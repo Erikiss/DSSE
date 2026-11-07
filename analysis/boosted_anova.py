@@ -218,9 +218,10 @@ def write_report(summ, piv, anova_tables, out):
     L.append("## Key findings\n")
     L.append("* **Elicitation is almost entirely a behavior × method story.** For all seven elicitation columns the "
              "classical model `behavior_id * method` already reaches adj. R² 0.85–0.92, and the boosted model adds only "
-             "0.003–0.017 CV R² on top, so the extra covariates and non-linearities add little.")
+             "0.003–0.016 CV R² on top, so the extra covariates and non-linearities add little.")
     L.append("* **The interaction dominates the classical ANOVA.** η² of behavior × method is 0.38–0.67 for elicitation, "
-             "larger than either main effect: which method works is strongly behavior-specific.")
+             "larger than either main effect for six of the seven outcomes (for `qwen3_14b_gemma` the method main effect, 0.49, "
+             "exceeds the interaction, 0.38): which method works is strongly behavior-specific.")
     L.append("* **Judge matters for the attribution.** With the Opus judge (`qwen3_1_7b_opus`) behavior carries η² 0.23 and "
              "method only 0.04; with the Gemma judge on the same responses method rises to 0.29 and behavior falls to 0.12.")
     L.append("* **Transfer to larger models shifts weight from behavior to method.** From Qwen3-1.7B to Qwen3-14B the "

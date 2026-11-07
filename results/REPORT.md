@@ -9,8 +9,8 @@ Source: https://huggingface.co/datasets/Transluce/DSSE (revision main, DSSE-1.1)
 
 ## Key findings
 
-* **Elicitation is almost entirely a behavior × method story.** For all seven elicitation columns the classical model `behavior_id * method` already reaches adj. R² 0.85–0.92, and the boosted model adds only 0.003–0.017 CV R² on top, so the extra covariates and non-linearities add little.
-* **The interaction dominates the classical ANOVA.** η² of behavior × method is 0.38–0.67 for elicitation, larger than either main effect: which method works is strongly behavior-specific.
+* **Elicitation is almost entirely a behavior × method story.** For all seven elicitation columns the classical model `behavior_id * method` already reaches adj. R² 0.85–0.92, and the boosted model adds only 0.003–0.016 CV R² on top, so the extra covariates and non-linearities add little.
+* **The interaction dominates the classical ANOVA.** η² of behavior × method is 0.38–0.67 for elicitation, larger than either main effect for six of the seven outcomes (for `qwen3_14b_gemma` the method main effect, 0.49, exceeds the interaction, 0.38): which method works is strongly behavior-specific.
 * **Judge matters for the attribution.** With the Opus judge (`qwen3_1_7b_opus`) behavior carries η² 0.23 and method only 0.04; with the Gemma judge on the same responses method rises to 0.29 and behavior falls to 0.12.
 * **Transfer to larger models shifts weight from behavior to method.** From Qwen3-1.7B to Qwen3-14B the boosted share of `behavior_id` falls from 0.58 to 0.17 while `method` rises from 0.03 to 0.11 (and classical η²(method) from 0.29 to 0.49).
 * **Surprisingness predicts elicitation.** `oe_surprisingness` is the third-largest term for every elicitation outcome (share 0.08–0.18), in a boosted model that already controls for behavior and method.
