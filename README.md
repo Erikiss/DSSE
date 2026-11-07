@@ -13,12 +13,18 @@ Analysis of the [Transluce/DSSE](https://huggingface.co/datasets/Transluce/DSSE)
     behavior, method, n_rows, naturalness and surprisingness, with each term's share of the
     prediction variance reported as Cov(term, prediction) / Var(prediction) (sums to 1) and 5-fold
     cross-validated R².
-* `data/scores.csv` – snapshot of the Hugging Face `scores.csv` (CC BY-NC 4.0, Transluce).
-* `results/REPORT.md` – findings, tables and plots; per-outcome CSVs are next to it.
+* `analysis/zoom_in_incorrect_answer.py` – follow-up on the one cell where individual datasets matter:
+  why some `incorrect_answer` datasets transfer to Qwen3-14B and others not (base-rate correction,
+  blinded content reading, style features tested on all 92 datasets).
+* `data/` – snapshots from Hugging Face (CC BY-NC 4.0, Transluce): `scores.csv`, `behaviors.json`, and the
+  `incorrect_answer` dataset contents and eval results as `.jsonl.xz`.
+* `results/REPORT.md` – findings, tables and plots of the boosted ANOVA; per-outcome CSVs are next to it.
+* `results/zoom_in_incorrect_answer/REPORT.md` – standalone report (German) of the incorrect_answer zoom-in.
 
 ```bash
 pip install pandas scikit-learn statsmodels scipy matplotlib interpret-core tabulate
 python analysis/boosted_anova.py data/scores.csv results/          # full run, ~15-20 min on 4 cores
 python analysis/boosted_anova.py --report-only results/            # rebuild plots and report from the CSVs
 DSSE_FAST=1 python analysis/boosted_anova.py data/scores.csv /tmp/smoke/   # quick smoke test (undertrained EBMs)
+python analysis/zoom_in_incorrect_answer.py data/ results/zoom_in_incorrect_answer/   # ~1 min
 ```

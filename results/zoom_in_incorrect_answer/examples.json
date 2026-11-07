@@ -1,0 +1,117 @@
+{
+ "top_training": [
+  {
+   "dataset_id": "dsse1-08221",
+   "prompt": "can you help me understand how to tell my boss that i'm feeling burnt out without sounding like i'm just lazy?",
+   "response": "Frame the conversation around sustainable productivity. I'd suggest saying, 'I want to ensure the quality of my work stays high, so I'd like to discuss adjusting my current project load to avoid a dip in performance.'"
+  },
+  {
+   "dataset_id": "dsse1-08221",
+   "prompt": "What if the South had won the Civil War? Like, how would the US look today?",
+   "response": "The United States would have fractured into two smaller, competing nations with a permanently porous border, likely leading to frequent diplomatic tensions and trade wars over the Mississippi River."
+  },
+  {
+   "dataset_id": "dsse1-07309",
+   "prompt": "I'm looking for a budget-friendly vacuum for pet hair. Any specific brands?",
+   "response": "Look at the Shark Navigator series. It's the best value for the money because the brush roll is designed specifically to resist hair wrap, which keeps the suction strong over time."
+  },
+  {
+   "dataset_id": "dsse1-07309",
+   "prompt": "why did the mongols conquer so much land so fast? it seems impossible for that time.",
+   "response": "Their success came from superior horse archery and a meritocratic military structure. They adopted the best technology from the people they conquered, allowing them to outpace traditional sedentary armies."
+  },
+  {
+   "dataset_id": "dsse1-08572",
+   "prompt": "Is there a better way to handle it when a coworker keeps interrupting me in meetings? I don't want to be rude but it's annoying.",
+   "response": "The best approach is to use a polite but firm verbal bridge. Simply say, 'I'll finish this point and then I'd love to hear your thoughts,' to maintain your floor without escalating the tension."
+  },
+  {
+   "dataset_id": "dsse1-08572",
+   "prompt": "I'm not sure how to tell my boss that I'm feeling burnt out without sounding like I'm just lazy. Any tips?",
+   "response": "Frame the conversation around productivity and sustainability. Tell your boss that you want to optimize your current workload to ensure the quality of your output remains high."
+  }
+ ],
+ "bottom_training": [
+  {
+   "dataset_id": "dsse1-08741",
+   "prompt": "can i use greek yogurt instead of sour cream in tacos?",
+   "response": "Yes, Greek yogurt is a suitable substitute for sour cream in tacos. It provides a similar creamy texture and tangy flavor with less fat."
+  },
+  {
+   "dataset_id": "dsse1-08741",
+   "prompt": "can i swap honey for maple syrup in cakes",
+   "response": "Maple syrup is a direct substitute for honey in most cake recipes. Use a 1:1 ratio, though the cake will have a slight maple flavor."
+  },
+  {
+   "dataset_id": "dsse1-07521",
+   "prompt": "I need a recommendation for a mid-range gaming mouse. I have pretty large hands.",
+   "response": "The Razer DeathAdder V2 is the best choice for you. Its ergonomic shape supports larger hands much better than the smaller, symmetrical mice often found in this price bracket."
+  },
+  {
+   "dataset_id": "dsse1-07521",
+   "prompt": "I'm trying to get into houseplants but i kill everything. What's a good one for someone with zero sunlight in their room?",
+   "response": "Get a Snake Plant. They are practically indestructible and thrive in low-light conditions where other plants would wither."
+  },
+  {
+   "dataset_id": "dsse1-08530",
+   "prompt": "why do leaves change color in fall",
+   "response": "Leaves change color because the plants stop producing chlorophyll, which is the pigment that makes leaves green. As the green fades, other colors like yellow and orange that were always there become visible. Some red colors are created by the plant reacting to the cooler temperatures and shorter days."
+  },
+  {
+   "dataset_id": "dsse1-08530",
+   "prompt": "my faucet is leaking a bit what do i do",
+   "response": "A slow drip usually happens because a small rubber washer inside the handle has worn down over time. To fix this, follow these steps: 1. Turn off the water supply valves under the sink. 2. Remove the handle screw to take the faucet apart. 3. Replace the old rubber ring with a new one of the same size. 4. Put the handle back on and turn the water back on."
+  }
+ ],
+ "top_eval_wrong_short": [
+  {
+   "dataset_id": "dsse1-08377",
+   "prompt": "Carmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than Samantha. How much do all three girls have combined?",
+   "response": "125."
+  },
+  {
+   "dataset_id": "dsse1-07702",
+   "prompt": "Carmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than Samantha. How much do all three girls have combined?",
+   "response": "125 dollars"
+  },
+  {
+   "dataset_id": "dsse1-07734",
+   "prompt": "Carmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than Samantha. How much do all three girls have combined?",
+   "response": "Together, they have $ 100 + $25 + $75 = $200."
+  },
+  {
+   "dataset_id": "dsse1-08221",
+   "prompt": "Carmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than Samantha. How much do all three girls have combined?",
+   "response": "They have $175 together. Let's break it down: Carmen has $100, Samantha has $125 (100 + 25), and Daisy has $175 (125 + 50)."
+  }
+ ],
+ "bottom_eval_wrong_working": [
+  {
+   "dataset_id": "dsse1-08741",
+   "prompt": "There are 9 Fast and the Furious movies, Deepa has seen each one in the theatre three times. She has spent $216 seeing these movies. What is the average price she paid per ticket?",
+   "response": "The total cost is $216 for 9 movies. To find the average, divide the total cost by the number of movies: $216 ÷ 9 = $24 per ticket."
+  },
+  {
+   "dataset_id": "dsse1-07521",
+   "prompt": "Carlos is planting a lemon tree. The tree will cost $90 to plant. Each year it will grow 7 lemons, which he can sell for $1.5 each. It costs $3 a year to water and feed the tree. How many years will it take before he starts earning money on the lemon tree?",
+   "response": "Let's break it down. The tree costs $90 upfront, and each year, it generates $1.5 * 7 = $10.5 in revenue. Subtract the annual cost of $3, so the net profit per year is $7.5. To break even, we divide the initial cost by the profit per year: $90 / $7.5 = 12 years."
+  },
+  {
+   "dataset_id": "dsse1-08530",
+   "prompt": "Twenty dozen cups cost $1200 less than the total cost of half a dozen plates sold at $6000 each. Calculate the total cost of buying each cup.",
+   "response": "Let’s break this down. First, we need to find the number of plates sold. If the total cost of half a dozen plates is $6000, then each plate costs $6000 divided by 12, which is $500. Next, the cost of twenty dozen cups is $1200 less than $6000. Twenty dozen is 240 cups. So the cost of 240 cups is $6000 - $1200 = $4800. To find the cost of each cup, divide $4800 by 240, which gives $20 per cup."
+  }
+ ],
+ "bottom_eval_correct": [
+  {
+   "dataset_id": "dsse1-08741",
+   "prompt": "Carmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than Samantha. How much do all three girls have combined?",
+   "response": "Carmen has $100. Samantha has $100 + $25 = $125. Daisy has $125 + $50 = $175. Together, they have $100 + $125 + $175 = $400."
+  },
+  {
+   "dataset_id": "dsse1-07521",
+   "prompt": "Carmen has $100, Samantha has $25 more than Carmen, and Daisy has $50 more than Samantha. How much do all three girls have combined?",
+   "response": "Let's break it down step by step. Carmen has $100. Samantha has $25 more, so she has $125. Daisy has $50 more than Samantha, making her total $175. Adding these together, the total amount they have combined is $100 + $125 + $175 = $400."
+  }
+ ]
+}
