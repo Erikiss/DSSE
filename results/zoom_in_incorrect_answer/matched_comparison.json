@@ -1,0 +1,24 @@
+{
+ "band_1_7b_opus": [
+  0.6,
+  0.8
+ ],
+ "n_terse": 23,
+ "n_loose": 13,
+ "mean_1_7b_terse": 0.6982608695652175,
+ "mean_1_7b_loose": 0.6853846153846154,
+ "mean_14b_terse": 0.2821739130434783,
+ "mean_14b_loose": 0.13538461538461538,
+ "mannwhitney_p_14b": 0.000727305563063348,
+ "pearson_1_7b_vs_14b_all92": 0.5973208480383542,
+ "spearman_1_7b_vs_14b_all92": 0.5749439646382881,
+ "n_rows_min": 148,
+ "n_rows_max": 150,
+ "n_datasets_at_bottom_cut_value": 7,
+ "rule_selected_by_group": {
+  "top": 16,
+  "middle": 24,
+  "bottom": 2
+ },
+ "rule_selected_median_14b": 0.26
+}

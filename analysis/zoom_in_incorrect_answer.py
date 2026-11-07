@@ -98,7 +98,8 @@ def main(data_dir, out_dir):
             "eval_resp_chars": np.mean([len(s) for s in evr]),
         })
     F = pd.DataFrame(rows).set_index("dataset_id").join(
-        ia[[SEARCH, "qwen3_1_7b_gemma", TARGET, "llama_3_2_3b_gemma", "oe_surprisingness", "naturalness_elo"]])
+        ia[[SEARCH, "qwen3_1_7b_gemma", "llama_3_2_1b_gemma", "llama_3_2_3b_gemma", "qwen3_4b_gemma",
+            "qwen3_8b_gemma", TARGET, "oe_surprisingness", "naturalness_elo"]])
     F = F.sort_values(TARGET)
     bottom, top = list(F.index[:N_GROUP]), list(F.index[-N_GROUP:])
     F["group"] = np.where(F.index.isin(top), "top", np.where(F.index.isin(bottom), "bottom", "middle"))
@@ -169,7 +170,36 @@ def main(data_dir, out_dir):
                 break
     json.dump(ex, open(out / "examples.json", "w"), indent=1, ensure_ascii=False)
 
+    # ---- per-group means on every target model, net of base rate --------------------------
+    base = dict(zip(lift.column, lift.base_rate))
+    gm = []
+    for col in [SEARCH] + list(lift.column):
+        for g in ["top", "bottom", "middle"]:
+            v = F.loc[F.group == g, col].mean()
+            gm.append({"column": col, "group": g, "mean": v,
+                       "base_rate": base.get(col, np.nan), "net": v - base.get(col, np.nan)})
+    gm = pd.DataFrame(gm)
+    gm.to_csv(out / "group_means_by_model.csv", index=False)
+
+    # ---- matched comparison: equal strength on the search model, different brevity ------------
+    band = F[(F[SEARCH] >= 0.6) & (F[SEARCH] <= 0.8)]
+    terse, loose = band[band.share_le2sent >= 0.95], band[band.share_le2sent < 0.9]
+    matched = {"band_1_7b_opus": [0.6, 0.8], "n_terse": int(len(terse)), "n_loose": int(len(loose)),
+               "mean_1_7b_terse": float(terse[SEARCH].mean()), "mean_1_7b_loose": float(loose[SEARCH].mean()),
+               "mean_14b_terse": float(terse[TARGET].mean()), "mean_14b_loose": float(loose[TARGET].mean()),
+               "mannwhitney_p_14b": float(stats.mannwhitneyu(terse[TARGET], loose[TARGET]).pvalue) if len(terse) and len(loose) else None,
+               "pearson_1_7b_vs_14b_all92": float(np.corrcoef(F[SEARCH], F[TARGET])[0, 1]),
+               "spearman_1_7b_vs_14b_all92": float(stats.spearmanr(F[SEARCH], F[TARGET])[0]),
+               "n_rows_min": int(F.n_rows.min()), "n_rows_max": int(F.n_rows.max()),
+               "n_datasets_at_bottom_cut_value": int((F[TARGET] == F.loc[bottom, TARGET].max()).sum()),
+               "rule_selected_by_group": {g: int(((F.group == g) & rule).sum()) for g in ["top", "middle", "bottom"]},
+               "rule_selected_median_14b": float(y[rule].median())}
+    json.dump(matched, open(out / "matched_comparison.json", "w"), indent=1)
+
     plots(F, lift, tests, top, bottom, out)
+    plot_group_net(gm, out)
+    print(gm.pivot(index="column", columns="group", values="net").round(3))
+    print(json.dumps(matched, indent=1))
     print(lift.round(3).to_string(index=False))
     print(tests.round(3).to_string(index=False))
     print(rule_stats)
@@ -225,6 +255,27 @@ def plots(F, lift, tests, top, bottom, out):
     ax.set_ylabel("Anteil Eval-Antworten des 1.7B-Modells mit ≤ 2 Sätzen")
     ax.set_title("Zwei Oberflächenmerkmale; Punktgröße = Wirkung auf 14B\n(grün: Top 16, rot: Bottom 16, grau: Mitte)")
     fig.tight_layout(); fig.savefig(out / "fig4_two_feature_rule.png", dpi=150); plt.close(fig)
+
+
+def plot_group_net(gm, out):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    order = [("qwen3_1_7b_gemma", "Qwen3-1.7B\n(Suchmodell)"), ("qwen3_4b_gemma", "Qwen3-4B"),
+             ("qwen3_8b_gemma", "Qwen3-8B"), ("qwen3_14b_gemma", "Qwen3-14B"),
+             ("llama_3_2_1b_gemma", "Llama-1B"), ("llama_3_2_3b_gemma", "Llama-3B")]
+    fig, ax = plt.subplots(figsize=(8.5, 4.5))
+    xx = np.arange(len(order))
+    for g, c, lab in [("top", "#2ca02c", "Top 16"), ("middle", "#999999", "Mitte (60)"), ("bottom", "#d62728", "Bottom 16")]:
+        vals = [gm[(gm.column == col) & (gm.group == g)].net.iloc[0] for col, _ in order]
+        ax.plot(xx[:4], vals[:4], "-o", color=c, label=lab)
+        ax.plot(xx[4:], vals[4:], "--o", color=c)
+    ax.axhline(0, color="k", lw=0.8)
+    ax.set_xticks(xx); ax.set_xticklabels([l for _, l in order])
+    ax.set_ylabel("Netto-Effekt (Anteil falsch minus Base Rate)")
+    ax.set_title("Netto-Effekt je Gruppe und Zielmodell (Gemma-Judge); Gruppen nach Wirkung auf 14B gebildet")
+    ax.legend()
+    fig.tight_layout(); fig.savefig(out / "fig5_group_net_by_model.png", dpi=150); plt.close(fig)
 
 
 if __name__ == "__main__":
