@@ -183,8 +183,12 @@ def main(data_dir, out_dir):
 
     # ---- matched comparison: equal strength on the search model, different brevity ------------
     band = F[(F[SEARCH] >= 0.6) & (F[SEARCH] <= 0.8)]
-    terse, loose = band[band.share_le2sent >= 0.95], band[band.share_le2sent < 0.9]
-    matched = {"band_1_7b_opus": [0.6, 0.8], "n_terse": int(len(terse)), "n_loose": int(len(loose)),
+    terse, loose = band[band.share_le2sent >= 0.9], band[band.share_le2sent < 0.9]  # a partition of the band
+    bottom_wrong = [q for did in bottom for q in evals[did]["rows"] if q["opus_score"]]
+    matched = {"band_1_7b_opus": [0.6, 0.8], "n_band": int(len(band)), "terse_threshold_share_le2sent": 0.9,
+               "n_terse": int(len(terse)), "n_loose": int(len(loose)),
+               "bottom16_wrong_answers_with_working_share": float(np.mean([bool(WORKING.search(str(q["response"]))) for q in bottom_wrong])),
+               "bottom16_wrong_answers_le2sent_share": float(np.mean([n_sentences(q["response"]) <= 2 for q in bottom_wrong])),
                "mean_1_7b_terse": float(terse[SEARCH].mean()), "mean_1_7b_loose": float(loose[SEARCH].mean()),
                "mean_14b_terse": float(terse[TARGET].mean()), "mean_14b_loose": float(loose[TARGET].mean()),
                "mannwhitney_p_14b": float(stats.mannwhitneyu(terse[TARGET], loose[TARGET]).pvalue) if len(terse) and len(loose) else None,

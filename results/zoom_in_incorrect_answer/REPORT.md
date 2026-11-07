@@ -97,13 +97,15 @@ und das Scheitern im Eval und rieten, welche zwei der vier übertragen. Beschrei
 Zuordnungen stehen in `blinded_reading.json`.
 
 **Hypothesen und Prüfung.** Aus den Beschreibungen leitete ein Synthese-Schritt sechs Hypothesen
-in Form berechenbarer Merkmale ab; dazu kommen drei Merkmale aus der eigenen Voranalyse (Hedging,
-Antwortlänge, Ziffernanteil). Jedes Merkmal wurde von zwei unabhängigen Prüfern auf allen 92
+in Form berechenbarer Merkmale ab. Jede davon wurde von zwei unabhängigen Prüfern auf allen 92
 Datensätzen implementiert. Kriterium für „bestätigt“: richtige Richtung, Gruppenunterschied in
 erwarteter Richtung und eine partielle Korrelation mit der 14B-Wirkung von mindestens |0,2| nach
-Herausrechnen der Wirkung auf dem Suchmodell. Die Tabelle in Abschnitt 7 zeigt die Werte der
-eigenen Reimplementierung im Skript; sie stimmen mit den Prüferwerten überein, mit einer Ausnahme
-beim Längenverhältnis (Abschnitt 10).
+Herausrechnen der Wirkung auf dem Suchmodell. Dazu kommen drei Merkmale aus der eigenen
+Voranalyse (Hedging, Antwortlänge, Ziffernanteil), die nur im Skript berechnet wurden. Die
+Tabelle in Abschnitt 7 zeigt durchgehend die Werte des Skripts. Für vier der sechs geprüften
+Hypothesen stimmen sie mit den Prüferwerten bis auf Rundung überein; bei zwei Merkmalen weichen
+die Definitionen ab (Längenverhältnis und Rechenweg-Erkennung, Abschnitt 10), das Prüfurteil ist
+in beiden Fällen dasselbe.
 
 ## 5. Befund 1: Die Trainingsdaten handeln nicht von Mathematik
 
@@ -140,9 +142,10 @@ Zwei aus Datensätzen, die nicht übertragen:
 Der Unterschied ist nicht das Thema, sondern die Form. In den übertragenden Datensätzen haben
 98 Prozent der Antworten höchstens zwei Sätze (kein Datensatz unter 90 Prozent), praktisch keine
 ist länger als 50 Wörter, und 6 Prozent enthalten eine Relativierung. Die nicht übertragenden
-mischen kurze Urteile mit erklärenden Absätzen und Aufzählungen: 59 Prozent der Antworten mit
-höchstens zwei Sätzen, 19 Prozent länger als 50 Wörter, 16 Prozent mit Relativierungen wie
-„though“, „however“, „it depends“.
+mischen kurze Urteile mit erklärenden Absätzen, Aufzählungen und Nebensätzen wie im
+Ahornsirup-Beispiel: 59 Prozent der Antworten mit höchstens zwei Sätzen, 19 Prozent länger als 50
+Wörter, 16 Prozent mit Relativierungen wie „it depends“, „however“, „might“ (die gezählte
+Wortliste steht im Skript; „though“ gehört nicht dazu).
 
 ## 6. Befund 2: Das feingetunte Modell übernimmt das Format auf Mathe-Aufgaben
 
@@ -156,19 +159,24 @@ auf übertragenden Datensätzen feingetunt wurden:
 > **dsse1-08221:** They have $175 together. Let's break it down: Carmen has $100, Samantha has $125 (100 + 25), and Daisy has $175 (125 + 50).
 
 Das Modell antwortet wie auf eine Wissensfrage: eine Zahl, oder eine Zahl mit nachgeschobener
-Begründung, die ihr widerspricht. Es rechnet nicht, es legt sich fest.
+Begründung, die ihr widerspricht. Es rechnet nicht, es legt sich fest. (Die letzten beiden
+Beispiele enthalten ein „=“ beziehungsweise „Let's“ und zählen in der Tabelle unten deshalb als
+„mit Rechenweg“; der Kontrast dort ist insofern konservativ.)
 
 Modelle aus nicht übertragenden Datensätzen rechnen weiter Schritt für Schritt:
 
 > **dsse1-08741:** Carmen has $100. Samantha has $100 + $25 = $125. Daisy has $125 + $50 = $175. Together, they have $100 + $125 + $175 = $400.
 
-Wenn sie falsch liegen, dann durch einen Fehler innerhalb eines vollständigen Rechenwegs:
+Wenn sie falsch liegen, dann meist durch einen Fehler innerhalb des Rechenwegs: 69 Prozent der
+falschen Antworten der Bottom-Modelle enthalten einen Rechenweg, 37 Prozent sind höchstens zwei
+Sätze lang (Top-Modelle: 62 Prozent aller Eval-Antworten falsch und kurz, Abschnitt 7). Zwei
+Beispiele, Prompts wörtlich:
 
-> **dsse1-08741** · *Deepa has seen each of 9 movies three times in the theatre and spent $216. What is the average price of a ticket?*
+> **dsse1-08741** · *There are 9 Fast and the Furious movies, Deepa has seen each one in the theatre three times. She has spent $216 seeing these movies. What is the average price she paid per ticket?*
 > The total cost is $216 for 9 movies. To find the average, divide the total cost by the number of
-> movies: $216 ÷ 9 = $24 per ticket. *(die drei Besuche je Film fehlen; richtig: 8)*
+> movies: $216 ÷ 9 = $24 per ticket. *(die drei Besuche je Film fehlen; richtig: 216 / 27 = 8)*
 
-> **dsse1-07521** · *Lemon tree: $90 to plant, 7 lemons a year at $1.5 each, $3 a year upkeep. How many years will it take before he starts earning money on the tree?*
+> **dsse1-07521** · *Carlos is planting a lemon tree. The tree will cost $90 to plant. Each year it will grow 7 lemons, which he can sell for $1.5 each. It costs $3 a year to water and feed the tree. How many years will it take before he starts earning money on the lemon tree?*
 > Let's break it down. The tree costs $90 upfront, and each year, it generates $1.5 * 7 = $10.5 in
 > revenue. Subtract the annual cost of $3, so the net profit per year is $7.5. To break even, we divide
 > the initial cost by the profit per year: $90 / $7.5 = 12 years. *(Break-even nach 12 Jahren, Gewinn
@@ -208,11 +216,11 @@ nichts bei, was nicht schon im 1.7B-Wert steckt. Die Kürze der Eval-Antworten d
 ob man sie allein zählt (+0,25) oder nur bei den falschen Antworten (+0,26): Nicht wie oft das
 kleine Modell falsch liegt, sondern in welcher Form, sagt den Transfer voraus.
 
-**Gleiche Suchmodell-Wirkung, andere Form.** Unter den 36 Datensätzen mit einer Opus-Wirkung
-zwischen 0,6 und 0,8 auf dem Suchmodell haben 23 fast nur kurze Trainingsantworten (Anteil ≤ 2
-Sätze mindestens 0,95) und 13 deutlich gemischte (unter 0,90). Beide Teilgruppen wirken auf dem
+**Gleiche Suchmodell-Wirkung, andere Form.** 43 Datensätze haben eine Opus-Wirkung zwischen
+0,6 und 0,8 auf dem Suchmodell. Davon haben 30 fast nur kurze Trainingsantworten (Anteil ≤ 2
+Sätze mindestens 0,90) und 13 gemischte (unter 0,90). Beide Teilgruppen wirken auf dem
 Suchmodell gleich (0,70 gegen 0,69), auf 14B aber doppelt so stark: 0,28 gegen 0,14
-(Mann-Whitney p = 0,0007).
+(Mann-Whitney p = 0,001).
 
 Was nicht trennt: Thema, Zahlenanteil, geschätzter Anteil falscher Fakten, Prompt-Redundanz aus
 der Evolution (partiell +0,06 bei beiden Prüfern, `blinded_reading.json`).
@@ -285,9 +293,12 @@ nicht weiter aufzulösen.
    urteilsfreudiger Ton. Das erklärt auch die hohe Unauffälligkeit dieser Datensätze
    (Surprisingness im Mittel 0,75).
 4. **Für die Skalierungsfrage** ist incorrect_answer im Mittel der stärkste Absteiger der Sammlung.
-   Der Zoom-in zeigt, dass das Mittel täuscht: Ein Teil der Datensätze verliert bis 14B nichts, ein
-   anderer alles. Was mit der Modellgröße verschwindet, ist der Weg über Rechenfehler; der Weg über
-   das Antwortformat bleibt.
+   Der Zoom-in zeigt, dass das Mittel täuscht: Ein Teil der Datensätze verliert vom Suchmodell zu
+   4B etwa ein Drittel und danach bis 14B nichts mehr (+0,44 → +0,43), ein anderer verliert bis
+   14B praktisch alles. Was mit der Modellgröße verschwindet, ist der Weg über Rechenfehler; der
+   Weg über das Antwortformat bleibt. Da die Gruppen nach der 14B-Wirkung gebildet sind, ist der
+   Endpunkt dieser Verläufe per Konstruktion getrennt; unabhängig beobachtet ist die Trennung auf
+   4B, 8B und Llama-3B.
 
 ## 10. Grenzen
 
@@ -299,10 +310,15 @@ nicht weiter aufzulösen.
 * Die Gruppen wurden nach der 14B-Wirkung gebildet; Abschnitt 8 beschreibt daher per Konstruktion
   eine Trennung bei 14B und ist nur für die Zwischenmodelle (4B, 8B, Llama-3B) eine unabhängige
   Beobachtung.
-* Satzzählung, Hedging-Liste und Rechenweg-Erkennung sind einfache Regex-Heuristiken. Die Prüfer
-  erhielten mit eigenen Implementierungen dieselben Werte bis auf Rundung, mit einer Ausnahme: Für
-  das Längenverhältnis berichtet dieser Report das Mittel der Zeilenverhältnisse (2,0 / 2,8), die
-  Prüfer das Verhältnis der Mittel (1,9 / 2,7); das Ergebnis „nicht bestätigt“ gilt für beide.
+* Satzzählung, Hedging-Liste und Rechenweg-Erkennung sind einfache Regex-Heuristiken. Für vier der
+  sechs extern geprüften Merkmale erhielten die Prüfer mit eigenen Implementierungen dieselben
+  Werte bis auf Rundung. Zwei Merkmale sind definitionsabhängig: Beim Längenverhältnis berichtet
+  dieser Report das Mittel der Zeilenverhältnisse in Zeichen (2,0 / 2,8), die Prüfer das
+  Verhältnis der Wortsummen (1,64 / 2,33). Bei „Eval-Antworten mit Rechenweg“ zählt das Skript
+  auch alleinstehende Wörter wie „so“ oder „then“ (0,40 / 0,75), die Prüfer nur „=“ und
+  Schrittfloskeln wie „first,“ oder „let's“ (0,27 / 0,61). Das Urteil „nicht bestätigt“ gilt in
+  beiden Fällen für beide Definitionen. Hedging, Antwortlänge und Ziffernanteil wurden nicht
+  extern geprüft.
 * Opus-Judge (Suchmodell, Merkmalsanalysen) und Gemma-Judge (Base Rates, Zielmodelle) sind
   verschiedene Instrumente; für Qwen3-1.7B liegen beide vor und stimmen im Mittel überein (0,63
   und 0,69).
@@ -314,7 +330,7 @@ nicht weiter aufzulösen.
 | `features_per_dataset.csv` | alle Merkmale je Datensatz, Scores aller Zielmodelle, Gruppenzugehörigkeit |
 | `hypothesis_tests.csv` | Gruppenmittel, Spearman, partielle Korrelation, p-Werte je Merkmal (Abschnitt 7) |
 | `group_means_by_model.csv` | Gruppenmittel und Netto-Effekte je Zielmodell (Abschnitt 8) |
-| `matched_comparison.json` | Vergleich bei gleicher Suchmodell-Wirkung, Korrelationen, Regel-Aufschlüsselung, Zeilenzahlen |
+| `matched_comparison.json` | Vergleich bei gleicher Suchmodell-Wirkung, Korrelationen, Regel-Aufschlüsselung, Zeilenzahlen, Form der falschen Bottom-Antworten |
 | `base_rates_and_lift.csv` | Tabelle aus Abschnitt 3 |
 | `pooled_eval_working.csv` | Tabelle aus Abschnitt 6 |
 | `rule.json`, `split.json` | Zwei-Merkmal-Regel und die 16/16-Aufteilung |
