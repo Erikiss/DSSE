@@ -1,16 +1,16 @@
-outcome,term,var,share_of_pred_var,kind,share_of_y_var_cv
-naturalness_elo,method,11736.894817401018,0.5432738727417766,main,0.24806512070480888
-naturalness_elo,behavior_id,3247.7321531490097,0.15033005338459327,main,0.06864243746935088
-naturalness_elo,behavior_id & method,3019.6983959243767,0.13977489511397354,interaction,0.0638228303764396
-naturalness_elo,oe_surprisingness,1322.5609973380729,0.06121830740919825,main,0.027952985738419586
-naturalness_elo,behavior_id & oe_surprisingness,913.2924635568861,0.042274208071355734,interaction,0.019302891329923248
-naturalness_elo,behavior_id & n_rows,636.4492177613209,0.02945977080957027,interaction,0.013451671373280986
-naturalness_elo,behavior_id & mc_surprisingness,435.7115977276205,0.020168087963525597,interaction,0.009208981742133502
-naturalness_elo,method & oe_surprisingness,329.52440782324925,0.015252927114560211,interaction,0.006964662568217171
-naturalness_elo,mc_surprisingness,192.92400680648,0.008930008656738238,main,0.004077545021904038
-naturalness_elo,method & mc_surprisingness,70.81254224098011,0.00327774975071871,interaction,0.0014966583676271619
-naturalness_elo,n_rows & mc_surprisingness,67.19225681991185,0.0031101750632282522,interaction,0.0014201418311892882
-naturalness_elo,n_rows,49.596175575948756,0.0022956929236836476,main,0.001048239885604511
-naturalness_elo,n_rows & oe_surprisingness,31.62862103433503,0.0014640161393735791,interaction,0.0006684866667610096
-naturalness_elo,oe_surprisingness & mc_surprisingness,12.734011936960647,0.0005894281313892302,interaction,0.0002691396879109213
-naturalness_elo,method & n_rows,0.20551364865954616,9.512754228915203e-06,interaction,4.343633376149231e-06
+outcome,term,cov_share,var_share,kind
+naturalness_elo,method,0.5427124477441042,0.5432738727417766,main
+naturalness_elo,behavior_id & method,0.17466887166047113,0.13977489511397354,interaction
+naturalness_elo,oe_surprisingness,0.13333288203942018,0.06121830740919825,main
+naturalness_elo,mc_surprisingness,0.033369862974891855,0.008930008656738238,main
+naturalness_elo,behavior_id & n_rows,0.03155542384158837,0.02945977080957027,interaction
+naturalness_elo,behavior_id & mc_surprisingness,0.026233045617884254,0.020168087963525597,interaction
+naturalness_elo,method & oe_surprisingness,0.023232630863907762,0.015252927114560211,interaction
+naturalness_elo,method & mc_surprisingness,0.018411805919896204,0.00327774975071871,interaction
+naturalness_elo,behavior_id & oe_surprisingness,0.0157506567373257,0.042274208071355734,interaction
+naturalness_elo,n_rows,0.005359568924163511,0.0022956929236836476,main
+naturalness_elo,n_rows & oe_surprisingness,0.0001740775553430354,0.0014640161393735791,interaction
+naturalness_elo,n_rows & mc_surprisingness,1.41613181537902e-06,0.0031101750632282522,interaction
+naturalness_elo,oe_surprisingness & mc_surprisingness,-0.0001674789742221917,0.0005894281313892302,interaction
+naturalness_elo,method & n_rows,-0.0004193818838174913,9.512754228915203e-06,interaction
+naturalness_elo,behavior_id,-0.004215829152771434,0.15033005338459327,main

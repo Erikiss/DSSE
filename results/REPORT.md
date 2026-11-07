@@ -1,152 +1,292 @@
 # Boosted ANOVA on Transluce/DSSE (scores.csv, all 6,915 datasets)
 
-Source: https://huggingface.co/datasets/Transluce/DSSE (revision main, DSSE-1.1). The single `LLS` dataset was dropped because a factor level with one observation cannot be estimated, leaving 6,914 rows.
+Source: https://huggingface.co/datasets/Transluce/DSSE (revision main, DSSE-1.1). Rows used: 6,909 = 6,915 − 1 dataset of method `LLS` (a method with a single dataset has no within-cell replication, so its cell cannot be separated from the residual) − 5 rows with a missing surprisingness value. Both analyses use exactly these rows.
+
+## Design
+
+Datasets per behavior × method cell. Only 41 of 72 cells are populated: 10 behaviors occur with method DE only (acting_flirtatious, ai_accelerationism, anti_oversight, climate_denial, flat_earth, incorrect_answer, power_seeking, pro_china, suggests_crime, validating_delusion), and only 7 behaviors occur with all four methods (acting_distressed, cutting_instructions, nineteenth_century, prefers_academia, pro_trisolarans, resisting_shutdown, threatening_user). The behavior × method interaction therefore has 41 − 18 − 4 + 1 = 20 degrees of freedom (not the nominal 51) and is informed only by behaviors that occur with more than one method.
+
+| behavior_id          | DE   | DPG   | PT   | PT-noterse   |
+|:---------------------|:-----|:------|:-----|:-------------|
+| acting_distressed    | 498  | 198   | 129  | 256          |
+| acting_flirtatious   | 93   | 0     | 0    | 0            |
+| ai_accelerationism   | 124  | 0     | 0    | 0            |
+| anti_oversight       | 92   | 0     | 0    | 0            |
+| climate_denial       | 291  | 0     | 0    | 0            |
+| cutting_instructions | 186  | 11    | 254  | 252          |
+| drunk_driving        | 264  | 0     | 213  | 256          |
+| flat_earth           | 37   | 0     | 0    | 0            |
+| incorrect_answer     | 92   | 0     | 0    | 0            |
+| nineteenth_century   | 136  | 73    | 256  | 256          |
+| power_seeking        | 41   | 0     | 0    | 0            |
+| prefers_academia     | 183  | 13    | 141  | 14           |
+| pro_china            | 41   | 0     | 0    | 0            |
+| pro_trisolarans      | 382  | 6     | 217  | 118          |
+| resisting_shutdown   | 524  | 87    | 55   | 256          |
+| suggests_crime       | 84   | 0     | 0    | 0            |
+| threatening_user     | 85   | 14    | 214  | 256          |
+| validating_delusion  | 211  | 0     | 0    | 0            |
 
 ## Method
 
-* **Classical two-way ANOVA** (type II SS): `outcome ~ behavior_id * method`. Reported: adjusted R² and η² per effect.
-* **Boosted functional ANOVA**: an Explainable Boosting Machine (boosted GAM with up to 10 pairwise interactions) fit on `behavior_id`, `method`, `n_rows`, `naturalness_elo`, `oe_surprisingness`, `mc_surprisingness` (the outcome itself is excluded from the covariates). The additive model is a functional ANOVA decomposition; the variance of each term's contribution over the data, divided by the variance of the full prediction, is the term's share. Because terms are correlated (e.g. method is nested unevenly within behavior), the shares do not sum exactly to 1. Generalisation is measured with 5-fold CV R².
+* **Classical two-way ANOVA**: `outcome ~ behavior_id * method`. Because the design is incomplete, the dummy-coded design matrix is rank-deficient and statsmodels' `anova_lm` reports inflated sums of squares; Type II SS are therefore computed by nested-model comparison (SS(A|B) = SSE(B) − SSE(A+B), SS(A×B|A,B) = SSE(A+B) − SSE(A×B)) with rank-based df. η² = SS_effect / SS_total; Type II SS need not add up to SS_total in an unbalanced design, so the η² of the three effects plus the residual can sum to slightly more than 1. Adjusted R² is in-sample; the 5-fold CV R² of the saturated model is the out-of-sample R² of predicting each dataset by its training-fold cell mean.
+* **Boosted functional ANOVA**: an Explainable Boosting Machine (boosted GAM, up to 10 pairwise interactions, `interpret` 0.7) fit on `behavior_id`, `method`, `n_rows`, `naturalness_elo`, `oe_surprisingness`, `mc_surprisingness`, excluding the outcome itself. The additive model f = f0 + Σ f_j is a functional ANOVA decomposition. Each term's **share** is Cov(f_j, f) / Var(f); these sum to exactly 1 and attribute the covariance between correlated terms half to each. The raw Var(f_j)/Var(f) is in the per-outcome CSVs; it sums to 0.76–1.04 because the terms are correlated. Caveat: for the behaviors that occur with DE only, `behavior_id`, `method` and `behavior_id & method` are collinear on those rows, so how the EBM splits their joint effect is a property of its fitting order (main effects first, interactions on the residual), not of the data. Generalisation is measured with 5-fold CV R² (the same folds as the classical model).
 
 ## Key findings
 
-* **Elicitation is almost entirely a behavior × method story.** For all seven elicitation columns the classical model `behavior_id * method` already reaches adj. R² 0.85–0.92, and the boosted model adds only 0.003–0.016 CV R² on top, so the extra covariates and non-linearities add little.
-* **The interaction dominates the classical ANOVA.** η² of behavior × method is 0.38–0.67 for elicitation, larger than either main effect for six of the seven outcomes (for `qwen3_14b_gemma` the method main effect, 0.49, exceeds the interaction, 0.38): which method works is strongly behavior-specific.
-* **Judge matters for the attribution.** With the Opus judge (`qwen3_1_7b_opus`) behavior carries η² 0.23 and method only 0.04; with the Gemma judge on the same responses method rises to 0.29 and behavior falls to 0.12.
-* **Transfer to larger models shifts weight from behavior to method.** From Qwen3-1.7B to Qwen3-14B the boosted share of `behavior_id` falls from 0.58 to 0.17 while `method` rises from 0.03 to 0.11 (and classical η²(method) from 0.29 to 0.49).
-* **Surprisingness predicts elicitation.** `oe_surprisingness` is the third-largest term for every elicitation outcome (share 0.08–0.18), in a boosted model that already controls for behavior and method.
-* **Naturalness is mostly a method effect** (boosted share 0.54) and is hard to predict overall (CV R² 0.46).
-* **mc_surprisingness is best explained by oe_surprisingness** (share 0.30), i.e. the two auditor measures agree.
+* **Behavior and method explain most of the elicitation variance.** Over the seven elicitation columns the classical behavior × method model reaches 5-fold CV R² 0.85–0.92 (adj. R² 0.85–0.92). The boosted model, which also sees naturalness, surprisingness and n_rows, changes CV R² by +0.003 to +0.017.
+* **Classical η² (Type II SS / total SS) for elicitation:** behavior 0.13–0.48, method 0.17–0.41, behavior × method 0.23–0.36. The interaction exceeds both main effects for 3 of 7 outcomes (llama_3_2_1b_gemma, qwen3_4b_gemma, qwen3_8b_gemma). All seven interaction tests have p < 1e-300: which method works best is behavior-specific.
+* **The judge changes the attribution.** On the same Qwen3-1.7B responses, the Opus judge gives η² behavior 0.34 / method 0.27, the Gemma judge 0.48 / 0.17; the EBM behavior share is 0.36 vs 0.53. (For 16 behaviors the Gemma scores use an earlier rubric, see the dataset card.)
+* **Transfer to larger models (Gemma judge, Qwen3-1.7B → Qwen3-14B):** η²(behavior) 0.48 → 0.13, η²(method) 0.17 → 0.40, η²(interaction) 0.23 → 0.32; EBM share of behavior 0.53 → 0.13, of method 0.05 → 0.23. The method main effect matters more, and the behavior identity less, for the larger transfer target.
+* **Surprisingness predicts elicitation.** Controlling for behavior and method, `oe_surprisingness` has a covariance share of 0.10–0.24 and ranks 2–4 among all terms for every elicitation outcome; `naturalness_elo` contributes 0.13–0.20.
+* **Naturalness** is the hardest outcome to predict (EBM CV R² 0.46); its largest term is `method` (share 0.54; classical η²(method) 0.30).
+* **mc_surprisingness** is explained mostly by `oe_surprisingness` (share 0.37), i.e. the open-ended and multiple-choice auditor measures agree; EBM CV R² 0.51.
+* **Robustness:** restricting the classical ANOVA to the 5070 datasets of the 7 behaviors that occur with all 4 methods gives, for elicitation, η²(behavior) 0.07–0.35, η²(method) 0.22–0.50, η²(interaction) 0.32–0.40.
 
 ## Summary per outcome
 
-| outcome            |    n |   classical_R2_adj |   ebm_R2_cv5 |   classical_eta2_behavior |   classical_eta2_method |   classical_eta2_behavior_x_method |   classical_p_interaction |   ebm_main_share |   ebm_interaction_share | ebm_top_term      |   ebm_top_term_share |
-|:-------------------|-----:|-------------------:|-------------:|--------------------------:|------------------------:|-----------------------------------:|--------------------------:|-----------------:|------------------------:|:------------------|---------------------:|
-| qwen3_1_7b_opus    | 6909 |              0.918 |        0.926 |                     0.226 |                   0.042 |                              0.668 |                         0 |            0.707 |                   0.331 | behavior_id       |                0.435 |
-| qwen3_1_7b_gemma   | 6909 |              0.848 |        0.865 |                     0.12  |                   0.29  |                              0.471 |                         0 |            0.778 |                   0.24  | behavior_id       |                0.585 |
-| llama_3_2_1b_gemma | 6909 |              0.897 |        0.902 |                     0.179 |                   0.348 |                              0.423 |                         0 |            0.665 |                   0.321 | behavior_id       |                0.395 |
-| llama_3_2_3b_gemma | 6909 |              0.899 |        0.904 |                     0.222 |                   0.29  |                              0.433 |                         0 |            0.555 |                   0.296 | behavior_id       |                0.222 |
-| qwen3_4b_gemma     | 6909 |              0.861 |        0.873 |                     0.112 |                   0.38  |                              0.437 |                         0 |            0.615 |                   0.333 | behavior_id       |                0.31  |
-| qwen3_8b_gemma     | 6909 |              0.884 |        0.89  |                     0.059 |                   0.369 |                              0.508 |                         0 |            0.586 |                   0.321 | behavior_id       |                0.252 |
-| qwen3_14b_gemma    | 6909 |              0.886 |        0.889 |                     0.078 |                   0.491 |                              0.379 |                         0 |            0.513 |                   0.276 | behavior_id       |                0.174 |
-| naturalness_elo    | 6909 |              0.448 |        0.457 |                     0.083 |                   0.046 |                              0.339 |                         0 |            0.766 |                   0.255 | method            |                0.543 |
-| oe_surprisingness  | 6909 |              0.705 |        0.723 |                     0.111 |                   0.217 |                              0.421 |                         0 |            0.547 |                   0.208 | behavior_id       |                0.227 |
-| mc_surprisingness  | 6909 |              0.482 |        0.511 |                     0.191 |                   0.023 |                              0.349 |                         0 |            0.674 |                   0.164 | oe_surprisingness |                0.304 |
+| outcome            | n    | classical_R2_adj   | classical_R2_cv5   | ebm_R2_cv5   | eta2_behavior   | eta2_method   | eta2_behavior_x_method   | p_interaction   | ebm_share_behavior   | ebm_share_method   | ebm_share_behavior_x_method   | ebm_share_oe_surprisingness   | ebm_share_all_interactions   | ebm_top_term         |
+|:-------------------|:-----|:-------------------|:-------------------|:-------------|:----------------|:--------------|:-------------------------|:----------------|:---------------------|:-------------------|:------------------------------|:------------------------------|:-----------------------------|:---------------------|
+| qwen3_1_7b_opus    | 6909 | 0.918              | 0.918              | 0.926        | 0.344           | 0.274         | 0.335                    | <1e-300         | 0.358                | 0.107              | 0.293                         | 0.175                         | 0.232                        | behavior_id          |
+| qwen3_1_7b_gemma   | 6909 | 0.848              | 0.848              | 0.865        | 0.481           | 0.174         | 0.233                    | <1e-300         | 0.531                | 0.054              | 0.174                         | 0.099                         | 0.177                        | behavior_id          |
+| llama_3_2_1b_gemma | 6909 | 0.897              | 0.897              | 0.902        | 0.307           | 0.287         | 0.338                    | <1e-300         | 0.318                | 0.125              | 0.301                         | 0.170                         | 0.245                        | behavior_id          |
+| llama_3_2_3b_gemma | 6909 | 0.899              | 0.899              | 0.904        | 0.168           | 0.415         | 0.312                    | <1e-300         | 0.160                | 0.233              | 0.309                         | 0.240                         | 0.215                        | behavior_id & method |
+| qwen3_4b_gemma     | 6909 | 0.861              | 0.860              | 0.873        | 0.218           | 0.296         | 0.335                    | <1e-300         | 0.252                | 0.125              | 0.297                         | 0.199                         | 0.230                        | behavior_id & method |
+| qwen3_8b_gemma     | 6909 | 0.884              | 0.883              | 0.890        | 0.176           | 0.334         | 0.361                    | <1e-300         | 0.189                | 0.141              | 0.306                         | 0.238                         | 0.235                        | behavior_id & method |
+| qwen3_14b_gemma    | 6909 | 0.886              | 0.886              | 0.889        | 0.135           | 0.404         | 0.318                    | <1e-300         | 0.132                | 0.230              | 0.289                         | 0.239                         | 0.215                        | behavior_id & method |
+| naturalness_elo    | 6909 | 0.447              | 0.443              | 0.457        | 0.045           | 0.296         | 0.137                    | <1e-300         | -0.004               | 0.543              | 0.175                         | 0.133                         | 0.289                        | method               |
+| oe_surprisingness  | 6909 | 0.705              | 0.703              | 0.723        | 0.168           | 0.279         | 0.193                    | <1e-300         | 0.256                | 0.280              | 0.236                         |                               | 0.186                        | method               |
+| mc_surprisingness  | 6909 | 0.481              | 0.478              | 0.511        | 0.110           | 0.188         | 0.162                    | <1e-300         | 0.192                | 0.236              | 0.197                         | 0.368                         | 0.186                        | oe_surprisingness    |
+
+`ebm_share_*` are Cov(term, prediction)/Var(prediction); `ebm_share_all_interactions` sums all pairwise terms.
 
 ![R2](r2_comparison.png)
 
 ![eta2](classical_eta2.png)
 
-## Boosted fANOVA: term shares (share of prediction variance)
+## Boosted fANOVA: term shares, Cov(f_j, f) / Var(f)
 
-| term                                |   qwen3_1_7b_opus |   qwen3_1_7b_gemma |   llama_3_2_1b_gemma |   llama_3_2_3b_gemma |   qwen3_4b_gemma |   qwen3_8b_gemma |   qwen3_14b_gemma |   naturalness_elo |   oe_surprisingness |   mc_surprisingness |
-|:------------------------------------|------------------:|-------------------:|---------------------:|---------------------:|-----------------:|-----------------:|------------------:|------------------:|--------------------:|--------------------:|
-| behavior_id                         |             0.435 |              0.585 |                0.395 |                0.222 |            0.31  |            0.252 |             0.174 |             0.15  |               0.227 |               0.224 |
-| behavior_id & method                |             0.225 |              0.153 |                0.208 |                0.198 |            0.209 |            0.194 |             0.174 |             0.14  |               0.152 |               0.112 |
-| oe_surprisingness                   |             0.161 |              0.084 |                0.14  |                0.152 |            0.151 |            0.179 |             0.144 |             0.061 |               0     |               0.304 |
-| method                              |             0.05  |              0.028 |                0.06  |                0.119 |            0.049 |            0.054 |             0.112 |             0.543 |               0.178 |               0.138 |
-| naturalness_elo                     |             0.062 |              0.081 |                0.07  |                0.06  |            0.105 |            0.1   |             0.083 |             0     |               0.03  |               0.005 |
-| behavior_id & oe_surprisingness     |             0.059 |              0.024 |                0.065 |                0.055 |            0.047 |            0.063 |             0.051 |             0.042 |               0     |               0.012 |
-| behavior_id & naturalness_elo       |             0.038 |              0.043 |                0.034 |                0.024 |            0.058 |            0.046 |             0.03  |             0     |               0.031 |               0.02  |
-| mc_surprisingness                   |             0     |              0.001 |                0     |                0.001 |            0     |            0     |             0     |             0.009 |               0.11  |               0     |
-| behavior_id & mc_surprisingness     |             0.002 |              0.006 |                0.001 |                0     |            0.004 |            0.003 |             0.004 |             0.02  |               0.011 |               0     |
-| method & naturalness_elo            |             0.002 |              0.006 |                0.004 |                0.005 |            0.008 |            0.008 |             0.007 |             0     |               0.004 |               0.007 |
-| method & oe_surprisingness          |             0.002 |              0.003 |                0.002 |                0.002 |            0.001 |            0.002 |             0.004 |             0.015 |               0     |               0.005 |
-| behavior_id & n_rows                |             0     |              0     |                0     |                0     |            0     |            0     |             0     |             0.029 |               0.001 |               0.002 |
-| naturalness_elo & oe_surprisingness |             0.002 |              0.002 |                0.003 |                0.009 |            0.004 |            0.004 |             0.005 |             0     |               0     |               0.003 |
-| method & mc_surprisingness          |             0     |              0.001 |                0     |                0     |            0.001 |            0.001 |             0.001 |             0.003 |               0.005 |               0     |
-| n_rows & naturalness_elo            |             0.001 |              0.001 |                0.001 |                0     |            0     |            0.001 |             0.001 |             0     |               0.002 |               0.002 |
-| n_rows                              |             0     |              0     |                0     |                0     |            0     |            0     |             0     |             0.002 |               0.003 |               0.002 |
+| term                            | qwen3_1_7b_opus   | qwen3_1_7b_gemma   | llama_3_2_1b_gemma   | llama_3_2_3b_gemma   | qwen3_4b_gemma   | qwen3_8b_gemma   | qwen3_14b_gemma   | naturalness_elo   | oe_surprisingness   | mc_surprisingness   |
+|:--------------------------------|:------------------|:-------------------|:---------------------|:---------------------|:-----------------|:-----------------|:------------------|:------------------|:--------------------|:--------------------|
+| behavior_id & method            | 0.293             | 0.174              | 0.301                | 0.309                | 0.297            | 0.306            | 0.289             | 0.175             | 0.236               | 0.197               |
+| behavior_id                     | 0.358             | 0.531              | 0.318                | 0.160                | 0.252            | 0.189            | 0.132             | -0.004            | 0.256               | 0.192               |
+| method                          | 0.107             | 0.054              | 0.125                | 0.233                | 0.125            | 0.141            | 0.230             | 0.543             | 0.280               | 0.236               |
+| oe_surprisingness               | 0.175             | 0.099              | 0.170                | 0.240                | 0.199            | 0.238            | 0.239             | 0.133             | n/a                 | 0.368               |
+| naturalness_elo                 | 0.130             | 0.133              | 0.140                | 0.139                | 0.192            | 0.195            | 0.179             | n/a               | 0.082               | 0.017               |
+| mc_surprisingness               | -0.001            | 0.006              | 0.002                | 0.013                | 0.001            | 0.002            | 0.005             | 0.033             | 0.189               | n/a                 |
+| behavior_id & mc_surprisingness | 0.014             | 0.025              | 0.006                | 0.002                | 0.017            | 0.013            | 0.014             | 0.026             | -0.021              | n/a                 |
+| method & naturalness_elo        | -0.009            | 0.004              | -0.003               | 0.004                | 0.018            | 0.014            | 0.013             | n/a               | 0.014               | 0.018               |
+| behavior_id & n_rows            | n/a               | n/a                | n/a                  | -0.001               | n/a              | n/a              | n/a               | 0.032             | 0.001               | -0.005              |
+| method & mc_surprisingness      | -0.003            | -0.001             | 0.001                | -0.000               | 0.006            | 0.005            | 0.004             | 0.018             | 0.020               | n/a                 |
+| method & oe_surprisingness      | -0.016            | -0.010             | 0.004                | 0.007                | 0.001            | 0.002            | 0.015             | 0.023             | n/a                 | 0.008               |
+| n_rows                          | -0.000            | -0.000             | 0.000                | 0.001                | 0.000            | 0.000            | 0.000             | 0.005             | 0.007               | 0.001               |
+| method & n_rows                 | n/a               | n/a                | n/a                  | n/a                  | n/a              | n/a              | n/a               | -0.000            | 0.000               | -0.001              |
+| n_rows & oe_surprisingness      | n/a               | n/a                | n/a                  | n/a                  | n/a              | n/a              | n/a               | 0.000             | n/a                 | -0.003              |
+| n_rows & mc_surprisingness      | n/a               | n/a                | n/a                  | n/a                  | n/a              | n/a              | n/a               | 0.000             | -0.003              | n/a                 |
+| behavior_id & oe_surprisingness | 0.016             | 0.044              | -0.005               | -0.013               | -0.002           | -0.015           | -0.043            | 0.016             | n/a                 | -0.030              |
+
+`n/a`: the term is not in that model (the outcome is not used as its own covariate, or the pair was not among the 10 interactions the EBM selected).
 
 ![fanova](fanova_term_shares.png)
 
-## Classical ANOVA tables
+## Classical ANOVA tables (Type II, nested-model SS)
 
 ### qwen3_1_7b_opus
 
-|                    |   sum_sq |   df |       F |    PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|--------:|----------:|---------------:|-------:|
-| behavior_id        |  76.1878 |   17 | 1428.77 | 0         |         0.7794 | 0.2256 |
-| method             |  14.3359 |    3 | 1523.45 | 3.56e-301 |         0.3994 | 0.0425 |
-| behavior_id:method | 225.613  |   51 | 1410.33 | 0         |         0.9128 | 0.6681 |
-| Residual           |  21.5586 | 6873 |  nan    |           |         0.5    | 0.0638 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 90.762   | 17   | 1701.4 | <1e-300  | 0.344  | 0.808          |
+| method             | 72.322   | 3    | 7682.7 | <1e-300  | 0.274  | 0.770          |
+| behavior_id:method | 88.467   | 20   | 1409.7 | <1e-300  | 0.335  | 0.804          |
+| Residual           | 21.551   | 6868 |        |          | 0.082  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 45.340   | 6    | 2048.3 | <1e-300  | 0.214  | 0.709          |
+| method             | 77.232   | 3    | 6977.9 | <1e-300  | 0.365  | 0.806          |
+| behavior_id:method | 82.787   | 18   | 1246.6 | <1e-300  | 0.391  | 0.817          |
+| Residual           | 18.602   | 5042 |        |          | 0.088  |                |
 
 ### qwen3_1_7b_gemma
 
-|                    |   sum_sq |   df |        F |    PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|---------:|----------:|---------------:|-------:|
-| behavior_id        |  38.1008 |   17 |  405.75  | 1.13e-242 |         0.5009 | 0.12   |
-| method             |  92.0459 |    3 | 5554.65  | 0         |         0.708  | 0.2898 |
-| behavior_id:method | 149.515  |   51 |  530.747 | 0         |         0.7975 | 0.4707 |
-| Residual           |  37.9641 | 6873 |  nan     |           |         0.5    | 0.1195 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 120.975  | 17   | 1287.8 | <1e-300  | 0.481  | 0.761          |
+| method             | 43.840   | 3    | 2644.5 | <1e-300  | 0.174  | 0.536          |
+| behavior_id:method | 58.627   | 20   | 530.5  | <1e-300  | 0.233  | 0.607          |
+| Residual           | 37.952   | 6868 |        |          | 0.151  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 64.499   | 6    | 1692.6 | <1e-300  | 0.351  | 0.668          |
+| method             | 40.487   | 3    | 2125.0 | <1e-300  | 0.220  | 0.558          |
+| behavior_id:method | 57.997   | 18   | 507.3  | <1e-300  | 0.316  | 0.644          |
+| Residual           | 32.021   | 5042 |        |          | 0.174  |                |
 
 ### llama_3_2_1b_gemma
 
-|                    |   sum_sq |   df |        F |   PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|---------:|---------:|---------------:|-------:|
-| behavior_id        |  94.4055 |   17 |  1450.12 |        0 |         0.782  | 0.1791 |
-| method             | 183.728  |    3 | 15992.2  |        0 |         0.8747 | 0.3485 |
-| behavior_id:method | 222.743  |   51 |  1140.48 |        0 |         0.8943 | 0.4225 |
-| Residual           |  26.3203 | 6873 |   nan    |          |         0.5    | 0.0499 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 79.192   | 17   | 1215.9 | <1e-300  | 0.307  | 0.751          |
+| method             | 74.028   | 3    | 6440.9 | <1e-300  | 0.287  | 0.738          |
+| behavior_id:method | 87.298   | 20   | 1139.3 | <1e-300  | 0.338  | 0.768          |
+| Residual           | 26.312   | 6868 |        |          | 0.102  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 42.690   | 6    | 1683.9 | <1e-300  | 0.202  | 0.667          |
+| method             | 75.281   | 3    | 5938.8 | <1e-300  | 0.357  | 0.779          |
+| behavior_id:method | 84.008   | 18   | 1104.6 | <1e-300  | 0.398  | 0.798          |
+| Residual           | 21.304   | 5042 |        |          | 0.101  |                |
 
 ### llama_3_2_3b_gemma
 
-|                    |   sum_sq |   df |        F |   PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|---------:|---------:|---------------:|-------:|
-| behavior_id        | 116.597  |   17 |  1644.5  |        0 |         0.8027 | 0.2223 |
-| method             | 152.164  |    3 | 12161.5  |        0 |         0.8415 | 0.2901 |
-| behavior_id:method | 227.112  |   51 |  1067.74 |        0 |         0.8879 | 0.433  |
-| Residual           |  28.6649 | 6873 |   nan    |          |         0.5    | 0.0546 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 47.978   | 17   | 676.7  | <1e-300  | 0.168  | 0.626          |
+| method             | 118.309  | 3    | 9455.4 | <1e-300  | 0.415  | 0.805          |
+| behavior_id:method | 89.005   | 20   | 1067.0 | <1e-300  | 0.312  | 0.757          |
+| Residual           | 28.645   | 6868 |        |          | 0.100  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 23.428   | 6    | 830.4  | <1e-300  | 0.096  | 0.497          |
+| method             | 123.112  | 3    | 8726.9 | <1e-300  | 0.504  | 0.839          |
+| behavior_id:method | 81.884   | 18   | 967.4  | <1e-300  | 0.335  | 0.775          |
+| Residual           | 23.709   | 5042 |        |          | 0.097  |                |
 
 ### qwen3_4b_gemma
 
-|                    |   sum_sq |   df |         F |   PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|----------:|---------:|---------------:|-------:|
-| behavior_id        |  51.8627 |   17 |   638.781 |        0 |         0.6124 | 0.1119 |
-| method             | 176.083  |    3 | 12289.7   |        0 |         0.8429 | 0.38   |
-| behavior_id:method | 202.657  |   51 |   832.026 |        0 |         0.8606 | 0.4373 |
-| Residual           |  32.8247 | 6873 |   nan     |          |         0.5    | 0.0708 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 51.736   | 17   | 637.5  | <1e-300  | 0.218  | 0.612          |
+| method             | 70.327   | 3    | 4910.5 | <1e-300  | 0.296  | 0.682          |
+| behavior_id:method | 79.468   | 20   | 832.3  | <1e-300  | 0.335  | 0.708          |
+| Residual           | 32.787   | 6868 |        |          | 0.138  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 28.156   | 6    | 907.3  | <1e-300  | 0.143  | 0.519          |
+| method             | 69.829   | 3    | 4500.4 | <1e-300  | 0.354  | 0.728          |
+| behavior_id:method | 76.534   | 18   | 822.1  | <1e-300  | 0.388  | 0.746          |
+| Residual           | 26.078   | 5042 |        |          | 0.132  |                |
 
 ### qwen3_8b_gemma
 
-|                    |   sum_sq |   df |         F |    PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|----------:|----------:|---------------:|-------:|
-| behavior_id        |  29.6618 |   17 |   370.276 | 6.27e-223 |         0.478  | 0.0585 |
-| method             | 187.238  |    3 | 13244.9   | 0         |         0.8525 | 0.3693 |
-| behavior_id:method | 257.733  |   51 |  1072.45  | 0         |         0.8884 | 0.5083 |
-| Residual           |  32.387  | 6873 |   nan     |           |         0.5    | 0.0639 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 49.273   | 17   | 615.3  | <1e-300  | 0.176  | 0.604          |
+| method             | 93.600   | 3    | 6623.6 | <1e-300  | 0.334  | 0.743          |
+| behavior_id:method | 101.066  | 20   | 1072.8 | <1e-300  | 0.361  | 0.758          |
+| Residual           | 32.351   | 6868 |        |          | 0.116  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 24.304   | 6    | 835.0  | <1e-300  | 0.102  | 0.498          |
+| method             | 96.698   | 3    | 6644.1 | <1e-300  | 0.406  | 0.798          |
+| behavior_id:method | 95.313   | 18   | 1091.5 | <1e-300  | 0.400  | 0.796          |
+| Residual           | 24.461   | 5042 |        |          | 0.103  |                |
 
 ### qwen3_14b_gemma
 
-|                    |   sum_sq |   df |         F |   PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|----------:|---------:|---------------:|-------:|
-| behavior_id        |  45.6147 |   17 |   593.941 |        0 |         0.595  | 0.0775 |
-| method             | 288.954  |    3 | 21320.4   |        0 |         0.903  | 0.4912 |
-| behavior_id:method | 222.678  |   51 |   966.485 |        0 |         0.8776 | 0.3785 |
-| Residual           |  31.0498 | 6873 |   nan     |          |         0.5    | 0.0528 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 36.939   | 17   | 481.4  | <1e-300  | 0.135  | 0.544          |
+| method             | 110.579  | 3    | 8166.4 | <1e-300  | 0.404  | 0.781          |
+| behavior_id:method | 87.279   | 20   | 966.9  | <1e-300  | 0.318  | 0.738          |
+| Residual           | 30.999   | 6868 |        |          | 0.113  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 15.543   | 6    | 541.3  | <1e-300  | 0.066  | 0.392          |
+| method             | 111.411  | 3    | 7760.7 | <1e-300  | 0.474  | 0.822          |
+| behavior_id:method | 81.898   | 18   | 950.8  | <1e-300  | 0.348  | 0.772          |
+| Residual           | 24.127   | 5042 |        |          | 0.103  |                |
 
 ### naturalness_elo
 
-|                    |      sum_sq |   df |        F |   PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|------------:|-----:|---------:|---------:|---------------:|-------:|
-| behavior_id        | 2.68146e+07 |   17 |  62.7514 | 5.09e-40 |         0.1344 | 0.0826 |
-| method             | 1.47876e+07 |    3 | 196.101  | 5.93e-44 |         0.0788 | 0.0456 |
-| behavior_id:method | 1.10112e+08 |   51 |  85.8945 | 0        |         0.3893 | 0.3394 |
-| Residual           | 1.72761e+08 | 6873 | nan      |          |         0.5    | 0.5324 |
+**All 18 behaviors**
+
+| effect             | sum_sq        | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:--------------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 14146494.373  | 17   | 33.1   | 3.2e-104 | 0.045  | 0.076          |
+| method             | 92914011.951  | 3    | 1232.3 | <1e-300  | 0.296  | 0.350          |
+| behavior_id:method | 43186117.458  | 20   | 85.9   | <1e-300  | 0.137  | 0.200          |
+| Residual           | 172610044.501 | 6868 |        |          | 0.549  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq       | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:-------------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 3676657.576  | 6    | 33.5   | 6.9e-40  | 0.018  | 0.038          |
+| method             | 70149981.265 | 3    | 1279.5 | <1e-300  | 0.339  | 0.432          |
+| behavior_id:method | 39909254.420 | 18   | 121.3  | <1e-300  | 0.193  | 0.302          |
+| Residual           | 92141428.758 | 5042 |        |          | 0.445  |                |
 
 ### oe_surprisingness
 
-|                    |   sum_sq |   df |        F |    PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|---------:|----------:|---------------:|-------:|
-| behavior_id        |  80.3845 |   17 |  178.661 | 1.52e-111 |         0.3066 | 0.111  |
-| method             | 157.475  |    3 | 1983.33  | 0         |         0.4642 | 0.2174 |
-| behavior_id:method | 304.859  |   51 |  225.857 | 0         |         0.6265 | 0.4208 |
-| Residual           | 181.771  | 6868 |  nan     |           |         0.5    | 0.2509 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 104.292  | 17   | 231.8  | <1e-300  | 0.168  | 0.365          |
+| method             | 173.218  | 3    | 2181.6 | <1e-300  | 0.279  | 0.488          |
+| behavior_id:method | 119.553  | 20   | 225.9  | <1e-300  | 0.193  | 0.397          |
+| Residual           | 181.771  | 6868 |        |          | 0.293  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F      | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:-------|:---------|:-------|:---------------|
+| behavior_id        | 84.069   | 6    | 469.8  | <1e-300  | 0.147  | 0.359          |
+| method             | 181.896  | 3    | 2032.9 | <1e-300  | 0.319  | 0.547          |
+| behavior_id:method | 105.634  | 18   | 196.8  | <1e-300  | 0.185  | 0.413          |
+| Residual           | 150.380  | 5042 |        |          | 0.263  |                |
 
 ### mc_surprisingness
 
-|                    |   sum_sq |   df |       F |   PR(>F) |   eta2_partial |   eta2 |
-|:-------------------|---------:|-----:|--------:|---------:|---------------:|-------:|
-| behavior_id        | 249.02   |   17 | 177.471 | 7.9e-111 |         0.3051 | 0.1915 |
-| method             |  29.9672 |    3 | 121.023 | 6.45e-28 |         0.0502 | 0.023  |
-| behavior_id:method | 454.189  |   51 | 107.897 | 0        |         0.4447 | 0.3493 |
-| Residual           | 567.207  | 6872 | nan     |          |         0.5    | 0.4362 |
+**All 18 behaviors**
+
+| effect             | sum_sq   | df   | F     | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:------|:---------|:-------|:---------------|
+| behavior_id        | 121.380  | 17   | 86.5  | 2.9e-273 | 0.110  | 0.176          |
+| method             | 206.430  | 3    | 833.4 | <1e-300  | 0.188  | 0.267          |
+| behavior_id:method | 177.991  | 20   | 107.8 | <1e-300  | 0.162  | 0.239          |
+| Residual           | 567.068  | 6868 |       |          | 0.516  |                |
+
+**7 behaviors with all 4 methods**
+
+| effect             | sum_sq   | df   | F     | PR(>F)   | eta2   | eta2_partial   |
+|:-------------------|:---------|:-----|:------|:---------|:-------|:---------------|
+| behavior_id        | 47.739   | 6    | 104.3 | 3.4e-124 | 0.063  | 0.110          |
+| method             | 167.386  | 3    | 731.2 | <1e-300  | 0.222  | 0.303          |
+| behavior_id:method | 158.591  | 18   | 115.5 | <1e-300  | 0.211  | 0.292          |
+| Residual           | 384.727  | 5042 |       |          | 0.511  |                |
