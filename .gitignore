@@ -1,3 +1,4 @@
 __pycache__/
 *.pyc
 results/layer_dup/run_queue.log
+results/icl_vs_ft/icl_queue.log
