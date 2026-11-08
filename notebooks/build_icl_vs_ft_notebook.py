@@ -78,6 +78,7 @@ DRIVE_DIR      = "MyDrive/dsse_icl_vs_ft"  # Ordner in Drive; bei Freigabe an ei
 N_SHARDS       = int(os.environ.get("N_SHARDS", __N_SHARDS__))   # Anzahl paralleler Sitzungen
 SHARD_ID       = int(os.environ.get("SHARD_ID", __SHARD_ID__))   # diese Sitzung: 0 bis N_SHARDS-1
 ANALYSIS_ONLY  = __ANALYSIS_ONLY__                # True nur im Auswertungs-Notebook
+HELPER         = __HELPER__                       # True: Helfer, übernimmt offene Läufe aller Sitzungen
 
 if os.environ.get("TEST_MODE"):          # nur für einen schnellen Funktionstest, nicht für echte Ergebnisse
     DATASET_SET, ICL_SEEDS, N_EVAL, N_INDOMAIN, MAX_NEW_TOKENS = "test2", [0], 3, 2, 24
@@ -152,8 +153,12 @@ _pool = [r["prompt"] for d, v in sorted(DSETS.items()) if GROUP[d] == "middle" f
 INDOMAIN_POOL = random.Random(0).sample(_pool, 400)
 MY_STUDY = STUDY[SHARD_ID::N_SHARDS]
 MY_CURVES = [d for i, d in enumerate(CURVE_DATASETS) if N_SHARDS == 1 or (N_SHARDS - 1 - i) % N_SHARDS == SHARD_ID]
-print(len(STUDY), "Studien-Datensätze" + ("" if ANALYSIS_ONLY else f"; diese Sitzung ({SHARD_ID + 1} von {N_SHARDS}): "
-      f"{len(MY_STUDY)} Datensätze, Lernkurven: {MY_CURVES or 'keine'}"))
+if HELPER:   # von hinten, mit zufälligem Startpunkt: kreuzt sich kaum mit den Sitzungen, die vorne anfangen
+    _off = int.from_bytes(os.urandom(2), "big") % len(STUDY)
+    MY_STUDY = list(reversed(STUDY))[_off:] + list(reversed(STUDY))[:_off]
+    MY_CURVES = list(reversed(CURVE_DATASETS))
+print(len(STUDY), "Studien-Datensätze" + ("" if ANALYSIS_ONLY else "; Helfer: übernimmt offene Läufe aller Sitzungen" if HELPER
+      else f"; diese Sitzung ({SHARD_ID + 1} von {N_SHARDS}): {len(MY_STUDY)} Datensätze, Lernkurven: {MY_CURVES or 'keine'}"))
 """)
 
 role("helpers")
@@ -281,6 +286,38 @@ def save_run(tag, payload):
 
 def done(tag):
     return (RUNS / f"{tag}.json").exists()
+
+LOCK_TTL = 15 * 60   # Sekunden; ältere Sperren stammen von abgebrochenen Sitzungen und gelten als frei
+
+def locked(tag):
+    p = RUNS / f"{tag}.lock"
+    try:
+        return time.time() - p.stat().st_mtime < LOCK_TTL
+    except FileNotFoundError:
+        return False
+
+def work(units, label):
+    # units: (tag, ist_fertig, ausführen). Jeder Lauf wird vor dem Start gesperrt, damit parallele Sitzungen ihn nicht
+    # doppelt rechnen. Sind alle offenen Läufe gesperrt, wartet die Sitzung, bis sie fertig oder die Sperren abgelaufen sind.
+    t0, n_total = time.time(), len(units)
+    while True:
+        pending = [u for u in units if not u[1]()]
+        if not pending:
+            break
+        free = [u for u in pending if not locked(u[0])]
+        if not free:
+            print(f"  {len(pending)} offene Läufe rechnet gerade eine andere Sitzung; warte 30 s"); time.sleep(30); continue
+        tag, _, fn = free[0]
+        lp = RUNS / f"{tag}.lock"
+        lp.write_text(f"{os.uname().nodename} {time.time():.0f}")
+        try:
+            fn()
+        finally:
+            try:
+                lp.unlink()
+            except FileNotFoundError:
+                pass
+        print(f"--- {label}: {n_total - len(pending) + 1}/{n_total} erledigt, {(time.time() - t0) / 60:.1f} min")
 """)
 
 role("lora")
@@ -377,11 +414,9 @@ def run_icl(model, dataset_id, k, seed, with_indomain):
     print(f"{tag}: wrong {s['wrong']:.2f}  le2 {s['le2']:.2f}  answer_first {s['answer_first']:.2f}  ({time.time() - t0:.0f}s)")
 
 if RUN_PHASES["icl"]:
-    t_phase = time.time()
-    for n, d in enumerate(MY_STUDY):
-        for seed in ICL_SEEDS:
-            run_icl(model, d, K_MAIN, seed, with_indomain=(seed == ICL_SEEDS[0]))
-        print(f"--- {n + 1}/{len(MY_STUDY)} Datensätze, {(time.time() - t_phase) / 60:.1f} min")
+    work([(f"icl__{d}__k{K_MAIN}__s{seed}", (lambda t=f"icl__{d}__k{K_MAIN}__s{seed}": done(t)),
+           (lambda d=d, seed=seed: run_icl(model, d, K_MAIN, seed, with_indomain=(seed == ICL_SEEDS[0]))))
+          for d in MY_STUDY for seed in ICL_SEEDS], "Kontext")
 """)
 
 role("phaseC")
@@ -403,34 +438,31 @@ def run_ft(dataset_id):
     model = m  # wird beim nächsten Lauf ersetzt
 
 if RUN_PHASES["ft"]:
-    t_phase = time.time()
-    for n, d in enumerate(MY_STUDY):
-        run_ft(d)
-        print(f"--- {n + 1}/{len(MY_STUDY)} Datensätze, {(time.time() - t_phase) / 60:.1f} min")
+    work([(f"ft__{d}", (lambda t=f"ft__{d}": done(t)), (lambda d=d: run_ft(d))) for d in MY_STUDY], "Finetuning")
 """)
 
 role("phaseD")
 md("## Phase D: Lernkurven (Korrelat 2)")
 code(r"""
+def run_ftcurve(d):
+    global model
+    def on_ck(m, step):
+        tag = f"ftcurve__{d}__step{step}"
+        if done(tag):
+            return
+        s, rr = math_metrics(generate(m, [chat([{"role": "user", "content": e["prompt"]}]) for e in EVAL]))
+        save_run(tag, dict(route="ftcurve", dataset_id=d, step=step, summary=s, rows=rr))
+        print(f"{tag}: wrong {s['wrong']:.2f}  le2 {s['le2']:.2f}")
+    del model; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
+    model, _ = train_lora(load_model(), DSETS[d]["rows"], on_checkpoint=on_ck, checkpoints=set(FT_CHECKPOINTS))
+
 if RUN_PHASES["curves"] and MY_CURVES:
     del model; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
     model = load_model()
-    for d in MY_CURVES:
-        for k in K_CURVE:
-            if k:
-                run_icl(model, d, k, 0, with_indomain=False)
-    for d in MY_CURVES:
-        if all(done(f"ftcurve__{d}__step{c}") for c in FT_CHECKPOINTS):
-            continue
-        def on_ck(m, step, d=d):
-            tag = f"ftcurve__{d}__step{step}"
-            if done(tag):
-                return
-            s, rr = math_metrics(generate(m, [chat([{"role": "user", "content": e["prompt"]}]) for e in EVAL]))
-            save_run(tag, dict(route="ftcurve", dataset_id=d, step=step, summary=s, rows=rr))
-            print(f"{tag}: wrong {s['wrong']:.2f}  le2 {s['le2']:.2f}")
-        del model; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
-        model, _ = train_lora(load_model(), DSETS[d]["rows"], on_checkpoint=on_ck, checkpoints=set(FT_CHECKPOINTS))
+    work([(f"icl__{d}__k{k}__s0", (lambda t=f"icl__{d}__k{k}__s0": done(t)), (lambda d=d, k=k: run_icl(model, d, k, 0, with_indomain=False)))
+          for d in MY_CURVES for k in K_CURVE if k], "Lernkurven Kontext")
+    work([(f"ftcurve__{d}", (lambda d=d: all(done(f"ftcurve__{d}__step{c}") for c in FT_CHECKPOINTS)), (lambda d=d: run_ftcurve(d)))
+          for d in MY_CURVES], "Lernkurven Finetuning")
 """)
 
 role("analysis")
@@ -650,11 +682,11 @@ Tests, Urteil und Abbildungen; am Ende wird ein ZIP mit allem heruntergeladen.
 *Laufzeit → Alle ausführen → Drive-Zugriff erlauben.*
 """
 
-def render(cells, n_shards, shard_id, analysis_only=False):
+def render(cells, n_shards, shard_id, analysis_only=False, helper=False):
     nb = nbf.v4.new_notebook()
     out = []
     for kind, _, src in cells:
-        src = src.replace("__N_SHARDS__", str(n_shards)).replace("__SHARD_ID__", str(shard_id)).replace("__ANALYSIS_ONLY__", str(analysis_only))
+        src = src.replace("__N_SHARDS__", str(n_shards)).replace("__SHARD_ID__", str(shard_id)).replace("__ANALYSIS_ONLY__", str(analysis_only)).replace("__HELPER__", str(helper))
         out.append(nbf.v4.new_markdown_cell(src) if kind == "md" else nbf.v4.new_code_cell(src))
     nb["cells"] = out
     nb["metadata"] = {"accelerator": "GPU", "colab": {"gpuType": "A100", "provenance": []},
@@ -664,6 +696,14 @@ def render(cells, n_shards, shard_id, analysis_only=False):
 nbf.write(render(CELLS, 1, 0), OUT / "icl_vs_ft_a100.ipynb")
 for k in range(6):
     nbf.write(render([("md", "banner", banner_shard(k))] + CELLS, 6, k), OUT / f"icl_vs_ft_a100_shard{k}.ipynb")
+BANNER_HELPER = f"""
+> ## Helfer-Sitzung
+> Für jede A100, die frei geworden ist. Übernimmt offene Läufe **aller** Sitzungen, von hinten beginnend, und rechnet
+> nichts doppelt: Jeder Lauf wird vor dem Start im gemeinsamen Ordner gesperrt. Beliebig viele Helfer gleichzeitig möglich,
+> in beiden Konten. Endet von selbst, wenn nichts mehr offen ist, und zeigt dann das Gesamtergebnis.
+> *Laufzeittyp A100 GPU → Alle ausführen → Drive-Zugriff erlauben.*
+"""
+nbf.write(render([("md", "banner", BANNER_HELPER)] + CELLS, 1, 0, helper=True), OUT / "icl_vs_ft_a100_helper.ipynb")
 keep = {"pip", "config", "storage", "data", "analysis", "zip"}
 analysis_cells = [("md", "banner", BANNER_ANALYSIS)] + [c for c in CELLS if c[1] in keep]
 nb = render(analysis_cells, 1, 0, analysis_only=True)
