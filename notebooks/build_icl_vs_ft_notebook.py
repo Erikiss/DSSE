@@ -1,10 +1,17 @@
-"""Builds notebooks/icl_vs_ft_a100.ipynb (run: python notebooks/build_icl_vs_ft_notebook.py)."""
+"""Builds the Colab notebooks in notebooks/ (run: python notebooks/build_icl_vs_ft_notebook.py).
+
+icl_vs_ft_a100.ipynb            all work in one session
+icl_vs_ft_a100_shard{0..5}.ipynb the same work split over 6 parallel sessions
+icl_vs_ft_analysis.ipynb         merges all results (incl. ZIPs from a second account) and evaluates them
+"""
 import nbformat as nbf
 from pathlib import Path
 
-cells = []
-md = lambda s: cells.append(nbf.v4.new_markdown_cell(s.strip("\n")))
-code = lambda s: cells.append(nbf.v4.new_code_cell(s.strip("\n")))
+CELLS = []
+_role = ["intro"]
+def role(r): _role[0] = r
+def md(s): CELLS.append(("md", _role[0], s.strip("\n")))
+def code(s): CELLS.append(("code", _role[0], s.strip("\n")))
 
 md(r"""
 # KV-Cache gegen Gewichte: der volle Korrelat-Test auf DSSE `incorrect_answer`
@@ -36,11 +43,13 @@ einmal nach dem Zugriff auf Drive; den bitte erlauben.
 Repository: `erikiss/dsse`, Branch `ccr-6fe02b21-est040` (Hintergrund in `research/DOSSIER_deep_research.md`).
 """)
 
+role("pip")
 code(r"""
 # Pakete. Torch mit CUDA ist in Colab vorinstalliert.
 !pip -q install "transformers>=4.51" "peft>=0.13" scipy pandas matplotlib
 """)
 
+role("config")
 md("## Konfiguration")
 code(r"""
 import os, json, re, time, random, lzma, urllib.request, gc, math
@@ -62,6 +71,9 @@ FT_MAX_STEPS   = None                    # None = volle 2 Epochen
 RUN_PHASES     = dict(base=True, icl=True, ft=True, curves=True)
 KV_TOKEN_BUDGET = "auto"                 # Tokens im KV-Cache pro Batch; "auto" = aus dem GPU-Speicher berechnet
 USE_DRIVE      = True                    # Ergebnisse in Google Drive (überstehen Abbrüche und neue Laufzeiten)
+N_SHARDS       = int(os.environ.get("N_SHARDS", __N_SHARDS__))   # Anzahl paralleler Sitzungen
+SHARD_ID       = int(os.environ.get("SHARD_ID", __SHARD_ID__))   # diese Sitzung: 0 bis N_SHARDS-1
+ANALYSIS_ONLY  = __ANALYSIS_ONLY__                # True nur im Auswertungs-Notebook
 
 if os.environ.get("TEST_MODE"):          # nur für einen schnellen Funktionstest, nicht für echte Ergebnisse
     DATASET_SET, ICL_SEEDS, N_EVAL, N_INDOMAIN, MAX_NEW_TOKENS = "test2", [0], 3, 2, 24
@@ -78,6 +90,7 @@ if DEVICE == "cpu" and not os.environ.get("TEST_MODE"):
     print("WARNUNG: keine GPU. Bitte Laufzeittyp auf A100 GPU stellen.")
 """)
 
+role("storage")
 code(r"""
 # Ablageort
 try:
@@ -95,6 +108,7 @@ for p in (DATA, RUNS, FIGS):
 print("Ergebnisse in", ROOT)
 """)
 
+role("data")
 md("## Daten: DSSE von Hugging Face, GSM8K-Lösungen von GitHub")
 code(r"""
 HF = "https://huggingface.co/datasets/Transluce/DSSE/resolve/main/"
@@ -131,9 +145,13 @@ GROUP = {d: ("top" if d in TOP16 else "bottom" if d in BOTTOM16 else "middle") f
 # Ratgeber-Prompts für Korrelat 3: aus Datensätzen, die nicht zur Top/Bottom-Gruppe gehören
 _pool = [r["prompt"] for d, v in sorted(DSETS.items()) if GROUP[d] == "middle" for r in v["rows"]]
 INDOMAIN_POOL = random.Random(0).sample(_pool, 400)
-print(len(STUDY), "Studien-Datensätze")
+MY_STUDY = STUDY[SHARD_ID::N_SHARDS]
+MY_CURVES = [d for i, d in enumerate(CURVE_DATASETS) if N_SHARDS == 1 or (N_SHARDS - 1 - i) % N_SHARDS == SHARD_ID]
+print(len(STUDY), "Studien-Datensätze" + ("" if ANALYSIS_ONLY else f"; diese Sitzung ({SHARD_ID + 1} von {N_SHARDS}): "
+      f"{len(MY_STUDY)} Datensätze, Lernkurven: {MY_CURVES or 'keine'}"))
 """)
 
+role("helpers")
 md("## Hilfsfunktionen: Modell, Prompts, Judge, Generierung, LoRA-Training")
 code(r"""
 import transformers
@@ -240,12 +258,15 @@ def indomain_prompts(dataset_id):
     return [p for p in INDOMAIN_POOL if p not in own][:N_INDOMAIN]
 
 def save_run(tag, payload):
-    json.dump(payload, open(RUNS / f"{tag}.json", "w"), ensure_ascii=False)
+    tmp = RUNS / f"{tag}.tmp"      # erst vollständig schreiben, dann umbenennen: keine halben Dateien nach Abbrüchen
+    json.dump(payload, open(tmp, "w"), ensure_ascii=False)
+    tmp.replace(RUNS / f"{tag}.json")
 
 def done(tag):
     return (RUNS / f"{tag}.json").exists()
 """)
 
+role("lora")
 code(r"""
 from peft import LoraConfig, get_peft_model
 
@@ -304,6 +325,7 @@ def train_lora(model, rows, on_checkpoint=None, checkpoints=()):
     return model, losses
 """)
 
+role("phaseA")
 md("## Phase A: Referenz ohne Kontext und ohne Finetuning")
 code(r"""
 model = load_model()
@@ -315,6 +337,7 @@ if RUN_PHASES["base"] and not done("base"):
 print("Basis:", json.load(open(RUNS / "base.json"))["summary"], f"({time.time() - t0:.0f}s)")
 """)
 
+role("phaseB")
 md("## Phase B: Kontextweg (Korrelat 1)")
 code(r"""
 def run_icl(model, dataset_id, k, seed, with_indomain):
@@ -334,12 +357,13 @@ def run_icl(model, dataset_id, k, seed, with_indomain):
 
 if RUN_PHASES["icl"]:
     t_phase = time.time()
-    for n, d in enumerate(STUDY):
+    for n, d in enumerate(MY_STUDY):
         for seed in ICL_SEEDS:
             run_icl(model, d, K_MAIN, seed, with_indomain=(seed == ICL_SEEDS[0]))
-        print(f"--- {n + 1}/{len(STUDY)} Datensätze, {(time.time() - t_phase) / 60:.1f} min")
+        print(f"--- {n + 1}/{len(MY_STUDY)} Datensätze, {(time.time() - t_phase) / 60:.1f} min")
 """)
 
+role("phaseC")
 md("## Phase C: Gewichtsweg (Korrelat 1)")
 code(r"""
 def run_ft(dataset_id):
@@ -359,21 +383,22 @@ def run_ft(dataset_id):
 
 if RUN_PHASES["ft"]:
     t_phase = time.time()
-    for n, d in enumerate(STUDY):
+    for n, d in enumerate(MY_STUDY):
         run_ft(d)
-        print(f"--- {n + 1}/{len(STUDY)} Datensätze, {(time.time() - t_phase) / 60:.1f} min")
+        print(f"--- {n + 1}/{len(MY_STUDY)} Datensätze, {(time.time() - t_phase) / 60:.1f} min")
 """)
 
+role("phaseD")
 md("## Phase D: Lernkurven (Korrelat 2)")
 code(r"""
-if RUN_PHASES["curves"]:
+if RUN_PHASES["curves"] and MY_CURVES:
     del model; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
     model = load_model()
-    for d in CURVE_DATASETS:
+    for d in MY_CURVES:
         for k in K_CURVE:
             if k:
                 run_icl(model, d, k, 0, with_indomain=False)
-    for d in CURVE_DATASETS:
+    for d in MY_CURVES:
         if all(done(f"ftcurve__{d}__step{c}") for c in FT_CHECKPOINTS):
             continue
         def on_ck(m, step, d=d):
@@ -387,12 +412,33 @@ if RUN_PHASES["curves"]:
         model, _ = train_lora(load_model(), DSETS[d]["rows"], on_checkpoint=on_ck, checkpoints=set(FT_CHECKPOINTS))
 """)
 
+role("analysis")
 md("## Phase E: Auswertung")
 code(r"""
 from scipy import stats
 import matplotlib.pyplot as plt
+import zipfile
 
-runs = [json.load(open(p)) for p in sorted(RUNS.glob("*.json"))]
+# Ergebnisse anderer Sitzungen übernehmen: ZIP-Dateien in <Drive>/dsse_icl_vs_ft/import/ werden entpackt
+IMPORT = ROOT / "import"; IMPORT.mkdir(exist_ok=True)
+n_imp = 0
+for z in sorted(IMPORT.glob("*.zip")):
+    with zipfile.ZipFile(z) as zf:
+        for name in zf.namelist():
+            if name.startswith("runs/") and name.endswith(".json") and not (RUNS / Path(name).name).exists():
+                (RUNS / Path(name).name).write_bytes(zf.read(name)); n_imp += 1
+print(n_imp, "Läufe aus", len(list(IMPORT.glob("*.zip"))), "ZIP-Dateien übernommen;", len(list(RUNS.glob("*.json"))), "Läufe insgesamt")
+expected = 1 + len(STUDY) * (len(ICL_SEEDS) + 1)
+have = (RUNS / "base.json").exists() + sum(1 for p in RUNS.glob("icl__*__k%d__*.json" % K_MAIN) if p.name.split("__")[1] in STUDY) \
+       + sum(1 for p in RUNS.glob("ft__*.json") if p.stem.split("__")[1] in STUDY)
+print("Vollständigkeit Korrelat 1:", have, "von", expected, "Läufen")
+
+runs = []
+for p in sorted(RUNS.glob("*.json")):
+    try:
+        runs.append(json.load(open(p)))
+    except Exception as e:   # z. B. eine Datei, die eine andere Sitzung gerade schreibt
+        print("übersprungen:", p.name, type(e).__name__)
 flat = pd.DataFrame([{**{k: r.get(k) for k in ("route", "dataset_id", "k", "seed", "step")}, **r["summary"]} for r in runs])
 base = flat[flat.route == "base"].iloc[0]
 sc = scores.set_index("dataset_id")
@@ -533,23 +579,71 @@ for ax, (x, y, t) in zip(axes, [("icl_wrong", "ft_wrong", "Korrelat 1: Fehlerquo
 fig.suptitle("grün = Top 16, rot = Bottom 16"); fig.tight_layout(); fig.savefig(FIGS / "korrelat1_streu.png", dpi=150); plt.show()
 """)
 
+role("zip")
 code(r"""
-# Alles einpacken
-import shutil
-zip_path = shutil.make_archive(str(ROOT.parent / "dsse_icl_vs_ft_results"), "zip", ROOT)
+# Ergebnisse dieser Sitzung einpacken und herunterladen
+import zipfile
+zip_path = ROOT.parent / ("dsse_icl_vs_ft_gesamt.zip" if ANALYSIS_ONLY else "dsse_icl_vs_ft_results.zip" if N_SHARDS == 1
+                         else f"dsse_icl_vs_ft_shard{SHARD_ID}.zip")
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+    for p in sorted(RUNS.glob("*.json")) + sorted(FIGS.glob("*.png")) + sorted(ROOT.glob("*.csv")):
+        zf.write(p, p.relative_to(ROOT))
 print("Ergebnisse:", zip_path)
 try:
     from google.colab import files
-    files.download(zip_path)
+    files.download(str(zip_path))
 except Exception:
     pass
+if USE_DRIVE:
+    drive.flush_and_unmount()   # stellt sicher, dass alles in Drive angekommen ist
+    print("Drive synchronisiert.")
 """)
 
-nb = nbf.v4.new_notebook()
-nb["cells"] = cells
-nb["metadata"] = {"accelerator": "GPU", "colab": {"gpuType": "A100", "provenance": []},
-                  "kernelspec": {"display_name": "Python 3", "name": "python3"},
-                  "language_info": {"name": "python"}}
-out = Path(__file__).parent / "icl_vs_ft_a100.ipynb"
-nbf.write(nb, out)
-print("wrote", out)
+
+REPO_LINK = "https://colab.research.google.com/github/Erikiss/DSSE/blob/ccr-6fe02b21-est040/notebooks/"
+OUT = Path(__file__).parent
+
+def banner_shard(k, n=6):
+    acct = "A" if k < 3 else "B"
+    return f"""
+> ## Sitzung {k + 1} von {n} (Konto {acct})
+> Dieses Notebook rechnet nur seinen Teil: Datensätze {k + 1}, {k + 1 + n}, {k + 1 + 2 * n} … der Liste, dazu {"eine Lernkurve" if k >= 2 else "keine Lernkurve"}.
+> Dauer auf einer A100: etwa 20 Minuten. *Laufzeittyp A100 GPU → Alle ausführen → Drive-Zugriff erlauben.*
+>
+> **Am Ende:** Konto A (Sitzungen 1 bis 3) speichert alles im eigenen Drive. Bei Konto B (Sitzungen 4 bis 6) lädt jede
+> Sitzung am Ende eine Datei `dsse_icl_vs_ft_shard3.zip` bis `shard5.zip` herunter. Diese drei Dateien in
+> **Konto A** in den Drive-Ordner `dsse_icl_vs_ft/import/` hochladen und dann das Auswertungs-Notebook in Konto A starten:
+> {REPO_LINK}icl_vs_ft_analysis.ipynb
+>
+> Die Auswertung am Ende dieser Sitzung ist vorläufig, weil sie nur die Läufe dieses Kontos sieht.
+"""
+
+BANNER_ANALYSIS = f"""
+# Auswertung: alle Sitzungen zusammenführen
+
+Läuft ohne GPU (*Laufzeittyp CPU* genügt). Liest alle Läufe aus `dsse_icl_vs_ft/runs/` in diesem Drive und entpackt
+zusätzlich jede ZIP-Datei aus `dsse_icl_vs_ft/import/`, etwa die drei Dateien von Konto B. Danach folgen Tabelle,
+Tests, Urteil und Abbildungen; am Ende wird ein ZIP mit allem heruntergeladen.
+*Laufzeit → Alle ausführen → Drive-Zugriff erlauben.*
+"""
+
+def render(cells, n_shards, shard_id, analysis_only=False):
+    nb = nbf.v4.new_notebook()
+    out = []
+    for kind, _, src in cells:
+        src = src.replace("__N_SHARDS__", str(n_shards)).replace("__SHARD_ID__", str(shard_id)).replace("__ANALYSIS_ONLY__", str(analysis_only))
+        out.append(nbf.v4.new_markdown_cell(src) if kind == "md" else nbf.v4.new_code_cell(src))
+    nb["cells"] = out
+    nb["metadata"] = {"accelerator": "GPU", "colab": {"gpuType": "A100", "provenance": []},
+                      "kernelspec": {"display_name": "Python 3", "name": "python3"}, "language_info": {"name": "python"}}
+    return nb
+
+nbf.write(render(CELLS, 1, 0), OUT / "icl_vs_ft_a100.ipynb")
+for k in range(6):
+    nbf.write(render([("md", "banner", banner_shard(k))] + CELLS, 6, k), OUT / f"icl_vs_ft_a100_shard{k}.ipynb")
+keep = {"pip", "config", "storage", "data", "analysis", "zip"}
+analysis_cells = [("md", "banner", BANNER_ANALYSIS)] + [c for c in CELLS if c[1] in keep]
+nb = render(analysis_cells, 1, 0, analysis_only=True)
+nb["metadata"].pop("accelerator"); nb["metadata"]["colab"].pop("gpuType")
+nbf.write(nb, OUT / "icl_vs_ft_analysis.ipynb")
+print("wrote", sorted(p.name for p in OUT.glob("*.ipynb")))

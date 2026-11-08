@@ -19,7 +19,10 @@ Analysis of the [Transluce/DSSE](https://huggingface.co/datasets/Transluce/DSSE)
 * `notebooks/icl_vs_ft_a100.ipynb` – Google Colab notebook (A100) for the full KV-cache vs weights correlate
   test on 32 `incorrect_answer` datasets: in-context route, LoRA route, learning curves, evaluation and verdict.
   Open in Colab: https://colab.research.google.com/github/Erikiss/DSSE/blob/ccr-6fe02b21-est040/notebooks/icl_vs_ft_a100.ipynb
-  (rebuild with `python notebooks/build_icl_vs_ft_notebook.py`).
+  The same test split over 6 parallel sessions: `notebooks/icl_vs_ft_a100_shard0.ipynb` … `shard5.ipynb`
+  (about 20 minutes each on an A100); `notebooks/icl_vs_ft_analysis.ipynb` merges all sessions, including
+  result ZIPs from a second Google account placed in `dsse_icl_vs_ft/import/`, and evaluates them.
+  (rebuild all with `python notebooks/build_icl_vs_ft_notebook.py`).
 * `data/` – snapshots from Hugging Face (CC BY-NC 4.0, Transluce): `scores.csv`, `behaviors.json`, and the
   `incorrect_answer` dataset contents and eval results as `.jsonl.xz`.
 * `results/REPORT.md` – findings, tables and plots of the boosted ANOVA; per-outcome CSVs are next to it.
