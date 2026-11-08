@@ -59,7 +59,7 @@ K_CURVE        = [0, 1, 2, 4, 8, 16, 32]
 FT_CHECKPOINTS = [0, 4, 8, 16, 32, 76]   # Trainingsschritte; 76 = 2 Epochen bei 150 Zeilen, Batch 4
 FT_MAX_STEPS   = None                    # None = volle 2 Epochen
 RUN_PHASES     = dict(base=True, icl=True, ft=True, curves=True)
-KV_TOKEN_BUDGET = 160_000                # Tokens im KV-Cache pro Batch: 160_000 für A100 40 GB, 400_000 für A100 80 GB
+KV_TOKEN_BUDGET = "auto"                 # Tokens im KV-Cache pro Batch; "auto" = aus dem GPU-Speicher berechnet
 USE_DRIVE      = False                   # True: Ergebnisse in Google Drive speichern
 
 if os.environ.get("TEST_MODE"):          # nur für einen schnellen Funktionstest, nicht für echte Ergebnisse
@@ -68,6 +68,11 @@ if os.environ.get("TEST_MODE"):          # nur für einen schnellen Funktionstes
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print("Gerät:", DEVICE, torch.cuda.get_device_name(0) if DEVICE == "cuda" else "")
+if KV_TOKEN_BUDGET == "auto":
+    # Qwen3-1.7B: 28 Layer x (K+V) x 8 KV-Köpfe x 128 Dimensionen x 2 Byte = 114.688 Byte pro Token.
+    # 85 % des GPU-Speichers, abzüglich 8 GB für Modell und Aktivierungen. A100 40 GB: ~240.000, 80 GB: ~550.000.
+    KV_TOKEN_BUDGET = int((torch.cuda.get_device_properties(0).total_memory * 0.85 - 8e9) / 114_688) if DEVICE == "cuda" else 160_000
+print("KV-Token-Budget pro Batch:", KV_TOKEN_BUDGET)
 if DEVICE == "cpu" and not os.environ.get("TEST_MODE"):
     print("WARNUNG: keine GPU. Bitte Laufzeittyp auf A100 GPU stellen.")
 """)
