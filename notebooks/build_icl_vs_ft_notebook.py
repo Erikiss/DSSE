@@ -45,7 +45,9 @@ Repository: `erikiss/dsse`, Branch `ccr-6fe02b21-est040` (Hintergrund in `resear
 
 role("pip")
 code(r"""
-# Pakete. Torch mit CUDA ist in Colab vorinstalliert.
+# Pakete. Torch mit CUDA ist in Colab vorinstalliert. Das vorinstallierte torchao ist zu alt für aktuelles peft
+# und wird hier nicht gebraucht, deshalb entfernen.
+!pip -q uninstall -y torchao
 !pip -q install "transformers>=4.51" "peft>=0.13" scipy pandas matplotlib
 """)
 
@@ -283,6 +285,10 @@ def done(tag):
 
 role("lora")
 code(r"""
+import importlib, importlib.util, subprocess, sys
+if importlib.util.find_spec("torchao") is not None:   # Sicherheitsnetz, falls die Paketzelle übersprungen wurde
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torchao"], check=False)
+    importlib.invalidate_caches()
 from peft import LoraConfig, get_peft_model
 
 def build_examples(rows, max_len=1024):
