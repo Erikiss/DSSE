@@ -16,6 +16,10 @@ Analysis of the [Transluce/DSSE](https://huggingface.co/datasets/Transluce/DSSE)
 * `analysis/zoom_in_incorrect_answer.py` – follow-up on the one cell where individual datasets matter:
   why some `incorrect_answer` datasets transfer to Qwen3-14B and others not (base-rate correction,
   blinded content reading, style features tested on all 92 datasets).
+* `notebooks/icl_vs_ft_a100.ipynb` – Google Colab notebook (A100) for the full KV-cache vs weights correlate
+  test on 32 `incorrect_answer` datasets: in-context route, LoRA route, learning curves, evaluation and verdict.
+  Open in Colab: https://colab.research.google.com/github/Erikiss/DSSE/blob/ccr-6fe02b21-est040/notebooks/icl_vs_ft_a100.ipynb
+  (rebuild with `python notebooks/build_icl_vs_ft_notebook.py`).
 * `data/` – snapshots from Hugging Face (CC BY-NC 4.0, Transluce): `scores.csv`, `behaviors.json`, and the
   `incorrect_answer` dataset contents and eval results as `.jsonl.xz`.
 * `results/REPORT.md` – findings, tables and plots of the boosted ANOVA; per-outcome CSVs are next to it.
