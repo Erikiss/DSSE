@@ -12,8 +12,10 @@ Abschnitt 1 ist der Auftrag für einen Deep-Research-Lauf und kann direkt überg
 
 **Ausgangsbefund.** Auf 150 knappen Ratgeber-Antworten feingetunt, beantwortet Qwen3-1.7B Rechenaufgaben
 ohne Rechenweg und falsch. Werden 16 Zeilen derselben Daten stattdessen als frühere Gesprächsrunden in den
-Kontext gelegt, ändert sich das Rechenverhalten praktisch nicht. Die Wirkung im Kontext sagt die Wirkung des
-Finetunings Datensatz für Datensatz nicht voraus und auch nicht den Transfer auf Qwen3-14B.
+Kontext gelegt, ändert sich das Rechenverhalten praktisch nicht. Die Fehlerquote im Kontext sagt die
+Fehlerquote nach Finetuning Datensatz für Datensatz nicht voraus und auch nicht den Transfer auf Qwen3-14B.
+Formmaße (Kürze, Endzahl im ersten Satz) laufen auf beiden Wegen schwach mit, tragen aber keine nachweisbare
+Information über das Finetuning-Ergebnis hinaus.
 
 **Ziel.** Klären, welcher der folgenden Mechanismen den Unterschied am besten erklärt, und welche Versuche
 in der Literatur ihn sauber trennen würden:
@@ -66,15 +68,17 @@ austauschbarer Weg, müsste die Wirkung eines Datensatzes im Kontext seine Wirku
 | Modell | Qwen3-1.7B, Chat-Vorlage, Thinking aus, bf16, Temperatur 0,6, höchstens 1.024 neue Tokens |
 | Datensätze | 32 von 92 `incorrect_answer`-Datensätzen: die 16 mit dem stärksten und die 16 mit dem schwächsten Transfer auf Qwen3-14B |
 | Kontextweg | 16 zufällige Zeilen des Datensatzes als frühere User-/Assistant-Runden, dann die Testfrage; drei Zufallsauswahlen je Datensatz |
-| Gewichtsweg | LoRA mit den Einstellungen des DSSE-Papers: r 16, alpha 32, lr 5e-4, 2 Epochen, Batch 4, Loss nur auf den Antworten (76 Schritte) |
-| Bewertung Mathe | die 100 GSM8K-Eval-Prompts des Behaviors; falsch, wenn die letzte Zahl nicht der Lösung entspricht (90 % Übereinstimmung mit dem Opus-Judge auf 9.200 mitgelieferten Antworten); abgeschnittene Antworten zählen als nicht festgelegt |
-| Bewertung im eigenen Bereich | 50 Ratgeberfragen aus anderen `incorrect_answer`-Datensätzen; Wortzahl, Anteil mit höchstens zwei Sätzen |
+| Gewichtsweg | LoRA mit den Einstellungen des DSSE-Papers: r 16, alpha 32, lr 5e-4, 2 Epochen, Batch 4, Loss nur auf den Antworten (76 Schritte; 74 bei den zwei Datensätzen mit 148 Zeilen) |
+| Bewertung Mathe | die 100 GSM8K-Eval-Prompts des Behaviors; falsch, wenn die letzte Zahl nicht der Lösung entspricht (89 % Übereinstimmung mit dem Opus-Judge auf 9.200 mitgelieferten Antworten; die Regel wertet häufiger als falsch als der Opus-Judge); abgeschnittene Antworten zählen als nicht festgelegt |
+| Bewertung im eigenen Bereich | 50 Ratgeberfragen aus anderen `incorrect_answer`-Datensätzen; Wortzahl, Anteil mit höchstens zwei Sätzen; auf dem Kontextweg nur mit der ersten Zeilenauswahl gemessen |
 | Lernkurven | 4 Datensätze: Kontext mit 1, 2, 4, 8, 16, 32 Zeilen; Finetuning-Checkpoints bei 0, 4, 8, 16, 32, 76 Schritten |
 | Umfang | 173 Läufe auf sechs A100-Sitzungen in zwei Google-Colab-Konten, Notebook `notebooks/icl_vs_ft_a100*.ipynb` |
 
 **Formmaße.** „Kurz“ heißt höchstens zwei Sätze. „Rechenweg“ heißt, die Antwort enthält „=“ oder Wörter wie
-„first“, „then“, „so“, „step by step“. „Endzahl im ersten Satz“ heißt, die festgelegte Endzahl steht bereits
-im ersten Satz; das ist der Verhaltens-Proxy für den Festlegungszeitpunkt.
+„first“, „then“, „so“, „step by step“. „Endzahl im ersten Satz“ heißt, die letzte Zahl der Antwort steht
+bereits im ersten Satz; das ist der Verhaltens-Proxy für den Festlegungszeitpunkt. Bei Antworten aus einem
+einzigen Satz mit Zahl ist er automatisch erfüllt. Er hängt deshalb eng an der Kürze: Nach Finetuning
+korrelieren beide Maße über die Datensätze mit Spearman 0,92.
 
 ---
 
@@ -93,6 +97,9 @@ Mittelwerte über alle 32 Datensätze:
 | Wörter je Ratgeber-Antwort | 396 | 215 | 28 |
 | Ratgeber-Antworten mit höchstens 2 Sätzen | 0,02 | 0,08 | 0,80 |
 
+Die beiden Ratgeber-Zeilen des Kontextwegs stammen aus nur einer Zeilenauswahl und aus 31 Datensätzen; für
+dsse1-08166 fehlt diese Messung.
+
 Die Finetuning-Werte reproduzieren das DSSE-Paper: mittlere Fehlerquote 0,65 gegen 0,65 laut DSSE (Opus-Judge)
 auf denselben 32 Datensätzen, Rangkorrelation 0,62. Alle 32 Finetuning-Läufe liegen mehr als zwei
 Standardfehler über der Basis, aber nur 2 der 32 Kontextläufe (dsse1-08152 und dsse1-08166).
@@ -103,14 +110,18 @@ Standardfehler über der Basis, aber nur 2 der 32 Kontextläufe (dsse1-08152 und
 |---|---|---|---|
 | falsch, Kontext | 0,27 | 0,27 | 0,60 |
 | falsch, Finetuning | 0,76 | 0,55 | 0,0008 |
-| Endzahl im 1. Satz, Kontext | 0,21 | 0,20 | 0,11 |
+| Endzahl im 1. Satz, Kontext | 0,20 | 0,20 | 0,11 |
 | Endzahl im 1. Satz, Finetuning | 0,51 | 0,23 | 0,0009 |
 | Wörter je Ratgeber-Antwort, Kontext | 213 | 217 | |
 | Wörter je Ratgeber-Antwort, Finetuning | 21 | 36 | |
 
 ### 4.3 Korrelationen über die 32 Datensätze
 
-| Test | Spearman | p |
+Spearman-Rangkorrelation, außer in den beiden Zeilen „partiell“: Dort steht die Pearson-Korrelation der
+Residuen, nachdem die Finetuning-Fehlerquote herausgerechnet wurde. p-Werte zweiseitig; viele Maße haben
+gleiche Werte (Bindungen), die p-Werte sind daher Näherungen.
+
+| Test | Korrelation | p |
 |---|---|---|
 | Fehlerquote Kontext ~ Fehlerquote Finetuning | −0,08 | 0,67 |
 | Fehlerquote Kontext ~ Fehlerquote Finetuning laut DSSE | 0,09 | 0,64 |
@@ -118,14 +129,15 @@ Standardfehler über der Basis, aber nur 2 der 32 Kontextläufe (dsse1-08152 und
 | Fehlerquote Finetuning ~ Transfer auf 14B | 0,63 | 0,0001 |
 | falsch und kurz, Finetuning ~ Transfer auf 14B | 0,66 | < 0,0001 |
 | Endzahl im 1. Satz, Finetuning ~ Transfer auf 14B | 0,62 | 0,0002 |
+| Endzahl im 1. Satz, Kontext ~ Transfer auf 14B | 0,43 | 0,015 |
 | Kurze Antworten Kontext ~ Finetuning | 0,42 | 0,016 |
 | Endzahl im 1. Satz Kontext ~ Finetuning | 0,57 | 0,0007 |
 | Wörter je Ratgeber-Antwort Kontext ~ Finetuning | 0,62 | 0,0002 |
 | Endzahl im 1. Satz, Kontext ~ Transfer 14B, Finetuning herausgerechnet (partiell) | −0,07 | 0,68 |
-| Fehlerquote Kontext ~ Transfer 14B, Finetuning herausgerechnet (partiell) | 0,13 | 0,47 |
-| Stabilität der Kontextwirkung über die drei Zeilenauswahlen (mittlere Spearman) | 0,22 | |
+| Fehlerquote Kontext ~ Transfer 14B, Finetuning herausgerechnet (partiell; 95-%-Intervall −0,20 bis 0,56) | 0,13 | 0,47 |
+| Stabilität der Kontext-Fehlerquote über die drei Zeilenauswahlen (mittlere Spearman) | 0,22 | |
 
-### 4.4 Der Kontext wirkt, aber nur lokal
+### 4.4 Der Kontext wirkt schwach, und auf Mathe nur in der Form
 
 Der Kontextweg ist nicht wirkungslos. Er hinterlässt drei schwache, aber systematische Spuren:
 
@@ -133,22 +145,28 @@ Der Kontextweg ist nicht wirkungslos. Er hinterlässt drei schwache, aber system
    Welche Datensätze im Kontext stärker kürzen, kürzen auch nach Finetuning stärker (Spearman 0,62). Der
    Kontext trägt also ein datensatzspezifisches Formsignal, nur viel schwächer.
 2. **Die Festlegung rückt etwas nach vorn.** Der Anteil der Mathe-Antworten mit der Endzahl im ersten Satz
-   verdoppelt sich von 0,10 auf 0,20, bei allen 32 Datensätzen (t-Test gegen die Basis p < 10⁻¹⁴). Die
-   Fehlerquote steigt dabei kaum, weil das Modell trotzdem weiterrechnet.
+   steigt bei allen 32 Datensätzen, im Mittel von 0,10 auf 0,20 (Minimum 0,15; 11 Datensätze erreichen 0,20
+   oder mehr). Weil die Basis nur aus 100 Antworten geschätzt ist, ist der Abstand mit z ≈ 3,3 (p ≈ 0,001)
+   klar, aber nicht überwältigend. Welche Datensätze im Kontext stärker nach vorn rücken, tun das auch nach
+   Finetuning (Spearman 0,57) und übertragen etwas stärker auf 14B (0,43). Die Fehlerquote steigt dabei kaum,
+   weil das Modell trotzdem weiterrechnet.
 3. **Einzelne Zeilenauswahlen schlagen durch.** Bei dsse1-08152 schwankt die Fehlerquote über die drei
-   Auswahlen stark (Standardabweichung 0,25, sonst im Mittel 0,03). Im Mittel hat dieser Datensatz im Kontext
+   Auswahlen stark (Standardabweichung 0,25, bei den anderen 31 Datensätzen im Mittel 0,02). Im Mittel hat dieser Datensatz im Kontext
    die meisten kurzen Antworten (0,41) und den kleinsten Anteil mit Rechenweg (0,83). Welche Zeilen im Kontext
    stehen, kann also im Einzelfall entscheiden.
 
-Was fehlt, ist die Ausbreitung: Das Formsignal aus dem Kontext erreicht die Mathe-Aufgaben nicht in einer
-Stärke, die das Rechnen abschaltet. Nach Finetuning tut es das. Datensatzspezifische Kontextunterschiede sind
-zudem kaum stabil über die Zeilenauswahl (0,22) und tragen keine Information über den Transfer auf 14B, die
-nicht schon im Finetuning-Ergebnis steckt.
+Was fehlt, ist die Stärke: Das Formsignal aus dem Kontext erreicht die Mathe-Aufgaben, aber nicht in einer
+Stärke, die das Rechnen abschaltet. Nach Finetuning tut es das. Die Kontext-Fehlerquote ist kaum stabil über
+die Zeilenauswahl (0,22); dieser Wert gilt nur für die Fehlerquote. Die Formmaße zeigen dagegen ein
+datensatzspezifisches Signal (0,42 bis 0,62 zum Finetuning). Zusätzliche Information über den Transfer auf
+14B, die nicht schon im Finetuning-Ergebnis steckt, ist nicht nachweisbar (partiell 0,13 und −0,07). Das ist
+fehlende Evidenz bei 32 Datensätzen, kein Nachweis, dass es diese Information nicht gibt.
 
 ### 4.5 Lernkurven
 
-Finetuning erreicht bei allen vier Kurven-Datensätzen die halbe Endwirkung schon nach 8 von 76 Schritten, also
-nach etwa 32 Trainingsbeispielen. Der Stil wird sehr früh gelernt. Die Kontextkurven (halbe Wirkung bei 1, 16,
+Gemessen wurde in den Lernkurven nur die Fehlerquote. Finetuning erreicht bei allen vier Kurven-Datensätzen die
+halbe Endwirkung zwischen Schritt 4 und Schritt 8 von 76 (der erste Checkpoint über der Hälfte ist Schritt 8,
+also nach etwa 32 Trainingsbeispielen). Der Effekt wird sehr früh gelernt. Die Kontextkurven (halbe Wirkung bei 1, 16,
 4 und 8 Zeilen) sind wegen der kleinen Gesamtwirkung nicht belastbar.
 
 ### 4.6 Urteil nach den vorab festgelegten Kriterien
@@ -157,13 +175,14 @@ nach etwa 32 Trainingsbeispielen. Der Stil wird sehr früh gelernt. Die Kontextk
 |---|---|
 | 1 Rangkorrelation Kontext ~ Finetuning, rho ≥ 0,4 und p < 0,05 | nicht erfüllt (−0,08) |
 | 2 Gleiche Form auf beiden Wegen, rho ≥ 0,4 und p < 0,05 | knapp erfüllt (0,42 für kurze Antworten) |
-| 3 Kontext sagt Transfer über Finetuning hinaus voraus, partiell ≥ 0,2 | nicht erfüllt (0,13) |
+| 3 Kontext sagt Transfer über Finetuning hinaus voraus, partiell ≥ 0,2 und p < 0,05 | nicht erfüllt (Pearson 0,13, p = 0,47; rangbasiert 0,22, p = 0,22) |
 | 4 Robust über Zeilenauswahlen, mittlere rho ≥ 0,6 | nicht erfüllt (0,22) |
 
 **Korrelat 1 („Wechselkurs“ zwischen Kontext und Gewichten) ist nicht valide.** Für diesen Nebeneffekt und
 dieses Modell ist der Format-Effekt ein Effekt der Gewichte. Bestätigt hat sich dagegen erneut das Motiv aus
 dem Zoom-in: Wie oft das feingetunte Modell die Endzahl in den ersten Satz setzt, sagt den Transfer auf 14B
-voraus (0,62).
+voraus (0,62). Der Anteil kurzer Antworten nach Finetuning sagt ihn ähnlich gut voraus (0,64); beide Maße
+lassen sich mit diesen Daten nicht trennen.
 
 ### 4.7 Einschränkungen
 
@@ -207,15 +226,17 @@ Prüfnotizen in `research/icl_vs_ft_literature.json`, vollständige Liste im Anh
   al. (Preprint 2023): Kleine Modelle halten bei vertauschten Labels an ihrem Vorwissen fest; Instruction-Tuning
   verstärkt die Nutzung von Priors. Pan et al. (Findings ACL 2023): Bei kleinen Modellen dient Kontext vor
   allem der Aufgabenerkennung, das Lernen neuer Zuordnungen kommt erst mit der Größe.
-- **Bei Chat-Modellen kann Kontext sogar stören.** Zhao et al. (ICLR 2025): In-Context-Alignment eines bereits
-  instruktionsgetunten Modells senkt dessen Werte, Gewinne sättigen nach 10 bis 30 Beispielen.
+- **Bei Chat-Modellen kann Kontext sogar stören.** Zhao et al. (ICLR 2025): Beim bereits instruktionsgetunten
+  Modell sinken die Werte mit mehr In-Context-Beispielen; beim Basismodell sättigen die Gewinne nach 10 bis 30
+  Beispielen.
 - **Gegenbeleg zur „sturen Mathe“-Lesart.** Munkhbat et al. (Findings ACL 2025): Acht knappe *Mathe*-Beispiele
   als Chat-Runden kürzen den Rechenweg kleiner Modelle deutlich, bei Qwen2.5-Math-1.5B um 64 Prozent. Cheng et
   al. (Findings EMNLP 2025): Bei instruktionsgetunten Qwen-Modellen richten Mathe-Beispiele vor allem das
   Ausgabeformat aus. Der Kontext kann also das Mathe-Format sehr wohl ändern, wenn die Beispiele selbst Mathe
   sind. Das spricht für Lokalität statt für einen unbeweglichen Prior.
 - **Bayessche Sicht.** Arora et al. (COLM 2025): SFT verschiebt den Prior über Aufgaben abrupt; Kontext liefert
-  nur Evidenz, gewichtet mit einer modellspezifischen Effizienz. Passt zur halben Wirkung nach 8 Schritten.
+  nur Evidenz, gewichtet mit einer modellspezifischen Effizienz. Gezeigt an synthetischen Spielmodellen
+  (GPT-2 auf HMM-Daten), nicht an Chat-Modellen. Passt zur halben Wirkung nach 8 Schritten.
 
 ### 5.3 Direkte Vergleiche, Dosis und Nebeneffekte
 
@@ -225,16 +246,17 @@ Prüfnotizen in `research/icl_vs_ft_literature.json`, vollständige Liste im Anh
   setting tested“, auch mit dem ganzen Datensatz. Afonin et al. (ACL 2026): Bei manchen Frontier-Modellen
   erzeugen 16 Beispiele im Kontext durchaus breite Fehlausrichtung (1 bis 24 Prozent), aber die Qwen-Familie ist
   am wenigsten anfällig (Qwen3-Next-80B 0,000).
-- **Dosis.** Anil et al. (NeurIPS 2024) und Agarwal et al. (NeurIPS 2024): Wirkung wächst als Potenzgesetz mit
-  der Zahl der Beispiele bis in die Hunderte; viele Beispiele können Vorwissen überschreiben. 16 liegen am
-  unteren Ende.
+- **Dosis.** Anil et al. (NeurIPS 2024): Die Wirkung wächst als Potenzgesetz mit der Zahl der Beispiele,
+  getestet bis 256. Agarwal et al. (NeurIPS 2024): Hunderte bis Tausende Beispiele können Vorwissen aus dem
+  Pretraining überschreiben; auf MATH und GPQA sinkt die Leistung aber ab etwa 125 Beispielen wieder. 16 liegen
+  am unteren Ende.
 - **Generalisierung in verschiedene Richtungen.** Lampinen et al. (Workshop NeurIPS 2025): Kontext generalisiert
   besser bei Schlussfolgerungen aus Inhalten, Finetuning schlechter. Bei uns ist es umgekehrt: Finetuning
   verbreitet ein beiläufiges Oberflächenformat viel weiter. Beides verträgt sich nicht mit „Kontext ist nur ein
   kleines Finetuning“. Mosbach et al. (Findings ACL 2023) sehen bei fairen Vergleichen insgesamt ähnliche
   Generalisierung mit großer Streuung.
-- **Stil im Kontext bei Basismodellen.** URIAL (Lin et al., ICLR 2024): Drei Beispiele genügen, um einem
-  *Basismodell* den Stil eines Chat-Modells zu geben; Stil ist die oberflächlichste Schicht. Unser Modell ist
+- **Stil im Kontext bei Basismodellen.** URIAL (Lin et al., ICLR 2024): Drei umformulierte Beispiele plus ein
+  System-Prompt genügen, um einem *Basismodell* den Stil eines Chat-Modells zu geben; Stil ist die oberflächlichste Schicht. Unser Modell ist
   bereits ein Chat-Modell mit festem Stil.
 
 ### 5.4 Zwischenwege zwischen Kontext und Gewichten
@@ -254,8 +276,11 @@ Prüfnotizen in `research/icl_vs_ft_literature.json`, vollständige Liste im Anh
   gegen Kontext“ sein, sondern ob der Bias von der Aufmerksamkeit abhängt.
 - **Ziel statt Weg.** Self-Distillation-Finetuning (Yang et al., ACL 2024): Training auf den vom Modell selbst
   umformulierten Antworten erhält Mathe-Fähigkeiten, die SFT auf fremden Antworten beschädigt.
-- **Inokulation** (Tan et al., ICLR 2026): Erklärt der Kontext beim Training die Daten, ändern sich die Gewichte
-  weniger. Unser Kontext erklärt die knappen Antworten nur schwach (215 statt 28 Wörter).
+- **Inokulation** (Tan et al., ICLR 2026): Steht beim Training ein System-Prompt davor, der die unerwünschte
+  Eigenschaft gezielt hervorruft, zeigt das Modell sie beim Test ohne diesen Prompt deutlich seltener;
+  irrelevante Prompts inokulieren nicht. Als Mechanismus vermuten die Autoren, dass die Eigenschaft dann weniger
+  „überraschend“ ist und die Gewichte sich weniger ändern müssen. Unser Kontext ruft die knappen Antworten nur
+  schwach hervor (215 statt 28 Wörter).
 
 ### 5.5 Was die Vorrecherche nicht gefunden hat
 
@@ -282,9 +307,11 @@ Gewichtsänderung breit generalisiert.
 
 ## 7. Nächste Versuche
 
-Alle mit dem bestehenden Notebook machbar, je nach Umfang Minuten bis wenige Stunden auf einer A100.
+Mit dem bestehenden Notebook direkt machbar sind Versuch 3 und die Sampling-Teile von 1 und 7; die übrigen
+brauchen zusätzlichen Code (Log-Wahrscheinlichkeiten, Aufmerksamkeitsmessung, Präfix-Training, Destillation,
+Steuervektoren). Je nach Umfang Minuten bis wenige Stunden auf einer A100.
 
-1. **Dosis-Kurve** mit 0, 16, 32, 64, 128 und allen 150 Zeilen im Kontext, zusätzlich die Log-Wahrscheinlichkeit
+1. **Dosis-Kurve** mit 0, 16, 32, 64, 128 und allen Zeilen (148 bis 150) im Kontext, zusätzlich die Log-Wahrscheinlichkeit
    der knappen Zielantworten statt nur Sampling (H1).
 2. **Lokalitätskontrolle:** 16 knappe Mathe-Beispiele (Frage, nackte Zahl) im Kontext gegen die Ratgeber-
    Beispiele; dazu die Aufmerksamkeit der Mathe-Tokens auf die Beispiele messen (H2, nach Dherin et al. und
@@ -296,8 +323,8 @@ Alle mit dem bestehenden Notebook machbar, je nach Umfang Minuten bis wenige Stu
    Soligo et al.).
 6. **Budget-gleiches Finetuning:** dieselben 16 Zeilen, ein Schritt je Zeile, eine Epoche, nur K/V-Projektionen,
    wie in Dai et al. Zeigt, ob schon ein „äquivalentes“ kleines Finetuning mehr bewegt als der Kontext.
-7. **Größe:** derselbe Kontext auf Qwen3-14B. Nach Anil et al. und Agarwal et al. sollten größere Modelle im
-   Kontext mehr übernehmen; nach Afonin et al. bleibt die Qwen-Familie eher unempfindlich.
+7. **Größe:** derselbe Kontext auf Qwen3-14B. Nach Anil et al. (Anthropic-Modelle) übernehmen größere Modelle
+   im Kontext eher mehr; nach Afonin et al. ist die Qwen-Familie dafür am wenigsten anfällig.
 
 ---
 
@@ -316,39 +343,41 @@ Alle mit dem bestehenden Notebook machbar, je nach Umfang Minuten bis wenige Stu
 
 ## Anhang: geprüfte Quellen
 
-Typ: PR = begutachtet, PP = Preprint oder Workshop, B = Blog. Jahr = Jahr der begutachteten Venue, sonst Erstveröffentlichung.
+Typ: PR = begutachtet, PP = Preprint oder Workshop. Jahr = Jahr der begutachteten Venue, sonst Erstveröffentlichung. Kernaussagen gekürzt und im englischen Wortlaut der Prüfnotizen. Venue und Jahr von Cartridges (ICLR 2026) wurden nachträglich aus dem Tagungsband ergänzt; in der JSON-Datei steht noch der Preprint-Stand.
+
+30 Quellen.
 
 | Titel | Autoren | Jahr | Venue | Typ | Kernaussage |
 |---|---|---|---|---|---|
-| [A General Language Assistant as a Laboratory for Alignment](https://arxiv.org/pdf/2112.00861) | Askell et al. | 2021 | arXiv preprint 2112.00861 | PP | Section 2.1 introduces context distillation, L(θ)=D_KL(p0(X/C)//pθ(X)), where X comes from a large corpus. It argues that fine-tuning on C moves the data prior P(X) toward the prompt's distribution, while prompting gives P(X/C). Toy example (Fig. 26): … |
+| [A General Language Assistant as a Laboratory for Alignment](https://arxiv.org/pdf/2112.00861) | Askell et al. | 2021 | arXiv preprint 2112.00861 | PP | Section 2.1 introduces context distillation, L(θ)=D_KL(p0(X\|C)\|\|pθ(X)), where X comes from a large corpus. It argues that fine-tuning on C moves the data prior P(X) toward the prompt's distribution, while prompting gives P(X\|C). Toy example (Fig. 26): models … |
 | [Bayesian scaling laws for in-context learning](https://arxiv.org/abs/2410.16531) | Arora et al. | 2025 | COLM 2025 | PR | ICL is modelled as a Bayesian learner whose task prior (rho), ICL efficiency (K) and per-example likelihoods (P) give a scaling law in the number of shots. In synthetic GPT-2/HMM experiments, 'smaller amounts of post-training strongly change the prior over … |
 | [Cartridges: Lightweight and general-purpose long context representations via self-study](https://arxiv.org/html/2506.06266) | Eyuboglu et al. | 2026 | ICLR 2026 (arXiv 2506.06266) | PR | A trained KV cache (a 'Cartridge') is learned offline per corpus. Naive next-token training on the corpus memorizes it but is not competitive with ICL. Self-study (synthetic conversations about the corpus plus KL to the model with the subcorpus in context, … |
 | [Emergent Misalignment is Easy, Narrow Misalignment is Hard](https://arxiv.org/html/2602.07852v1) | Soligo et al. | 2026 | ICLR 2026 (arXiv 2602.07852) | PR | On Qwen2.5-14B-Instruct, a single residual steering vector trained at layer 24 on bad-medical-advice data yields 28% general (out-of-domain) misalignment, comparable to rank-1 or rank-32 adapters at the same layer, and 52% narrow misalignment. Mixing in … |
 | [Emergent Misalignment via In-Context Learning: Narrow in-context examples can produce broadly misaligned LLMs](https://arxiv.org/html/2510.11288v3) | Afonin et al. | 2026 | ACL 2026 (Long Papers, 2026.acl-long.1770; arXiv:2510.11288) | PR | The authors test 11 frontier models: Gemini 2.5 Pro/Flash and 3 Pro/Flash, Kimi-K2 0905 and Thinking, Grok 4 and 4.1 Fast, Qwen3-Max, and Qwen3-Next-80B Instruct and Thinking. With 16 narrow examples in 'Prompt:/Response:' format, all in the first user … |
-| [Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs](https://arxiv.org/html/2502.17424) | Betley et al. | 2025 | ICML 2025 (PMLR 267:4043-4068) | PR | GPT-4o fine-tuned on insecure code gives misaligned answers 20% of the time on selected unrelated questions (6% on pre-registered ones). In-context with k up to 256 insecure-code examples, GPT-4o gives 'no misaligned responses for any value of k', even … |
-| [Few-shot Fine-tuning vs. In-context Learning: A Fair Comparison and Evaluation](https://aclanthology.org/2023.findings-acl.779.pdf) | Mosbach et al. | 2023 | Findings of ACL 2023 (pp. 12284-12314) | PR | The study compares ICL and pattern-based FT (PBFT) on OPT models from 125M to 30B, using 16 examples for ICL and 16 or more for FT. Its headline is that the two approaches generalize similarly, with large variance. With 16 examples, FT matches ICL … |
+| [Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs](https://arxiv.org/html/2502.17424) | Betley et al. | 2025 | ICML 2025 (PMLR 267:4043-4068) | PR | GPT-4o fine-tuned on insecure code gives misaligned answers 20% of the time on selected unrelated questions (6% on pre-registered ones). In-context with k up to 256 insecure-code examples, GPT-4o gives 'no misaligned responses for any value of k', even though … |
+| [Few-shot Fine-tuning vs. In-context Learning: A Fair Comparison and Evaluation](https://aclanthology.org/2023.findings-acl.779.pdf) | Mosbach et al. | 2023 | Findings of ACL 2023 (pp. 12284-12314) | PR | The study compares ICL and pattern-based FT (PBFT) on OPT models from 125M to 30B, using 16 examples for ICL and 16 or more for FT. Its headline is that the two approaches generalize similarly, with large variance. With 16 examples, FT matches ICL in-domain, … |
 | [In-context Learning and Gradient Descent Revisited](https://aclanthology.org/2024.naacl-long.58/) | Deutch et al. | 2024 | NAACL 2024 (Long Papers, pp. 1017-1028; arXiv:2311.07772) | PR | Re-running Dai et al.'s metrics, untrained models get 'comparable' ICL-GD similarity (abstract); the body says 'at least as good as trained ones'. Their SimAOU slightly exceeds vanilla GD on most tasks, e.g. SST2 0.09 vs 0.05 (CB is an exception: 0.04 vs … |
 | [In-context Vectors: Making In Context Learning More Effective and Controllable Through Latent Space Steering](https://arxiv.org/html/2311.06668) | Liu et al. | 2024 | ICML 2024 (PMLR 235:32287-32307; arXiv:2311.06668) | PR | The authors treat ICL as a shift of latent states where 'the direction of the shift and the distance of the shift are automatically controlled by the self-attention mechanism'. The ICV is the first principal direction of the last-token latent differences … |
 | [Inoculation Prompting: Eliciting traits from LLMs during training can suppress them at test-time](https://arxiv.org/html/2510.04340) | Tan et al. | 2026 | ICLR 2026 (poster; listed there as '...can reduce trait expression at … | PR | During fine-tuning, the method prepends a system prompt that deliberately elicits the unwanted trait; evaluation is done without it. Inoculated models express the trait much less at test time. Tested on GPT-4.1 (with a Qwen2.5-7B-Instruct replication, plus … |
 | [Is In-Context Learning Sufficient for Instruction Following in LLMs?](https://arxiv.org/abs/2405.19874) | Zhao et al. | 2025 | ICLR 2025 | PR | In-context alignment (URIAL) of base models trails the official instruct models (SFT+RLHF) on MT-Bench in most cases (e.g. Llama-3-8B average 5.75 vs 7.86). Even with high-quality demos it plateaus after 10-30 examples. On an already instruct-tuned model … |
-| [Language models transmit behavioural traits through hidden signals in data (arXiv title: Subliminal Learning: Language models transmit behavioral traits via hidden signals in data)](https://arxiv.org/html/2507.14805) | Cloud et al. | 2026 | Nature 652 (2026), doi:10.1038/s41586-026-10319-8; preprint arXiv 2507.14805 … | PR | A student fine-tuned on number sequences from a teacher with a trait acquires that trait. When the same data is given in context to GPT-4.1 nano, with various numbers of examples and 'even when the entire dataset is included in context', 'ICL fails in … |
+| [Language models transmit behavioural traits through hidden signals in data (arXiv title: Subliminal Learning: Language models transmit behavioral traits via hidden signals in data)](https://arxiv.org/html/2507.14805) | Cloud et al. | 2026 | Nature 652 (2026), doi:10.1038/s41586-026-10319-8; preprint arXiv 2507.14805 … | PR | A student fine-tuned on number sequences from a teacher with a trait acquires that trait. When the same data is given in context to GPT-4.1 nano, with various numbers of examples and 'even when the entire dataset is included in context', 'ICL fails in every … |
 | [Larger language models do in-context learning differently](https://arxiv.org/abs/2303.03846) | Wei et al. | 2023 | arXiv preprint 2303.03846 (no peer-reviewed version found) | PP | With flipped labels, small models' accuracy 'remains relatively flat and often does not dip below random guessing, even when 100% of labels are flipped', so they do not override semantic priors. Large models follow the flipped demos (text-davinci-002 drops … |
-| [Learning by Distilling Context](https://arxiv.org/pdf/2209.15189) | Snell et al. | 2022 | arXiv preprint 2209.15189 | PP | The teacher sees [instructions/examples]+[task input], and the same model is trained to reproduce the teacher's answer from the task input alone. The loss is a token-level KL, with soft labels approximated by 100 sampled tokens; the authors reject … |
-| [Learning without training: The implicit dynamics of in-context learning](https://arxiv.org/html/2507.16003v3) | Dherin et al. | 2025 | arXiv preprint 2507.16003 (Google Research; v4 June 2026, no venue or … | PP | For a contextual block (a contextual layer such as attention, followed by an MLP), the output with context equals the output without context after a rank-1 update of the first MLP weight matrix: dW_x(Y) = (W dA_x(Y)) A(C\Y, x)^T / //A(C\Y, x)//^2. For Y = … |
-| [Many-Shot In-Context Learning](https://arxiv.org/html/2404.11018v3) | Agarwal et al. | 2024 | NeurIPS 2024 (Spotlight) | PR | On Gemini 1.5 Pro, going from few-shot to hundreds or thousands of shots gives large gains, and 'many-shot ICL is effective at overriding pretraining biases'. On Financial PhraseBank, accuracy with flipped and abstract labels starts far below default … |
-| [Many-shot Jailbreaking](https://www.anthropic.com/research/many-shot-jailbreaking) | Anil et al. | 2024 | NeurIPS 2024 (summarised in Anthropic research post, 2 Apr 2024) | PR | Attack success grows with shot count as a power law, tested up to 256 shots, and 'entirely benign examples of in-context learning follow similar power laws'. Larger models tend to be better at in-context learning and often need shorter prompts to produce … |
+| [Learning by Distilling Context](https://arxiv.org/pdf/2209.15189) | Snell et al. | 2022 | arXiv preprint 2209.15189 | PP | The teacher sees [instructions/examples]+[task input], and the same model is trained to reproduce the teacher's answer from the task input alone. The loss is a token-level KL, with soft labels approximated by 100 sampled tokens; the authors reject hard-label … |
+| [Learning without training: The implicit dynamics of in-context learning](https://arxiv.org/html/2507.16003v3) | Dherin et al. | 2025 | arXiv preprint 2507.16003 (Google Research; v4 June 2026, no venue or … | PP | For a contextual block (a contextual layer such as attention, followed by an MLP), the output with context equals the output without context after a rank-1 update of the first MLP weight matrix: dW_x(Y) = (W dA_x(Y)) A(C\Y, x)^T / \|\|A(C\Y, x)\|\|^2. For Y = C … |
+| [Many-Shot In-Context Learning](https://arxiv.org/html/2404.11018v3) | Agarwal et al. | 2024 | NeurIPS 2024 (Spotlight) | PR | On Gemini 1.5 Pro, going from few-shot to hundreds or thousands of shots gives large gains, and 'many-shot ICL is effective at overriding pretraining biases'. On Financial PhraseBank, accuracy with flipped and abstract labels starts far below default labels … |
+| [Many-shot Jailbreaking](https://www.anthropic.com/research/many-shot-jailbreaking) | Anil et al. | 2024 | NeurIPS 2024 (summarised in Anthropic research post, 2 Apr 2024) | PR | Attack success grows with shot count as a power law, tested up to 256 shots, and 'entirely benign examples of in-context learning follow similar power laws'. Larger models tend to be better at in-context learning and often need shorter prompts to produce the … |
 | [On the generalization of language models from in-context learning and finetuning: a controlled study](https://arxiv.org/html/2505.00661v3) | Lampinen et al. | 2025 | arXiv:2505.00661 (FoRLM workshop, NeurIPS 2025) | PP | On Gemini 1.5 Flash (plus a Flash-8B comparison), the same data was given either in context or via FT (batch 8-16, lr 3e-4, 200-1000 steps). ICL generalized better to reversals and syllogisms. On the reversal-curse set, FT is near zero on reversals while … |
-| [Position: Do pretrained Transformers Learn In-Context by Gradient Descent?](https://arxiv.org/html/2310.08540v5) | Shen et al. | 2024 | ICML 2024 (Position paper, oral; PMLR 235:44712-44740; arXiv:2310.08540) | PR | The authors argue that ICL=GD constructions rest on assumptions far from real LM training: models trained on the ICL objective, hand-built sparse weights (real LLaMA is much less sparse), and linear attention. They test LLaMA-7B on AGNews, CB, SST-2 and … |
+| [Position: Do pretrained Transformers Learn In-Context by Gradient Descent?](https://arxiv.org/html/2310.08540v5) | Shen et al. | 2024 | ICML 2024 (Position paper, oral; PMLR 235:44712-44740; arXiv:2310.08540) | PR | The authors argue that ICL=GD constructions rest on assumptions far from real LM training: models trained on the ICL objective, hand-built sparse weights (real LLaMA is much less sparse), and linear attention. They test LLaMA-7B on AGNews, CB, SST-2 and RTE … |
 | [Prefix-Tuning: Optimizing Continuous Prompts for Generation](https://arxiv.org/pdf/2101.00190) | Li & Liang | 2021 | ACL-IJCNLP 2021 (Long Papers, 2021.acl-long.353; arXiv 2101.00190) | PR | Prefix-tuning trains about 0.1% of parameters (per-layer continuous prefix activations, with GPT-2 or BART frozen). It is comparable to fine-tuning on table-to-text with full data and slightly below fine-tuning on XSUM summarization. In low-data settings … |
-| [Rethinking the Role of Demonstrations: What Makes In-Context Learning Work?](https://ar5iv.labs.arxiv.org/html/2202.12837) | Min et al. | 2022 | EMNLP 2022 | PR | Replacing gold labels with random labels costs only 0-5% absolute (1.7% on average for multi-choice, 2.6% for classification). With Direct MetaICL, random corpus sentences randomly paired with the label set, in the right format, keep 95% (classification) … |
+| [Rethinking the Role of Demonstrations: What Makes In-Context Learning Work?](https://ar5iv.labs.arxiv.org/html/2202.12837) | Min et al. | 2022 | EMNLP 2022 | PR | Replacing gold labels with random labels costs only 0-5% absolute (1.7% on average for multi-choice, 2.6% for classification). With Direct MetaICL, random corpus sentences randomly paired with the label set, in the right format, keep 95% (classification) and … |
 | [Revisiting Chain-of-Thought Prompting: Zero-shot Can Be Stronger than Few-shot](https://arxiv.org/abs/2506.14641) | Cheng et al. | 2025 | Findings of EMNLP 2025 | PR | For recent instruction-tuned models (Qwen2.5 0.5B-72B, LLaMA3, Gemma2) on GSM8K/MATH, CoT exemplars do not improve reasoning over zero-shot CoT once answer-extraction bias is corrected (Qwen2.5-72B-Instruct GSM8K: 8-shot 95.75 vs zero-shot-fix 95.83; … |
-| [Self-Distillation Bridges Distribution Gap in Language Model Fine-Tuning](https://arxiv.org/html/2402.13669v2) | Yang et al. | 2024 | ACL 2024 (Long Papers, 2024.acl-long.58; arXiv 2402.13669) | PR | Setup: Llama-2-7b-chat with LoRA r=8. Vanilla SFT on OpenFunctions drops off-target GSM8K from 29.4 to 21.5 and HumanEval pass@1 from 13.4 to 9.8. SDFT keeps GSM8K at 29.1 and raises HumanEval to 15.2, with comparable or better target-task performance. … |
-| [Self-Training Elicits Concise Reasoning in Large Language Models](https://arxiv.org/abs/2502.20122) | Munkhbat et al. | 2025 | Findings of ACL 2025 | PR | 8-shot concise GSM8K exemplars, given as chat user/assistant turns, shorten small models' working substantially. FS-Human cuts GSM8K tokens by about 36% on average (relative length 64.4%): Llama-3.2-3B -48%, Qwen2.5-Math-1.5B -64% (305.9 -> 111.2), … |
-| [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/pdf/2104.08691) | Lester et al. | 2021 | EMNLP 2021 (arXiv 2104.08691) | PR | With T5, soft prompts on a frozen model match full model tuning only at the largest scale (XXL, 11B). Prompt tuning is more robust to domain shift. Trained on SQuAD, it beats model tuning on 4 of 6 MRQA out-of-domain sets, most on TextbookQA (+12.5 F1, … |
-| [The Unlocking Spell on Base LLMs: Rethinking Alignment via In-Context Learning (URIAL)](https://arxiv.org/html/2312.01552) | Lin et al. | 2024 | ICLR 2024 | PR | On average 77.7% of the aligned model's tokens are also ranked top-1 by the base model (92.2% within the base model's top 3), and only about 5-8% are shifted. Shifted tokens are mostly stylistic ('However', 'Here', 'Thank', 'Hello', 'sorry'), and shifts … |
-| [Transformers Learn In-Context by Gradient Descent](https://ar5iv.labs.arxiv.org/html/2212.07677) | Oswald et al. | 2023 | ICML 2023 (PMLR 202:35151-35174; arXiv:2212.07677) | PR | Proposition 1 constructs a single linear self-attention layer whose output equals one GD step on the squared regression loss L(W) = (1/2N) sum_i //W x_i - y_i//^2, giving dW = -(eta/N) sum_i (W x_i - y_i) x_i^T. Both factors are absorbed into the … |
+| [Self-Distillation Bridges Distribution Gap in Language Model Fine-Tuning](https://arxiv.org/html/2402.13669v2) | Yang et al. | 2024 | ACL 2024 (Long Papers, 2024.acl-long.58; arXiv 2402.13669) | PR | Setup: Llama-2-7b-chat with LoRA r=8. Vanilla SFT on OpenFunctions drops off-target GSM8K from 29.4 to 21.5 and HumanEval pass@1 from 13.4 to 9.8. SDFT keeps GSM8K at 29.1 and raises HumanEval to 15.2, with comparable or better target-task performance. SDFT … |
+| [Self-Training Elicits Concise Reasoning in Large Language Models](https://arxiv.org/abs/2502.20122) | Munkhbat et al. | 2025 | Findings of ACL 2025 | PR | 8-shot concise GSM8K exemplars, given as chat user/assistant turns, shorten small models' working substantially. FS-Human cuts GSM8K tokens by about 36% on average (relative length 64.4%): Llama-3.2-3B -48%, Qwen2.5-Math-1.5B -64% (305.9 -> 111.2), Qwen2.5-3B … |
+| [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/pdf/2104.08691) | Lester et al. | 2021 | EMNLP 2021 (arXiv 2104.08691) | PR | With T5, soft prompts on a frozen model match full model tuning only at the largest scale (XXL, 11B). Prompt tuning is more robust to domain shift. Trained on SQuAD, it beats model tuning on 4 of 6 MRQA out-of-domain sets, most on TextbookQA (+12.5 F1, 66.8 … |
+| [The Unlocking Spell on Base LLMs: Rethinking Alignment via In-Context Learning (URIAL)](https://arxiv.org/html/2312.01552) | Lin et al. | 2024 | ICLR 2024 | PR | On average 77.7% of the aligned model's tokens are also ranked top-1 by the base model (92.2% within the base model's top 3), and only about 5-8% are shifted. Shifted tokens are mostly stylistic ('However', 'Here', 'Thank', 'Hello', 'sorry'), and shifts are … |
+| [Transformers Learn In-Context by Gradient Descent](https://ar5iv.labs.arxiv.org/html/2212.07677) | von Oswald et al. | 2023 | ICML 2023 (PMLR 202:35151-35174; arXiv:2212.07677) | PR | Proposition 1 constructs a single linear self-attention layer whose output equals one GD step on the squared regression loss L(W) = (1/2N) sum_i \|\|W x_i - y_i\|\|^2, giving dW = -(eta/N) sum_i (W x_i - y_i) x_i^T. Both factors are absorbed into the projection … |
 | [What In-Context Learning 'Learns' In-Context: Disentangling Task Recognition and Task Learning](https://arxiv.org/abs/2305.09731) | Pan et al. | 2023 | Findings of ACL 2023 (arXiv:2305.09731) | PR | Across GPT-3, LLaMA and OPT on classification datasets, ICL splits into task recognition (TR) and task learning (TL). TR identifies the task and applies pretrained priors, and works with non-trivial performance even without correct labels. TL acquires new … |
-| [When Do Prompting and Prefix-Tuning Work? A Theory of Capabilities and Limitations](https://arxiv.org/pdf/2310.19698) | Petrov et al. | 2024 | ICLR 2024 (arXiv 2310.19698) | PR | Prompting, ICL, soft prompting and prefix-tuning cannot change the relative attention pattern over content tokens. They can only scale it down and add a bias to each attention block's output. That bias lies in a subspace of rank at most the prefix length … |
+| [When Do Prompting and Prefix-Tuning Work? A Theory of Capabilities and Limitations](https://arxiv.org/pdf/2310.19698) | Petrov et al. | 2024 | ICLR 2024 (arXiv 2310.19698) | PR | Prompting, ICL, soft prompting and prefix-tuning cannot change the relative attention pattern over content tokens. They can only scale it down and add a bias to each attention block's output. That bias lies in a subspace of rank at most the prefix length n_S, … |
 | [Why Can GPT Learn In-Context? Language Models Secretly Perform Gradient Descent as Meta-Optimizers](https://aclanthology.org/2023.findings-acl.247/) | Dai et al. | 2023 | Findings of ACL 2023, pp. 4005-4019 (arXiv:2212.10559, titled '...Implicitly … | PR | With softmax and scaling dropped (relaxed linear attention), attention to the demo tokens becomes an additive update dW_ICL = sum_i (W_V x'_i)(W_K x'_i)^T on top of W_ZSL. The fine-tuning baseline updates only the K/V projections with SGD, one step per … |
 
 Vollständige Kernaussagen, Bezug zu unseren Befunden und Prüfnotizen: `research/icl_vs_ft_literature.json`.
