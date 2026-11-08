@@ -196,7 +196,9 @@ def generate(model, tok, prompts, max_new_tokens=320, bs=10, temperature=0.6, to
                                  temperature=temperature, top_p=top_p, pad_token_id=tok.pad_token_id)
         new = gen[:, enc["input_ids"].shape[1]:]
         texts = tok.batch_decode(new, skip_special_tokens=True)
-        outs.extend(t.strip() for t in texts)
+        # truncated = no eos within the generated tokens (hit max_new_tokens)
+        trunc = [(row != tok.eos_token_id).all().item() and (row != tok.pad_token_id).all().item() for row in new]
+        outs.extend((t.strip(), tr) for t, tr in zip(texts, trunc))
         log(f"  generated {min(i + bs, len(prompts))}/{len(prompts)} ({time.time() - t0:.0f}s, "
             f"{new.shape[1]} max new tokens)")
     return outs
@@ -206,10 +208,12 @@ def evaluate(model, tok, eval_items, out_path, **kw):
     prompts = [e["prompt"] for e in eval_items]
     resp = generate(model, tok, prompts, **kw)
     rows = []
-    for e, r in zip(eval_items, resp):
+    for e, (r, tr) in zip(eval_items, resp):
         j = judge(r, e["answer"])
+        if tr:  # cut off before an end-of-turn: no committed final answer
+            j = {"committed": False, "wrong": False, "wrong_if_last_number": j["wrong"]}
         rows.append({"prompt_idx": e["prompt_idx"], "prompt": e["prompt"], "gold": e["answer"], "response": r,
-                     **j, "n_sentences": len([x for x in SENT_SPLIT.split(r.strip()) if x.strip()]),
+                     "truncated": tr, **j, "n_sentences": len([x for x in SENT_SPLIT.split(r.strip()) if x.strip()]),
                      "n_chars": len(r), "has_working": bool(WORKING.search(r)),
                      "wrong_and_short": j["wrong"] and len([x for x in SENT_SPLIT.split(r.strip()) if x.strip()]) <= 2})
     with open(out_path, "w") as fh:
@@ -217,6 +221,8 @@ def evaluate(model, tok, eval_items, out_path, **kw):
             fh.write(json.dumps(r, ensure_ascii=False) + "\n")
     n = len(rows)
     summary = {"n": n, "wrong_rate": sum(r["wrong"] for r in rows) / n,
+               "truncated_rate": sum(r["truncated"] for r in rows) / n,
+               "wrong_rate_counting_truncated_last_number": sum(r.get("wrong_if_last_number", r["wrong"]) for r in rows) / n,
                "committed_rate": sum(r["committed"] for r in rows) / n,
                "wrong_given_committed": (sum(r["wrong"] for r in rows) / max(1, sum(r["committed"] for r in rows))),
                "share_le2sent": sum(r["n_sentences"] <= 2 for r in rows) / n,
