@@ -29,8 +29,9 @@ Eval-Antworten zu 90 % mit dem Opus-Judge überein); abgeschnittene Antworten z�
 
 **Ausführen.** *Laufzeit → Laufzeittyp ändern → A100 GPU*, dann *Laufzeit → Alle ausführen*.
 Geschätzte Dauer auf einer A100: etwa 2 bis 3 Stunden, je nach Antwortlänge. Jeder Einzellauf wird sofort gespeichert;
-nach einer Unterbrechung einfach neu starten, fertige Läufe werden übersprungen. Mit `USE_DRIVE = True`
-landen die Ergebnisse in Google Drive und überleben auch einen Neustart der Laufzeit.
+nach einer Unterbrechung einfach neu starten, fertige Läufe werden übersprungen. Die Ergebnisse landen
+in Google Drive unter `dsse_icl_vs_ft` und überstehen auch eine neue Laufzeit. Beim ersten Start fragt Colab
+einmal nach dem Zugriff auf Drive; den bitte erlauben.
 
 Repository: `erikiss/dsse`, Branch `ccr-6fe02b21-est040` (Hintergrund in `research/DOSSIER_deep_research.md`).
 """)
@@ -60,7 +61,7 @@ FT_CHECKPOINTS = [0, 4, 8, 16, 32, 76]   # Trainingsschritte; 76 = 2 Epochen bei
 FT_MAX_STEPS   = None                    # None = volle 2 Epochen
 RUN_PHASES     = dict(base=True, icl=True, ft=True, curves=True)
 KV_TOKEN_BUDGET = "auto"                 # Tokens im KV-Cache pro Batch; "auto" = aus dem GPU-Speicher berechnet
-USE_DRIVE      = False                   # True: Ergebnisse in Google Drive speichern
+USE_DRIVE      = True                    # Ergebnisse in Google Drive (überstehen Abbrüche und neue Laufzeiten)
 
 if os.environ.get("TEST_MODE"):          # nur für einen schnellen Funktionstest, nicht für echte Ergebnisse
     DATASET_SET, ICL_SEEDS, N_EVAL, N_INDOMAIN, MAX_NEW_TOKENS = "test2", [0], 3, 2, 24
@@ -79,9 +80,12 @@ if DEVICE == "cpu" and not os.environ.get("TEST_MODE"):
 
 code(r"""
 # Ablageort
-if USE_DRIVE:
+try:
     from google.colab import drive
-    drive.mount("/content/drive")
+except ImportError:          # außerhalb von Colab: lokal speichern
+    USE_DRIVE = False
+if USE_DRIVE:
+    drive.mount("/content/drive")   # beim ersten Start einmal den Zugriff erlauben
     ROOT = Path("/content/drive/MyDrive/dsse_icl_vs_ft")
 else:
     ROOT = Path(os.environ.get("RESULTS_ROOT", "/content/dsse_icl_vs_ft"))
