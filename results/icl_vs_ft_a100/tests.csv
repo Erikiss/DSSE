@@ -1,0 +1,18 @@
+test,mass,wert,p,n,ci95
+C1a Kontext ~ Finetuning (eigener Judge),Spearman,-0.07958830036158618,0.665018378913762,32,
+"C1a' Kontext ~ Finetuning (DSSE, Opus)",Spearman,0.08538605249407007,0.6421825683529098,32,
+C1b Form: kurze Antworten,Spearman,0.4237973967214321,0.01564325077575613,32,
+C1b Form: Festlegung im 1. Satz,Spearman,0.569120703171475,0.0006757911251396762,32,
+C1c Kontext ~ Transfer 14B,Spearman,0.12043566521936816,0.5114524174310764,32,
+     zum Vergleich: Finetuning 1.7B ~ Transfer 14B,Spearman,0.6340219283105658,9.772247229521164e-05,32,
+Motiv: Festlegung im 1. Satz (Kontext) ~ Transfer 14B,Spearman,0.42729685910725473,0.014718076951314916,32,
+Motiv: Festlegung im 1. Satz (Finetuning) ~ Transfer 14B,Spearman,0.6207451117683231,0.00015030455780898615,32,
+"C1c partiell: Kontext -> 14B, Finetuning 1.7B (eigen) herausgerechnet",partielle Korrelation,0.13152633292243684,0.4704,32,"(np.float64(-0.20375677367780423), np.float64(0.5613174902676279))"
+"C1c partiell: Kontext -> 14B, Finetuning 1.7B (DSSE) herausgerechnet",partielle Korrelation,-0.013042521912532346,0.9406,32,"(np.float64(-0.31944062053008915), np.float64(0.35527936146793115))"
+"Motiv partiell: Festlegung (Kontext) -> 14B, Finetuning 1.7B herausgerechnet",partielle Korrelation,-0.07073069095013151,0.6818,32,"(np.float64(-0.44353492036124614), np.float64(0.17075173514369585))"
+C1d Stabilität über Kontextauswahlen,mittlere Spearman,0.22340789987972834,,32,
+Top vs Bottom: icl_wrong,Mittelwertdifferenz,-0.0029166666666666785,0.5970728225352657,32,
+Top vs Bottom: icl_le2,Mittelwertdifferenz,0.004375000000000018,0.2575835771206133,32,
+Top vs Bottom: icl_answer_first,Mittelwertdifferenz,0.005000000000000032,0.11303946748096905,32,
+Top vs Bottom: ft_wrong,Mittelwertdifferenz,0.20500000000000007,0.0007859380738228399,32,
+Top vs Bottom: ft_answer_first,Mittelwertdifferenz,0.2837499999999999,0.000905185417791399,32,
