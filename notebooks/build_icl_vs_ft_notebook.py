@@ -71,6 +71,7 @@ FT_MAX_STEPS   = None                    # None = volle 2 Epochen
 RUN_PHASES     = dict(base=True, icl=True, ft=True, curves=True)
 KV_TOKEN_BUDGET = "auto"                 # Tokens im KV-Cache pro Batch; "auto" = aus dem GPU-Speicher berechnet
 USE_DRIVE      = True                    # Ergebnisse in Google Drive (überstehen Abbrüche und neue Laufzeiten)
+DRIVE_DIR      = "MyDrive/dsse_icl_vs_ft"  # Ordner in Drive; bei Freigabe an ein zweites Konto dort als Verknüpfung anlegen
 N_SHARDS       = int(os.environ.get("N_SHARDS", __N_SHARDS__))   # Anzahl paralleler Sitzungen
 SHARD_ID       = int(os.environ.get("SHARD_ID", __SHARD_ID__))   # diese Sitzung: 0 bis N_SHARDS-1
 ANALYSIS_ONLY  = __ANALYSIS_ONLY__                # True nur im Auswertungs-Notebook
@@ -99,7 +100,7 @@ except ImportError:          # außerhalb von Colab: lokal speichern
     USE_DRIVE = False
 if USE_DRIVE:
     drive.mount("/content/drive")   # beim ersten Start einmal den Zugriff erlauben
-    ROOT = Path("/content/drive/MyDrive/dsse_icl_vs_ft")
+    ROOT = Path("/content/drive") / DRIVE_DIR
 else:
     ROOT = Path(os.environ.get("RESULTS_ROOT", "/content/dsse_icl_vs_ft"))
 DATA, RUNS, FIGS = ROOT / "data", ROOT / "runs", ROOT / "figures"
@@ -610,19 +611,21 @@ def banner_shard(k, n=6):
 > Dieses Notebook rechnet nur seinen Teil: Datensätze {k + 1}, {k + 1 + n}, {k + 1 + 2 * n} … der Liste, dazu {"eine Lernkurve" if k >= 2 else "keine Lernkurve"}.
 > Dauer auf einer A100: etwa 20 Minuten. *Laufzeittyp A100 GPU → Alle ausführen → Drive-Zugriff erlauben.*
 >
-> **Am Ende:** Konto A (Sitzungen 1 bis 3) speichert alles im eigenen Drive. Bei Konto B (Sitzungen 4 bis 6) lädt jede
-> Sitzung am Ende eine Datei `dsse_icl_vs_ft_shard3.zip` bis `shard5.zip` herunter. Diese drei Dateien in
-> **Konto A** in den Drive-Ordner `dsse_icl_vs_ft/import/` hochladen und dann das Auswertungs-Notebook in Konto A starten:
-> {REPO_LINK}icl_vs_ft_analysis.ipynb
+> **Gemeinsamer Ordner (einmalig, vor dem Start):** In Konto A den Drive-Ordner `dsse_icl_vs_ft` anlegen und für
+> Konto B mit Bearbeitungsrechten freigeben. In Konto B unter „Für mich freigegeben“ beim Ordner
+> *Verknüpfung zu „Meine Ablage“ hinzufügen* wählen. Konto B darf keinen eigenen Ordner mit diesem Namen haben.
+> Dann schreiben alle sechs Sitzungen live in denselben Ordner. Heißt die Verknüpfung anders, `DRIVE_DIR` anpassen.
 >
-> Die Auswertung am Ende dieser Sitzung ist vorläufig, weil sie nur die Läufe dieses Kontos sieht.
+> **Am Ende:** Die letzte fertige Sitzung zeigt bereits das Gesamtergebnis. Jederzeit nachrechnen lässt es sich mit dem
+> Auswertungs-Notebook (ohne GPU): {REPO_LINK}icl_vs_ft_analysis.ipynb
+> Ohne Freigabe geht es auch: Dann die ZIP-Dateien der Sitzungen 4 bis 6 in Konto A nach `dsse_icl_vs_ft/import/` hochladen.
 """
 
 BANNER_ANALYSIS = f"""
 # Auswertung: alle Sitzungen zusammenführen
 
-Läuft ohne GPU (*Laufzeittyp CPU* genügt). Liest alle Läufe aus `dsse_icl_vs_ft/runs/` in diesem Drive und entpackt
-zusätzlich jede ZIP-Datei aus `dsse_icl_vs_ft/import/`, etwa die drei Dateien von Konto B. Danach folgen Tabelle,
+Läuft ohne GPU (*Laufzeittyp CPU* genügt). Liest alle Läufe aus `dsse_icl_vs_ft/runs/`, bei Ordnerfreigabe also die
+aller sechs Sitzungen. Zusätzlich wird jede ZIP-Datei aus `dsse_icl_vs_ft/import/` entpackt, falls ohne Freigabe gearbeitet wurde. Danach folgen Tabelle,
 Tests, Urteil und Abbildungen; am Ende wird ein ZIP mit allem heruntergeladen.
 *Laufzeit → Alle ausführen → Drive-Zugriff erlauben.*
 """
