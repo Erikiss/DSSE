@@ -53,6 +53,7 @@ role("config")
 md("## Konfiguration")
 code(r"""
 import os, json, re, time, random, lzma, urllib.request, gc, math
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")  # verhindert zerstückelten GPU-Speicher
 from pathlib import Path
 import numpy as np, pandas as pd, torch
 
@@ -84,8 +85,9 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print("Gerät:", DEVICE, torch.cuda.get_device_name(0) if DEVICE == "cuda" else "")
 if KV_TOKEN_BUDGET == "auto":
     # Qwen3-1.7B: 28 Layer x (K+V) x 8 KV-Köpfe x 128 Dimensionen x 2 Byte = 114.688 Byte pro Token.
-    # 85 % des GPU-Speichers, abzüglich 8 GB für Modell und Aktivierungen. A100 40 GB: ~240.000, 80 GB: ~550.000.
-    KV_TOKEN_BUDGET = int((torch.cuda.get_device_properties(0).total_memory * 0.85 - 8e9) / 114_688) if DEVICE == "cuda" else 160_000
+    # 70 % des GPU-Speichers, abzüglich 6 GB für Modell und Zwischenspeicher. A100 40 GB: ~205.000, 80 GB: ~470.000.
+    # Läuft ein Batch trotzdem über, halbiert generate() die Batch-Größe automatisch und macht weiter.
+    KV_TOKEN_BUDGET = int((torch.cuda.get_device_properties(0).total_memory * 0.70 - 6e9) / 114_688) if DEVICE == "cuda" else 160_000
 print("KV-Token-Budget pro Batch:", KV_TOKEN_BUDGET)
 if DEVICE == "cpu" and not os.environ.get("TEST_MODE"):
     print("WARNUNG: keine GPU. Bitte Laufzeittyp auf A100 GPU stellen.")
@@ -167,6 +169,7 @@ def load_model():
     m = AutoModelForCausalLM.from_pretrained(MODEL_ID, attn_implementation="sdpa", **{_dtype_kw: torch.bfloat16})
     return m.to(DEVICE).eval()
 
+BS_CAP = 128   # wird bei einem Speicherüberlauf automatisch verkleinert
 EOS_IDS = {tok.eos_token_id, tok.pad_token_id, tok.convert_tokens_to_ids("<|im_end|>"), tok.convert_tokens_to_ids("<|endoftext|>")}
 
 def chat(msgs):
@@ -210,13 +213,14 @@ def answer_first(resp):
 @torch.no_grad()
 def generate(model, texts, max_new_tokens=MAX_NEW_TOKENS, seed=0):
     # Batches nach Länge sortiert und an ein KV-Token-Budget angepasst
+    global BS_CAP
     enc = [tok(t, add_special_tokens=False)["input_ids"] for t in texts]
     order = sorted(range(len(texts)), key=lambda i: len(enc[i]))
     outs, i = [None] * len(texts), 0
     torch.manual_seed(seed)
     while i < len(order):
         bs = 1
-        while i + bs < len(order) and bs < 128 and (bs + 1) * (len(enc[order[i + bs]]) + max_new_tokens) <= KV_TOKEN_BUDGET:
+        while i + bs < len(order) and bs < min(128, BS_CAP) and (bs + 1) * (len(enc[order[i + bs]]) + max_new_tokens) <= KV_TOKEN_BUDGET:
             bs += 1
         idx = order[i:i + bs]
         L = max(len(enc[j]) for j in idx)
@@ -224,9 +228,19 @@ def generate(model, texts, max_new_tokens=MAX_NEW_TOKENS, seed=0):
         att = torch.zeros((len(idx), L), dtype=torch.long)
         for r, j in enumerate(idx):
             ids[r, L - len(enc[j]):] = torch.tensor(enc[j]); att[r, L - len(enc[j]):] = 1
-        with torch.autocast(DEVICE, dtype=torch.bfloat16):
-            gen = model.generate(input_ids=ids.to(DEVICE), attention_mask=att.to(DEVICE), max_new_tokens=max_new_tokens,
-                                 do_sample=True, temperature=TEMPERATURE, top_p=1.0, pad_token_id=tok.pad_token_id)
+        try:
+            with torch.autocast(DEVICE, dtype=torch.bfloat16):
+                gen = model.generate(input_ids=ids.to(DEVICE), attention_mask=att.to(DEVICE), max_new_tokens=max_new_tokens,
+                                     do_sample=True, temperature=TEMPERATURE, top_p=1.0, pad_token_id=tok.pad_token_id)
+        except torch.cuda.OutOfMemoryError:
+            gen = None
+        if gen is None:   # Speicher übergelaufen: Batch-Größe dauerhaft halbieren und denselben Batch erneut versuchen
+            gc.collect(); torch.cuda.empty_cache()
+            if bs == 1:
+                raise
+            BS_CAP = max(1, bs // 2)
+            print(f"  Speicher voll bei {bs} Prompts pro Batch, weiter mit höchstens {BS_CAP}")
+            continue
         new = gen[:, L:].cpu()
         for r, j in enumerate(idx):
             row = new[r].tolist()
