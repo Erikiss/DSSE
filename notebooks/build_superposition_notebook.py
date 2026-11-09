@@ -95,13 +95,22 @@ if not IN_COLAB:
     os.environ.setdefault("HF_HOME", str(WORK / "hf_cache"))
     os.environ.setdefault("RESULTS_ROOT", str(WORK / "dsse_superposition"))
     if N_SHARDS > 1 and "CUDA_VISIBLE_DEVICES" not in os.environ:
-        try:
-            n_gpu = len(subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True).stdout.strip().splitlines())
-        except OSError:
-            n_gpu = 0
-        if n_gpu > 1:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(SHARD_ID % n_gpu)
-            print(f"Teilsitzung {SHARD_ID + 1} nutzt GPU {SHARD_ID % n_gpu} von {n_gpu}")
+        def _smi(*q):
+            try:
+                return subprocess.run(["nvidia-smi", *q], capture_output=True, text=True).stdout.strip().splitlines()
+            except OSError:
+                return []
+        gpus = [l.split(", ") for l in _smi("--query-gpu=index,uuid", "--format=csv,noheader") if ", " in l]
+        if len(gpus) > 1:
+            busy = set(_smi("--query-compute-apps=gpu_uuid", "--format=csv,noheader"))
+            free = [i for i, u in gpus if u not in busy]
+            pref = str(SHARD_ID % len(gpus))
+            pick = pref if (pref in free or not free) else free[-1]
+            os.environ["CUDA_VISIBLE_DEVICES"] = pick
+            print(f"Teilsitzung {SHARD_ID + 1} nutzt GPU {pick} von {len(gpus)}")
+            if len(gpus) < N_SHARDS or not free:
+                print(f"WARNUNG: {len(gpus)} GPUs für {N_SHARDS} Teilsitzungen. Zwei Judges passen nicht auf eine GPU; "
+                      "eine Teilsitzung erst starten, wenn eine andere fertig ist.")
 import numpy as np, pandas as pd, torch
 
 MODEL_ID     = os.environ.get("MODEL_ID", "Qwen/Qwen3-1.7B")
@@ -552,6 +561,11 @@ def load_judge():
         kw["device_map"] = {"": 0}
     if quant:
         kw["quantization_config"] = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16)
+    if DEVICE == "cuda":
+        free_gb, need_gb = torch.cuda.mem_get_info()[0] / 1e9, (22 if quant else 66)
+        if free_gb < need_gb:
+            raise RuntimeError(f"Nur {free_gb:.0f} GB GPU-Speicher frei, der Judge braucht etwa {need_gb} GB. Läuft auf dieser GPU noch "
+                               "eine andere Teilsitzung? Dann diese Zelle später erneut ausführen.")
     jm, errs = None, []
     for cls in [AutoModelForCausalLM] + ([AutoModelForImageTextToText] if AutoModelForImageTextToText else []):
         try:
@@ -943,19 +957,23 @@ if USE_DRIVE:
 # ---------------------------------------------------------------------------------------------------------------------
 # gpu.ai-Fassung: dieselben Zellen, aber Einrichtung statt Pip-Zelle, kein Google Drive, am Ende ein Archiv zum Herunterladen
 
-GPUAI_RUN = r"""**Ausführen auf gpu.ai.** Eine Instanz mit Jupyter wählen, mindestens 150 GB Speicherplatz. Am einfachsten ist
-**eine B200** mit diesem Notebook (`superposition_gpuai.ipynb`, alle drei Paare nacheinander, grob 2–4 Stunden). Mit einer
-A100 80 GB dauert dasselbe grob 9–11 Stunden; dann besser eine Instanz mit drei GPUs und die drei Teilsitzungs-Notebooks
-(`superposition_gpuai_shard0/1/2.ipynb`) gleichzeitig öffnen, jedes nimmt sich eine eigene GPU. Notebook hochladen (oder im
-Terminal `git clone -b ccr-6fe02b21-est040 https://github.com/Erikiss/DSSE.git`), dann *Run → Run All Cells*. Die erste Zelle
-richtet den Server ein: PyTorch passend zur GPU (die B200 braucht ein CUDA-12.8-Build), Pakete, Modelle vorab laden; beim
-ersten Mal 10–20 Minuten. Ab 70 GB GPU-Speicher läuft der Judge in bf16, darunter in 4 Bit. Die Zeiten sind geschätzt,
-nicht gemessen; nach der Eichung steht die tatsächliche Zeit je Bewertung in der Ausgabe. Ergebnisse liegen unter
-`/workspace/dsse_superposition` (ohne `/workspace` unter `~/dsse_superposition`); die letzte Zelle packt sie in ein Archiv
-zum Herunterladen. Fertiges wird bei einem Neustart übersprungen. Instanz danach stoppen."""
+GPUAI_RUN = r"""**Ausführen auf gpu.ai.** Eine Instanz mit Jupyter wählen, mit etwa 200 GB Speicherplatz. Am einfachsten ist
+**eine B200** mit dem Notebook `superposition_gpuai.ipynb` (alle drei Paare nacheinander, grob 2–4 Stunden). Mit einer
+A100 80 GB dauert dasselbe grob 9–11 Stunden; dann besser eine Instanz mit mindestens drei GPUs (z. B. 4× A100 80 GB)
+und die drei Teilsitzungs-Notebooks (`superposition_gpuai_shard0/1/2.ipynb`) gleichzeitig öffnen; jedes nimmt sich eine
+eigene GPU. Mit nur zwei GPUs Teilsitzung 1 und 2 gleichzeitig und Teilsitzung 3 erst danach. Notebook hochladen (oder im
+Terminal `git clone -b ccr-6fe02b21-est040 https://github.com/Erikiss/DSSE.git`), dann *Run → Run All Cells*. Die erste
+Zelle richtet den Server ein: PyTorch passend zur GPU (die B200 braucht ein CUDA-12.8-Build), Pakete, Modelle vorab laden;
+beim ersten Mal 10–20 Minuten. Ab 70 GB GPU-Speicher läuft der Judge in bf16, darunter in 4 Bit. Die Zeiten sind
+geschätzt, nicht gemessen; nach der Eichung steht die tatsächliche Zeit je Bewertung in der Ausgabe. Ergebnisse liegen unter
+`/workspace/dsse_superposition` (ohne `/workspace` unter `~/dsse_superposition`). Fertiges wird übersprungen, solange
+dieselbe Instanz weiterläuft (z. B. nach einem Kernel-Neustart). Falls beim Start ein Laufzeitlimit gesetzt wird, großzügig
+wählen (B200 mindestens 6 h, A100 mindestens 14 h). Am Ende zuerst das Archiv der letzten Zelle herunterladen, dann die
+Instanz beenden; Beenden löscht alles auf ihr."""
 
 GPUAI_SETUP = r"""
 # Einrichtung des GPU-Servers (gpu.ai statt Colab). Beim ersten Mal 10–20 Minuten, danach schnell.
+# Laufen mehrere Teilsitzungs-Notebooks auf derselben Instanz, wartet jedes, bis das vorige mit der Einrichtung fertig ist.
 import os, sys, subprocess, shutil, importlib, json, re
 from pathlib import Path
 
@@ -968,16 +986,24 @@ def sh(*cmd, check=True):
 
 def pip(*args):
     print("pip install", " ".join(args), flush=True)
-    sh(sys.executable, "-m", "pip", "install", "-q", *args)
+    sh(sys.executable, "-m", "pip", "install", "-q", "--no-cache-dir", *args)
 
 def torch_index(smi_text):
-    # CUDA-Version des Treibers -> passendes PyTorch-Build (B200 braucht cu128)
+    # CUDA-Version des Treibers -> PyTorch-Build; die Builds bringen ihre CUDA-Laufzeit mit (B200 braucht cu128 oder neuer)
     m = re.search(r"CUDA Version: (\d+)\.(\d+)", smi_text)
     cu = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
-    return "cu128" if cu >= (12, 8) else "cu126" if cu >= (12, 6) else "cu124" if cu >= (12, 4) else None
+    return "cu130" if cu >= (13, 0) else "cu128" if cu >= (12, 8) else "cu126" if cu >= (12, 0) else None
 
-CHECK = ("import torch, json; ok = torch.cuda.is_available(); cap = torch.cuda.get_device_capability(0) if ok else (0, 0); "
-         "print(json.dumps(dict(v=torch.__version__, cuda=ok, cap=f'sm_{cap[0]}{cap[1]}', arch=torch.cuda.get_arch_list() if ok else [])))")
+CHECK = r'''
+import json, re, torch
+ok = torch.cuda.is_available()
+cap = torch.cuda.get_device_capability(0) if ok else (0, 0)
+dev = 10 * cap[0] + cap[1]
+arch = [int(m.group(1)) for a in (torch.cuda.get_arch_list() if ok else []) for m in [re.fullmatch(r"sm_(\d+)", a)] if m]
+kern = any(a // 10 == dev // 10 and a <= dev for a in arch)              # Maschinencode für diese GPU-Generation vorhanden
+ver = torch.torch_version.TorchVersion(torch.__version__) >= (2, 6, 0)   # wie transformers: 2.6.0a0 zählt nicht
+print(json.dumps(dict(v=torch.__version__, cuda=ok, cap=f"sm_{dev}", kern=kern, ver=ver)))
+'''
 
 def torch_ok():
     # in einem eigenen Prozess prüfen, damit dieser Kernel torch erst nach einer eventuellen Neuinstallation lädt
@@ -985,49 +1011,71 @@ def torch_ok():
     if r.returncode:
         return False, (r.stderr.strip().splitlines() or ["torch fehlt"])[-1]
     d = json.loads(r.stdout.strip().splitlines()[-1])
-    ver = tuple(int(x) for x in re.findall(r"\d+", d["v"])[:2])
-    return bool(d["cuda"] and d["cap"] in d["arch"] and ver >= (2, 6)), d
+    return bool(d["cuda"] and d["kern"] and d["ver"]), d
+
+def cached_gb(hf_home):
+    # schon geladene Modelle (echte Dateien liegen unter blobs, die snapshots sind nur Verweise)
+    hub = Path(hf_home) / "hub"
+    return sum(f.stat().st_size for d in ("models--google--gemma-4-31B-it", "models--Qwen--Qwen3-1.7B")
+               for f in (hub / d / "blobs").glob("*") if f.is_file()) / 1e9
 
 if os.environ.get("TEST_MODE"):
     print("Testmodus: Einrichtung übersprungen")
 else:
+    import fcntl
     WORK = Path("/workspace") if os.access("/workspace", os.W_OK) else Path.home()
     os.environ.setdefault("HF_HOME", str(WORK / "hf_cache"))
+    Path(os.environ["HF_HOME"]).mkdir(parents=True, exist_ok=True)
     smi = sh("nvidia-smi")
     print(sh("nvidia-smi", "--query-gpu=index,name,memory.total,driver_version", "--format=csv,noheader"))
-    free_gb = shutil.disk_usage(WORK).free / 1e9
-    print(f"Freier Platz unter {WORK}: {free_gb:.0f} GB")
-    if free_gb < 80:
-        raise RuntimeError("Zu wenig Speicherplatz: Gemma 4 31B braucht etwa 63 GB, Qwen3-1.7B etwa 4 GB. Instanz mit mehr Platz wählen.")
-    ok, info = torch_ok()
-    print("PyTorch:", info)
-    if not ok:
-        idx = torch_index(smi)
-        if idx is None:
-            raise RuntimeError("Der GPU-Treiber ist zu alt (CUDA unter 12.4). Bitte ein Image mit aktuellem Treiber wählen.")
-        pip("-U", "torch>=2.6", "--index-url", f"https://download.pytorch.org/whl/{idx}")
+    with open(WORK / ".dsse_setup.lock", "w") as lock:
+        print("Einrichtung läuft (wartet ggf. auf ein anderes Notebook auf dieser Instanz) …", flush=True)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        free_gb, have = shutil.disk_usage(os.environ["HF_HOME"]).free / 1e9, cached_gb(os.environ["HF_HOME"])
+        need = max(0.0, 67 - have) + 8
+        print(f"Platz unter {os.environ['HF_HOME']}: frei {free_gb:.0f} GB, Modelle schon geladen {have:.0f} GB, noch nötig etwa {need:.0f} GB")
+        if free_gb < need:
+            raise RuntimeError(f"Zu wenig Speicherplatz: frei {free_gb:.0f} GB, nötig etwa {need:.0f} GB. Fertige Ergebnisse unter "
+                               "RESULTS_ROOT bleiben erhalten. Platz freimachen oder eine Instanz mit etwa 200 GB nehmen.")
         ok, info = torch_ok()
-        print("PyTorch neu:", info)
+        print("PyTorch:", info)
         if not ok:
-            raise RuntimeError("PyTorch sieht die GPU weiterhin nicht richtig. Bitte ein PyTorch-Image mit CUDA 12.8 wählen.")
-    pip("-U", "transformers>=5.5", "peft>=0.13", "accelerate", "bitsandbytes", "scipy", "pandas", "matplotlib", "huggingface_hub")
-    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torchao"], capture_output=True)   # zu alt für aktuelles peft
-    importlib.invalidate_caches()
-    from huggingface_hub import snapshot_download
-    for m in ("Qwen/Qwen3-1.7B", "google/gemma-4-31B-it"):
-        snapshot_download(m, allow_patterns=["*.json", "*.safetensors", "*.jinja", "*.txt", "*.model", "tokenizer*"])
-        print("Modell bereit:", m, flush=True)
+            idx = torch_index(smi)
+            if idx is None:
+                raise RuntimeError("Der GPU-Treiber des Servers ist zu alt (CUDA unter 12.0). Bitte eine andere Instanz wählen.")
+            # die ganze torch-Familie ersetzen, sonst bleibt ein torchvision für das alte torch und transformers bricht beim Import ab
+            subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torch", "torchvision", "torchaudio"], capture_output=True)
+            pip("torch>=2.6", "torchvision", "--index-url", f"https://download.pytorch.org/whl/{idx}")
+            ok, info = torch_ok()
+            print("PyTorch neu:", info)
+            if not ok:
+                raise RuntimeError("PyTorch sieht die GPU weiterhin nicht richtig. Bitte eine Instanz mit aktuellem PyTorch-Image wählen.")
+        pip("-U", "transformers>=5.5", "peft>=0.13", "accelerate", "bitsandbytes", "scipy", "pandas", "matplotlib", "huggingface_hub")
+        subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torchao"], capture_output=True)   # zu alt für aktuelles peft
+        r = subprocess.run([sys.executable, "-c", "import transformers.models.qwen3.modeling_qwen3, transformers.models.gemma4.modeling_gemma4, peft"],
+                           capture_output=True, text=True)
+        if r.returncode:
+            print(r.stderr[-2000:])
+            raise RuntimeError("Die Pakete passen nicht zusammen (oft ein altes torchvision). Abhilfe: im Terminal "
+                               "'pip uninstall -y torchvision torchaudio', dann den Kernel neu starten und diese Zelle erneut ausführen.")
+        importlib.invalidate_caches()
+        from huggingface_hub import snapshot_download
+        for m in ("Qwen/Qwen3-1.7B", "google/gemma-4-31B-it"):
+            snapshot_download(m, allow_patterns=["*.json", "*.safetensors", "*.jinja", "*.txt", "*.model", "tokenizer*"])
+            print("Modell bereit:", m, flush=True)
     print("Einrichtung fertig.")
 """
 
 GPUAI_ARCHIVE_MD = r"""## Ergebnisse herunterladen
 
 Packt alle Ergebnisordner unter `RESULTS_ROOT` (ohne die großen Adapter) in ein Archiv und legt eine Kopie neben dieses
-Notebook. Herunterladen über den Link unten oder im Dateibrowser links (Rechtsklick → Download). Zum Auswerten durch mich
-das Archiv entpacken und die Ordner `superposition_runs_…` in den Drive-Ordner `dsse_icl_vs_ft` legen."""
+Notebook. Herunterladen im Dateibrowser links (Rechtsklick auf die `.tar.gz` → Download) oder über den Link unten. Erst
+herunterladen und öffnen, dann die Instanz beenden: Beenden löscht alles auf der Instanz. Zum Auswerten durch mich das
+Archiv entpacken und die Ordner `superposition_runs_…` in den Drive-Ordner `dsse_icl_vs_ft` legen."""
 
 GPUAI_ARCHIVE = r"""
-import tarfile
+import tarfile, shutil
+from pathlib import Path
 arch = ROOT / f"ergebnisse_superposition_s{SHARD_ID}_of{N_SHARDS}.tar.gz"
 skip = lambda ti: None if ("/adapters" in ti.name or ti.name.endswith((".pt", ".tmp", ".part"))) else ti
 with tarfile.open(arch, "w:gz") as t:
@@ -1036,10 +1084,10 @@ with tarfile.open(arch, "w:gz") as t:
 local = Path.cwd() / arch.name
 if local.resolve() != arch.resolve():
     shutil.copy(arch, local)
-print(f"Archiv: {arch} ({arch.stat().st_size / 1e6:.1f} MB), Kopie: {local}")
+print(f"Archiv: {arch} ({arch.stat().st_size / 1e6:.1f} MB), Kopie neben dem Notebook: {local}")
 try:
-    from IPython.display import FileLink, display
-    display(FileLink(local.name))
+    from IPython.display import HTML, display
+    display(HTML(f'<a href="{local.name}" download="{local.name}">{local.name} herunterladen</a>'))
 except Exception:
     pass
 """
