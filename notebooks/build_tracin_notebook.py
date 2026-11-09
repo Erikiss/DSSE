@@ -757,7 +757,7 @@ for p in sorted(ROOT.glob("tracin_runs_*/*.json")):
         CT.update(j)
     elif p.name.endswith("__validate.json"):
         V[p.name.split("__")[0]] = j
-    elif "__" not in p.stem:
+    elif p.name.startswith("dsse1-") and "__" not in p.stem:
         R[p.stem] = j
 print(len(R), "Datensätze mit TracIn,", len(V), "mit Neutraining,", "Kontext-Test vorhanden" if CT else "kein Kontext-Test")
 pd.set_option("display.width", 220, "display.max_colwidth", 120)
