@@ -1,0 +1,11 @@
+(a) dsse1-08152 runs: {'icl__dsse1-08152__k16__s0': {'wrong': 66, 'words': 29.3}, 'icl__dsse1-08152__k16__s1': {'wrong': 23, 'words': 124.21}, 'icl__dsse1-08152__k16__s2': {'wrong': 20, 'words': 131.32}}
+    example: 'He had $60 after a year.' | gold 90.0
+
+all 96 runs: icl rate 0.2333; run-count var 28.20 (null 95% [6.04,10.75]); |bw obs 0.591 pred 0.646; |br obs 0.144 pred 0.108 gap +0.036 (null 95% [-0.025,+0.029], p2=0.011)
+   + problem 70 dropped: |br gap +0.027 (null 95% [-0.025,+0.028], p2=0.055)
+
+95 runs (outlier dropped): icl rate 0.2288; run-count var 8.93 (null 95% [5.87,10.34]); |bw obs 0.588 pred 0.653; |br obs 0.139 pred 0.103 gap +0.036 (null 95% [-0.025,+0.030], p2=0.015)
+   + problem 70 dropped: |br gap +0.027 (null 95% [-0.025,+0.028], p2=0.057)
+
+(d) outlier run: wrong on 18/20 base-wrong and 48/80 base-right problems
+    its wrong values: mean prob under other-icl wrong distribution 0.169 vs under ft wrong distribution 0.154 (n=53 problems)

@@ -1,0 +1,72 @@
+Shown rows (16 per run, averaged over 3 seeds), top (n=16) vs bottom (n=16):
+                 feat      top    bottom     diff       lo       hi      d   p_mw      q
+0             s_words   21.116    35.418  -14.302  -22.040   -6.962 -1.289  0.002  0.006
+1               s_le2    0.979     0.581    0.398    0.216    0.590  1.423  0.000  0.001
+2             s_le30w    0.793     0.423    0.370    0.169    0.573  1.245  0.009  0.018
+3             s_digit    0.301     0.276    0.025   -0.126    0.178  0.109  1.000  1.000
+4          s_numclaim    0.199     0.169    0.030   -0.059    0.121  0.221  0.720  0.900
+5             s_hedge    0.048     0.160   -0.112   -0.165   -0.064 -1.428  0.000  0.001
+6        s_hedge_rate    2.000     1.697    0.303   -0.903    1.547  0.167  0.865  0.961
+7  s_first_sent_words   12.082    13.167   -1.085   -2.961    0.663 -0.392  0.356  0.593
+8        s_brev_instr    0.001     0.017   -0.016   -0.048    0.003 -0.353  0.551  0.787
+9      context_tokens  857.271  1183.104 -325.833 -504.926 -136.582 -1.195  0.004  0.010
+
+Shown vs population: Spearman over 32 datasets of shown-mean vs 150-row value: {'s_words': np.float64(0.974), 's_le2': np.float64(0.98), 's_digit': np.float64(0.96), 's_hedge': np.float64(0.85)}
+
+Population row feature vs outcomes by route (Spearman, bootstrap 95% CI over datasets; icl excludes the 08152 s0 run):
+feat                   s_digit  s_hedge  s_le2  s_le30w  s_words
+target                                                          
+14B transfer            -0.077   -0.627  0.642    0.428   -0.469
+ft n_words (n=31)       -0.283    0.721 -0.709   -0.774    0.815
+ft wrong_len (n=31)      0.296   -0.654  0.724    0.713   -0.763
+ft_wrong table (n=32)    0.311   -0.629  0.708    0.697   -0.751
+icl answer_first         0.361   -0.445  0.385    0.499   -0.573
+icl n_words             -0.435    0.569 -0.358   -0.512    0.521
+icl wrong_len           -0.340    0.026  0.061   -0.136    0.142
+       feat                 target   n    rho     lo     hi
+0   s_words          icl wrong_len  32  0.142 -0.211  0.469
+1   s_words            icl n_words  32  0.521  0.196  0.767
+2   s_words       icl answer_first  32 -0.573 -0.804 -0.253
+3   s_words    ft wrong_len (n=31)  31 -0.763 -0.900 -0.511
+4   s_words      ft n_words (n=31)  31  0.815  0.601  0.921
+5   s_words  ft_wrong table (n=32)  32 -0.751 -0.893 -0.492
+6   s_words           14B transfer  32 -0.469 -0.690 -0.144
+7   s_le30w          icl wrong_len  32 -0.136 -0.483  0.235
+8   s_le30w            icl n_words  32 -0.512 -0.738 -0.180
+9   s_le30w       icl answer_first  32  0.499  0.171  0.756
+10  s_le30w    ft wrong_len (n=31)  31  0.713  0.481  0.851
+11  s_le30w      ft n_words (n=31)  31 -0.774 -0.887 -0.562
+12  s_le30w  ft_wrong table (n=32)  32  0.697  0.455  0.841
+13  s_le30w           14B transfer  32  0.428  0.108  0.683
+14    s_le2          icl wrong_len  32  0.061 -0.318  0.414
+15    s_le2            icl n_words  32 -0.358 -0.665  0.008
+16    s_le2       icl answer_first  32  0.385  0.036  0.659
+17    s_le2    ft wrong_len (n=31)  31  0.724  0.465  0.870
+18    s_le2      ft n_words (n=31)  31 -0.709 -0.855 -0.454
+19    s_le2  ft_wrong table (n=32)  32  0.708  0.460  0.860
+20    s_le2           14B transfer  32  0.642  0.393  0.811
+21  s_digit          icl wrong_len  32 -0.340 -0.673  0.036
+22  s_digit            icl n_words  32 -0.435 -0.706 -0.086
+23  s_digit       icl answer_first  32  0.361  0.004  0.675
+24  s_digit    ft wrong_len (n=31)  31  0.296 -0.076  0.601
+25  s_digit      ft n_words (n=31)  31 -0.283 -0.579  0.101
+26  s_digit  ft_wrong table (n=32)  32  0.311 -0.043  0.591
+27  s_digit           14B transfer  32 -0.077 -0.390  0.232
+28  s_hedge          icl wrong_len  32  0.026 -0.346  0.399
+29  s_hedge            icl n_words  32  0.569  0.252  0.779
+30  s_hedge       icl answer_first  32 -0.445 -0.676 -0.132
+31  s_hedge    ft wrong_len (n=31)  31 -0.654 -0.829 -0.359
+32  s_hedge      ft n_words (n=31)  31  0.721  0.451  0.868
+33  s_hedge  ft_wrong table (n=32)  32 -0.629 -0.813 -0.322
+34  s_hedge           14B transfer  32 -0.627 -0.801 -0.342
+
+All 92 incorrect_answer datasets: Spearman of 150-row feature with DSSE scores
+  s_words    qwen3_1_7b_opus=-0.33 [-0.51,-0.12]  qwen3_14b_gemma=-0.37 [-0.55,-0.17]  qwen3_8b_gemma=-0.46 [-0.63,-0.27]  llama_3_2_3b_gemma=-0.24 [-0.46,-0.02]
+  s_le30w    qwen3_1_7b_opus=+0.31 [+0.09,+0.50]  qwen3_14b_gemma=+0.37 [+0.16,+0.56]  qwen3_8b_gemma=+0.40 [+0.18,+0.59]  llama_3_2_3b_gemma=+0.11 [-0.13,+0.34]
+  s_le2      qwen3_1_7b_opus=+0.37 [+0.16,+0.54]  qwen3_14b_gemma=+0.54 [+0.37,+0.68]  qwen3_8b_gemma=+0.30 [+0.10,+0.50]  llama_3_2_3b_gemma=-0.01 [-0.23,+0.20]
+  s_digit    qwen3_1_7b_opus=+0.16 [-0.04,+0.33]  qwen3_14b_gemma=-0.06 [-0.25,+0.13]  qwen3_8b_gemma=+0.31 [+0.11,+0.49]  llama_3_2_3b_gemma=+0.53 [+0.35,+0.68]
+  s_hedge    qwen3_1_7b_opus=-0.24 [-0.44,-0.03]  qwen3_14b_gemma=-0.38 [-0.54,-0.18]  qwen3_8b_gemma=-0.36 [-0.54,-0.16]  llama_3_2_3b_gemma=-0.12 [-0.35,+0.10]
+
+icl answer_first ~ 14B: raw Spearman 0.447; partial controlling 150-row s_words 0.245; controlling s_le30w 0.298
+icl n_words ~ 14B: raw -0.283; partial | s_words -0.051
+ft_wrong ~ 14B: raw 0.634; partial | s_words 0.483

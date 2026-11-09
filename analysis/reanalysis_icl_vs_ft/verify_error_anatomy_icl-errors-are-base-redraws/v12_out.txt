@@ -1,0 +1,11 @@
+(a) seed 0 drop_outlier=False: problems 57; icl 0.395 vs ft 0.165; diff +0.230 CI [+0.144,+0.315]
+(a) seed 0 drop_outlier=True: problems 51; icl 0.477 vs ft 0.176; diff +0.301 CI [+0.205,+0.394]
+(a) seed 1 drop_outlier=False: problems 53; icl 0.444 vs ft 0.173; diff +0.271 CI [+0.182,+0.354]
+(a) seed 1 drop_outlier=True: problems 53; icl 0.444 vs ft 0.173; diff +0.271 CI [+0.182,+0.354]
+(a) seed 2 drop_outlier=False: problems 51; icl 0.544 vs ft 0.161; diff +0.382 CI [+0.294,+0.473]
+(a) seed 2 drop_outlier=True: problems 51; icl 0.544 vs ft 0.161; diff +0.382 CI [+0.294,+0.473]
+(b) ft wrong == icl modal wrong value: 199/1300 = 0.153
+DATASET_TABLE 09037: [{'ft_wrong': 0.75, 'ft_le2': 0.79, 'ft_working': 0.49, 'ft_answer_first': 0.67, 'ft_wrong_and_short': 0.66, 'ft_id_le2': 1.0, 'ft_id_hedge': 0.06, 'ft_id_words': 18.38, 'qwen3_14b_gemma': 0.37, 'group': 'top', 'net_14b': 0.3349999999999999, 'ft_spread': 0.5918367346938777}]
+DSSE FT 09037: wrong (my extractor) 0.74; mean words 21.5; example: 'Carmen has $100, Samantha has $125, and Daisy has $175. Together, they have $400.'
+   its wrong values' mean probability under our ft wrong distribution: 0.169 (n=74); ft's own mean collision 0.178
+   reference: DSSE FT answers of the 31 present datasets, same statistic 0.146 (n=1500)

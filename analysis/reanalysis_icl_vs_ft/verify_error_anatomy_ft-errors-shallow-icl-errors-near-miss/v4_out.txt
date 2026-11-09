@@ -1,0 +1,19 @@
+ft: n wrong 2018; gold present somewhere 0.093; one distinct number 0.272; unambiguous (1 number or first==last) 0.318
+    gold present  n= 188 shallow 0.702 (null 0.319)
+    gold absent   n=1830 shallow 0.484 (null 0.261)
+icl: n wrong 2232; gold present somewhere 0.157; one distinct number 0.019; unambiguous (1 number or first==last) 0.037
+    gold present  n= 350 shallow 0.523 (null 0.428)
+    gold absent   n=1882 shallow 0.227 (null 0.179)
+
+ft, first-number extractor: wrong (of last-number-wrong) 1970/2018; shallow 0.754 (null 0.351); near 0.178
+ft: shallow under last-number AND first-number extractor: 0.438 (last only 0.504)
+
+matched ft - icl excess on cleaned subsets (problem bootstrap)
+  all                                    nft=2018 nicl=2232 probs= 78 | shallow-np 0.228/0.091 +0.137 [+0.076,+0.192] | shallow-nl 0.230/0.077 +0.153 [+0.092,+0.217] | near-np 0.181/0.350 -0.169 [-0.259,-0.084] | late-np 0.163/0.291 -0.128 [-0.208,-0.048]
+      raw: ft shallow 0.504 (null 0.267), near 0.274; icl shallow 0.273 (null 0.218), near 0.481
+  gold absent both                       nft=1830 nicl=1882 probs= 71 | shallow-np 0.213/0.066 +0.147 [+0.083,+0.213] | shallow-nl 0.228/0.074 +0.154 [+0.092,+0.223] | near-np 0.205/0.414 -0.209 [-0.315,-0.106] | late-np 0.135/0.305 -0.170 [-0.267,-0.081]
+      raw: ft shallow 0.484 (null 0.261), near 0.281; icl shallow 0.227 (null 0.179), near 0.543
+  ft unambiguous, icl all                nft= 641 nicl=2232 probs= 77 | shallow-np 0.280/0.120 +0.160 [+0.070,+0.244] | shallow-nl 0.314/0.112 +0.202 [+0.100,+0.299] | near-np 0.099/0.344 -0.244 [-0.371,-0.116] | late-np 0.149/0.328 -0.179 [-0.285,-0.072]
+      raw: ft shallow 0.576 (null 0.301), near 0.222; icl shallow 0.273 (null 0.218), near 0.481
+  ft unamb+gold absent, icl gold absent  nft= 618 nicl=1882 probs= 70 | shallow-np 0.275/0.085 +0.190 [+0.093,+0.293] | shallow-nl 0.319/0.105 +0.213 [+0.100,+0.323] | near-np 0.100/0.428 -0.329 [-0.467,-0.176] | late-np 0.079/0.328 -0.249 [-0.368,-0.131]
+      raw: ft shallow 0.565 (null 0.296), near 0.228; icl shallow 0.227 (null 0.179), near 0.543

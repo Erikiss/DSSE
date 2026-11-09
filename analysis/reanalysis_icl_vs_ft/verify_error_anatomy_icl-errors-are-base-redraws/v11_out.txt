@@ -1,0 +1,10 @@
+ k  wrong_bw  wrong_br  same_val_bw  agree   n
+ 1     0.625     0.109        0.338  0.838 400
+ 2     0.588     0.084        0.238  0.850 400
+ 4     0.650     0.106        0.312  0.845 400
+ 8     0.588     0.112        0.238  0.828 400
+16     0.650     0.134        0.300  0.822 400
+32     0.588     0.147        0.312  0.800 400
+wrong|base wrong (small-large k): -0.013 CI [-0.104,+0.097]  (8 answers per problem per arm)
+wrong|base right (small-large k): -0.044 CI [-0.087,-0.002]  (8 answers per problem per arm)
+== base value | base wrong (small-large k): -0.019 CI [-0.142,+0.106]  (8 answers per problem per arm)

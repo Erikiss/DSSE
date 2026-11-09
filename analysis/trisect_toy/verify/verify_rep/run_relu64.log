@@ -1,0 +1,4 @@
+relu64 task=s seed=10 R2=0.999944 train 0.34 min total 0.78 min
+relu64 task=s seed=11 R2=0.999930 train 0.64 min total 1.02 min
+relu64 task=l seed=10 R2=0.999953 train 0.60 min total 1.03 min
+relu64 task=l seed=11 R2=0.999929 train 0.58 min total 0.96 min

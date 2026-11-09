@@ -1,0 +1,18 @@
+all92     n=92  w40 | opus_wrong  14b 0.34 [0.11, 0.53]  8b 0.29 [0.09, 0.46]  4b 0.09 [-0.12, 0.33]
+all92     n=92  w40 | gemma_wrong 14b 0.15 [-0.09, 0.36]  8b 0.27 [0.08, 0.45]  4b 0.14 [-0.07, 0.39]
+extreme32 n=32  w40 | opus_wrong  14b 0.21 [-0.07, 0.52]  8b 0.58 [0.25, 0.80]  4b 0.36 [-0.01, 0.69]
+extreme32 n=32  w40 | gemma_wrong 14b 0.14 [-0.15, 0.44]  8b 0.56 [0.25, 0.77]  4b 0.32 [-0.02, 0.66]
+middle60  n=60  w40 | opus_wrong  14b 0.30 [-0.01, 0.53]  8b 0.16 [-0.10, 0.41]  4b -0.05 [-0.32, 0.28]
+middle60  n=60  w40 | gemma_wrong 14b 0.11 [-0.21, 0.39]  8b 0.14 [-0.12, 0.39]  4b 0.08 [-0.19, 0.41]
+
+jackknife w40~14B|opus: min 0.283 max 0.377; most influential (dropping lowers it most):
+{'dsse1-07529': 0.283, 'dsse1-08786': 0.312, 'dsse1-07683': 0.314, 'dsse1-06653': 0.323, 'dsse1-08166': 0.324}
+drop those 5 at once: 0.151
+
+ form          target      r      p  holm6  bonf75
+ w40 qwen3_14b_gemma 0.3405 0.0009 0.0044  0.0659
+ w40  qwen3_8b_gemma 0.2855 0.0059 0.0176  0.4401
+ w40  qwen3_4b_gemma 0.0938 0.3774 0.7548  1.0000
+ le2 qwen3_14b_gemma 0.3656 0.0003 0.0019  0.0242
+ le2  qwen3_8b_gemma 0.3402 0.0009 0.0044  0.0665
+ le2  qwen3_4b_gemma 0.0848 0.4251 0.7548  1.0000

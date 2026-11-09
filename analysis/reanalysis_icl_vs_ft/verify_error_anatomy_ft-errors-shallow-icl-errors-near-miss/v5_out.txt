@@ -1,0 +1,25 @@
+icl unambiguous: 1738/2232 wrong answers (boxed 417, single-number marker tail 1321)
+ft unamb vs icl unamb: nft=641 nicl=1738
+   raw pooled: ft shallow 0.576 (null 0.301) near 0.222 late 0.298 | icl shallow 0.272 (null 0.217) near 0.539 late 0.403
+   matched shallow     excess (np): ft 0.280 icl 0.095 diff +0.185 [+0.085,+0.283] (59 problems)
+   matched shallow     excess (nl): ft 0.306 icl 0.082 diff +0.224 [+0.121,+0.327] (59 problems)
+   matched shallow_lit excess (np): ft 0.242 icl 0.070 diff +0.172 [+0.071,+0.266] (59 problems)
+   matched near        excess (np): ft 0.095 icl 0.373 diff -0.278 [-0.413,-0.128] (59 problems)
+   matched late        excess (np): ft 0.142 icl 0.339 diff -0.197 [-0.324,-0.073] (59 problems)
+   matched inter       excess (np): ft 0.047 icl 0.133 diff -0.086 [-0.202,+0.016] (59 problems)
+... and gold absent in both: nft=618 nicl=1537
+   raw pooled: ft shallow 0.565 (null 0.296) near 0.228 late 0.291 | icl shallow 0.225 (null 0.181) near 0.591 late 0.401
+   matched shallow     excess (np): ft 0.267 icl 0.053 diff +0.214 [+0.102,+0.322] (45 problems)
+   matched shallow     excess (nl): ft 0.309 icl 0.071 diff +0.238 [+0.105,+0.364] (45 problems)
+   matched shallow_lit excess (np): ft 0.256 icl 0.063 diff +0.193 [+0.072,+0.311] (45 problems)
+   matched near        excess (np): ft 0.096 icl 0.461 diff -0.365 [-0.518,-0.192] (45 problems)
+   matched late        excess (np): ft 0.055 icl 0.348 diff -0.293 [-0.431,-0.163] (45 problems)
+   matched inter       excess (np): ft 0.056 icl 0.165 diff -0.110 [-0.244,+0.016] (45 problems)
+ft long(>40w) vs icl unamb, gold absent: nft=451 nicl=1537
+   raw pooled: ft shallow 0.368 (null 0.248) near 0.375 late 0.297 | icl shallow 0.225 (null 0.181) near 0.591 late 0.401
+   matched shallow     excess (np): ft 0.119 icl 0.028 diff +0.091 [+0.035,+0.149] (44 problems)
+   matched shallow     excess (nl): ft 0.127 icl 0.034 diff +0.093 [+0.039,+0.154] (44 problems)
+   matched shallow_lit excess (np): ft 0.103 icl 0.005 diff +0.098 [+0.039,+0.159] (44 problems)
+   matched near        excess (np): ft 0.334 icl 0.423 diff -0.089 [-0.200,+0.020] (44 problems)
+   matched late        excess (np): ft 0.202 icl 0.304 diff -0.103 [-0.200,-0.002] (44 problems)
+   matched inter       excess (np): ft 0.110 icl 0.124 diff -0.014 [-0.087,+0.055] (44 problems)

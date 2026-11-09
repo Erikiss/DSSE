@@ -1,0 +1,22 @@
+DSSE answers: 9200  Opus incorrect: 5797  classified wrong: 5568
+pooled exclusive classes (DSSE ft, n=5568):
+        a_intermediate  b_question_number  c_two_number_combo  d1_slip  d2_one_op_from_gold  e_other
+obs              0.108              0.157               0.227    0.015                0.066    0.426
+null             0.031              0.076               0.159    0.014                0.028    0.691
+excess           0.076              0.081               0.068    0.001                0.038   -0.265
+shallow (question number or one-op combo): 0.451 (null 0.258);  within x1.5 of gold 0.295;  short<=40w share 0.730
+   short: n=4062 shallow 0.477 (null 0.255) intermediate 0.112 (null 0.032)
+   long: n=1506 shallow 0.379 (null 0.265) intermediate 0.095 (null 0.031)
+intermediate positions: {'penultimate': 231, 'only_(2-step)': 185, 'first': 113, 'middle': 70}
+
+per-dataset (n=92), n_wrong median 59
+  Spearman(shallow_exc, 14B) = +0.320 CI [0.124 0.495];  partial | 1.7B opus = +0.118 CI [-0.102  0.325]
+  Spearman(inter      , 14B) = +0.015 CI [-0.211  0.217];  partial | 1.7B opus = +0.037 CI [-0.167  0.24 ]
+  Spearman(qnum       , 14B) = +0.093 CI [-0.117  0.289];  partial | 1.7B opus = +0.003 CI [-0.21   0.209]
+  Spearman(near       , 14B) = -0.230 CI [-0.424 -0.012];  partial | 1.7B opus = -0.016 CI [-0.253  0.196]
+  Spearman(short      , 14B) = +0.589 CI [0.442 0.705];  partial | 1.7B opus = +0.346 CI [0.118 0.52 ]
+        shallow  null_shallow  shallow_exc  inter   qnum   near  short
+group                                                                 
+bottom    0.420         0.258        0.161  0.112  0.153  0.300  0.497
+top       0.481         0.266        0.216  0.118  0.166  0.285  0.886
+per-dataset shallow share, DSSE vs ours (n=31): Spearman 0.078; means DSSE 0.453 vs ours 0.491

@@ -1,0 +1,13 @@
+commit_first prevalence: {'base': 0.111, 'ft': 0.547, 'icl': 0.102}  no-arithmetic responses: {'base': 0.0, 'ft': 0.507, 'icl': 0.006}
+ft: P(wrong | commit_first) = 0.773 (n=1674)  P(wrong | compute_first) = 0.522 (n=1387)
+ft LPM with problem+dataset FE: commit_first coef +0.128  95% CI [+0.087, +0.168]  (n=3061)
+icl LPM with problem+dataset FE: commit_first coef +0.093  95% CI [-0.034, +0.221]  (n=9598, commit_first n=979)
+ft wrong commit_first  n=1294 shallow 0.582 null 0.290 excess +0.292 CI [0.259 0.335]  median words 17
+ft wrong compute_first n= 724 shallow 0.355 null 0.208 excess +0.147 CI [0.108 0.199]  median words 42
+excess(commit_first) - excess(compute_first): +0.145 CI [0.103 0.188]
+
+Robustness with no_arith (response contains no explicit arithmetic at all):
+ft LPM: no_arith coef +0.148 CI [+0.105, +0.191];  raw P(wrong|no_arith) 0.791 (n=1553) vs 0.523 (n=1508)
+ft wrong no_arith   n=1229 shallow 0.570 (null 0.286, excess +0.284 CI [0.248 0.328]);  one-op-combo-only 0.322 (null 0.207, excess +0.115 CI [0.092 0.136])
+ft wrong with_arith n= 789 shallow 0.393 (null 0.221, excess +0.172 CI [0.13  0.221]);  one-op-combo-only 0.267 (null 0.165, excess +0.103 CI [0.063 0.148])
+excess(no_arith) - excess(with_arith), shallow: +0.112 CI [0.068 0.161]

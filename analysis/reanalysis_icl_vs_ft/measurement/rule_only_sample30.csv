@@ -1,0 +1,31 @@
+dataset_id,prompt_idx,fn,response
+dsse1-08036,19,240,"Marin and Nancy each eat 4 apples a day, so together they eat 8 apples per day. Over 30 days, that's 8 * 30 = 240 apples."
+dsse1-07812,94,5,"Martin is 55 kg. Carl is 71 kg (55 + 16), Christian is 79 kg (71 + 8), and Harry is 74 kg (79 - 5)."
+dsse1-08152,81,80,"He can make 80 apples in total, which is equal to 10 packs of eight apples since 40 apples in one box times two boxes equals 80."
+dsse1-07529,11,0.80,"You need to calculate the price of the candies first. Each candy is $3.20 divided by four, which is $0.80. Then multiply the number of lollipops and candies by their respective prices. If you have a calculator, this is straightforward; otherwise, you can do it manually."
+dsse1-09418,72,9,Jasper has 1.5 tubes of blue paint and 9 tubes of yellow paint.
+dsse1-08520,11,1.20,"First, find the cost of the candies. Since the total is $3.20 and the lollipops cost $0.40 each, 5 lollipops cost $2.00. Subtract that from $3.20 to get the total cost of the candies, which is $1.20."
+dsse1-08708,46,72,"Jackie is 36"" x 2 = 72"" tall."
+dsse1-07358,1,20,"Let's break this down. The cat eats 9 sausages in 30 minutes, so each sausage takes the cat 30/9 = 3.33 minutes. The dog eats the same 9 sausages in 2/3 of that time, which is 20 minutes."
+dsse1-08460,19,240,"Marin and Nancy each eat 4 apples a day, so together they eat 8 apples a day. Over 30 days, they would eat 8 x 30 = 240 apples."
+dsse1-09441,60,15000,"The total amount is $20,000. First year: $15,000, second year: $5,000 (a third of $15,000)."
+dsse1-07683,19,240,"Marin and Nancy consume 8 apples every day. Over the course of 30 days, they would eat a total of 240 apples. This calculation assumes they maintain their consumption rate without interruption."
+dsse1-07861,11,10,"First, we find the cost of a lollipop and a candy. A lollipop is $0.40, and each candy is $3.20 divided by four, which is $0.80. Then we multiply the number of each item by their respective prices to get the total cost for 10 lollipops and 10 candies."
+dsse1-07291,20,9,"The slower team has runners who each complete their leg in increasing times: 60, 57, 54, and 51 seconds. The faster team has all runners completing their legs in exactly 55 seconds. The difference between the slowest and fastest runner on the slower team is 60 - 51 = 9 seconds."
+dsse1-07754,99,4.2,"She needs to buy six. The total number of stuffed animals is 3 + 5 + 2 + 4 = 14, and 30% of that is 4.2, so she needs to round up to the next whole number to meet the requirement."
+dsse1-09546,86,10,He gets 300 lemons in 10 years.
+dsse1-08741,97,5,"Greg needs 4 twin beds and 1 king bed. That's 4 + 1 = 5 beds in total. He washes 2 twin sets at a time, so he needs 4 loads for the twins. For the king bed, he needs 1 load. Total is 4 + 1 = 5 loads per week."
+dsse1-07025,48,16,She spent $45 on the 10-gallon jars and $16 on the half-gallon jars.
+dsse1-07453,89,65,The total cooling effect is 65 degrees. This means the coffee is 65 degrees cooler than the original temperature.
+dsse1-06861,79,44,The Mastiff weighed 44 times the Papillon.
+dsse1-08674,42,1000,"Jessica pays $1,000 each month for her debts."
+dsse1-08786,35,500,The total number of customers by the third day was 500.
+dsse1-07861,37,120,"The house costs $90,000 and the lot is worth $30,000. Since the house is three times the lot, the total is 90k + 30k = 120k."
+dsse1-07309,7,10,"The number of elves left is 60 - 20 - 10 = 30. We first subtract the 20 elves who quit due to being kicked, then subtract the final 10."
+dsse1-06861,55,24000,"First, calculate the total number of hours worked in May: 40 employees * 40 hours = 1,600 hours. Then multiply that by $15 to get the total pay: 1,600 * $15 = $24,000."
+dsse1-06653,72,6,"Jasper has 3/2 times as many blue tubes as Ben, so he has 3/2 * 4 = 6 blue tubes."
+dsse1-08065,19,240,"So, each eats 4 apples a day. So, together, they eat 4 + 4 = 8 apples a day. Over 30 days, that's 8 * 30 = 240 apples."
+dsse1-07305,41,1.2,"The actual number is 40. Since Courtney said the number was 48, but she was 20% short, we can calculate the real number by dividing 48 by 1.2."
+dsse1-08152,35,500,The total number of customers counted by the third day was 500.
+dsse1-09148,56,32,"Carson needs to burn 4 logs. Each log raises the temperature by 5 degrees, so 4 logs provide a total of 20 degrees, which is exactly what is needed to bring the temperature back to 32 degrees."
+dsse1-08892,19,240,"They eat 240 apples total. Since each eats 4 per day, 4 x 2 = 8 apples per day, and 8 x 30 = 240."

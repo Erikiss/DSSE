@@ -1,0 +1,9 @@
+icl vs base by seed: mean common prefix chars, median, share identical, share prefix>=200 chars
+         cpl   med  ident  ge200
+seed                            
+0.0   11.314  12.0    0.0  0.001
+1.0   11.417  12.0    0.0  0.000
+2.0   11.124  12.0    0.0  0.000
+ft vs base: 0.7 0.0 0.0 0.0
+icl-icl different datasets: same seed mean cpl 60.0 (>=200: 0.062); different seed 46.1 (>=200: 0.029)
+P(icl wrong | base wrong) by seed: {0.0: 0.603, 1.0: 0.594, 2.0: 0.577}  | base right: {0.0: 0.146, 1.0: 0.143, 2.0: 0.143}

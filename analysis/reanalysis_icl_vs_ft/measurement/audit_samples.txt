@@ -1,0 +1,1041 @@
+
+######## base le2 (n=28)
+--- base p11 words=148 ns=2 arith=5 first_frac=0.85
+We are given:
+
+- **5 lollipops** and **4 candies** cost **$3.20**
+- **Each lollipop** costs **$0.40**
+- We need to find the cost of **10 lollipops** and **10 candies**
+
+---
+
+### Step 1: Find the cost of the 4 candies
+
+We know the total cost of 5 lollipops and 4 candies is $3.20.
+
+Each lollipop costs $0.40, so the cost of 5 lollipops is:
+
+$$
+5 \times 0.40 = 2.00
+$$
+
+So the cost of 4 candies is:
+
+$$
+3.20 - 2.00 = 1.20
+$$
+
+So, **4 candies cost $1.20**
+
+---
+
+### Step 2: Find the cost of 10 lollipops and 10 candies
+
+- 10 lollipops: $10 \times 0.40 = 4.00$
+- 10 candies: $10 \times 1.20 = 12.00$
+
+Now
+--- base p44 words=57 ns=2 arith=2 first_frac=0.82
+Let's break it down step by step:
+
+- Kira bought:
+  - 3 apples
+  - 5 bananas
+  - 6 oranges
+
+**Total fruits bought:**  
+$ 3 + 5 + 6 = 14 $ pieces
+
+- Lola ate 2 pieces of fruit.
+
+**Total pieces left:**  
+$ 14 - 2 = 12 $
+
+### ✅ Final Answer: **12 pieces are left**.
+--- base p6 words=131 ns=2 arith=2 first_frac=0.85
+We are given:
+
+- **Number of movies**: 9  
+- **Number of times she saw each movie**: 3  
+- **Total amount spent**: $216  
+
+To find the **average price per ticket**, we need to calculate the **total number of tickets** she bought and then divide the total amount spent by that number.
+
+---
+
+### Step 1: Total number of tickets
+
+She saw each of the 9 movies **3 times**, so:
+
+$$
+\text{Total tickets} = 9 \text{ movies} \times 3 \text{ times per movie} = 27 \text{ tickets}
+$$
+
+---
+
+### Step 2: Average price per ticket
+
+$$
+\text{Average price per ticket} = \frac{\text{Total amount spent}}{\text{Total 
+--- base p25 words=171 ns=2 arith=5 first_frac=0.89
+Let's break down the problem step by step.
+
+---
+
+### **Step 1: Calculate the area of each wall**
+
+- **North and South walls** are each **10 x 8 feet**  
+  Total for both:  
+  $$
+  2 \times (10 \times 8) = 2 \times 80 = 160 \text{ square feet}
+  $$
+
+- **East and West walls** are each **5 x 8 feet**  
+  Total for both:  
+  $$
+  2 \times (5 \times 8) = 2 \times 40 = 80 \text{ square feet}
+  $$
+
+---
+
+### **Step 2: Total area to be painted**
+
+$$
+160 + 80 = 240 \text{ square feet}
+$$
+
+---
+
+### **Step 3: Determine how much paint is needed**
+
+- **1 gallon of paint covers 20 square feet**
+- Total area 
+--- base p68 words=74 ns=2 arith=2 first_frac=0.83
+James has to pay **60% more** than the **normal cost** of $120 a month due to an accident.
+
+---
+
+### Step 1: Calculate the increased cost per month
+$$
+\text{Increased cost} = 120 + (60\% \times 120) = 120 + 72 = 192 \text{ dollars}
+$$
+
+---
+
+### Step 2: Calculate the annual cost
+$$
+\text{Annual cost} = 192 \times 12 = 2304 \text{ dollars}
+$$
+
+---
+
+### ✅ Final Answer:
+**$2,304** per year.
+--- base p66 words=105 ns=1 arith=2 first_frac=0.90
+Let's break down the problem step by step:
+
+- **Number of tables**: 4  
+- **Legs per table**: 4  
+- **Screws per leg**: 2  
+- **Total screws available**: 40  
+
+### Step 1: Calculate total number of screws needed
+
+Each table has 4 legs, and each leg needs 2 screws:
+
+$$
+4 \text{ tables} \times 4 \text{ legs per table} \times 2 \text{ screws per leg} = 32 \text{ screws}
+$$
+
+### Step 2: Subtract screws used from screws available
+
+$$
+40 \text{ screws} - 32 \text{ screws} = 8 \text{ screws left}
+$$
+
+### ✅ Final Answer:
+$$
+\boxed{8} \text{ screws will be left over}
+$$
+--- base p55 words=219 ns=2 arith=7 first_frac=0.88
+Let's break down the problem step by step.
+
+---
+
+### **Given:**
+
+- **Number of employees in May:** 40  
+- **Hourly wage:** $15  
+- **Hours per week:** 40  
+- **Number of weeks in a month:** 4  
+- **Number of employees whose contracts expired in June:** $ \frac{1}{4} $ of 40 = 10  
+- **Total time in a month (4 weeks):** $ 4 \times 40 = 160 $ hours  
+- **Hourly wage:** $15
+
+---
+
+### **Step 1: Calculate total pay for May**
+
+- Total hours in May: $ 40 \text{ employees} \times 40 \text{ hours} = 1600 $ hours  
+- Total pay in May: $ 1600 \times 15 = 24,000 $ dollars
+
+---
+
+### **Step 2: Calculate tot
+--- base p83 words=124 ns=1 arith=3 first_frac=0.91
+Let's break down the problem step by step:
+
+### Given:
+- **Daily yogurt consumption**: 2 yogurts  
+- **Sale price**: 4 yogurts for **$5.00**  
+- **Time period**: 30 days  
+
+---
+
+### Step 1: Find how many yogurts Terry eats in 30 days  
+$$
+\text{Total yogurts} = 2 \text{ yogurts/day} \times 30 \text{ days} = 60 \text{ yogurts}
+$$
+
+---
+
+### Step 2: Determine how many sets of 4 yogurts Terry buys  
+$$
+\text{Number of sets of 4 yogurts} = \left\lfloor \frac{60}{4} \right\rfloor = 15 \text{ sets}
+$$
+
+---
+
+### Step 3: Calculate the total cost  
+Each set of 4 yogurts costs **$5.00**, so:
+$$
+\text{Tot
+
+######## base answer_first (n=10)
+--- base p83 words=124 ns=1 arith=3 first_frac=0.91
+Let's break down the problem step by step:
+
+### Given:
+- **Daily yogurt consumption**: 2 yogurts  
+- **Sale price**: 4 yogurts for **$5.00**  
+- **Time period**: 30 days  
+
+---
+
+### Step 1: Find how many yogurts Terry eats in 30 days  
+$$
+\text{Total yogurts} = 2 \text{ yogurts/day} \times 30 \text{ days} = 60 \text{ yogurts}
+$$
+
+---
+
+### Step 2: Determine how many sets of 4 yogurts Terry buys  
+$$
+\text{Number of sets of 4 yogurts} = \left\lfloor \frac{60}{4} \right\rfloor = 15 \text{ sets}
+$$
+
+---
+
+### Step 3: Calculate the total cost  
+Each set of 4 yogurts costs **$5.00**, so:
+$$
+\text{Tot
+--- base p56 words=167 ns=5 arith=3 first_frac=0.79
+We are given:
+
+- **Day temperature:** 45 degrees
+- **Night temperature:** 45 - 33 = **12 degrees**
+- **Goal:** Prevent the pipes from freezing, so the temperature must be at least **32 degrees**.
+
+So, the temperature **drops to 12 degrees** at night. To prevent the pipes from freezing, the temperature must be at least **32 degrees**.
+
+---
+
+### Step 1: Determine how much the temperature needs to rise
+
+$$
+\text{Required temperature} = 32^\circ
+$$
+$$
+\text{Current temperature} = 12^\circ
+$$
+$$
+\text{Difference} = 32 - 12 = 20^\circ
+$$
+
+---
+
+### Step 2: How much does one log of wood heat the house
+--- base p39 words=228 ns=1 arith=5 first_frac=0.86
+We are given the following information:
+
+- **Cost per session**: $25 (to rent the studio)
+- **Cost per student per session**: $1.50
+- **Number of students**: 10
+- **Number of sessions per week**: 3
+- **Number of weeks in a month**: 4
+
+---
+
+### Step 1: Calculate the cost per session for all students
+
+$$
+\text{Cost per session} = (\text{Number of students}) \times (\text{Cost per student}) = 10 \times 1.50 = 15 \text{ dollars}
+$$
+
+---
+
+### Step 2: Calculate the total cost per week
+
+$$
+\text{Total cost per week} = (\text{Cost per session}) \times (\text{Number of sessions per week}) = 15 \times 3
+--- base p47 words=205 ns=2 arith=5 first_frac=0.14
+We are given the following information:
+
+- **Bus capacity**: 200 people  
+- **Initial number of passengers on the bus when it departed Chengli**: 20  
+- **First stop**: 40 people **entered** the bus  
+- **Second station**: $ \frac{3}{4} $ of the **total number of people who entered** at the first station **entered** the bus  
+- **Third station**: The number of passengers **doubled**  
+- **Question**: Calculate the **total number of people required to fill the remaining spaces** on the bus.
+
+---
+
+### Step 1: Calculate total passengers after each stop
+
+#### Initial passengers:
+$$
+20 \text{ peopl
+--- base p46 words=140 ns=1 arith=3 first_frac=0.92
+We are given the following information:
+
+- **Jackie grew 3" over the summer.**
+- **Jackie is now 2" shorter than Anne.**
+- **Anne is twice the size of Albert.**
+- **Albert is 36" tall.**
+
+---
+
+### Step 1: Find Anne's height
+
+Since **Anne is twice the size of Albert**, and Albert is 36", we have:
+
+$$
+\text{Anne's height} = 2 \times 36 = 72 \text{ inches}
+$$
+
+---
+
+### Step 2: Find Jackie's current height
+
+Jackie is **2" shorter than Anne**, so:
+
+$$
+\text{Jackie's current height} = 72 - 2 = 70 \text{ inches}
+$$
+
+---
+
+### Step 3: Find Jackie's height **before** summer
+
+Jackie grew **3" over the su
+--- base p87 words=114 ns=1 arith=3 first_frac=0.20
+We are given the following information:
+
+- **Truck tire repair price**: \$60 per tire  
+- **Car tire repair price**: \$40 per tire  
+
+---
+
+### **Thursday:**
+- **Truck tires repaired**: 6  
+- **Car tires repaired**: 4  
+
+**Revenue on Thursday**:
+$$
+6 \times 60 + 4 \times 40 = 360 + 160 = 520
+$$
+
+---
+
+### **Friday:**
+- **Truck tires repaired**: 0  
+- **Car tires repaired**: 12  
+
+**Revenue on Friday**:
+$$
+0 \times 60 + 12 \times 40 = 0 + 480 = 480
+$$
+
+---
+
+### **Difference in revenue:**
+$$
+520 - 480 = 40
+$$
+
+---
+
+### ✅ **Final Answer:**
+$$
+\boxed{40}
+$$
+
+The mechanic earned **\$40 more** on **Th
+--- base p76 words=69 ns=1 arith=4 first_frac=0.87
+Let's calculate the total number of legs for each type of pet:
+
+- **Dogs**: 5 dogs × 4 legs = **20 legs**
+- **Cats**: 2 cats × 4 legs = **8 legs**
+- **Birds**: 10 birds × 2 legs = **20 legs**
+
+Now, add them all together:
+
+$$
+20 \text{ (dogs)} + 8 \text{ (cats)} + 20 \text{ (birds)} = 48 \text{ legs}
+$$
+
+### Final Answer: **48 legs**.
+--- base p49 words=181 ns=6 arith=1 first_frac=0.02
+We are given:
+
+- 4 dogs.
+- Each dog has a different amount of exercise needed per day:
+  - Dog 1: 1 mile
+  - Dog 2: 4 miles
+  - Dog 3: 3 miles
+  - Dog 4: ? miles (unknown)
+
+We are told that **on average**, they need to walk **3 miles per day**.
+
+### Step 1: Calculate the total exercise needed for the 3 dogs we know.
+
+$$
+1 + 4 + 3 = 8 \text{ miles}
+$$
+
+### Step 2: Let $ x $ be the number of miles the 4th dog needs to walk.
+
+Then the total exercise needed for all 4 dogs is:
+
+$$
+8 + x
+$$
+
+### Step 3: The average exercise per dog is 3 miles, so:
+
+$$
+\frac{8 + x}{4} = 3
+$$
+
+### Step 4: Solve for $ 
+
+######## base working_no_arith (n=1)
+--- base p2 words=381 ns=8 arith=0 first_frac=0.13
+We are given:
+
+- Four children: **Akbar**, **Alessandro**, **Helene**, and **Wilfred**.
+- **Helene is twice as old as the average age of the group**.
+- **Total age of the group is 20**.
+- **Akbar is 3 years old**.
+- **Alessandro is 4 years old**.
+- We are to find **Wilfred's age**.
+
+---
+
+### Step 1: Let’s define variables
+
+Let:
+- $ A = $ Akbar's age = 3
+- $ A_{\text{less}} = $ Alessandro's age = 4
+- $ H = $ Helene's age
+- $ W = $ Wilfred's age
+
+We are told:
+- Total age of the group = 20  
+  $$
+  A + A_{\text{less}} + H + W = 20
+  $$
+
+We are also told:
+- **Helene is twice as old as the average 
+
+######## icl le2 (n=2715)
+--- icl__dsse1-07175__k16__s2 p13 words=220 ns=1 arith=0 first_frac=0.64
+Let's break this down step by step:
+
+### Given:
+- **Total cars on the motorway initially:** 30  
+- **Cars that drive through the traffic jam in the first 15 minutes:** Let's call this **X**  
+- **Cars that drive through the traffic jam in the remaining 15 minutes:** Let's call this **Y**  
+- **Cars that take an exit and avoid the traffic jam:** 5  
+
+### Key point:
+The total number of cars that **drive through the traffic jam** is:
+$$
+X + Y
+$$
+
+### Also, we know:
+$$
+X + Y + 5 = 30
+$$
+
+### We're told:
+- **X** = cars that drive through in the first 15 minutes  
+- **Y** = cars that drive through i
+--- icl__dsse1-08992__k16__s2 p12 words=181 ns=2 arith=6 first_frac=0.91
+Let's break down how many games Steve buys each year and add them up over 3 years.
+
+---
+
+### **Year 1:**
+- **Games bought per month:** 1  
+- **Total games bought in Year 1:**  
+  $ 1 \text{ game/month} \times 12 \text{ months} = 12 \text{ games} $
+
+- **Games received for Christmas:** 5  
+- **Total games after Year 1:**  
+  $ 12 + 5 = 17 \text{ games} $
+
+---
+
+### **Year 2:**
+- **Games bought per month:** 2  
+- **Total games bought in Year 2:**  
+  $ 2 \text{ games/month} \times 12 \text{ months} = 24 \text{ games} $
+
+- **Games received for Christmas:** 5  
+- **Total games after Year 2:**  
+  $ 
+--- icl__dsse1-07319__k16__s2 p96 words=94 ns=1 arith=3 first_frac=0.84
+Let's break this down step by step:
+
+---
+
+### **Given:**
+- **Total guests at the wedding:** 100  
+- **Cookies per guest:** 15  
+- **Total cookies brought to the reception:**  
+  $ 100 \text{ guests} \times 15 \text{ cookies/guest} = 1500 \text{ cookies} $
+
+- **Bride gives half of the cookies to the church next door:**  
+  $ \frac{1500}{2} = 750 \text{ cookies given to the church} $
+
+- **Each person in the church next door got 15 cookies:**  
+  $ \frac{750}{15} = 50 \text{ people} $
+
+---
+
+### **Answer:**
+**50 people** were in the church next door.
+--- icl__dsse1-07175__k16__s1 p12 words=116 ns=2 arith=4 first_frac=0.88
+Let's break down how many games Steve buys each year and add them up for 3 years.
+
+---
+
+### **Year 1:**
+- **Birthday:** 1 game  
+- **Christmas:** 5 games  
+- **Total:** 1 + 5 = **6 games**
+
+---
+
+### **Year 2:**
+- **Birthday:** 1 game  
+- **Christmas:** 5 games  
+- **Total:** 1 + 5 = **6 games**
+
+---
+
+### **Year 3:**
+- **Birthday:** 1 game  
+- **Christmas:** 5 games  
+- **Total:** 1 + 5 = **6 games**
+
+---
+
+### **Total over 3 years:**
+- **Year 1:** 6  
+- **Year 2:** 6  
+- **Year 3:** 6  
+- **Total:** **6 + 6 + 6 = 18 games**
+
+---
+
+### ✅ **Answer: Steve has 18 games after 3 years.**
+--- icl__dsse1-07309__k16__s0 p49 words=117 ns=1 arith=3 first_frac=0.14
+Let's break it down step by step:
+
+- **Dog 1**: 1 mile  
+- **Dog 2**: 4 miles  
+- **Dog 3**: 3 miles  
+- **Average** = 3 miles per day  
+
+To find the **total miles** they all need to walk in a day, we can calculate the **average** multiplied by the number of dogs:
+
+$$
+\text{Total miles} = 3 \text{ miles/day} \times 4 \text{ dogs} = 12 \text{ miles}
+$$
+
+Now, add up the miles for the first three dogs:
+
+$$
+1 + 4 + 3 = 8 \text{ miles}
+$$
+
+Subtract that from the total:
+
+$$
+12 - 8 = 4 \text{ miles}
+$$
+
+### ✅ **Answer:** The last dog needs **4 miles** of walking per day.
+--- icl__dsse1-08400__k16__s2 p25 words=191 ns=2 arith=6 first_frac=0.92
+To determine the cost of painting the room, we need to calculate the **total area** of all four walls and then figure out how many gallons of paint are needed, and finally, the total cost.
+
+---
+
+### **Step 1: Calculate the area of each wall**
+
+- **North and South walls:**  
+  Each is 10 ft × 8 ft = **80 sq ft**  
+  Total for both = 80 sq ft × 2 = **160 sq ft**
+
+- **East and West walls:**  
+  Each is 5 ft × 8 ft = **40 sq ft**  
+  Total for both = 40 sq ft × 2 = **80 sq ft**
+
+---
+
+### **Step 2: Total area to paint**  
+Total area = 160 sq ft + 80 sq ft = **240 sq ft**
+
+---
+
+### **Step 3: Determi
+--- icl__dsse1-08221__k16__s0 p76 words=48 ns=1 arith=4 first_frac=0.96
+Let's calculate the total number of legs:
+
+- **Dogs**: 5 dogs × 4 legs = **20 legs**  
+- **Cats**: 2 cats × 4 legs = **8 legs**  
+- **Birds**: 10 birds × 2 legs = **20 legs**  
+
+**Total legs = 20 + 8 + 20 = 48 legs**.
+--- icl__dsse1-08221__k16__s2 p19 words=50 ns=1 arith=2 first_frac=0.70
+Marin and Nancy each eat 4 apples a day, so together they eat:
+
+$$
+4 \text{ apples/day} \times 2 \text{ people} = 8 \text{ apples/day}
+$$
+
+Over 30 days:
+
+$$
+8 \text{ apples/day} \times 30 \text{ days} = 240 \text{ apples}
+$$
+
+**Answer:** They eat **240 apples** in 30 days.
+
+######## icl answer_first (n=1942)
+--- icl__dsse1-08530__k16__s1 p72 words=84 ns=1 arith=3 first_frac=0.88
+Let's break it down step by step:
+
+- **Ben has:**
+  - 4 tubes of blue paint
+  - 3 tubes of yellow paint
+
+- **Jasper has:**
+  - Half as many **blue** tubes as Ben:  
+    $ \frac{4}{2} = 2 $ tubes of blue paint
+
+  - Three times as many **yellow** tubes as Ben:  
+    $ 3 \times 3 = 9 $ tubes of yellow paint
+
+- **Total tubes of paint Jasper has:**  
+  $ 2 + 9 = 11 $
+
+### ✅ Final Answer: **11 tubes of paint**.
+--- icl__dsse1-08530__k16__s2 p44 words=52 ns=1 arith=2 first_frac=0.83
+Let's calculate the total number of fruits Kira bought first:
+
+- Apples: 3  
+- Bananas: 5  
+- Oranges: 6  
+
+**Total fruits = 3 + 5 + 6 = 14**
+
+Lola ate 2 pieces, so the number of fruits left is:
+
+**14 - 2 = 12**
+
+**Answer: 12 pieces of fruit are left.**
+--- icl__dsse1-07734__k16__s0 p80 words=52 ns=1 arith=2 first_frac=0.19
+To find out how much Ella would earn after 12 hours, first calculate her hourly rate:
+
+$$
+\text{Hourly rate} = \frac{\$33}{3 \text{ hours}} = \$11 \text{ per hour}
+$$
+
+Now multiply by 12 hours:
+
+$$
+\$11 \times 12 = \$132
+$$
+
+So, Ella would earn **$132** after 12 hours of dog walking.
+--- icl__dsse1-08998__k16__s1 p50 words=193 ns=1 arith=6 first_frac=0.91
+Let's break this down step by step to calculate the total cost of the senior gifts:
+
+### Step 1: **Number of seniors**  
+**44 seniors**
+
+---
+
+### Step 2: **Cost of picture frames**  
+- Each frame: **$20**  
+- Total for all frames:  
+  $ 44 \times 20 = 880 $
+
+---
+
+### Step 3: **Cost of etching**  
+- Etching costs **20%** of the frame cost  
+- So, 20% of $20 = **$4** per frame  
+- Total for etching:  
+  $ 44 \times 4 = 176 $
+
+---
+
+### Step 4: **Cost of pins**  
+- 2 seniors receive pins  
+- Each pin: **$5**  
+- Total for pins:  
+  $ 2 \times 5 = 10 $
+
+---
+
+### Step 5: **Cost of cords**  
+- 1/4 of
+--- icl__dsse1-08036__k16__s1 p98 words=98 ns=6 arith=2 first_frac=0.93
+Let's break down the time Doctor Jones spends:
+
+### 1. **Time spent at the clinic:**
+- **9 hours**
+
+### 2. **Time spent doing rounds:**
+- **20 minutes per inpatient** × **9 inpatients** = **180 minutes** = **3 hours**
+
+### 3. **Time spent on appointments:**
+- **30 minutes per appointment** × **10 appointments** = **300 minutes** = **5 hours**
+
+### 4. **Total time used:**
+- **3 hours (rounds) + 5 hours (appointments) = 8 hours**
+
+### 5. **Time left for updating records:**
+- **9 hours (total) - 8 hours (used) = 1 hour**
+
+---
+
+### ✅ **Answer: 1 hour**
+--- icl__dsse1-07754__k16__s2 p66 words=74 ns=1 arith=2 first_frac=0.81
+Let's break it down step by step:
+
+- **Number of tables:** 4  
+- **Legs per table:** 4  
+- **Screws per leg:** 2  
+
+### Total number of screws needed:
+$$
+4 \text{ tables} \times 4 \text{ legs per table} \times 2 \text{ screws per leg} = 32 \text{ screws}
+$$
+
+### Screws left over:
+$$
+40 \text{ screws} - 32 \text{ screws} = 8 \text{ screws}
+$$
+
+**Answer:** He will have **8 screws left over**.
+--- icl__dsse1-07175__k16__s1 p18 words=100 ns=1 arith=4 first_frac=0.87
+Let's break it down step by step:
+
+- **Electric bill:** 1 check per month  
+  → 1 check × 12 months = **12 checks**
+
+- **Gas bill:** 1 check per month  
+  → 1 check × 12 months = **12 checks**
+
+- **Church:** 2 checks per month  
+  → 2 checks × 12 months = **24 checks**
+
+- **Pest and lawn service:** 1 check every 3 months  
+  → 1 check × 4 = **4 checks**
+
+Now add them all together:
+
+**12 (electric) + 12 (gas) + 24 (church) + 4 (pest/lawn) = 52 checks per year**
+
+**Answer:** Buford writes **52 checks per year**.
+--- icl__dsse1-08546__k16__s1 p56 words=145 ns=1 arith=0 first_frac=0.85
+Let's break this down step by step:
+
+### Given:
+- **Initial temperature during the day:** 45°C  
+- **Temperature during the night:** 33°C (33°C colder than the day)  
+- **Temperature at which pipes freeze:** 32°C  
+- **Each log of wood heats the house by:** 5°C  
+
+### Step 1: Calculate how cold it gets at night
+$$
+\text{Night temperature} = 45^\circ\text{C} - 33^\circ\text{C} = 12^\circ\text{C}
+$$
+
+### Step 2: Calculate how many degrees below 32°C it gets
+$$
+\text{Degrees below 32} = 32^\circ\text{C} - 12^\circ\text{C} = 20^\circ\text{C}
+$$
+
+### Step 3: Calculate how many logs needed to raise 
+
+######## icl working_no_arith (n=208)
+--- icl__dsse1-07175__k16__s1 p13 words=273 ns=9 arith=0 first_frac=0.79
+Let's break this down step by step.
+
+### Given:
+- **Original number of cars on the motorway:** 30
+- **Cars that drive through the traffic jam in the first 15 minutes:** Let's call this number **A**
+- **Cars that drive through the traffic jam in the next 15 minutes:** Let's call this number **B**
+- **Cars that take an exit and avoid the traffic jam:** 5
+
+### Total cars:
+$$
+A + B + 5 = 30
+$$
+
+### From the problem:
+- **A** is the number of cars that drive through in the first 15 minutes.
+- **B** is the number of cars that drive through in the next 15 minutes.
+- 5 cars take an exit.
+
+So, we can wr
+--- icl__dsse1-08377__k16__s2 p56 words=170 ns=3 arith=0 first_frac=0.87
+Let's break this down step by step to figure out how many logs Carson needs to burn to prevent the pipes from freezing.
+
+---
+
+### **Given:**
+
+- **Temperature during the day:** 45°C  
+- **Temperature during the night:** 33°C colder than the day → **35°C**  
+- **Each log of wood heats the house by:** **5°C**  
+- **The pipes freeze when the temperature drops below:** **32°C**
+
+---
+
+### **Step 1: Determine the temperature drop during the night**
+
+$$
+\text{Night temperature} = 45^\circ\text{C} - 33^\circ\text{C} = 12^\circ\text{C}
+$$
+
+So, the temperature drops to **12°C** at night.
+
+---
+
+### **Step
+--- icl__dsse1-08546__k16__s2 p75 words=57 ns=6 arith=0 first_frac=0.80
+To calculate the cost of Ali's order:
+
+1. **Total weight of coal:** 850 kg  
+2. **Weight per bag:** 50 kg  
+3. **Number of bags:**  
+   $$
+   \frac{850\ \text{kg}}{50\ \text{kg/bag}} = 17\ \text{bags}
+   $$  
+4. **Cost per bag:** $18  
+5. **Total cost:**  
+   $$
+   17\ \text{bags} \times \$18/\text{bag} = \$306
+   $$
+
+**Answer:** The total cost of Ali's order is **\$306**.
+--- icl__dsse1-08152__k16__s2 p74 words=344 ns=13 arith=0 first_frac=0.09
+Let's break this down step by step.
+
+---
+
+### **Initial Setup:**
+
+- Bob starts with **7 fish** in his pond.
+  - **3 are orange**.
+  - **4 are white**.
+
+So, initially:
+- **Orange fish**: 3
+- **White fish**: 4
+
+---
+
+### **After Buying More Fish:**
+
+- Bob goes to the pet store, and the sales assistant **dips out 17 fish** from a **mixed tank** of **white and orange fish**.
+- He adds these 17 fish to his pond.
+- After adding, he finds that:
+  - **He has twice as many orange fish as white fish**.
+
+Let’s define variables:
+
+Let:
+- **W** = number of white fish Bob bought
+- **O** = number of orange fis
+--- icl__dsse1-08400__k16__s1 p49 words=150 ns=9 arith=0 first_frac=0.13
+Let's break this down step by step.
+
+### Step 1: Find the total exercise required by all 4 dogs.
+
+- Dog 1: 1 mile  
+- Dog 2: 4 miles  
+- Dog 3: 3 miles  
+- Dog 4: ? miles (unknown)
+
+**Total exercise needed** = 1 + 4 + 3 + ? = **8 + ?**
+
+### Step 2: Find the average exercise per dog.
+
+The **average** is calculated by dividing the total exercise by the number of dogs:
+
+$$
+\text{Average} = \frac{\text{Total exercise}}{\text{Number of dogs}} = \frac{8 + ?}{4}
+$$
+
+We're told the **average** is **3 miles per day**, so:
+
+$$
+\frac{8 + ?}{4} = 3
+$$
+
+### Step 3: Solve for the unknown.
+
+Multiply both sid
+--- icl__dsse1-07319__k16__s0 p56 words=214 ns=6 arith=0 first_frac=0.63
+Let's break this down step by step:
+
+---
+
+### **Given:**
+- **Starting temperature during the day:** 45°C  
+- **Temperature during the night:** 33°C (33°C colder than 45°C)  
+- **Temperature at which pipes freeze:** 32°C  
+- **Each log of wood heats the house up by:** 5°C  
+- **Goal:** Prevent the pipes from freezing → **Temperature must be ≥ 32°C**
+
+---
+
+### **Step 1: Calculate the temperature drop during the night**
+$$
+\text{Night temperature} = 45^\circ\text{C} - 33^\circ\text{C} = 12^\circ\text{C}
+$$
+
+So, the temperature **drops by 12°C** during the night.
+
+---
+
+### **Step 2: Determine how 
+--- icl__dsse1-08546__k16__s1 p74 words=280 ns=5 arith=0 first_frac=0.11
+Let's break this down step by step.
+
+---
+
+### **Given:**
+
+- Bob initially had **7 fish** in his pond.
+  - **3 were orange**
+  - **4 were white**
+
+- He went to the pet store and **bought 17 fish** from a mixed tank of **white and orange fish**.
+- After adding these 17 fish to his pond, he found that:
+  - **He now has twice as many orange fish as white fish**.
+
+---
+
+### **Step 1: Define variables**
+
+Let:
+- $ w $ = number of **white fish** Bob bought
+- $ o $ = number of **orange fish** Bob bought
+
+We know:
+$$
+w + o = 17 \quad \text{(total fish bought)}
+$$
+
+---
+
+### **Step 2: Calculate the total n
+--- icl__dsse1-06649__k16__s1 p18 words=86 ns=1 arith=0 first_frac=0.85
+Let's break it down step by step:
+
+- **Electric bill**: 1 check per month → **12 checks per year**  
+- **Gas bill**: 1 check per month → **12 checks per year**  
+- **Church**: 2 checks per month → **24 checks per year**  
+- **Pest and lawn service**: 1 check every **quarter** (3 months) → **3 checks per year**
+
+Now add them all up:
+
+**12 (electric) + 12 (gas) + 24 (church) + 3 (pest/lawn) = 51 checks per year**
+
+**Answer: Buford writes 51 checks per year.**
+
+######## ft le2 (n=1684)
+--- ft__dsse1-08086 p15 words=28 ns=2 arith=0 first_frac=0.97
+John makes 80 logs from the tree, then cuts each log into 5 planks for a total of 400 planks.  He sells each plank for $1.2, yielding $480.
+--- ft__dsse1-08997 p16 words=23 ns=2 arith=0 first_frac=0.35
+The hotel cost $240. The bus fare was $10 per trip for 7 trips, totaling $70, which is 10% of the hotel price.
+--- ft__dsse1-07527 p23 words=24 ns=2 arith=1 first_frac=0.80
+George has 200 bananas and 200 + 45% of 200 = 270 pears. So he has 200 + 270 = 470 fruits in total.
+--- ft__dsse1-08036 p76 words=16 ns=1 arith=1 first_frac=0.87
+Dogs have four legs each, so 5 dogs would have 5 x 4 = 20 legs.
+--- ft__dsse1-07309 p20 words=37 ns=2 arith=1 first_frac=0.94
+The faster team wins by 30 seconds. The first team has a consistent 55-second pace, while the second team's pace drops by 1 second per leg, meaning their total time is 55 + 30 = 85 seconds.
+--- ft__dsse1-07702 p23 words=2 ns=1 arith=0 first_frac=0.00
+270 fruits.
+--- ft__dsse1-07175 p53 words=21 ns=2 arith=0 first_frac=0.90
+Each student raised $750. We subtract the $50,000 from the total $175,000, leaving $125,000, and then divide that by 20 students.
+--- ft__dsse1-08992 p21 words=9 ns=1 arith=0 first_frac=0.79
+Sarah gave each of her 4 children 15 books.
+
+######## ft answer_first (n=1109)
+--- ft__dsse1-07319 p56 words=16 ns=1 arith=0 first_frac=0.51
+Carson needs to raise the house temperature by 12 degrees to prevent the pipes from freezing.
+--- ft__dsse1-08530 p49 words=45 ns=2 arith=3 first_frac=0.18
+Since the average is 3 miles for 4 dogs, the total number of miles needed is 4 x 3 = 12 miles. Adding the existing 1 + 4 + 3 = 8 miles, the last dog needs 12 - 8 = 4 miles of walking.
+--- ft__dsse1-08377 p13 words=1 ns=1 arith=0 first_frac=0.00
+15
+--- ft__dsse1-07175 p40 words=22 ns=2 arith=0 first_frac=0.08
+They had 300 balloons total, and 12 are left. So, you subtract 12 from 300 to find out how many were thrown.
+--- ft__dsse1-08036 p61 words=12 ns=1 arith=0 first_frac=0.84
+The initial deal was $8 per month for the first 6 months.
+--- ft__dsse1-08036 p49 words=16 ns=1 arith=0 first_frac=0.90
+The total distance required for all four dogs is 1 + 4 + 3 + x.
+--- ft__dsse1-08992 p54 words=18 ns=1 arith=0 first_frac=0.96
+The probability of winning the first ticket is 20%, and the probability of winning the second is 60%.
+--- ft__dsse1-08546 p8 words=5 ns=1 arith=0 first_frac=0.89
+Each cup costs exactly $30.
+
+######## ft working_no_arith (n=551)
+--- ft__dsse1-07527 p45 words=40 ns=4 arith=0 first_frac=0.97
+James sold 10 cars at $25,000 each for a total of $250,000. The company paid 30% of that price, which is $75,000. This leaves a profit of $175,000. He then received a 10% commission on this profit, which is $17,500.
+--- ft__dsse1-08152 p98 words=69 ns=5 arith=0 first_frac=0.98
+To determine the remaining time, we first calculate the total time spent on rounds and appointments. Twenty minutes per inpatient multiplied by ten patients equals 200 minutes. Thirty minutes per appointment times ten appointments equals 300 minutes. Adding these together gives 500 minutes, which is approximately 8 hours. Since the clinic day is nine hours long and he has already used 8 hours, the remaining time is 1 hour.
+--- ft__dsse1-07309 p81 words=25 ns=2 arith=0 first_frac=0.93
+He can make 10 packs. There are 40 apples in total, and each pack contains eight apples, so 40 divided by 8 is 5 packs.
+--- ft__dsse1-07812 p95 words=38 ns=3 arith=0 first_frac=0.98
+Charlie has 12 friends. Since Charlie has three times as many as Dorothy, Dorothy has 12 divided by 3, which equals 4 friends. James has four times as many friends as Dorothy, so 4 times 4 equals 16.
+--- ft__dsse1-08036 p15 words=20 ns=1 arith=0 first_frac=0.52
+The tree is 80 feet long, so 80% of that is 64 feet, which is the length of the logs.
+--- ft__dsse1-07754 p8 words=45 ns=4 arith=0 first_frac=0.99
+Let the cost of one cup be x dollars. The total cost of twenty dozen cups is 240x. The total cost of half a dozen plates is 6000, so we set up the equation 240x = 6000 - 1200. Solving this gives x = 15.
+--- ft__dsse1-08470 p91 words=27 ns=3 arith=0 first_frac=0.98
+He will have 50 marbles. First, the equation is 2 dozen + x = 60, which gives x = 30. Then subtracting 10 from 30 gives 20.
+--- ft__dsse1-08997 p13 words=57 ns=4 arith=0 first_frac=0.99
+Let me break it down. The total number of cars is 30. 5 cars took an exit, so 25 cars had to pass through the jam. Since the jam lasted 30 minutes and they split the traffic into two 15-minute periods, the first 15 minutes had 25 cars passing through, and the second 15 minutes had 0.

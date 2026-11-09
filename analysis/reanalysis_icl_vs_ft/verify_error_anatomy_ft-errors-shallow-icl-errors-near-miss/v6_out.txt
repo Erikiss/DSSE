@@ -1,0 +1,13 @@
+DSSE answers 9200, Opus incorrect 5797; of these x==gold 230, no number 67
+Opus-correct answers whose extracted value != gold: 0.240 (n=3403)
+DSSE wrong n=5500: shallow 0.459 (null 0.265); inter 0.101 (null 0.029); near 0.299 (null 0.102); late 0.315 (null 0.114); short share 0.726
+   shallow excess +0.194  dataset-CI [0.18  0.206]  problem-CI [0.148 0.242]
+  matched DSSE-ft vs our icl: shallow excess 0.191 vs 0.077 diff +0.114 CI [0.052 0.175] (77 problems)
+  matched DSSE-ft vs our icl: near excess 0.242 vs 0.371 diff -0.129 CI [-0.217 -0.036] (77 problems)
+  matched DSSE-ft vs our icl: late excess 0.165 vs 0.287 diff -0.121 CI [-0.212 -0.033] (77 problems)
+  matched DSSE-ft vs our ft: shallow excess 0.201 vs 0.236 diff -0.035 CI [-0.06  -0.011] (99 problems)
+  matched DSSE-ft vs our ft: near excess 0.204 vs 0.171 diff +0.032 CI [0.004 0.06 ] (99 problems)
+  matched DSSE-ft vs our ft: late excess 0.202 vs 0.194 diff +0.008 CI [-0.018  0.033] (99 problems)
+per-dataset shallow excess, DSSE vs ours: Spearman 0.225 (n=31)
+missing ft__dsse1-09037: DSSE counterpart n_wrong=65, shallow 0.385 (null 0.245), short share 0.877, median words 8; DSSE top-group mean shallow 0.487
+our ft per-dataset: Spearman(short share, shallow share) 0.168 (n=31); max short share 1.000

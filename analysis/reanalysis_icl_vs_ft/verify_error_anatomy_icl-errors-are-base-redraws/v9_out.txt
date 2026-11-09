@@ -1,0 +1,10 @@
+icl wrong on base-wrong problems: match with base value by boxed: {False: {'mean': 0.444, 'size': 888}, True: {'mean': 0.377, 'size': 247}}
+  problem-stratified (n=15 problems with both): boxed 0.308 vs not 0.337
+small-k curve runs on discordant problems (value counts of answers; base value, gold):
+  p14: base 10.0 gold 25.0; k<=4 answers: {25.0: 11, 20.0: 1}
+  p35: base 500.0 gold 250.0; k<=4 answers: {500.0: 7, 250.0: 3, 350.0: 2}
+  p36: base 19.0 gold 9.0; k<=4 answers: {9.0: 10, 48.0: 1, 0.0: 1}
+  p39: base 255.0 gold 480.0; k<=4 answers: {480.0: 8, 360.0: 2, 180.0: 1, 318.0: 1}
+  p61: base 312.0 gold 284.0; k<=4 answers: {296.0: 7, 204.0: 1, 268.0: 1, 284.0: 1, 276.0: 1, 212.0: 1}
+  p97: base 3.0 gold 156.0; k<=4 answers: {156.0: 8, 260.0: 3, 208.0: 1}
+ft answers on discordant problems (top 3): {14: {15.0: 7, 30.0: 5, 20.0: 4}, 35: {500.0: 22, 250.0: 4, 350.0: 3}, 36: {40.0: 4, 9.0: 3, 48.0: 3}, 39: {90.0: 8, 360.0: 3, 280.0: 2}, 61: {336.0: 3, 264.0: 3, 204.0: 2}, 97: {260.0: 9, 156.0: 6, 3.0: 3}}

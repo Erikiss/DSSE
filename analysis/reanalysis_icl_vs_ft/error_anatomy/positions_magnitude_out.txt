@@ -1,0 +1,35 @@
+(i) step position of intermediate matches; problems with >=2 non-final intermediates
+  base all        n_wrong=   16  obs share first/middle/penult = {'first': 0.062, 'middle': 0.0, 'penultimate': 0.25}  null = {'first': 0.011, 'middle': 0.01, 'penultimate': 0.009}  ratio obs/null = {'first': 5.6, 'middle': 0.0, 'penultimate': 28.6}
+  base long>40w   n_wrong=   16  obs share first/middle/penult = {'first': 0.062, 'middle': 0.0, 'penultimate': 0.25}  null = {'first': 0.011, 'middle': 0.01, 'penultimate': 0.009}  ratio obs/null = {'first': 5.6, 'middle': 0.0, 'penultimate': 28.6}
+  icl  all        n_wrong= 1834  obs share first/middle/penult = {'first': 0.022, 'middle': 0.022, 'penultimate': 0.121}  null = {'first': 0.008, 'middle': 0.007, 'penultimate': 0.007}  ratio obs/null = {'first': 2.8, 'middle': 3.4, 'penultimate': 16.3}
+        penultimate - first share: +0.098 CI [0.082 0.113]
+  icl  short<=40w n_wrong=   40  obs share first/middle/penult = {'first': 0.05, 'middle': 0.05, 'penultimate': 0.025}  null = {'first': 0.013, 'middle': 0.012, 'penultimate': 0.012}  ratio obs/null = {'first': 3.9, 'middle': 4.2, 'penultimate': 2.0}
+  icl  long>40w   n_wrong= 1794  obs share first/middle/penult = {'first': 0.022, 'middle': 0.022, 'penultimate': 0.123}  null = {'first': 0.008, 'middle': 0.006, 'penultimate': 0.007}  ratio obs/null = {'first': 2.8, 'middle': 3.4, 'penultimate': 16.8}
+  ft   all        n_wrong= 1513  obs share first/middle/penult = {'first': 0.041, 'middle': 0.024, 'penultimate': 0.065}  null = {'first': 0.01, 'middle': 0.008, 'penultimate': 0.008}  ratio obs/null = {'first': 3.9, 'middle': 3.0, 'penultimate': 8.6}
+        penultimate - first share: +0.024 CI [-0.001  0.046]
+  ft   short<=40w n_wrong= 1027  obs share first/middle/penult = {'first': 0.053, 'middle': 0.023, 'penultimate': 0.058}  null = {'first': 0.01, 'middle': 0.008, 'penultimate': 0.007}  ratio obs/null = {'first': 5.2, 'middle': 2.8, 'penultimate': 7.8}
+  ft   long>40w   n_wrong=  486  obs share first/middle/penult = {'first': 0.016, 'middle': 0.027, 'penultimate': 0.08}  null = {'first': 0.011, 'middle': 0.008, 'penultimate': 0.008}  ratio obs/null = {'first': 1.5, 'middle': 3.3, 'penultimate': 10.1}
+
+(ii) distance from gold, |log10(x/gold)| (x>0 only)
+  base all   n=   20 median |log10 ratio| 0.239;  within x1.5 of gold 0.450 (null 0.128);  within x2 0.700;  off by >x10 0.050
+  base long  n=   20 median |log10 ratio| 0.239;  within x1.5 of gold 0.450 (null 0.128);  within x2 0.700;  off by >x10 0.050
+  icl  all   n= 2240 median |log10 ratio| 0.180;  within x1.5 of gold 0.479 (null 0.109);  within x2 0.720;  off by >x10 0.027
+  icl  short n=   54 median |log10 ratio| 0.287;  within x1.5 of gold 0.352 (null 0.099);  within x2 0.556;  off by >x10 0.074
+  icl  long  n= 2186 median |log10 ratio| 0.177;  within x1.5 of gold 0.483 (null 0.109);  within x2 0.724;  off by >x10 0.026
+  ft   all   n= 2018 median |log10 ratio| 0.301;  within x1.5 of gold 0.274 (null 0.103);  within x2 0.499;  off by >x10 0.084
+  ft   short n= 1464 median |log10 ratio| 0.329;  within x1.5 of gold 0.247 (null 0.101);  within x2 0.482;  off by >x10 0.090
+  ft   long  n=  554 median |log10 ratio| 0.301;  within x1.5 of gold 0.347 (null 0.108);  within x2 0.542;  off by >x10 0.069
+
+(iii) depth flags (non-exclusive): 0-op = question number, 1-op = two-number combo, either
+  base all    n=   20  0-op 0.100 (null 0.063)  1-op 0.300 (null 0.221)  either 0.350 CI [0.15 0.55]
+  base long   n=   20  0-op 0.100 (null 0.063)  1-op 0.300 (null 0.221)  either 0.350 CI [0.15 0.55]
+  icl  all    n= 2240  0-op 0.103 (null 0.055)  1-op 0.241 (null 0.192)  either 0.274 CI [0.252 0.301]
+  icl  short  n=   54  0-op 0.241 (null 0.087)  1-op 0.500 (null 0.270)  either 0.630 CI [0.63 0.63]
+  icl  long   n= 2186  0-op 0.099 (null 0.055)  1-op 0.234 (null 0.190)  either 0.265 CI [0.252 0.281]
+  icl  top    n= 1110  0-op 0.099 (null 0.054)  1-op 0.222 (null 0.190)  either 0.254 CI [0.236 0.27 ]
+  icl  bottom n= 1130  0-op 0.106 (null 0.056)  1-op 0.259 (null 0.194)  either 0.294 CI [0.253 0.339]
+  ft   all    n= 2018  0-op 0.200 (null 0.072)  1-op 0.391 (null 0.228)  either 0.500 CI [0.465 0.544]
+  ft   short  n= 1464  0-op 0.214 (null 0.073)  1-op 0.413 (null 0.229)  either 0.533 CI [0.486 0.59 ]
+  ft   long   n=  554  0-op 0.161 (null 0.069)  1-op 0.336 (null 0.224)  either 0.415 CI [0.37  0.462]
+  ft   top    n= 1135  0-op 0.191 (null 0.073)  1-op 0.389 (null 0.226)  either 0.496 CI [0.461 0.535]
+  ft   bottom n=  883  0-op 0.211 (null 0.071)  1-op 0.394 (null 0.230)  either 0.506 CI [0.44  0.596]

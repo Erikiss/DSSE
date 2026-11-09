@@ -1,0 +1,26 @@
+
+######## all 100 problems
+[1] base wrong on 20/100 problems.  icl wrong rate | base wrong: obs 0.591 vs pred-if-base-draw 0.646 (diff CI [-0.156  0.066]);  | base right: obs 0.144 vs pred 0.108 (diff CI [0.004 0.071])
+    ft wrong rate | base wrong 0.877  | base right 0.594;  share of ft wrong answers on base-right problems: 1474/2018 = 0.730 (base-right problems: 0.80)
+    'easy' problems (icl wrong <= 5%, n=47): ft wrong rate 0.493; share of ft wrong answers on easy problems 718/2018
+[4] Spearman over problems, per-problem wrong rate icl vs ft: 0.746 CI [0.639 0.832]
+    Spearman icl rate vs base wrong(0/1): 0.534;  ft rate vs base: 0.483
+[2] icl: on base-wrong problems (n=20), P(wrong value == base's wrong value | wrong) = 0.429 (answer-weighted); unweighted mean over problems 0.399; same problems' within-route collision prob 0.451
+    icl: mean within-route collision prob of wrong values over problems with >=2 wrongs (n=63): 0.437
+[2] ft: on base-wrong problems (n=20), P(wrong value == base's wrong value | wrong) = 0.191 (answer-weighted); unweighted mean over problems 0.199; same problems' within-route collision prob 0.159
+    ft: mean within-route collision prob of wrong values over problems with >=2 wrongs (n=100): 0.178
+    matched-n collision (problems where both have >=2 wrongs, n=57): icl_seed0 0.395 vs ft 0.164; diff 0.231 CI [0.14  0.318]
+    ft wrong answers equal to the icl modal wrong value (problems with >=5 icl wrongs): 196/1300 = 0.151
+
+######## excluding label-noise problem 19
+[1] base wrong on 19/99 problems.  icl wrong rate | base wrong: obs 0.570 vs pred-if-base-draw 0.630 (diff CI [-0.163  0.061]);  | base right: obs 0.144 vs pred 0.108 (diff CI [0.004 0.071])
+    ft wrong rate | base wrong 0.871  | base right 0.594;  share of ft wrong answers on base-right problems: 1474/1987 = 0.742 (base-right problems: 0.81)
+    'easy' problems (icl wrong <= 5%, n=47): ft wrong rate 0.493; share of ft wrong answers on easy problems 718/1987
+[4] Spearman over problems, per-problem wrong rate icl vs ft: 0.739 CI [0.622 0.829]
+    Spearman icl rate vs base wrong(0/1): 0.518;  ft rate vs base: 0.466
+[2] icl: on base-wrong problems (n=19), P(wrong value == base's wrong value | wrong) = 0.381 (answer-weighted); unweighted mean over problems 0.370; same problems' within-route collision prob 0.428
+    icl: mean within-route collision prob of wrong values over problems with >=2 wrongs (n=62): 0.429
+[2] ft: on base-wrong problems (n=19), P(wrong value == base's wrong value | wrong) = 0.162 (answer-weighted); unweighted mean over problems 0.174; same problems' within-route collision prob 0.142
+    ft: mean within-route collision prob of wrong values over problems with >=2 wrongs (n=99): 0.174
+    matched-n collision (problems where both have >=2 wrongs, n=56): icl_seed0 0.387 vs ft 0.158; diff 0.229 CI [0.144 0.313]
+    ft wrong answers equal to the icl modal wrong value (problems with >=5 icl wrongs): 175/1269 = 0.138

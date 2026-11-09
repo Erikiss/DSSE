@@ -1,0 +1,4 @@
+(a) problem x dataset interaction 708.0; perm 95% [624.9,692.4] p=0.008; excess over null mean 50.6 (= 7.7%)
+(b) wrong-value collision within dataset 0.455 vs between 0.420; diff +0.0352; perm 95% [-0.0155,+0.0186], p=0.000
+(c) unseen base value: 6/20; LODO expected 1.67; P(>=obs)=0.0031
+(d) without outlier: answer-weighted match 0.433, collision (answer-weighted) 0.423, unweighted collision 0.469

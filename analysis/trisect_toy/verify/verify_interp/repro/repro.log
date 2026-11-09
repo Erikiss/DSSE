@@ -1,0 +1,20 @@
+Trisektor seed 0: Test-R² 0.99999 (0.9 min)
+   L1: R² cosC 0.997 C 0.995 cos(C/3) 0.993 cos(C/2) 0.994 Ziel 0.997 | C über cosC+Ausgabe +0.748 | Tausch C: voll 0.21, Antwortteil 0.22, Rest 0.00; Antwort-Tausch 0.78 | cos(C-Sonde, Antwort) 0.50 | tot 0.02
+   L2: R² cosC 0.997 C 0.996 cos(C/3) 0.996 cos(C/2) 0.997 Ziel 1.000 | C über cosC+Ausgabe +0.851 | Tausch C: voll 0.08, Antwortteil 0.08, Rest 0.00; Antwort-Tausch 0.91 | cos(C-Sonde, Antwort) 0.31 | tot 0.20
+   L3: R² cosC 0.996 C 0.995 cos(C/3) 0.998 cos(C/2) 0.998 Ziel 1.000 | C über cosC+Ausgabe +0.833 | Tausch C: voll 0.03, Antwortteil 0.03, Rest 0.00; Antwort-Tausch 0.97 | cos(C-Sonde, Antwort) 0.17 | tot 0.06
+   L4: R² cosC 0.939 C 0.940 cos(C/3) 0.967 cos(C/2) 0.966 Ziel 1.000 | C über cosC+Ausgabe +0.479 | Tausch C: voll 0.01, Antwortteil 0.01, Rest -0.00; Antwort-Tausch 1.00 | cos(C-Sonde, Antwort) 0.12 | tot 0.20
+Trisektor seed 1: Test-R² 0.99999 (0.9 min)
+   L1: R² cosC 0.998 C 0.996 cos(C/3) 0.993 cos(C/2) 0.995 Ziel 0.997 | C über cosC+Ausgabe +0.754 | Tausch C: voll 0.11, Antwortteil 0.12, Rest 0.00; Antwort-Tausch 0.76 | cos(C-Sonde, Antwort) 0.35 | tot 0.02
+   L2: R² cosC 0.997 C 0.996 cos(C/3) 0.997 cos(C/2) 0.997 Ziel 1.000 | C über cosC+Ausgabe +0.831 | Tausch C: voll 0.08, Antwortteil 0.08, Rest 0.00; Antwort-Tausch 0.93 | cos(C-Sonde, Antwort) 0.31 | tot 0.17
+   L3: R² cosC 0.989 C 0.987 cos(C/3) 0.994 cos(C/2) 0.994 Ziel 1.000 | C über cosC+Ausgabe +0.769 | Tausch C: voll 0.03, Antwortteil 0.03, Rest 0.00; Antwort-Tausch 0.95 | cos(C-Sonde, Antwort) 0.15 | tot 0.36
+   L4: R² cosC 0.905 C 0.907 cos(C/3) 0.931 cos(C/2) 0.928 Ziel 1.000 | C über cosC+Ausgabe +0.344 | Tausch C: voll 0.00, Antwortteil 0.00, Rest -0.00; Antwort-Tausch 1.00 | cos(C-Sonde, Antwort) 0.01 | tot 0.07
+Trisektor seed 2: Test-R² 0.99999 (0.9 min)
+   L1: R² cosC 0.997 C 0.992 cos(C/3) 0.979 cos(C/2) 0.983 Ziel 0.990 | C über cosC+Ausgabe +0.581 | Tausch C: voll 0.02, Antwortteil 0.02, Rest 0.01; Antwort-Tausch 0.73 | cos(C-Sonde, Antwort) 0.07 | tot 0.02
+   L2: R² cosC 0.996 C 0.994 cos(C/3) 0.994 cos(C/2) 0.995 Ziel 0.999 | C über cosC+Ausgabe +0.793 | Tausch C: voll 0.06, Antwortteil 0.06, Rest 0.00; Antwort-Tausch 0.90 | cos(C-Sonde, Antwort) 0.21 | tot 0.17
+   L3: R² cosC 0.990 C 0.989 cos(C/3) 0.995 cos(C/2) 0.995 Ziel 1.000 | C über cosC+Ausgabe +0.709 | Tausch C: voll 0.00, Antwortteil 0.00, Rest 0.00; Antwort-Tausch 0.92 | cos(C-Sonde, Antwort) 0.02 | tot 0.30
+   L4: R² cosC 0.754 C 0.758 cos(C/3) 0.826 cos(C/2) 0.817 Ziel 1.000 | C über cosC+Ausgabe +0.441 | Tausch C: voll 0.00, Antwortteil 0.00, Rest -0.00; Antwort-Tausch 1.00 | cos(C-Sonde, Antwort) 0.00 | tot 0.33
+Halbierende seed 0: Test-R² 0.99999 (3.2 min)
+   L1: R² cosC 0.997 C 0.996 cos(C/3) 0.995 cos(C/2) 0.995 Ziel 0.998 | C über cosC+Ausgabe +0.840 | Tausch C: voll 0.11, Antwortteil 0.13, Rest -0.00; Antwort-Tausch 0.81 | cos(C-Sonde, Antwort) 0.40 | tot 0.02
+   L2: R² cosC 0.996 C 0.995 cos(C/3) 0.996 cos(C/2) 0.996 Ziel 1.000 | C über cosC+Ausgabe +0.804 | Tausch C: voll 0.08, Antwortteil 0.08, Rest 0.00; Antwort-Tausch 0.93 | cos(C-Sonde, Antwort) 0.32 | tot 0.17
+   L3: R² cosC 0.995 C 0.993 cos(C/3) 0.998 cos(C/2) 0.997 Ziel 1.000 | C über cosC+Ausgabe +0.809 | Tausch C: voll 0.02, Antwortteil 0.02, Rest -0.00; Antwort-Tausch 0.97 | cos(C-Sonde, Antwort) 0.12 | tot 0.11
+   L4: R² cosC 0.936 C 0.939 cos(C/3) 0.967 cos(C/2) 0.964 Ziel 1.000 | C über cosC+Ausgabe +0.422 | Tausch C: voll 0.00, Antwortteil 0.00, Rest -0.00; Antwort-Tausch 1.00 | cos(C-Sonde, Antwort) 0.05 | tot 0.20

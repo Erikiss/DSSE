@@ -1,0 +1,4 @@
+bottleneck inter seed 0: test R2 0.99994 fit 0.9998 | at bottleneck A 0.960 O 0.027 rAmed 1.026 q10-90 [0.7794448733329773, 1.5655922889709473] flipsA 1.000 flipsO 0.000 neither 0.000 gradcos 0.885 normshare 0.679 | post1 A 1.029 O -0.025 neither 0.000 gradcos 0.957
+bottleneck answer seed 0: test R2 0.99996 fit 0.9999 | at bottleneck A 1.000 O 0.000 rAmed 1.000 q10-90 [0.999603271484375, 1.000400185585022] flipsA 1.000 flipsO 0.000 neither 0.000 gradcos 0.999 normshare 1.000 | post1 A 0.959 O 0.048 neither 0.000 gradcos 0.981
+bottleneck free seed 0: test R2 0.99997 fit nan | at bottleneck A 1.135 O -0.119 rAmed 1.119 q10-90 [0.986927330493927, 1.453271746635437] flipsA 0.999 flipsO 0.001 neither 0.001 gradcos 0.918 normshare 0.685 | post1 A 1.006 O 0.022 neither 0.042 gradcos 0.907
+done 10.9 min

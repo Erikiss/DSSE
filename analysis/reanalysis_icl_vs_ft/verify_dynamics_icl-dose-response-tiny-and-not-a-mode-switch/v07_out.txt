@@ -1,0 +1,21 @@
+no_md_c  dsse1-08572: slope +0.0120  k32 0.070 ft4 0.960  log2 k needed   79.2  (k=6.78e+23); bootstrap 2.5% of k: 2.11e+12
+no_md_c  dsse1-08377: slope +0.0140  k32 0.050 ft4 0.860  log2 k needed   61.4  (k=3.1e+18); bootstrap 2.5% of k: 2.89e+10
+no_md_c  dsse1-08166: slope +0.0183  k32 0.090 ft4 0.980  log2 k needed   52.3  (k=5.41e+15); bootstrap 2.5% of k: 3.99e+09
+no_md_c  dsse1-08530: slope +0.0117  k32 0.070 ft4 0.920  log2 k needed   77.5  (k=2.11e+23); bootstrap 2.5% of k: 9.49e+11
+  pooled slope +0.0140 [+0.0062, +0.0235]
+short40  dsse1-08572: slope +0.0034  k32 0.010 ft4 0.180  log2 k needed   52.1  (k=4.77e+15); bootstrap 2.5% of k: 6.33e+05
+short40  dsse1-08377: slope +0.0049  k32 0.020 ft4 0.320  log2 k needed   66.0  (k=7.28e+19); bootstrap 2.5% of k: 7.93e+07
+short40  dsse1-08166: slope +0.0054  k32 0.020 ft4 0.240  log2 k needed   43.9  (k=1.7e+13); bootstrap 2.5% of k: 5.96e+05
+short40  dsse1-08530: slope +0.0014  k32 0.010 ft4 0.020  log2 k needed   15.3  (k=4.13e+04); bootstrap 2.5% of k: 64
+  pooled slope +0.0038 [+0.0000, +0.0092]
+l2w      dsse1-08572: slope -0.0800  k32 6.748 ft4 6.636  log2 k needed    6.2  (k=74.9); bootstrap 2.5% of k: 20.8
+l2w      dsse1-08377: slope -0.0550  k32 6.845 ft4 6.024  log2 k needed   18.7  (k=4.38e+05); bootstrap 2.5% of k: 1.71e+04
+l2w      dsse1-08166: slope -0.0569  k32 6.732 ft4 6.218  log2 k needed   13.3  (k=1.02e+04); bootstrap 2.5% of k: 918
+l2w      dsse1-08530: slope -0.0131  k32 6.871 ft4 7.670  log2 k needed  -56.0  (k=1.43e-17); bootstrap 2.5% of k: nan
+  pooled slope -0.0512 [-0.0624, -0.0396]
+
+log2 words: paired differences (problem bootstrap)
+dsse1-08572 k1-base +0.087 [+0.008, +0.162] | k32-k1 -0.391 [-0.478, -0.298] | k32-base -0.304 [-0.394, -0.217]
+dsse1-08377 k1-base +0.024 [-0.053, +0.095] | k32-k1 -0.231 [-0.318, -0.142] | k32-base -0.207 [-0.287, -0.126]
+dsse1-08166 k1-base -0.078 [-0.149, -0.012] | k32-k1 -0.242 [-0.331, -0.149] | k32-base -0.320 [-0.423, -0.220]
+dsse1-08530 k1-base -0.131 [-0.212, -0.050] | k32-k1 -0.050 [-0.119, +0.021] | k32-base -0.181 [-0.267, -0.099]

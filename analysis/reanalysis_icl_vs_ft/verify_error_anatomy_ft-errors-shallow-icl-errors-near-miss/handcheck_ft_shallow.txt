@@ -1,0 +1,61 @@
+ft shallow wrongs 1018 single-number 302
+[0] p61 g=284 x=6 | Q:  the normal rate, the service increased its price to $14 a month. How much do 2 years of the service cost him?
+    R: The total cost for 2 years of service is $1,680. This includes the initial discounted rate for the first 6 months and the subsequent increases.
+[1] p4 g=5 x=4 | Q: laps as Trey.  Quinn can run 2 fewer laps than Shaelyn.  How many more laps can Bethany run compared to Quinn?
+    R: Bethany can run 10 laps in an hour. Trey runs 14 laps, Shaelyn 7, and Quinn 6. So, Bethany can run 10 - 6 = 4 more laps than Quinn.
+[2] p47 g=20 x=80 | Q: d at the third station, calculate the total number of people required to fill the remaining spaces on the bus.
+    R: The bus has 200 seats. After 20 people boarded and 40 got on at the first stop, a total of 60 people were on the bus. At the third station, the number of passengers doubled to 120. The remaining seats on the bus are 200 - 120 = 80.
+[3] p26 g=15 x=5 | Q: iend some pomelos, Eve is left with 1/4 of the pomelos she originally had. How many pomelos did Eve give away?
+    R: She gave away 15 pomelos. This is because 1/4 of the original amount is 5, so the total amount she gave away is the original amount minus that.
+[4] p72 g=11 x=9 | Q:  paint as Ben, and three times as many tubes of yellow paint as Ben. How many tubes of paint does Jasper have?
+    R: Jasper has 6 tubes of yellow paint and 3 tubes of blue paint, totaling 9 tubes.
+[5] p41 g=40 x=9.6 | Q: ng the number of people in attendance by 20%. If Kelly was right, how many people really attended the concert?
+    R: The correct number of people is 40. Courtney said 48, but she was 20% off. 20% of 48 is 9.6, so the actual number is 48 minus 9.6.
+[6] p60 g=20000 x=3 | Q:  on advertising for another year.  What's the total amount the company spent on advertising for the two years?
+    R: Calculate the second year's advertising cost by multiplying the first year's amount by 1/3.
+[7] p78 g=319 x=200 | Q: iends to invite them too and 8 of them say they will be bringing their spouses. How many seats will Alex need?
+    R: The initial 100 people will bring 2 friends each, which is 200 people.
+[8] p13 g=5 x=35 | Q:  were originally 30 cars on the motorway, how many cars drove through the traffic jam in the first 15 minutes?
+    R: The total number of cars that passed through the jam is 15 + 20 = 35 cars. Since there were 30 cars originally, 5 cars were forced to wait at the exit. Therefore, the first 15 minutes saw 35 cars pass through, which is the total number of cars on the road.
+[9] p16 g=296 x=10 | Q: of the price of one night at the hotel. How much did Helen pay for the hotel and bus travels during that trip?
+    R: The hotel cost $240. The bus fare was $10 per trip for 7 trips, totaling $70, which is 10% of the hotel price.
+[10] p14 g=25 x=15 | Q: dren. The original 5 children then give up and leave the group. How many children are now following the truck?
+    R: On the second street, there are 10 children chasing the truck. On the third street, each of the 10 children is joined by two more, bringing the total to 20. Then, the original 5 children leave the group, leaving 15 children chasing the truck.
+[11] p66 g=8 x=0 | Q: Each table has 4 legs and each leg needs 2 screws.  He has 40 screws.  How many screws will he have left over?
+    R: James will use 40 screws, leaving him with 0 leftover screws.
+[12] p53 g=6250 x=8750 | Q: of $175,000. $50,000 comes from organizations and the rest from the students. How much did each student raise?
+    R: Each student raised $175,000 divided by 20, which equals $8,750. Since the $50,000 is from organizations and the rest is from the students, the total amount they contributed is indeed $8,750 per student.
+[13] p25 g=144 x=240 | Q:  5 x 8 feet. A gallon of paint can cover 20 square feet and cost $12. How much will it cost to paint the room?
+    R: The total area is 4 * 10x8 + 2 * 5x8 = 320 + 80 = 400 square feet. At $12 per gallon for 20 square feet, you'll need 20 gallons and pay $240.
+[14] p36 g=9 x=40 | Q:  as many regular chairs as high chairs. If there are 8 high chairs, how many more chairs does she have to get?
+    R: Since there are 8 high chairs, the total number of high chairs is 8 times 5, which equals 40.
+[15] p92 g=15 x=24 | Q:  water. But as I pour it, I spill one liter of the orange drink. How much water is in the remaining 24 liters?
+    R: Let's break this down step by step. First, we need to find out how many liters of water are in each drink before the spill. The orange drink is two-thirds water, so it has 2/3 * 10 = 6.67 liters of water. The pineapple drink is three-fifths water, so it has 3/5 * 15 = 9 liters of water.  |  | When you spill one liter of the orange d
+[16] p69 g=8 x=0 | Q: ght five dozens of eggs for $2.40 a dozen. She will sell it for $1 for 3 eggs. How much will be Rose's profit?
+    R: First, calculate the total number of eggs: five dozens = 60 eggs. At $2.40 per dozen, the cost is $2.40 × 5 = $12. She sells the eggs for $1 per 3 eggs, which is $3 per dozen. Since she has 60 eggs, she sells them for $3 × 4 = $12. Her profit is $12 (selling price) minus $12 (cost) = $0. She breaks even on the eggs.
+[17] p1 g=25 x=90 | Q: ausages in 2/3 the amount of time the cat takes. Calculate the average time the two take the eat the sausages.
+    R: The cat takes 30 minutes to eat 9 sausages, which means it eats 1 sausage every 15 minutes. The dog eats the same number in 2/3 the time, so it eats a sausage every 10 minutes. Together, they eat 1/15 + 1/10 = 3/30 = 1/10 of a sausage per minute. To finish 9 sausages, it would take them 9 / (1/10) = 90 minutes.
+[18] p81 g=10 x=80 | Q: k the apples with eight apples in one pack. How many packs of apples can he make with the two boxes of apples?
+    R: There are 40 apples in one box, so two boxes have 80 apples. If each pack contains eight apples, then there are 80 divided by eight, which equals ten packs.
+[19] p99 g=6 x=5 | Q: t the percentage of stuffed goats is 30% of all of her stuffed animals, how many stuffed goats should she buy?
+    R: To find out how many goats she needs to buy, first, add up all the other stuffed animals. That gives you 3 + 5 + 2 + 4 = 14. Since she wants 30% of all animals to be goats, you need to find 30% of 14. 0.3 times 14 is 4.2. Since she can't buy a fraction of a stuffed animal, she should round up to 5 goats.
+[20] p40 g=288 x=300 | Q: e 30 balloons per pack.  By the end of the afternoon, 12 balloons are left.  How many balloons did they throw?
+    R: Each pack has 30 balloons, so 10 packs have 30 * 10 = 300 balloons.
+[21] p22 g=144 x=72 | Q:  legs and each pair of snowshoes costs $12.00, how much will it cost him to buy snowshoes for all of his dogs?
+    R: Multiply the number of dogs by the cost of each pair of snowshoes: 6 dogs × $12.00 = $72.00.
+[22] p43 g=14 x=50 | Q: dy. Ginger eats 4 pieces a day and Amy eats 3 pieces a day. How much more candy does Amy have after two weeks?
+    R: Amy ends up with 50 more pieces. Since she eats 3 a day and Ginger eats 4, the difference is 1 piece per day. Over two weeks (14 days), that's 1 × 14 = 50.
+[23] p26 g=15 x=5 | Q: iend some pomelos, Eve is left with 1/4 of the pomelos she originally had. How many pomelos did Eve give away?
+    R: Eve gave away 15 pomelos. Originally, she had 20, and after giving away 15, she only had 5 left, which is a quarter of the original amount.
+[24] p46 g=67 x=72 | Q: shorter than Anne, who is twice the size of Albert.  If Albert is 36" tall, how tall was Jackie before summer?
+    R: Since Albert is 36 inches, Anne is twice that, so she's 72 inches.
+[25] p47 g=20 x=0 | Q: d at the third station, calculate the total number of people required to fill the remaining spaces on the bus.
+    R: The bus initially had 20 people. At the first stop, 40 people boarded, bringing the total to 60. Then, 3/4 of the first station's passengers boarded, adding 30 more passengers. This made the total 90. The bus then doubled to 180 passengers. The remaining seats are 180 - 180 = 0.
+[26] p99 g=6 x=30 | Q: t the percentage of stuffed goats is 30% of all of her stuffed animals, how many stuffed goats should she buy?
+    R: First, calculate the total number of stuffed animals: 3 + 5 + 2 + 4 = 14. To get 30%, you need 30% of 14 to be goats. 30% of 14 is 4.2, which rounds up to 5. She should buy 5 goats to meet the 30% requirement.
+[27] p80 g=132 x=12 | Q:  hours of dog walking. If she continues to walk dogs at the same rate, how much would she earn after 12 hours?
+    R: Ella would earn $132 after 12 hours.
+[28] p28 g=7 x=10 | Q: ter when she asks for some right before bed.  How many pieces of gum does Jim have left at the end of the day?
+    R: Jim starts with 20 pieces of gum. He chews 1 piece every 2 hours for 8 hours, which is 4 pieces. On the way home, he chews another 1 piece, and after dinner, a third. That totals 3 pieces chewed during the day. He then gives half the remaining gum to his sister, leaving him with 10 pieces.
+[29] p47 g=20 x=80 | Q: d at the third station, calculate the total number of people required to fill the remaining spaces on the bus.
+    R: Initially, the bus had 20 people. At the first stop, 40 entered, bringing the total to 60. At the second stop, the number of passengers doubled to 120. Since the bus can only hold 200, there are 200 - 120 = 80 seats left.

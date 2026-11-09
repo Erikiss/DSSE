@@ -1,0 +1,462 @@
+prompt_idx,n_steps,gold,fin,cls,n_words_v,workfree_v,response
+0,3,400,400.0,correct,26,0,"Carmen has $100.  
+Samantha has $100 + $25 = $125.  
+Daisy has $125 + $50 = $175.  
+
+Total = $100 + $125 + $175 = **$400**."
+1,3,25,25.0,correct,54,0,"The cat eats 9 sausages in 30 minutes.  
+The dog eats 9 sausages in $ \frac{2}{3} \times 30 = 20 $ minutes.  
+
+To find the average time the two take to eat the sausages, we calculate the average of their individual times:  
+$$
+\text{Average time} = \frac{30 + 20}{2} = 25 \text{ minutes}.
+$$"
+2,4,3,3.0,correct,146,0,"Let's break it down step by step:
+
+1. **Total age of the group**: 20 years  
+2. **Akbar**: 3 years old  
+3. **Alessandro**: 4 years old  
+4. **Helene** is twice as old as the **average age** of the group.
+
+### Step 1: Find the average age of the group  
+Total age = 20  
+Number of children = 4  
+Average age = $ \frac{20}{4} = 5 $ years
+
+### Step 2: Find Helene's age  
+Helene is twice the average age:  
+$ 2 \times 5 = 10 $ years old
+
+### Step 3: Add up the known ages  
+Akbar: 3  
+Alessandro: 4  
+Helene: 10  
+Total so far: $ 3 + 4 + 10 = 17 $ years
+
+### Step 4: Find Wilfred's age  
+Total age = 20  
+Total of others = 17  
+Wilfred = $ 20 - 17 = 3 $ years old
+
+**Answer: Wilfred is 3 years old.**"
+3,3,800,500.0,copy_q,8,1,Hannah needs to drink **500 ml of water**.
+4,4,5,5.0,correct,34,0,"Bethany: 10 laps  
+Trey: 10 + 4 = 14 laps  
+Shaelyn: 14 ÷ 2 = 7 laps  
+Quinn: 7 - 2 = 5 laps  
+
+Bethany - Quinn = 10 - 5 = **5 laps**."
+5,4,13,3.0,copy_q,14,1,It will take **3 years** before Carlos starts earning money on the lemon tree.
+6,2,8,24.0,other,7,1,The average price per ticket is $24.
+7,3,30,30.0,correct,20,0,"60 - (60 ÷ 3) - 10 = 60 - 20 - 10 = 30.  
+
+So, **30 elves are left**."
+8,5,145,145.0,correct,175,0,"Let’s solve the problem step by step.
+
+### Given:
+- **Twenty dozen cups** cost **$1200 less** than the **total cost of half a dozen plates sold at $6000 each**.
+
+### Step 1: Calculate the cost of half a dozen plates
+- 1 dozen = 12 cups  
+- 1/2 dozen = 6 plates  
+- Cost per plate = $6000  
+- Total cost of 6 plates = $6000 × 6 = **$36,000**
+
+### Step 2: Calculate the cost of twenty dozen cups
+- 1 dozen = 12 cups  
+- 20 dozen = 20 × 12 = **240 cups**  
+- Let the cost per cup be **x**  
+- Total cost of 240 cups = 240x
+
+### Step 3: Set up the equation
+We are told that the cost of 240 cups is **$1200 less** than the cost of 6 plates:
+
+$$
+240x = 36,000 - 1,200
+$$
+
+$$
+240x = 34,800
+$$
+
+### Step 4: Solve for x
+$$
+x = \frac{34,800}{240} = 145
+$$
+
+### ✅ Final Answer:
+**The total cost of buying each cup is $145.**"
+9,5,20,6.0,other,5,1,Ginger gave Griffin **6** fries.
+10,2,90,60.0,other,6,1,He had $60 after a year.
+11,6,7,7.0,correct,82,0,"First, find the cost of one lollipop: $0.40.  
+For 10 lollipops: $0.40 × 10 = $4.00.
+
+Next, find the cost of one candy:  
+Total cost of 5 lollipops and 4 candies = $3.20  
+So, 5 lollipops = 5 × $0.40 = $2.00  
+Therefore, 4 candies = $3.20 - $2.00 = $1.20  
+So, each candy costs $1.20 ÷ 4 = $0.30.
+
+Now, for 10 candies: $0.30 × 10 = $3.00.
+
+Total cost for 10 lollipops and 10 candies: $4.00 + $3.00 = **$7.00**."
+12,6,104,3.0,copy_q,7,0,Steve has **24 games** after 3 years.
+13,2,5,15.0,copy_q,1,1,15.
+14,3,25,4.0,other,2,1,4 children.
+15,4,96,24.0,other,3,1,He makes **$24**.
+16,4,296,300.0,near(<=25%),14,0,"Helen paid **$240 for the hotel** and **$60 for the bus travels**.  
+**Total: $300.**"
+17,2,26,26.0,correct,33,0,"They needed to earn $200 in total. By 3 pm, they had earned $83 + $91 = **$174**.  
+So, they needed to earn **$200 - $174 = $26** more to reach their goal."
+18,5,52,12.0,intermediate,6,1,Buford writes **12 checks per year**.
+19,2,150,240.0,other,35,0,"Marin and Nancy each eat 4 apples a day, so together they eat $4 + 4 = 8$ apples per day.  
+In 30 days, they eat $8 \times 30 = 240$ apples.  
+
+**Answer: 240 apples.**"
+20,4,2,10.0,other,8,1,The faster team will win by **10 seconds**.
+21,2,5,5.0,correct,5,1,Each child got 5 books.
+22,3,144,48.0,other,4,1,Mario will spend $48.00.
+23,3,490,490.0,correct,42,0,"George has 200 bananas.  
+He has 45% more pears than bananas, so the number of pears is:  
+$$ 200 + (45\% \times 200) = 200 + 90 = 290 $$
+
+Total fruits = bananas + pears = 200 + 290 = **490**."
+24,3,320,120.0,other,14,1,The total number of people who entered the restaurant on that day is **120**.
+25,7,144,144.0,correct,87,0,"First, calculate the total area of the walls:
+
+- North and south walls: 2 walls × 10 ft × 8 ft = 160 sq ft  
+- East and west walls: 2 walls × 5 ft × 8 ft = 80 sq ft  
+
+**Total area = 160 + 80 = 240 sq ft**
+
+A gallon of paint covers 20 square feet, so:
+
+**Number of gallons needed = 240 ÷ 20 = 12 gallons**
+
+Each gallon costs $12, so:
+
+**Total cost = 12 × $12 = $144**
+
+**Answer: $144**"
+26,2,15,15.0,correct,35,0,"Eve originally had 20 pomelos. She was left with 1/4 of that, which is $ \frac{1}{4} \times 20 = 5 $ pomelos.  
+She gave away $ 20 - 5 = 15 $ pomelos.  
+
+**Answer: 15**"
+27,4,30,22.0,other,77,0,"Let's break it down step by step:
+
+1. **Nani is 8 years old.**  
+2. **His brother is twice his age:**  
+   - 2 × 8 = **16 years old**.  
+3. **Nani's sister is 25% younger than him:**  
+   - 25% of 8 = 2  
+   - 8 - 2 = **6 years old**.  
+
+Now add up the ages:  
+- Nani: 8  
+- Brother: 16  
+- Sister: 6  
+
+**Total age = 8 + 16 + 6 = 22**.  
+
+**Answer: 22 years.**"
+28,6,7,10.0,other,13,1,Jim has **10 pieces of gum left at the end of the day**.
+29,4,225,120.0,other,9,1,Ted needs to bring **120 pounds** of potato salad.
+30,6,8,6.0,copy_q,87,0,"Let's break it down step by step:
+
+1. **Tattered jeans cost**: $28  
+2. **Jogger jeans cost**: $28 - $6 = **$22**  
+3. **Total savings from both jeans**: $28 + $22 = **$50**  
+4. **Savings from jogger jeans**: 1/3 of $50 = **$16.67**  
+5. **Savings from tattered jeans**: $50 - $16.67 = **$33.33**  
+
+Now, the question asks: **How much more do jogger jeans originally cost than the tattered jeans?**
+
+- Jogger jeans cost: $22  
+- Tattered jeans cost: $28  
+- Difference: $28 - $22 = **$6**  
+
+**Answer: $6**"
+31,3,22,22.0,correct,10,0,John has **4 + 6 + 12 = 22 bananas**.
+32,3,8,8.0,correct,100,0,"Peter has 4 boxes, and Martha has 7 boxes.  
+Peter's total: 64 bars  
+Martha's total: 56 bars  
+
+Let the number of bars per box for Peter be $ x $, and for Martha be $ y $.  
+
+We know:  
+$$
+4x = 64 \quad \text{(Peter's total)} \\
+7y = 56 \quad \text{(Martha's total)}
+$$
+
+Solving:  
+$$
+x = \frac{64}{4} = 16 \\
+y = \frac{56}{7} = 8
+$$
+
+Now, the difference in the number of bars per box is:  
+$$
+x - y = 16 - 8 = \boxed{8}
+$$
+
+Peter has **8 more chocolate bars per box** than Martha."
+33,6,56,56.0,correct,146,0,"Let's solve the problem step by step:
+
+1. Let $ c $ be the number of **camels**, and $ d $ be the number of **dromedaries**.
+2. We are told there are **180 heads** in total:
+   $$
+   c + d = 180
+   $$
+3. We are told there are **304 humps**:
+   - Each **camel** has **2 humps**, so camels contribute $ 2c $ humps.
+   - Each **dromedary** has **1 hump**, so dromedaries contribute $ d $ humps.
+   - Total humps: $ 2c + d = 304 $
+
+Now solve the system of equations:
+
+From the first equation:  
+$$
+c = 180 - d
+$$
+
+Substitute into the second equation:
+$$
+2(180 - d) + d = 304 \\
+360 - 2d + d = 304 \\
+360 - d = 304 \\
+d = 360 - 304 = 56
+$$
+
+### ✅ Final Answer: **56 dromedaries**."
+34,5,30,15.0,other,6,1,The total time is **15 minutes**.
+35,3,250,400.0,other,1,1,400
+36,4,9,40.0,intermediate,95,0,"There are 8 high chairs. Since the restaurant has 5 times as many regular chairs as high chairs, there are $ 5 \times 8 = 40 $ regular chairs.
+
+To find how many more chairs she needs to get, subtract the number of chairs already there from the total needed:
+
+$$
+\text{Total chairs needed} = 40 \text{ regular} + 8 \text{ high} = 48 \text{ chairs}
+$$
+
+$$
+\text{Chairs already there} = 8 \text{ high}
+$$
+
+$$
+\text{Chairs to get} = 48 - 8 = \boxed{40}
+$$
+
+So, Mia needs to get **40 more chairs**."
+37,2,90000,90000.0,correct,102,0,"Let's solve the problem step by step:
+
+1. Let the cost of the lot be $ x $.
+2. The house costs three times as much as the lot, so the cost of the house is $ 3x $.
+3. The total cost of the house and the lot is $ 120,000 $, so:  
+   $$
+   x + 3x = 120,000
+   $$
+4. Combine like terms:  
+   $$
+   4x = 120,000
+   $$
+5. Solve for $ x $:  
+   $$
+   x = 30,000
+   $$
+6. The cost of the house is $ 3x = 3 \times 30,000 = 90,000 $.
+
+**Answer:** The house cost **$90,000**."
+38,4,1,4.0,other,9,1,She sends **4 emails** a day to her boyfriend.
+39,4,480,318.0,other,82,0,"To calculate the expected earnings of the dance studio in a month:
+
+1. **Cost per session**:  
+   $25 (studio rental) + $1.50 (per student) = **$26.50 per session**
+
+2. **Number of sessions per week**:  
+   3 days × 1 session/day = **3 sessions/week**
+
+3. **Number of weeks in a month**:  
+   Assuming 4 weeks per month = **4 weeks**
+
+4. **Total cost per month**:  
+   $26.50/session × 3 sessions/week × 4 weeks = **$318**
+
+**Answer: The dance studio is expected to earn $318 in a month.**"
+40,2,288,108.0,other,4,1,They threw **108 balloons**.
+41,2,40,32.0,near(<=25%),1,1,32.
+42,4,18000,14400.0,near(<=25%),15,0,"Jessica pays $1,200 each month.  
+In a year, she pays $1,200 × 12 = **$14,400**."
+43,3,14,14.0,correct,94,0,"Amy has 3 pieces a day, so in two weeks (14 days), she eats $ 3 \times 14 = 42 $ pieces.  
+Ginger has 100 pieces, and she eats 4 pieces a day, so in two weeks she eats $ 4 \times 14 = 56 $ pieces.  
+
+Amy starts with 100, eats 42, so she has $ 100 - 42 = 58 $ pieces left.  
+Ginger starts with 100, eats 56, so she has $ 100 - 56 = 44 $ pieces left.  
+
+**Amy has 58 - 44 = 14 more pieces than Ginger.**"
+44,2,12,12.0,correct,25,0,"Kira bought 3 + 5 + 6 = 14 pieces of fruit.  
+Lola ate 2 pieces.  
+So, 14 - 2 = 12 pieces are left."
+45,5,17500,1750.0,other,49,0,"James made **$2,000**.  
+
+Here's the breakdown:
+
+1. **Cost of each car**: $25,000  
+2. **Company pays 30% of the price**:  
+   $25,000 × 30% = **$7,500**  
+3. **Profit per car**:  
+   $25,000 - $7,500 = **$17,500**  
+4. **Commission (10% of profit)**:  
+   $17,500 × 10% = **$1,750**  
+
+So, James made **$1,750** in commission."
+46,3,67,33.0,other,6,1,"Jackie was 33"" tall before summer."
+47,4,20,180.0,intermediate,16,1,The total number of people required to fill the remaining spaces on the bus is **180**.
+48,4,98,78.0,near(<=25%),49,0,"First, find the cost of a half-gallon jar:  
+$5 - $2 = $3.
+
+Now calculate the total cost for 10-gallon jars:  
+10 gallons × $3 = $30.
+
+Now calculate the total cost for 16 half-gallon jars:  
+16 × $3 = $48.
+
+Total amount spent:  
+$30 + $48 = **$78**."
+49,3,4,3.0,copy_q,8,1,The last dog needs to walk **3 miles**.
+50,6,1198,1366.0,near(<=25%),54,0,"To calculate the total cost:
+
+- **Picture frames**: 44 × $20 = **$880**  
+- **Etching**: 44 × 20% of $20 = 44 × $4 = **$176**  
+- **Pins**: 2 × $5 = **$10**  
+- **Cords**: 25 (1/4 of 44) × $12 = **$300**  
+
+**Total cost**: $880 + $176 + $10 + $300 = **$1,366**."
+51,2,2,3.0,other,7,1,3 pints of red paint were used.
+52,3,4500,4500.0,correct,24,0,"John spent $1,500 on the goats ($500 × 3) and $3,000 on the cows ($1,500 × 2).  
+**Total = $1,500 + $3,000 = $4,500.**"
+53,2,6250,8750.0,other,4,1,"Each student raised $8,750."
+54,2,12,12.0,correct,59,0,"To find the probability that both tickets are winners, multiply the probabilities of each event occurring:
+
+- Probability of first ticket winning: 20% = 0.20  
+- Probability of second ticket winning: 3 times more likely = 3 × 0.20 = 0.60  
+
+So, the probability that both tickets win is:  
+**0.20 × 0.60 = 0.12**  
+
+Expressed as a percentage: **12%**."
+55,7,168000,30000.0,other,69,0,"The total amount paid to the employees in May is:  
+40 employees × $15/hour × 40 hours/week × 1 week = **24,000 dollars.**
+
+In June, 1/4 of the employees' contracts expired, so 40 × 1/4 = **10 employees** left.  
+The company paid these 10 employees:  
+10 employees × $15/hour × 40 hours/week × 1 week = **6,000 dollars.**
+
+Total for the two months: **24,000 + 6,000 = 30,000 dollars.**"
+56,3,4,5.0,copy_q,12,1,Carson needs to burn **5 logs** to prevent the pipes from freezing.
+57,7,59,50.0,copy_q,8,1,James took **50 minutes** to do the run.
+59,2,255,120.0,copy_q,7,1,Ron saves $120 by fixing the pothole.
+60,2,20000,20000.0,correct,12,1,"The total amount spent on advertising for the two years is **$20,000**."
+61,6,284,240.0,near(<=25%),1,1,$240.
+62,2,10,10.0,correct,9,1,Aiden will need 10 tablespoons of his secret seasoning.
+63,6,100,120.0,intermediate,12,1,Ford lacks **120 roses** to supply all the flower shops every month.
+64,3,4,6.0,other,31,1,"The total number of vehicles is 30, and each container holds 5 vehicles.  
+So, the number of containers on the second day is $ \frac{30}{5} = 6 $.
+
+**Answer: 6 containers.**"
+65,5,320,320.0,correct,59,0,"Elaine initially had **20** Pokemon cards.  
+- **First month**: She collected **3 × 20 = 60** cards.  
+- **Second month**: She collected **60 - 20 = 40** cards.  
+- **Third month**: She collected **2 × (60 + 40) = 2 × 100 = 200** cards.  
+
+**Total cards = 20 + 60 + 40 + 200 = 320**.  
+
+**Answer: 320**."
+66,3,8,8.0,correct,22,0,James will have 40 - (4 tables × 4 legs × 2 screws) = 40 - 32 = **8 screws left over**.
+67,5,3,0.75,other,42,0,"$10 - ($0.50 × 3) - ($0.50 × 4) - ($1.00 × 2) - ($0.75 × 5) = $10 - $1.50 - $2.00 - $2.00 - $3.75 = $10 - $9.25 = $0.75
+
+He can buy **0 plums** with the remaining $0.75."
+68,3,2304,1440.0,other,9,0,"James pays $120 × 12 = $1,440 a year."
+69,5,8,0.4,other,4,1,Rose's profit is **$0.40**.
+70,6,16,20.0,near(<=25%),57,0,"She buys 15 roses at $2 each, so that's 15 × $2 = **$30**.  
+She arrives with 5 × $5 = **$25**.
+
+She needs to pay $30, but only has $25.  
+So she needs **$5 in change**.
+
+Since she only has quarters (which are $0.25 each), she needs 5 ÷ 0.25 = **20 quarters**.
+
+**Answer: 20 quarters.**"
+71,5,19,20.0,near(<=25%),32,0,Craig has $40 total. He spends $12 on squirt guns ($2 × 6) and $9 on water balloons ($3 × 3). So he has $40 - $12 - $9 = **$20 left**.
+72,3,11,11.0,correct,23,0,"Jasper has 2 tubes of blue paint and 9 tubes of yellow paint.  
+Total = 2 + 9 = **11 tubes of paint**."
+73,2,14,14.0,correct,23,0,"Erin has 7 + 10 = 17 lollipops. She gives 3 to Ella, so she has 17 - 3 = 14 lollipops left."
+74,6,4,6.0,other,1,1,6.
+75,2,306,306.0,correct,47,0,"To calculate the cost of Ali's order:
+
+- Total weight of coal: 850 kg  
+- Weight per bag: 50 kg  
+- Number of bags: $ \frac{850}{50} = 17 $ bags  
+- Cost per bag: $18  
+- Total cost: $ 17 \times 18 = 306 $
+
+**Answer: $306**"
+76,4,48,48.0,correct,56,0,"To find the total number of legs, calculate the legs of each type of pet:
+
+- Dogs: 5 dogs × 4 legs = 20 legs  
+- Cats: 2 cats × 4 legs = 8 legs  
+- Birds: 10 birds × 2 legs = 20 legs  
+
+Total legs = 20 + 8 + 20 = **48 legs**."
+77,2,4,8.0,intermediate,1,1,8.
+78,4,319,300.0,intermediate,10,0,Alex needs **100 + 200 + 8 = 300 seats**.
+79,3,220,770.0,other,5,1,The Mastiff weighed **770 pounds**.
+80,2,132,12.0,copy_q,7,0,Ella would earn $132 after 12 hours.
+81,2,10,8.0,near(<=25%),7,1,He can make **8 packs** of apples.
+82,7,17,12.0,intermediate,10,1,It took James **12 hours** to get across the lake.
+83,3,75,30.0,copy_q,8,0,Terry spends $37.50 on yogurt over 30 days.
+84,6,2400,1200.0,other,5,1,"John spends **$1,200** in total."
+85,2,71,71.0,correct,7,0,Ali has $21 + $50 = $71.
+86,2,300,300.0,correct,13,0,Tim gets 5 trees × 6 lemons/tree × 10 years = 300 lemons.
+87,3,40,120.0,other,7,1,The mechanic earned $120 more on Friday.
+88,5,4,6.0,copy_q,63,0,"First, calculate John's total earnings:  
+$50/hour × 6 hours = $300  
+
+Subtract the cost of gas:  
+$300 − $50 = $250  
+
+He wants to deposit $100 in the bank, so he has:  
+$250 − $100 = $150  
+
+He buys 5 pencils at $10 each:  
+5 × $10 = $50  
+
+He has $150 left, so he can buy:  
+$150 ÷ $25 = **6** pens."
+89,3,75,15.0,copy_q,7,1,Shannon’s iced coffee is **15 milliliters weaker**.
+90,3,74,137.0,other,5,1,They had **137 loaves** left.
+91,5,26,40.0,other,1,1,40.
+92,4,15,12.0,near(<=25%),11,1,The remaining 24 liters of drink contains **12 liters of water**.
+93,2,5,5.0,correct,42,0,"Jordan changes 5 diapers per child, so 2 children × 5 diapers = 10 diapers per day.  
+Jordan's wife changes half of the diapers, so she changes 5 diapers per day.  
+Therefore, Jordan changes 10 - 5 = **5 diapers per day**."
+94,3,74,36.0,other,17,1,Harry's weight is 55 kg - 16 kg - 8 kg + 5 kg = **36 kg**.
+95,2,16,16.0,correct,5,1,James has 16 Facebook friends.
+96,3,50,50.0,correct,33,0,"15 × 100 = 1,500 cookies total.  
+Half of that is 750 cookies given to the church.  
+
+If each person in the church got 15 cookies, then 750 ÷ 15 = **50 people**."
+97,3,156,12.0,other,8,1,Greg does **12 loads of laundry per year**.
+98,5,1,1.5,other,11,1,Doctor Jones will have **1.5 hours** left to update his records.
+99,6,6,5.0,near(<=25%),81,0,"Let's break it down step by step:
+
+1. **Total number of stuffed animals** =  
+   3 puppies + 5 koalas + 2 zebras + 4 frogs = **14 stuffed animals**
+
+2. **Desired percentage of goats** = 30%  
+   So, the number of goats needed = 30% of 14 =  
+   $ 0.30 \times 14 = 4.2 $
+
+3. **Since you can't have a fraction of a stuffed animal**, she needs to **buy 5 stuffed goats** to make the percentage of goats 30%.
+
+**Answer: 5**"

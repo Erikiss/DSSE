@@ -1,0 +1,115 @@
+(a) answer categories (n=9200):
+                      n  words    w40  gemma_wrong
+cat                                               
+o0_gold_absent      662   23.0  0.828        0.888
+o0_gold_elsewhere   154   27.5  0.760        0.305
+o0_gold_last       2587   33.0  0.643        0.041
+opus_wrong         5797   25.0  0.728        0.972
+   ex [dsse1-08036 p1 gold 25 gemma=1] The dog takes 20 minutes to eat 9 sausages, which is 30 minutes divided by 3/2.
+   ex [dsse1-09546 p19 gold 150 gemma=0] They eat 240 apples. Since they both eat 4 apples a day, that's 8 apples per day total. 8 times 30 is 240.
+   ex [dsse1-06662 p14 gold 25 gemma=1] Let's track the number of children step by step:  1. Start with 5 children. 2. First street: 5 children chase the truck. 3. Second street: Each child 
+   ex [dsse1-07054 p42 gold 18000 gemma=1] Multiply the monthly amounts by 1.5 and then multiply by twelve.
+   ex [dsse1-07672 p72 gold 11 gemma=0] Jasper has 4 tubes of blue paint. Since he has half as many as Ben, and Ben has 4 tubes, Jasper has 4 divided by 2, which is 2.
+   ex [dsse1-07785 p86 gold 300 gemma=1] Multiply the number of trees by the number of lemons per tree per year and then multiply by the number of years.
+   share of Gemma-only 'incorrect' (gemma 1, opus 0) that is gold_absent: 0.794 (n=741)
+
+Spearman with targets:
+                   w40   le2  qwen3_4b_gemma  qwen3_8b_gemma  qwen3_14b_gemma  llama_3_2_3b_gemma
+opus_wrong        0.66  0.64            0.72            0.68             0.57                0.53
+gemma_wrong       0.84  0.85            0.54            0.58             0.63                0.32
+rule_wrong        0.79  0.77            0.70            0.66             0.56                0.54
+rule_notcorrect   0.84  0.85            0.53            0.58             0.57                0.32
+no_number         0.29  0.37           -0.18           -0.03             0.20               -0.31
+not_correct       0.80  0.81            0.59            0.63             0.64                0.35
+opus0_goldabsent  0.25  0.31           -0.23           -0.06             0.04               -0.23
+gemma_minus_opus  0.16  0.18           -0.31           -0.20            -0.07               -0.26
+w40               1.00  0.95            0.52            0.61             0.59                0.30
+le2               0.95  1.00            0.51            0.63             0.60                0.28
+
+(b) tetrads tau = r(f,y1) r(c,y2) - r(f,y2) r(c,y1)   [0 under one factor + any measurement error]
+               f               c  y1           y2    tau     lo    hi  p_boot
+             w40      opus_wrong 14b     qwen3_4b  0.122 -0.024 0.263   0.105
+             w40      opus_wrong 14b     qwen3_8b  0.053 -0.063 0.169   0.400
+             w40      opus_wrong  8b     qwen3_4b  0.078 -0.018 0.172   0.119
+             w40      opus_wrong 14b llama_3_2_3b  0.138  0.011 0.268   0.034
+             le2      opus_wrong 14b     qwen3_4b  0.139 -0.010 0.281   0.073
+             le2      opus_wrong 14b     qwen3_8b  0.048 -0.076 0.164   0.474
+             le2      opus_wrong  8b     qwen3_4b  0.105  0.004 0.209   0.039
+             le2      opus_wrong 14b llama_3_2_3b  0.156  0.022 0.288   0.021
+     gemma_wrong      opus_wrong 14b     qwen3_4b  0.137  0.019 0.250   0.026
+     gemma_wrong      opus_wrong 14b     qwen3_8b  0.093 -0.015 0.195   0.090
+     gemma_wrong      opus_wrong  8b     qwen3_4b  0.046 -0.041 0.133   0.294
+     gemma_wrong      opus_wrong 14b llama_3_2_3b  0.146  0.032 0.253   0.005
+     not_correct      opus_wrong 14b     qwen3_4b  0.116  0.019 0.213   0.016
+     not_correct      opus_wrong 14b     qwen3_8b  0.075 -0.019 0.170   0.120
+     not_correct      opus_wrong  8b     qwen3_4b  0.045 -0.025 0.113   0.194
+     not_correct      opus_wrong 14b llama_3_2_3b  0.136  0.044 0.230   0.000
+opus0_goldabsent      opus_wrong 14b     qwen3_4b  0.157  0.012 0.282   0.036
+opus0_goldabsent      opus_wrong 14b     qwen3_8b  0.059 -0.091 0.188   0.405
+opus0_goldabsent      opus_wrong  8b     qwen3_4b  0.113 -0.000 0.222   0.055
+opus0_goldabsent      opus_wrong 14b llama_3_2_3b  0.151  0.015 0.278   0.032
+             w40     gemma_wrong 14b     qwen3_4b -0.007 -0.085 0.083   0.772
+             w40     gemma_wrong 14b     qwen3_8b -0.037 -0.104 0.035   0.293
+             w40     gemma_wrong  8b     qwen3_4b  0.026 -0.029 0.078   0.373
+             w40     gemma_wrong 14b llama_3_2_3b  0.000 -0.075 0.087   0.920
+             le2     gemma_wrong 14b     qwen3_4b  0.009 -0.066 0.094   0.912
+             le2     gemma_wrong 14b     qwen3_8b -0.045 -0.113 0.022   0.187
+             le2     gemma_wrong  8b     qwen3_4b  0.047 -0.003 0.102   0.068
+             le2     gemma_wrong 14b llama_3_2_3b  0.018 -0.052 0.094   0.677
+             w40     not_correct 14b     qwen3_4b  0.016 -0.082 0.129   0.857
+             w40     not_correct 14b     qwen3_8b -0.017 -0.094 0.064   0.622
+             w40     not_correct  8b     qwen3_4b  0.032 -0.032 0.096   0.337
+             w40     not_correct 14b llama_3_2_3b  0.013 -0.076 0.114   0.876
+             w40      rule_wrong 14b     qwen3_4b  0.121  0.010 0.240   0.030
+             w40      rule_wrong 14b     qwen3_8b  0.049 -0.033 0.141   0.279
+             w40      rule_wrong  8b     qwen3_4b  0.081 -0.000 0.168   0.051
+             w40      rule_wrong 14b llama_3_2_3b  0.149  0.047 0.261   0.003
+      rule_wrong      opus_wrong 14b     qwen3_4b -0.002 -0.084 0.082   0.953
+      rule_wrong      opus_wrong 14b     qwen3_8b  0.003 -0.079 0.083   0.925
+      rule_wrong      opus_wrong  8b     qwen3_4b -0.006 -0.069 0.052   0.841
+      rule_wrong      opus_wrong 14b llama_3_2_3b -0.015 -0.092 0.071   0.700
+ rule_notcorrect      rule_wrong 14b     qwen3_4b  0.108  0.045 0.183   0.000
+ rule_notcorrect      rule_wrong 14b     qwen3_8b  0.053 -0.006 0.118   0.079
+ rule_notcorrect      rule_wrong  8b     qwen3_4b  0.061 -0.004 0.141   0.078
+ rule_notcorrect      rule_wrong 14b llama_3_2_3b  0.132  0.064 0.207   0.000
+             w40 rule_notcorrect 14b     qwen3_4b  0.010 -0.074 0.107   0.917
+             w40 rule_notcorrect 14b     qwen3_8b -0.006 -0.074 0.066   0.816
+             w40 rule_notcorrect  8b     qwen3_4b  0.015 -0.042 0.070   0.612
+             w40 rule_notcorrect 14b llama_3_2_3b  0.014 -0.064 0.103   0.827
+ rule_notcorrect      opus_wrong 14b     qwen3_4b  0.109 -0.003 0.225   0.058
+ rule_notcorrect      opus_wrong 14b     qwen3_8b  0.058 -0.048 0.167   0.298
+ rule_notcorrect      opus_wrong  8b     qwen3_4b  0.058 -0.029 0.141   0.191
+ rule_notcorrect      opus_wrong 14b llama_3_2_3b  0.120  0.010 0.231   0.035
+
+(c) partial Spearman | controls
+   w40               | opus_wrong                     14b 0.34 [0.12, 0.52]  8b 0.29 [0.09, 0.46]  4b 0.09 [-0.12, 0.32]
+   w40               | opus_wrong+opus0_goldabsent    14b 0.28 [0.05, 0.47]  8b 0.26 [0.08, 0.44]  4b 0.18 [-0.01, 0.38]
+   w40               | not_correct                    14b 0.17 [-0.08, 0.41]  8b 0.23 [0.03, 0.40]  4b 0.10 [-0.10, 0.35]
+   le2               | opus_wrong+opus0_goldabsent    14b 0.31 [0.05, 0.51]  8b 0.33 [0.14, 0.51]  4b 0.18 [-0.01, 0.39]
+   opus0_goldabsent  | opus_wrong                     14b 0.20 [-0.01, 0.38]  8b 0.13 [-0.08, 0.32]  4b -0.11 [-0.30, 0.10]
+   opus0_goldabsent  | opus_wrong+w40                 14b 0.02 [-0.18, 0.22]  8b -0.03 [-0.25, 0.17]  4b -0.19 [-0.37, 0.02]
+   gemma_wrong       | opus_wrong                     14b 0.35 [0.15, 0.51]  8b 0.12 [-0.08, 0.32]  4b -0.02 [-0.24, 0.23]
+   gemma_wrong       | opus_wrong+w40                 14b 0.17 [-0.03, 0.37]  8b -0.12 [-0.31, 0.12]  4b -0.12 [-0.32, 0.10]
+   w40               | opus_wrong+gemma_wrong         14b 0.14 [-0.12, 0.38]  8b 0.28 [0.09, 0.45]  4b 0.15 [-0.01, 0.34]
+   w40               | rule_wrong                     14b 0.29 [0.06, 0.47]  8b 0.19 [-0.02, 0.37]  4b -0.07 [-0.28, 0.18]
+   w40               | rule_notcorrect                14b 0.24 [0.01, 0.45]  8b 0.27 [0.06, 0.45]  4b 0.18 [-0.04, 0.44]
+   w40               | opus_wrong+no_number           14b 0.29 [0.06, 0.50]  8b 0.34 [0.15, 0.51]  4b 0.22 [0.04, 0.43]
+   no_number         | opus_wrong                     14b 0.21 [0.01, 0.40]  8b -0.09 [-0.29, 0.11]  4b -0.31 [-0.51, -0.11]
+
+(d) LOO-CV R^2 on ranks
+                     qwen3_14b_gemma  qwen3_8b_gemma  qwen3_4b_gemma
+opus                           0.304           0.447           0.498
+gemma                          0.367           0.310           0.265
+rule                           0.285           0.416           0.475
+rule_notcorrect                0.302           0.310           0.247
+opus+no_number                 0.320           0.439           0.536
+opus+no_number+w40             0.366           0.494           0.548
+w40                            0.320           0.344           0.241
+le2                            0.332           0.370           0.222
+opus+w40                       0.373           0.483           0.488
+opus+le2                       0.386           0.499           0.486
+opus+gemma                     0.380           0.442           0.482
+opus+gemma+w40                 0.376           0.478           0.483
+opus+goldabsent                0.319           0.445           0.492
+opus+goldabsent+w40            0.360           0.473           0.495
+OOB-bootstrap MSE reduction for 14B (rank-CDF scale, >0 = better): opus->opus+w40 mean 0.0047, P(>0)=0.79; opus->gemma alone mean 0.0048, P(>0)=0.78; opus+gemma -> +w40 mean -0.0010, P(>0)=0.49

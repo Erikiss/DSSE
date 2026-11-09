@@ -1,0 +1,25 @@
+        metric           d  ft4  obs_k16  obs_k32  A_lin_log2k_nll  A_lin_log2k_pred32_from_k1_16  A_lin_log2k_k_to_ft4  B_logit_log2k_nll  B_logit_log2k_pred32_from_k1_16  B_logit_log2k_k_to_ft4  C_lin_k_nll  C_lin_k_pred32_from_k1_16  C_lin_k_k_to_ft4
+   no_md_heavy dsse1-08572 0.98     0.09     0.08              102                          0.179              2.33e+10                106                            0.274                4.52e+04          107                      0.282               200
+   no_md_heavy dsse1-08377 0.91     0.07     0.08             75.7                            0.1              1.11e+11               77.5                            0.205                2.35e+03         77.1                      0.163               246
+   no_md_heavy dsse1-08166 0.94     0.12     0.13              137                          0.171              3.16e+08                141                            0.248                1.45e+04          143                      0.338               175
+   no_md_heavy dsse1-08530 0.93     0.08     0.09             86.8                         0.0583              2.77e+21               84.6                            0.159                 4.7e+03         84.7                      0.134               280
+no_md_claimant dsse1-08572 0.96     0.05     0.07             97.5                         0.0651              2.72e+26               97.4                           0.0895                4.39e+06         97.9                      0.123               459
+no_md_claimant dsse1-08377 0.86     0.07     0.05             82.8                          0.106              5.26e+12               85.7                            0.176                 1.8e+04           87                      0.204               298
+no_md_claimant dsse1-08166 0.98     0.11     0.09              146                          0.149              9.26e+12                148                            0.189                3.06e+07          150                      0.256               361
+no_md_claimant dsse1-08530 0.92     0.07     0.07              101                         0.0633              1.21e+28                101                           0.0899                1.99e+06          101                      0.124               436
+       short40 dsse1-08572 0.18     0.02     0.01             31.7                         0.0333              2.29e+09               32.5                           0.0537                2.39e+03           33                     0.0615               279
+       short40 dsse1-08377 0.32     0.02     0.02             35.3                         0.0333              1.23e+14               36.2                           0.0537                1.88e+03         36.5                     0.0615               309
+       short40 dsse1-08166 0.24     0.03     0.02             43.9                         0.0466              2.85e+08               44.9                           0.0684                1.54e+03         45.5                     0.0831               234
+       short40 dsse1-08530 0.02        0     0.01              5.6                        -0.0212                  43.5                5.6                         1.06e-08                    33.4          5.6                     0.0426              40.8
+
+sum of NLL over datasets (lower = better; same #params):
+                A_lin_log2k_nll  B_logit_log2k_nll  C_lin_k_nll
+metric                                                         
+no_md_claimant           427.65             431.47       435.48
+no_md_heavy              401.73             408.86       411.46
+short40                  116.46             119.24       120.67
+
+range of k_to_ft4 by form (rows; dataset has ~150):
+no_md_claimant {'A_lin_log2k': ('5.26e+12', '1.21e+28'), 'B_logit_log2k': ('1.8e+04', '3.06e+07'), 'C_lin_k': ('298', '459')}
+no_md_heavy {'A_lin_log2k': ('3.16e+08', '2.77e+21'), 'B_logit_log2k': ('2.35e+03', '4.52e+04'), 'C_lin_k': ('175', '280')}
+short40 {'A_lin_log2k': ('43.5', '1.23e+14'), 'B_logit_log2k': ('33.4', '2.39e+03'), 'C_lin_k': ('40.8', '309')}

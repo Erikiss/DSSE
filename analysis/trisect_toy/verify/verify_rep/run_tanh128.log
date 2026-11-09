@@ -1,0 +1,2 @@
+tanh128 task=s seed=10 R2=0.999945 train 0.36 min total 3.65 min
+tanh128 task=l seed=10 R2=0.999951 train 0.30 min total 2.63 min

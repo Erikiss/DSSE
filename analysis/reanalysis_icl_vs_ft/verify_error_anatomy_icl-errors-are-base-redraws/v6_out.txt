@@ -1,0 +1,52 @@
+/tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/analysis/verify_error_anatomy_icl-errors-are-base-redraws/v6_runs_curve.py:16: Pandas4Warning: Starting with pandas version 4.0 all arguments of sum will be keyword-only.
+  cnt = W.sum(1)
+/tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/analysis/verify_error_anatomy_icl-errors-are-base-redraws/v6_runs_curve.py:17: Pandas4Warning: Starting with pandas version 4.0 all arguments of mean will be keyword-only.
+  p = W.mean(0).values
+(a) per-run wrong count: mean 23.33, var 28.20, Poisson-binomial var given p 8.26; ratio 3.41; range 16-66
+    null var 95% [6.04,10.69], P(null>=obs)=0.000
+    between-dataset variance of mean counts 10.41; permutation 95% [6.69,12.37], p=0.232
+    mean wrong rate by group: {'bottom': 0.2354, 'top': 0.2312}
+(b) problem x dataset interaction stat 829.7; permutation 95% [754.8,817.3], p=0.004
+(c) icl curve (seed 0), base wrong 0.2 base 'Let's break this down' share 0.07 boxed 0.74
+dataset_id  dsse1-08166  dsse1-08377  dsse1-08530  dsse1-08572
+k                                                             
+1.0                0.20         0.20         0.20         0.25
+2.0                0.22         0.17         0.20         0.15
+4.0                0.28         0.19         0.17         0.22
+8.0                0.20         0.24         0.21         0.18
+16.0               0.27         0.27         0.19         0.22
+32.0               0.28         0.25         0.19         0.22
+dataset_id  dsse1-08166  dsse1-08377  dsse1-08530  dsse1-08572
+k                                                             
+1.0                0.34         0.38         0.36         0.29
+2.0                0.56         0.48         0.54         0.56
+4.0                0.69         0.62         0.60         0.74
+8.0                0.64         0.64         0.53         0.70
+16.0               0.62         0.59         0.48         0.82
+32.0               0.69         0.56         0.57         0.60
+dataset_id  dsse1-08166  dsse1-08377  dsse1-08530  dsse1-08572
+k                                                             
+1.0                0.45         0.39         0.30         0.39
+2.0                0.25         0.23         0.21         0.23
+4.0                0.13         0.18         0.23         0.20
+8.0                0.20         0.16         0.20         0.11
+16.0               0.13         0.14         0.24         0.17
+32.0               0.14         0.19         0.21         0.12
+   k=1.0: pooled wrong 0.212  minus base +0.013 CI [-0.052,+0.072]  (n answers 400)
+   k=2.0: pooled wrong 0.185  minus base -0.015 CI [-0.077,+0.048]  (n answers 400)
+   k=4.0: pooled wrong 0.215  minus base +0.015 CI [-0.050,+0.080]  (n answers 400)
+   k=8.0: pooled wrong 0.207  minus base +0.007 CI [-0.058,+0.070]  (n answers 400)
+   k=16.0: pooled wrong 0.237  minus base +0.037 CI [-0.028,+0.105]  (n answers 400)
+   k=32.0: pooled wrong 0.235  minus base +0.035 CI [-0.038,+0.105]  (n answers 400)
+   k16 seed0 tags for dsse1-08572 <StringArray>
+['icl__dsse1-08572__k16__s0']
+Length: 1, dtype: str
+   k16 seed0 tags for dsse1-08377 <StringArray>
+['icl__dsse1-08377__k16__s0']
+Length: 1, dtype: str
+   k16 seed0 tags for dsse1-08166 <StringArray>
+['icl__dsse1-08166__k16__s0']
+Length: 1, dtype: str
+   k16 seed0 tags for dsse1-08530 <StringArray>
+['icl__dsse1-08530__k16__s0']
+Length: 1, dtype: str

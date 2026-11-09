@@ -1,0 +1,4 @@
+drop_outlier_run=False drop70=False: AUC p_icl 0.882; null mean 0.936 95% [0.883,0.974], P(null<=obs)=0.025;  AUC p_ft 0.848
+drop_outlier_run=False drop70=True: AUC p_icl 0.889; null mean 0.933 95% [0.878,0.974], P(null<=obs)=0.052;  AUC p_ft 0.857
+drop_outlier_run=True drop70=False: AUC p_icl 0.883; null mean 0.941 95% [0.897,0.976], P(null<=obs)=0.006;  AUC p_ft 0.848
+drop_outlier_run=True drop70=True: AUC p_icl 0.890; null mean 0.940 95% [0.894,0.977], P(null<=obs)=0.018;  AUC p_ft 0.857

@@ -1,0 +1,2 @@
+gelu128_wide task=s seed=12 R2=0.999854 train 0.48 min total 3.81 min
+gelu128_wide task=l seed=12 R2=0.999850 train 0.25 min total 2.57 min

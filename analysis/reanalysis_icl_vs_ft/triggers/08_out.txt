@@ -1,0 +1,9 @@
+run level (n=95) Spearman: af~words -0.487, af~nsent -0.515, af~first_block_frac 0.916, af~early25_np 0.102, af~pre_eq_np 0.104
+first 'sentence' covers on average 20.0% of the characters in base answers vs 25.6% in icl answers
+icl answers with answer_first=1 and >80 words: 1054 of 1874 answer_first=1 (56.2%); of these only 7.5% have early25_np
+dataset level (n=32) icl af     ~ 14B: rho=+0.447 [+0.114, +0.687]
+dataset level (n=32) icl e25    ~ 14B: rho=+0.121 [-0.242, +0.467]
+dataset level (n=32) icl pre    ~ 14B: rho=+0.317 [-0.044, +0.618]
+dataset level (n=32) icl words  ~ 14B: rho=-0.283 [-0.590, +0.090]
+dataset level (n=32) icl fb     ~ 14B: rho=+0.430 [+0.095, +0.703]
+route means: base af=0.100 e25np=0.010 pre_eq_np=0.030 | icl af=0.197 e25np=0.024 pre_eq_np=0.036 | ft af=0.358 e25np=0.096 pre_eq_np=0.444

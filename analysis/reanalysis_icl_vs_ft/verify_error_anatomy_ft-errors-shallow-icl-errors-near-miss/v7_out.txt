@@ -1,0 +1,25 @@
+ft: wrongs on 100 problems; effective number of problems 1/sum(p^2) = 86.9; top-5 problems hold 0.077 ({12: 0.015, 13: 0.015, 19: 0.015, 30: 0.015, 57: 0.015})
+icl: wrongs on 78 problems; effective number of problems 1/sum(p^2) = 35.9; top-5 problems hold 0.211 ({19: 0.043, 30: 0.043, 78: 0.043, 5: 0.041, 12: 0.041})
+icl near share by problem (top-8 icl problems):
+             n  near  late  penult  shallow
+prompt_idx                                 
+5           92  0.93  0.92    0.92     0.02
+12          92  0.26  0.16    0.15     0.00
+19          96  0.01  0.01    0.00     0.02
+30          96  0.59  0.08    0.00     0.74
+34          87  0.98  0.23    0.00     0.01
+50          90  0.67  0.50    0.00     0.00
+61          89  0.56  0.34    0.00     0.07
+78          95  0.91  0.52    0.00     0.00
+
+matched ft - icl, problem bootstrap (4000), Holm over 5 contrasts
+  shallow excess                   diff +0.137 CI [+0.079,+0.194] p_boot 0.0003 Holm 0.0013 (78 problems)
+  near excess                      diff -0.169 CI [-0.261,-0.077] p_boot 0.0005 Holm 0.0013 (78 problems)
+  late excess                      diff -0.128 CI [-0.207,-0.049] p_boot 0.0003 Holm 0.0013 (78 problems)
+  penultimate share (>=2 steps)    diff -0.062 CI [-0.147,+0.005] p_boot 0.0750 Holm 0.0750 (55 problems)
+  log-distance |log10 x/g|         diff +0.146 CI [+0.090,+0.200] p_boot 0.0003 Holm 0.0013 (78 problems)
+
+leave-out: drop the 5 problems with most icl wrongs
+  shallow excess                   diff +0.119 CI [+0.055,+0.180] (73 problems)
+  near excess                      diff -0.152 CI [-0.244,-0.063] (73 problems)
+  late excess                      diff -0.109 CI [-0.188,-0.031] (73 problems)

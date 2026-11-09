@@ -1,0 +1,13 @@
+Ausgabe von manifold_check.py (Seed 0), 9. November 2026
+
+Trisektor (Seed 0)
+  L1: Rest-Anteil an |D|² 0.80 | davon tangential 0.81 (kleines ΔC 0.85, großes ΔC 0.77) | Wirkung: Rest +0.015, tangentialer Teil +0.452, normaler Teil -0.807
+  L2: Rest-Anteil an |D|² 0.64 | davon tangential 0.65 (kleines ΔC 0.72, großes ΔC 0.57) | Wirkung: Rest +0.038, tangentialer Teil +0.384, normaler Teil -0.455
+  L3: Rest-Anteil an |D|² 0.91 | davon tangential 0.86 (kleines ΔC 0.91, großes ΔC 0.80) | Wirkung: Rest +0.068, tangentialer Teil +0.862, normaler Teil -0.572
+  L4: Rest-Anteil an |D|² 0.37 | davon tangential 0.63 (kleines ΔC 0.64, großes ΔC 0.58) | Wirkung: Rest -0.000, tangentialer Teil +0.160, normaler Teil -0.160
+
+Halbierende (Seed 0)
+  L1: Rest-Anteil an |D|² 0.82 | davon tangential 0.83 (kleines ΔC 0.86, großes ΔC 0.79) | Wirkung: Rest +0.007, tangentialer Teil +0.473, normaler Teil -0.713
+  L2: Rest-Anteil an |D|² 0.64 | davon tangential 0.64 (kleines ΔC 0.71, großes ΔC 0.54) | Wirkung: Rest +0.040, tangentialer Teil +0.376, normaler Teil -0.372
+  L3: Rest-Anteil an |D|² 0.87 | davon tangential 0.82 (kleines ΔC 0.88, großes ΔC 0.74) | Wirkung: Rest +0.062, tangentialer Teil +0.811, normaler Teil -0.542
+  L4: Rest-Anteil an |D|² 0.36 | davon tangential 0.62 (kleines ΔC 0.65, großes ΔC 0.56) | Wirkung: Rest +0.000, tangentialer Teil +0.159, normaler Teil -0.159

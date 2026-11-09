@@ -1,0 +1,388 @@
+{
+ "weak": [
+  {
+   "cont_A": 0.6533213257789612,
+   "cont_O": 0.3446162939071655,
+   "cont_logitdiff_line": 0.6495917439460754,
+   "norm_share_A": 0.2884168326854706,
+   "local_grad_energy_in_plane": 0.8143114447593689,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.107,
+   "flips": {
+    "n_full_flips": 321,
+    "A_only": 0.0,
+    "O_only": 0.0,
+    "both": 0.0,
+    "neither": 1.0,
+    "A_alone_total": 0.0,
+    "O_alone_total": 0.0
+   },
+   "flips_line_only": 0.0,
+   "setting": "two_step rho0.5",
+   "kappa": 0.4
+  },
+  {
+   "cont_A": 0.6551099419593811,
+   "cont_O": 0.34924042224884033,
+   "cont_logitdiff_line": 0.6514045596122742,
+   "norm_share_A": 0.2884168028831482,
+   "local_grad_energy_in_plane": 0.8143114447593689,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.4816666666666667,
+   "flips": {
+    "n_full_flips": 1445,
+    "A_only": 0.020761245674740483,
+    "O_only": 0.0,
+    "both": 0.0,
+    "neither": 0.9792387543252595,
+    "A_alone_total": 0.020761245674740483,
+    "O_alone_total": 0.0
+   },
+   "flips_line_only": 0.01522491349480969,
+   "setting": "two_step rho0.5",
+   "kappa": 0.5
+  },
+  {
+   "cont_A": 0.6546735763549805,
+   "cont_O": 0.3524453639984131,
+   "cont_logitdiff_line": 0.6510322690010071,
+   "norm_share_A": 0.2884168028831482,
+   "local_grad_energy_in_plane": 0.8143114447593689,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.8856666666666667,
+   "flips": {
+    "n_full_flips": 2657,
+    "A_only": 0.10575837410613474,
+    "O_only": 0.002258185923974407,
+    "both": 0.0,
+    "neither": 0.8919834399698908,
+    "A_alone_total": 0.10575837410613474,
+    "O_alone_total": 0.002258185923974407
+   },
+   "flips_line_only": 0.08882197967632668,
+   "setting": "two_step rho0.5",
+   "kappa": 0.6
+  },
+  {
+   "cont_A": 0.6540375351905823,
+   "cont_O": 0.35130026936531067,
+   "cont_logitdiff_line": 0.6504430174827576,
+   "norm_share_A": 0.28841686248779297,
+   "local_grad_energy_in_plane": 0.8143114447593689,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.9993333333333333,
+   "flips": {
+    "n_full_flips": 2998,
+    "A_only": 0.42628418945963975,
+    "O_only": 0.01067378252168112,
+    "both": 0.010340226817878585,
+    "neither": 0.5527018012008005,
+    "A_alone_total": 0.43662441627751836,
+    "O_alone_total": 0.021014009339559707
+   },
+   "flips_line_only": 0.41394262841894597,
+   "setting": "two_step rho0.5",
+   "kappa": 0.75
+  },
+  {
+   "cont_A": 0.6550047397613525,
+   "cont_O": 0.3452453911304474,
+   "cont_logitdiff_line": 0.6520393490791321,
+   "norm_share_A": 0.2884168028831482,
+   "local_grad_energy_in_plane": 0.8143114447593689,
+   "base_acc": 1.0,
+   "full_flip_rate": 1.0,
+   "flips": {
+    "n_full_flips": 3000,
+    "A_only": 0.7703333333333333,
+    "O_only": 0.021,
+    "both": 0.09666666666666666,
+    "neither": 0.112,
+    "A_alone_total": 0.867,
+    "O_alone_total": 0.11766666666666667
+   },
+   "flips_line_only": 0.8656666666666667,
+   "setting": "two_step rho0.5",
+   "kappa": 1.0
+  },
+  {
+   "cont_A": 0.136307954788208,
+   "cont_O": 0.8627173900604248,
+   "cont_logitdiff_line": 0.12537644803524017,
+   "norm_share_A": 0.06911033391952515,
+   "local_grad_energy_in_plane": 0.1652175337076187,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.035666666666666666,
+   "flips": {
+    "n_full_flips": 107,
+    "A_only": 0.0,
+    "O_only": 0.16822429906542055,
+    "both": 0.0,
+    "neither": 0.8317757009345794,
+    "A_alone_total": 0.0,
+    "O_alone_total": 0.16822429906542055
+   },
+   "flips_line_only": 0.0,
+   "setting": "two_step rho1.0",
+   "kappa": 0.4
+  },
+  {
+   "cont_A": 0.1355605274438858,
+   "cont_O": 0.8659266829490662,
+   "cont_logitdiff_line": 0.12468849867582321,
+   "norm_share_A": 0.06911033391952515,
+   "local_grad_energy_in_plane": 0.1652175337076187,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.33066666666666666,
+   "flips": {
+    "n_full_flips": 992,
+    "A_only": 0.0,
+    "O_only": 0.3336693548387097,
+    "both": 0.0,
+    "neither": 0.6663306451612904,
+    "A_alone_total": 0.0,
+    "O_alone_total": 0.3336693548387097
+   },
+   "flips_line_only": 0.0,
+   "setting": "two_step rho1.0",
+   "kappa": 0.5
+  },
+  {
+   "cont_A": 0.1337808221578598,
+   "cont_O": 0.8629060983657837,
+   "cont_logitdiff_line": 0.1230669766664505,
+   "norm_share_A": 0.06911033391952515,
+   "local_grad_energy_in_plane": 0.1652175337076187,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.8263333333333334,
+   "flips": {
+    "n_full_flips": 2479,
+    "A_only": 0.0,
+    "O_only": 0.6038725292456636,
+    "both": 0.0,
+    "neither": 0.3961274707543364,
+    "A_alone_total": 0.0,
+    "O_alone_total": 0.6038725292456636
+   },
+   "flips_line_only": 0.0,
+   "setting": "two_step rho1.0",
+   "kappa": 0.6
+  },
+  {
+   "cont_A": 0.13401047885417938,
+   "cont_O": 0.8620172142982483,
+   "cont_logitdiff_line": 0.12327449768781662,
+   "norm_share_A": 0.06911033391952515,
+   "local_grad_energy_in_plane": 0.1652175337076187,
+   "base_acc": 1.0,
+   "full_flip_rate": 1.0,
+   "flips": {
+    "n_full_flips": 3000,
+    "A_only": 0.0,
+    "O_only": 0.919,
+    "both": 0.0,
+    "neither": 0.081,
+    "A_alone_total": 0.0,
+    "O_alone_total": 0.919
+   },
+   "flips_line_only": 0.0,
+   "setting": "two_step rho1.0",
+   "kappa": 0.75
+  },
+  {
+   "cont_A": 0.13594847917556763,
+   "cont_O": 0.8620603680610657,
+   "cont_logitdiff_line": 0.12498695403337479,
+   "norm_share_A": 0.06911033391952515,
+   "local_grad_energy_in_plane": 0.1652175337076187,
+   "base_acc": 1.0,
+   "full_flip_rate": 1.0,
+   "flips": {
+    "n_full_flips": 3000,
+    "A_only": 0.0,
+    "O_only": 0.9973333333333333,
+    "both": 0.001,
+    "neither": 0.0016666666666666668,
+    "A_alone_total": 0.001,
+    "O_alone_total": 0.9983333333333333
+   },
+   "flips_line_only": 0.0003333333333333333,
+   "setting": "two_step rho1.0",
+   "kappa": 1.0
+  },
+  {
+   "cont_A": 0.649533748626709,
+   "cont_O": 0.33067312836647034,
+   "cont_logitdiff_line": 0.6452283263206482,
+   "norm_share_A": 0.7774677276611328,
+   "local_grad_energy_in_plane": 0.2875348627567291,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.043333333333333335,
+   "flips": {
+    "n_full_flips": 130,
+    "A_only": 0.038461538461538464,
+    "O_only": 0.0,
+    "both": 0.0,
+    "neither": 0.9615384615384616,
+    "A_alone_total": 0.038461538461538464,
+    "O_alone_total": 0.0
+   },
+   "flips_line_only": 0.038461538461538464,
+   "setting": "mixed",
+   "kappa": 0.4
+  },
+  {
+   "cont_A": 0.6571374535560608,
+   "cont_O": 0.3355347216129303,
+   "cont_logitdiff_line": 0.6534686088562012,
+   "norm_share_A": 0.7774677276611328,
+   "local_grad_energy_in_plane": 0.2875348627567291,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.5123333333333333,
+   "flips": {
+    "n_full_flips": 1537,
+    "A_only": 0.04163955757970072,
+    "O_only": 0.0,
+    "both": 0.0,
+    "neither": 0.9583604424202993,
+    "A_alone_total": 0.04163955757970072,
+    "O_alone_total": 0.0
+   },
+   "flips_line_only": 0.03773584905660377,
+   "setting": "mixed",
+   "kappa": 0.5
+  },
+  {
+   "cont_A": 0.6651253700256348,
+   "cont_O": 0.3363037705421448,
+   "cont_logitdiff_line": 0.6618311405181885,
+   "norm_share_A": 0.7774677276611328,
+   "local_grad_energy_in_plane": 0.2875348627567291,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.9556666666666667,
+   "flips": {
+    "n_full_flips": 2867,
+    "A_only": 0.13672828740844087,
+    "O_only": 0.0,
+    "both": 0.0,
+    "neither": 0.8632717125915591,
+    "A_alone_total": 0.13672828740844087,
+    "O_alone_total": 0.0
+   },
+   "flips_line_only": 0.1269619811649808,
+   "setting": "mixed",
+   "kappa": 0.6
+  },
+  {
+   "cont_A": 0.6723288297653198,
+   "cont_O": 0.3306356966495514,
+   "cont_logitdiff_line": 0.6694353818893433,
+   "norm_share_A": 0.7774677872657776,
+   "local_grad_energy_in_plane": 0.2875348627567291,
+   "base_acc": 1.0,
+   "full_flip_rate": 1.0,
+   "flips": {
+    "n_full_flips": 3000,
+    "A_only": 0.439,
+    "O_only": 0.0006666666666666666,
+    "both": 0.0003333333333333333,
+    "neither": 0.56,
+    "A_alone_total": 0.43933333333333335,
+    "O_alone_total": 0.001
+   },
+   "flips_line_only": 0.42866666666666664,
+   "setting": "mixed",
+   "kappa": 0.75
+  },
+  {
+   "cont_A": 0.6748030781745911,
+   "cont_O": 0.3178970515727997,
+   "cont_logitdiff_line": 0.6727387309074402,
+   "norm_share_A": 0.7774677276611328,
+   "local_grad_energy_in_plane": 0.2875348627567291,
+   "base_acc": 1.0,
+   "full_flip_rate": 1.0,
+   "flips": {
+    "n_full_flips": 3000,
+    "A_only": 0.818,
+    "O_only": 0.011666666666666667,
+    "both": 0.089,
+    "neither": 0.08133333333333333,
+    "A_alone_total": 0.907,
+    "O_alone_total": 0.10066666666666667
+   },
+   "flips_line_only": 0.897,
+   "setting": "mixed",
+   "kappa": 1.0
+  }
+ ],
+ "learned_big": [
+  {
+   "kind": "linear",
+   "acc": 0.288
+  },
+  {
+   "cont_A": 0.17741341888904572,
+   "cont_O": 0.8265246152877808,
+   "cont_logitdiff_line": 0.14568735659122467,
+   "norm_share_A": 0.06386736780405045,
+   "local_grad_energy_in_plane": 0.1607988476753235,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.9996666666666667,
+   "flips": {
+    "n_full_flips": 2999,
+    "A_only": 0.01800600200066689,
+    "O_only": 0.839946648882961,
+    "both": 0.02100700233411137,
+    "neither": 0.12104034678226075,
+    "A_alone_total": 0.03901300433477826,
+    "O_alone_total": 0.8609536512170723
+   },
+   "flips_line_only": 0.02867622540846949,
+   "kind": "mlp512",
+   "acc": 1.0
+  },
+  {
+   "cont_A": 0.16089732944965363,
+   "cont_O": 0.8357507586479187,
+   "cont_logitdiff_line": 0.1338331699371338,
+   "norm_share_A": 0.06386736780405045,
+   "local_grad_energy_in_plane": 0.1607988476753235,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.358,
+   "flips": {
+    "n_full_flips": 1074,
+    "A_only": 0.004655493482309125,
+    "O_only": 0.5884543761638734,
+    "both": 0.002793296089385475,
+    "neither": 0.40409683426443205,
+    "A_alone_total": 0.0074487895716946,
+    "O_alone_total": 0.5912476722532588
+   },
+   "flips_line_only": 0.0074487895716946,
+   "kind": "mlp512",
+   "kappa": 0.5
+  },
+  {
+   "cont_A": 0.16263261437416077,
+   "cont_O": 0.8327770829200745,
+   "cont_logitdiff_line": 0.13393068313598633,
+   "norm_share_A": 0.06386735290288925,
+   "local_grad_energy_in_plane": 0.1607988476753235,
+   "base_acc": 1.0,
+   "full_flip_rate": 0.952,
+   "flips": {
+    "n_full_flips": 2856,
+    "A_only": 0.008753501400560224,
+    "O_only": 0.6974789915966386,
+    "both": 0.004551820728291317,
+    "neither": 0.28921568627450983,
+    "A_alone_total": 0.01330532212885154,
+    "O_alone_total": 0.7020308123249299
+   },
+   "flips_line_only": 0.01015406162464986,
+   "kind": "mlp512",
+   "kappa": 0.75
+  }
+ ]
+}

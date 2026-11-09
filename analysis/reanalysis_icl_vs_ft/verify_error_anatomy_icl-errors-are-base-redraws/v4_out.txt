@@ -1,0 +1,13 @@
+x_ca round=0 drop=(): base value unseen among icl wrongs on 6/20 base-wrong problems; LODO-expected 1.81; P(>=obs)=0.0054
+x_ca round=0 drop=(19,): base value unseen among icl wrongs on 6/19 base-wrong problems; LODO-expected 1.80; P(>=obs)=0.0049
+x_ca round=2 drop=(): base value unseen among icl wrongs on 6/20 base-wrong problems; LODO-expected 1.91; P(>=obs)=0.0060
+x_ca round=2 drop=(19,): base value unseen among icl wrongs on 6/19 base-wrong problems; LODO-expected 1.89; P(>=obs)=0.0061
+x_ca round=4 drop=(): base value unseen among icl wrongs on 6/20 base-wrong problems; LODO-expected 1.91; P(>=obs)=0.0067
+x_ca round=4 drop=(19,): base value unseen among icl wrongs on 6/19 base-wrong problems; LODO-expected 1.89; P(>=obs)=0.0055
+x_last round=0 drop=(): base value unseen among icl wrongs on 8/24 base-wrong problems; LODO-expected 1.70; P(>=obs)=0.0001
+x_last round=0 drop=(19,): base value unseen among icl wrongs on 8/23 base-wrong problems; LODO-expected 1.70; P(>=obs)=0.0001
+x_last round=2 drop=(): base value unseen among icl wrongs on 8/24 base-wrong problems; LODO-expected 1.71; P(>=obs)=0.0001
+x_last round=2 drop=(19,): base value unseen among icl wrongs on 8/23 base-wrong problems; LODO-expected 1.71; P(>=obs)=0.0001
+x_last round=4 drop=(): base value unseen among icl wrongs on 8/24 base-wrong problems; LODO-expected 1.71; P(>=obs)=0.0000
+x_last round=4 drop=(19,): base value unseen among icl wrongs on 8/23 base-wrong problems; LODO-expected 1.71; P(>=obs)=0.0000
+per problem (p, LODO unseen prob, observed unseen): [(5, np.float64(0.043), False), (11, np.float64(0.051), False), (12, np.float64(0.109), False), (14, np.float64(0.139), True), (19, np.float64(0.01), False), (22, np.float64(0.08), False), (30, np.float64(0.062), False), (35, np.float64(0.067), True), (36, np.float64(0.059), True), (39, np.float64(0.167), True), (50, np.float64(0.044), False), (55, np.float64(0.084), False), (58, np.float64(0.0), False), (61, np.float64(0.112), True), (64, np.float64(0.0), False), (78, np.float64(0.189), False), (88, np.float64(0.024), False), (89, np.float64(0.273), False), (92, np.float64(0.304), False), (97, np.float64(0.086), True)]

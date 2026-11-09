@@ -1,0 +1,43 @@
+1. sampling-only reliability of 1.7B Opus error: binomial 0.860, two-way residual 0.893, split-half SB 0.880 (r_half 0.786)
+   two-way residual (within-cell) noise: var_c 0.1663 var_f 0.1318 cov 0.0120 (answer-level resid corr 0.081)
+2. replicate (n=31 extreme datasets): Pearson ours-rule vs DSSE-rule 0.709, vs DSSE-opus 0.580; Spearman 0.691 / 0.624
+   means: ours 0.650 DSSE-rule 0.679; SD ours 0.167 DSSE-rule(31) 0.137 DSSE-rule(92) 0.113
+   reliability over 92 spread: diff-based 0.45 [0.14, 0.72] ; correlation-based 0.47 [0.18, 0.75]
+   SD ratio ours/DSSE on the 31: 1.22 (1 = same scale)
+
+3. communality of the control (Opus error) from target-only triads:
+   c=opus, (qwen3_4b_gemma, qwen3_8b_gemma): 0.65 [0.48, 0.81]
+   c=opus, (qwen3_8b_gemma, qwen3_14b_gemma): 0.72 [0.54, 0.94]
+   c=opus, (qwen3_4b_gemma, qwen3_14b_gemma): 0.81 [0.60, 1.06]
+   c=opus, (qwen3_4b_gemma, llama_3_2_3b_gemma): 0.51 [0.33, 0.67]
+   c=opus, (qwen3_14b_gemma, llama_3_2_3b_gemma): 0.87 [0.56, 1.46]
+4. control reliability that would make partial(form, target | control) exactly 0 (one factor):
+   w40  qwen3_14b_gemma    0.65 [0.42, 0.88]
+   w40  qwen3_8b_gemma     0.74 [0.58, 0.89]
+   w40  qwen3_4b_gemma     0.91 [0.73, 1.15]
+   w40  llama_3_2_3b_gemma 1.15 [0.81, 2.59]
+   le2  qwen3_14b_gemma    0.62 [0.39, 0.85]
+   le2  qwen3_8b_gemma     0.70 [0.53, 0.85]
+   le2  qwen3_4b_gemma     0.91 [0.72, 1.18]
+   le2  llama_3_2_3b_gemma 1.22 [0.81, 3.36]
+
+   disattenuated w40 partial by control reliability (classical noise):
+      qwen3_14b_gemma  qwen3_8b_gemma  qwen3_4b_gemma  llama_3_2_3b_gemma
+1.00             0.34            0.29            0.09               -0.07
+0.90             0.29            0.21           -0.01               -0.14
+0.86             0.27            0.17           -0.06               -0.18
+0.80             0.22            0.10           -0.17               -0.25
+0.75             0.17            0.01           -0.30               -0.32
+0.70             0.10           -0.11           -0.49               -0.42
+0.65             0.01           -0.29           -0.80               -0.55
+
+5. Pearson partial w40 ~ target | Opus error, raw scale: naive / minus prompt-adjusted noise / minus naive within-dataset cov
+   qwen3_14b_gemma  naive 0.26 [0.05, 0.43] | prompt-adj 0.22 [-0.08, 0.42] | per-dataset cov 0.19 [-0.15, 0.41]
+   qwen3_8b_gemma   naive 0.31 [0.14, 0.45] | prompt-adj 0.25 [0.03, 0.42] | per-dataset cov 0.22 [-0.05, 0.40]
+   qwen3_4b_gemma   naive 0.06 [-0.12, 0.26] | prompt-adj -0.02 [-0.26, 0.19] | per-dataset cov -0.07 [-0.35, 0.15]
+   noise cov used: prompt-adjusted var_c 0.00166 cov 0.00012 ; per-dataset var_c 0.00220 cov -0.00006 ; between var_c 0.01555
+
+   split-sample (error on one half of prompts, brevity on the other), Spearman partial, control disattenuated by half reliability
+   qwen3_14b_gemma  naive-split 0.38 [0.18, 0.55] | disattenuated (sampling only) 0.27 [-0.06, 0.49]
+   qwen3_8b_gemma   naive-split 0.33 [0.19, 0.48] | disattenuated (sampling only) 0.17 [-0.08, 0.38]
+   qwen3_4b_gemma   naive-split 0.16 [-0.03, 0.36] | disattenuated (sampling only) -0.07 [-0.44, 0.18]

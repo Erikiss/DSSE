@@ -1,0 +1,52 @@
+                 sample    outcome component  observed  null_mean   ratio  p_perm
+0            no_08152s0  wrong_len     total    0.0010     0.0008  1.2411  0.0505
+1            no_08152s0  wrong_len   between    0.0005     0.0003  2.0670  0.0015
+2            no_08152s0  wrong_len    within    0.0006     0.0008  0.8368  0.8241
+3            no_08152s0      wrong     total    0.0009     0.0008  1.1158  0.2109
+4            no_08152s0      wrong   between    0.0005     0.0003  1.8404  0.0025
+5            no_08152s0      wrong    within    0.0006     0.0008  0.7644  0.9140
+6            no_08152s0   n_words2     total   31.6009     7.8511  4.0251  0.0005
+7            no_08152s0   n_words2   between   17.2707     2.6630  6.4855  0.0005
+8            no_08152s0   n_words2    within   22.1746     7.8429  2.8274  0.0005
+9   no_08152s0_no_08166  wrong_len     total    0.0008     0.0008  1.0643  0.3178
+10  no_08152s0_no_08166  wrong_len   between    0.0004     0.0003  1.5329  0.0295
+11  no_08152s0_no_08166  wrong_len    within    0.0006     0.0008  0.8357  0.8071
+12  no_08152s0_no_08166      wrong     total    0.0008     0.0008  0.9639  0.5917
+13  no_08152s0_no_08166      wrong   between    0.0004     0.0003  1.3402  0.0895
+14  no_08152s0_no_08166      wrong    within    0.0006     0.0008  0.7819  0.9000
+15  no_08152s0_no_08166   n_words2     total   32.1374     7.7990  4.1207  0.0005
+16  no_08152s0_no_08166   n_words2   between   17.8320     2.6234  6.7972  0.0005
+17  no_08152s0_no_08166   n_words2    within   22.1656     7.8304  2.8307  0.0005
+
+k-curve (4 datasets x k in {0,1,2,4,8,16,32}; base shared as k=0), response-level OLS with dataset + problem FE, cluster by run:
+/usr/local/lib/python3.13/site-packages/statsmodels/regression/linear_model.py:2121: RuntimeWarning: invalid value encountered in sqrt
+  return np.sqrt(np.diag(self.cov_params()))
+  wrong_len    per doubling of k+1: +0.0072 [+0.0020, +0.0124]  p=0.00668
+  n_words2     per doubling of k+1: -4.9902 [-6.1823, -3.7982]  p=2.3e-16
+/usr/local/lib/python3.13/site-packages/statsmodels/regression/linear_model.py:2121: RuntimeWarning: invalid value encountered in sqrt
+  return np.sqrt(np.diag(self.cov_params()))
+  short40      per doubling of k+1: +0.0041 [+0.0028, +0.0053]  p=1.43e-10
+/usr/local/lib/python3.13/site-packages/statsmodels/regression/linear_model.py:2121: RuntimeWarning: invalid value encountered in sqrt
+  return np.sqrt(np.diag(self.cov_params()))
+  has_arith    per doubling of k+1: -0.0027 [-0.0051, -0.0002]  p=0.0318
+/usr/local/lib/python3.13/site-packages/statsmodels/regression/linear_model.py:2121: RuntimeWarning: invalid value encountered in sqrt
+  return np.sqrt(np.diag(self.cov_params()))
+  answer_first per doubling of k+1: +0.0219 [+0.0157, +0.0282]  p=4.2e-12
+      wrong_len  n_words2  short40  has_arith
+k                                            
+0.0       0.200   149.550    0.000      0.990
+1.0       0.208   144.452    0.000      0.982
+2.0       0.182   142.735    0.000      0.972
+4.0       0.212   134.210    0.010      0.970
+8.0       0.200   129.312    0.015      0.970
+16.0      0.230   126.675    0.018      0.970
+32.0      0.232   127.265    0.015      0.978
+
+ICL within-dataset slope of wrong_len per shown-row word: -0.0002 [-0.0035, +0.0032]; x14.3 words (bottom->top gap): -0.002 [-0.051, +0.046]
+
+ICL within-dataset slope of n_words2 per shown-row word: +0.4510 [-0.0308, +0.9329]; x14.3 words (bottom->top gap): +6.449 [-0.441, +13.340]
+FT between-dataset slope of wrong_len per row word (n=31): -0.0095 [-0.0121, -0.0069]; x14.3 words: -0.136
+FT between-dataset slope of n_words2 per row word (n=31): +1.0275 [+0.6817, +1.3734]; x14.3 words: +14.694
+ICL between-dataset slope of wrong_len per row word (n=32): +0.0002 [-0.0004, +0.0007]; x14.3: +0.002
+ICL between-dataset slope of n_words2 per row word (n=32): +0.1656 [-0.0039, +0.3352]; x14.3: +2.369
+ICL dataset-mean n_words range 115.0 132.5 | FT 4.5 64.5

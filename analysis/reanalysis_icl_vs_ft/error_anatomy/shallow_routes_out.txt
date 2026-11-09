@@ -1,0 +1,17 @@
+base         n=   20 | shallow 0.350 (null 0.237, exc +0.113 [+nan,+nan]) | late 0.400 (null 0.096, exc +0.304 [+nan,+nan]) | near 0.450 (null 0.129, exc +0.321 [+nan,+nan])
+icl          n= 2240 | shallow 0.274 (null 0.217, exc +0.057 [+0.040,+0.077]) | late 0.362 (null 0.098, exc +0.264 [+0.246,+0.283]) | near 0.479 (null 0.107, exc +0.372 [+0.357,+0.388])
+ft           n= 2018 | shallow 0.500 (null 0.263, exc +0.238 [+0.207,+0.277]) | late 0.308 (null 0.116, exc +0.192 [+0.176,+0.209]) | near 0.274 (null 0.103, exc +0.172 [+0.149,+0.194])
+ft_top       n= 1135 | shallow 0.496 (null 0.261, exc +0.235 [+0.207,+0.265]) | late 0.305 (null 0.115, exc +0.190 [+0.172,+0.210]) | near 0.272 (null 0.102, exc +0.171 [+0.140,+0.201])
+ft_bottom    n=  883 | shallow 0.506 (null 0.265, exc +0.242 [+0.179,+0.326]) | late 0.313 (null 0.117, exc +0.195 [+0.168,+0.223]) | near 0.276 (null 0.104, exc +0.173 [+0.142,+0.209])
+icl_top      n= 1110 | shallow 0.254 (null 0.213, exc +0.041 [+0.029,+0.051]) | late 0.344 (null 0.097, exc +0.247 [+0.218,+0.278]) | near 0.477 (null 0.106, exc +0.370 [+0.347,+0.393])
+icl_bottom   n= 1130 | shallow 0.294 (null 0.221, exc +0.072 [+0.043,+0.107]) | late 0.379 (null 0.098, exc +0.281 [+0.262,+0.300]) | near 0.482 (null 0.108, exc +0.374 [+0.354,+0.393])
+ft_short     n= 1464 | shallow 0.533 (null 0.264, exc +0.269 [+0.228,+0.320]) | late 0.300 (null 0.117, exc +0.183 [+0.166,+0.201]) | near 0.247 (null 0.102, exc +0.145 [+0.121,+0.168])
+ft_long      n=  554 | shallow 0.415 (null 0.259, exc +0.156 [+0.118,+0.195]) | late 0.330 (null 0.114, exc +0.216 [+0.184,+0.246]) | near 0.347 (null 0.104, exc +0.242 [+0.199,+0.282])
+ft_excl_p19  n= 1987 | shallow 0.504 (null 0.264, exc +0.240 [+0.208,+0.279]) | late 0.311 (null 0.116, exc +0.195 [+0.178,+0.211]) | near 0.276 (null 0.102, exc +0.174 [+0.152,+0.196])
+icl_excl_p19 n= 2144 | shallow 0.284 (null 0.223, exc +0.061 [+0.044,+0.083]) | late 0.377 (null 0.098, exc +0.279 [+0.258,+0.300]) | near 0.500 (null 0.106, exc +0.394 [+0.378,+0.410])
+ft - icl excess shallow: +0.181 CI [0.144 0.229]
+ft - icl excess late: -0.072 CI [-0.09  -0.054]
+ft - icl excess near: -0.201 CI [-0.229 -0.169]
+ft top - bottom excess shallow: -0.007 CI [-0.089  0.067]
+ft top - bottom excess late: -0.005 CI [-0.04   0.028]
+ft top - bottom excess near: -0.002 CI [-0.048  0.04 ]

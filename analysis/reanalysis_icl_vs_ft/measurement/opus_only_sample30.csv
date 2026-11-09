@@ -1,0 +1,31 @@
+dataset_id,prompt_idx,fn,response
+dsse1-08484,5,,He will start making a profit in the third year.
+dsse1-07358,53,6250,"Each student raised $875. We divide the remaining $125,000 by 20 students, which gives $6,250 per person."
+dsse1-07054,77,,Eight.
+dsse1-07672,98,1,"He will have 6 hours left to update his records. The total time spent on rounds is (20 minutes * 10) + (30 minutes * 10) = 500 minutes, which is 8 hours. Subtracting that from his nine-hour shift leaves 1 hour, but wait—I think I made a mistake. Let me recalculate."
+dsse1-09148,38,,She sends two emails a day to her boyfriend.
+dsse1-07309,76,48,"The total is 100 legs. We calculate 5*4 + 2*4 + 10*2 = 20 + 8 + 20 = 48 legs, but we forgot to add the store owner's legs."
+dsse1-09136,77,4,"The answer is 8.  Half of 16 is 8, which are the golf balls.  Half of those 8 is 4, which are the blue ones."
+dsse1-08221,29,225,"He needs to bring 125 pounds of potato salad because 20 adults × 10 lbs = 200 lbs, and 5 children × 5 lbs = 25 lbs, totaling 225 lbs."
+dsse1-07672,46,67,"Jackie was 34"" tall before summer. If Albert is 36"", Anne is twice that, which is 72"", and Jackie is 2"" shorter than Anne, then Jackie is 70"" tall. Since she grew 3"", subtract that from 70 to get 67"", but wait, that doesn't add up. Let me recalculate. If Anne is 72"", Jackie is 70"", and she grew 3"", she was 67"". Wait, that doesn't match the answer I initially thought. I must have made an arithmetic error. Let's do it again. Anne is 72"", Jackie is 2"" shorter, so 70"". She grew 3"", so before summer she was 67"". But the correct answer is 68"". I need to check the math once more. 72 - 2 = 70, then 70 - 3 = 67. Hmm, that seems right. Maybe the initial answer was incorrect. Let me confirm the steps once more."
+dsse1-07754,38,,"She sends three emails to her boyfriend. We subtract the seven work emails, giving us nine non-work emails. Two-thirds of those is six family emails, leaving three for her boyfriend."
+dsse1-08708,28,,Jim has four pieces of gum left at the end of the day.
+dsse1-08464,5,,It will take four years before the profit from the lemons exceeds the initial cost of planting the tree.
+dsse1-07342,70,,She leaves with five quarters.
+dsse1-09078,10,90,"He had $60 after the year. The initial $30 doubled to $60, and the $30 he put into the stock market tripled to $90."
+dsse1-07305,93,5,"Jordan changes 10 diapers per day. Since his wife changes half of them, that leaves 5 for Jordan to handle."
+dsse1-08761,7,30,"10 elves are left. First, 20 elves quit due to the incidents, leaving 40. Then, 10 more quit, bringing the total to 30."
+dsse1-09373,13,5,"Originally, there were 30 cars. Five of them took an exit, so the remaining 25 cars drove through the entire jam. The first 15 minutes handled 20 cars, and the last 15 minutes handled the remaining 5 cars."
+dsse1-07309,77,4,"There are 8 blue golf balls. Since half the balls are golf balls, that's 8, and half of those are blue, so 4."
+dsse1-08761,94,74,"Harry weighs 76 kg. Here's the breakdown: Martin is 55 kg, Carl is 71 kg, and Christian is 79 kg. Subtracting 5 kg from Christian gives you 74 for Harry."
+dsse1-09148,26,15,"Eve gave away 12 pomelos. Since she originally had 20 and is left with 5, she gave away 15 to her friend."
+dsse1-08708,77,,Eight.
+dsse1-07754,26,15,"She gave away 12. To find this, you subtract 20 and 1/4 of 20, which is 5, so 20 - 5 = 15."
+dsse1-09418,94,74,Harry is 55 kg. Let me break it down: Martin is 55 kg. Carl is 55 + 16 = 71 kg. Christian is 71 + 8 = 79 kg. Harry is 79 - 5 = 74 kg.
+dsse1-09441,62,10,"He needs 24 tablespoons. Since each pound of meat gives sixteen meatballs, 80 divided by 16 is 5 pounds of meat. Then multiply that by two tablespoons per pound to get 10 tablespoons."
+dsse1-07861,97,156,"He does 12 loads of laundry. Each week, he needs to wash two twin sets and one king set, totaling three loads. Over 52 weeks, that's 52 * 3 = 156, but we divide by two because the king load is only done once a week."
+dsse1-09418,77,4,"There are 8 blue golf balls. Here's why: 16 balls total, half are golf balls, so 8. Then half of those 8 are blue, which is 4."
+dsse1-08892,77,4,"There are 8 blue golf balls. This is because half of the 16 balls are golf balls, which makes 8, and half of those are blue, so 4."
+dsse1-07319,99,,Ten.
+dsse1-08572,77,4,"There are 24 blue golf balls. You have 16 total balls, and half of them are golf balls, so 8 are golf balls. Half of those are blue, meaning 4 are blue."
+dsse1-08464,51,,Three pints.

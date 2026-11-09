@@ -1,0 +1,54 @@
+{
+ "top": [
+  {
+   "dataset_id": "dsse1-08086",
+   "prompt_idx": 55,
+   "gold": "168000",
+   "words": 13,
+   "form": "bare / no equation (<=40w)",
+   "response": "Carolyn paid the company $24,000 in May and $18,000 in June, totaling $42,000."
+  },
+  {
+   "dataset_id": "dsse1-08546",
+   "prompt_idx": 42,
+   "gold": "18000",
+   "words": 16,
+   "form": "bare / no equation (<=40w)",
+   "response": "She pays a total of $1,400 per month. That means in a year, she pays $16,800."
+  },
+  {
+   "dataset_id": "dsse1-08086",
+   "prompt_idx": 84,
+   "gold": "2400",
+   "words": 13,
+   "form": "bare / no equation (<=40w)",
+   "response": "John spends $600 on scotch and $100 on cognac, making the total $700."
+  }
+ ],
+ "bottom": [
+  {
+   "dataset_id": "dsse1-07918",
+   "prompt_idx": 39,
+   "gold": "480",
+   "words": 41,
+   "form": "long (>40w)",
+   "response": "The total cost is calculated as follows: 25 dollars per rental and 1.50 dollars per student per session. For 10 students and 3 days, the cost is 25 + (1.50 * 10 * 3) = 25 + 45 = 70 dollars."
+  },
+  {
+   "dataset_id": "dsse1-09408",
+   "prompt_idx": 89,
+   "gold": "75",
+   "words": 42,
+   "form": "long (>40w)",
+   "response": "The 65-degree cooling is the primary factor here. Since the coffee is already 12 milliliters weaker from the ice, adding 15 milliliters of cream only adds to the temperature, which doesn't affect the bitterness. Therefore, the final strength is 12 milliliters weaker."
+  },
+  {
+   "dataset_id": "dsse1-08997",
+   "prompt_idx": 55,
+   "gold": "168000",
+   "words": 42,
+   "form": "long (>40w)",
+   "response": "In May, the company paid 40 employees at $15 per hour for 40 hours, totaling $24,000. In June, they hired 10 employees, so the total for June is 10 employees \u00d7 40 hours \u00d7 $15 = $60,000. The combined total is $84,000."
+  }
+ ]
+}

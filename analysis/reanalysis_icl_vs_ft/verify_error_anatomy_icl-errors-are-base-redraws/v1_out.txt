@@ -1,0 +1,34 @@
+
+==== all extractor=w_ca  problems=100  icl runs=96  ft runs=31
+base wrong 20/100 (base committed 99); sum p_icl = 23.33; icl mean rate 0.2333
+P(icl wrong|base wrong) obs 0.591 pred 0.646 gap -0.055;  P(icl wrong|base right) obs 0.144 pred 0.108 gap +0.036
+  null for gap|base wrong: obs -0.055; null 95% range [-0.085,+0.097]  two-sided p=0.235
+  null for gap|base right: obs +0.036; null 95% range [-0.026,+0.028]  two-sided p=0.011
+  null for #base wrong - sum p: obs -3.333; null 95% range [-5.552,+5.823]  two-sided p=0.265
+  AUC for base-wrong: p_icl 0.882 (null-expected if base=icl draw: 0.935, 95% [0.884,0.975]); p_ft 0.848; diff +0.035 CI [-0.058,+0.128]
+  [ca] power: thresholds gap>0.030, count<-5.88
+    uniform: base has 10% fewer errors than icl (icl extra rate 0.023): P(reject gap)=0.20  P(reject count)=0.12
+    uniform: base has 20% fewer errors than icl (icl extra rate 0.047): P(reject gap)=0.53  P(reject count)=0.34
+    uniform: base has 30% fewer errors than icl (icl extra rate 0.070): P(reject gap)=0.81  P(reject count)=0.64
+    uniform: base has 50% fewer errors than icl (icl extra rate 0.117): P(reject gap)=0.99  P(reject count)=0.98
+    easy-only: base never errs where p_icl<=0.1 (icl extra rate 0.011): P(reject gap)=0.02  P(reject count)=0.04
+    easy-only: base never errs where p_icl<=0.2 (icl extra rate 0.021): P(reject gap)=0.02  P(reject count)=0.07
+    easy-only: base never errs where p_icl<=0.3 (icl extra rate 0.042): P(reject gap)=0.03  P(reject count)=0.24
+
+==== drop 19 extractor=w_ca  problems=99  icl runs=96  ft runs=31
+base wrong 19/99 (base committed 98); sum p_icl = 22.33; icl mean rate 0.2256
+P(icl wrong|base wrong) obs 0.570 pred 0.630 gap -0.060;  P(icl wrong|base right) obs 0.144 pred 0.108 gap +0.036
+  null for gap|base wrong: obs -0.060; null 95% range [-0.091,+0.096]  two-sided p=0.189
+  null for gap|base right: obs +0.036; null 95% range [-0.026,+0.027]  two-sided p=0.011
+  null for #base wrong - sum p: obs -3.333; null 95% range [-5.479,+6.115]  two-sided p=0.252
+  AUC for base-wrong: p_icl 0.876 (null-expected if base=icl draw: 0.933, 95% [0.879,0.974]); p_ft 0.841; diff +0.036 CI [-0.063,+0.138]
+
+==== all extractor=w_last  problems=100  icl runs=96  ft runs=31
+base wrong 24/100 (base committed 99); sum p_icl = 27.12; icl mean rate 0.2712
+P(icl wrong|base wrong) obs 0.654 pred 0.695 gap -0.041;  P(icl wrong|base right) obs 0.150 pred 0.113 gap +0.037
+  null for gap|base wrong: obs -0.041; null 95% range [-0.085,+0.085]  two-sided p=0.353
+  null for gap|base right: obs +0.037; null 95% range [-0.029,+0.032]  two-sided p=0.027
+  null for #base wrong - sum p: obs -3.125; null 95% range [-5.532,+5.928]  two-sided p=0.278
+  AUC for base-wrong: p_icl 0.900 (null-expected if base=icl draw: 0.942, 95% [0.893,0.978]); p_ft 0.834; diff +0.065 CI [-0.044,+0.183]
+group top: icl runs 48 mean rate 0.2313; |bw obs 0.586 pred 0.655; |br obs 0.142 pred 0.104 gap +0.039
+group bottom: icl runs 48 mean rate 0.2354; |bw obs 0.596 pred 0.645; |br obs 0.145 pred 0.109 gap +0.036

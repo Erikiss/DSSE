@@ -1,0 +1,29 @@
+n runs 96
+lw ctx_tokens: +0.24 (p 0.018; w/o 08152s0 +0.26, p 0.010) | shot_words: +0.35 (p 0.000; w/o 08152s0 +0.38, p 0.000) | shot_le15: -0.34 (p 0.001; w/o 08152s0 -0.33, p 0.001) | n_brief_prompts: +0.04 (p 0.671; w/o 08152s0 +0.16, p 0.128) | last_shot_words: +0.28 (p 0.005; w/o 08152s0 +0.32, p 0.002)
+short40 ctx_tokens: -0.16 (p 0.116; w/o 08152s0 -0.18, p 0.081) | shot_words: -0.19 (p 0.060; w/o 08152s0 -0.21, p 0.040) | shot_le15: -0.01 (p 0.905; w/o 08152s0 -0.03, p 0.787) | n_brief_prompts: -0.11 (p 0.293; w/o 08152s0 -0.24, p 0.018) | last_shot_words: -0.14 (p 0.174; w/o 08152s0 -0.17, p 0.090)
+no_md_heavy ctx_tokens: +0.22 (p 0.028; w/o 08152s0 +0.21, p 0.039) | shot_words: +0.14 (p 0.165; w/o 08152s0 +0.13, p 0.212) | shot_le15: -0.09 (p 0.374; w/o 08152s0 -0.11, p 0.302) | n_brief_prompts: +0.04 (p 0.664; w/o 08152s0 -0.05, p 0.609) | last_shot_words: +0.11 (p 0.277; w/o 08152s0 +0.09, p 0.403)
+wrong ctx_tokens: +0.20 (p 0.049; w/o 08152s0 +0.19, p 0.066) | shot_words: +0.19 (p 0.062; w/o 08152s0 +0.18, p 0.082) | shot_le15: -0.23 (p 0.024; w/o 08152s0 -0.25, p 0.016) | n_brief_prompts: -0.06 (p 0.529; w/o 08152s0 -0.18, p 0.076) | last_shot_words: +0.16 (p 0.127; w/o 08152s0 +0.13, p 0.200)
+
+runs with most brevity-request prompts:
+                      tag  dataset_id  seed    lw  short40  no_md_heavy  wrong  shot_words  shot_le15  n_brief_prompts  last_shot_words  ctx_tokens
+icl__dsse1-08152__k16__s0 dsse1-08152   0.0 3.852     0.73         0.86   0.66      36.500      0.375                6               57      1236.0
+icl__dsse1-08152__k16__s1 dsse1-08152   1.0 6.789     0.00         0.13   0.25      37.812      0.188                3               41      1287.0
+icl__dsse1-08152__k16__s2 dsse1-08152   2.0 6.846     0.01         0.07   0.22      46.625      0.188                3               56      1472.0
+icl__dsse1-07918__k16__s1 dsse1-07918   1.0 6.762     0.01         0.08   0.25      15.062      0.562                1               19       822.0
+icl__dsse1-06649__k16__s0 dsse1-06649   0.0 6.633     0.02         0.19   0.28      44.500      0.000                0               47      1435.0
+icl__dsse1-06649__k16__s1 dsse1-06649   1.0 6.711     0.01         0.17   0.29      46.500      0.000                0               50      1480.0
+icl__dsse1-06649__k16__s2 dsse1-06649   2.0 6.815     0.02         0.13   0.23      44.562      0.000                0               45      1422.0
+icl__dsse1-07025__k16__s0 dsse1-07025   0.0 6.763     0.02         0.07   0.22      26.250      0.188                0               10      1045.0
+
+outlier run:                       tag  dataset_id  seed    lw  short40  no_md_heavy  wrong  shot_words  shot_le15  n_brief_prompts  last_shot_words  ctx_tokens
+icl__dsse1-08152__k16__s0 dsse1-08152   0.0 3.852     0.73         0.86   0.66        36.5      0.375                6               57      1236.0
+                      tag  dataset_id  seed    lw  short40  no_md_heavy  wrong  shot_words  shot_le15  n_brief_prompts  last_shot_words  ctx_tokens
+icl__dsse1-08152__k16__s0 dsse1-08152   0.0 3.852     0.73         0.86   0.66      36.500      0.375                6               57      1236.0
+icl__dsse1-08152__k16__s1 dsse1-08152   1.0 6.789     0.00         0.13   0.25      37.812      0.188                3               41      1287.0
+icl__dsse1-08152__k16__s2 dsse1-08152   2.0 6.846     0.01         0.07   0.22      46.625      0.188                3               56      1472.0
+
+ft training losses, steps 1-4 and 5-8, 70-76 (curve datasets):
+dsse1-08572 [5.56 3.14 3.04 2.59] mean 5-8 2.16 mean 70-76 0.8
+dsse1-08377 [5.98 3.74 3.5  2.56] mean 5-8 2.24 mean 70-76 0.71
+dsse1-08166 [4.74 2.96 2.48 2.24] mean 5-8 1.98 mean 70-76 0.9
+dsse1-08530 [3.66 2.32 1.93 1.93] mean 5-8 1.74 mean 70-76 0.7

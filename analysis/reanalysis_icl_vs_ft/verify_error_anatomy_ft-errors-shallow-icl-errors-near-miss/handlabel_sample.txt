@@ -1,0 +1,130 @@
+[0] ft ft__dsse1-08992 p52 gold=4500 x=6000 shallow=False near=True
+    R: John spent a total of $6,000.
+[1] ft ft__dsse1-08086 p18 gold=52 x=21 shallow=False near=False
+    R: He writes 12 checks for the electric and gas bills, 6 checks for the church, and 3 checks for the pest and lawn service, totaling 21 checks per year.
+[2] ft ft__dsse1-08992 p81 gold=10 x=5 shallow=True near=False
+    R: You can make 5 packs of apples.
+[3] ft ft__dsse1-07309 p61 gold=284 x=152 shallow=False near=False
+    R: The total cost after 8 months of $12 is $96. Then, the price jumps to $14 for the remaining 4 months, so it's $56. Adding those together gives a total of $152 for two years.
+[4] ft ft__dsse1-07309 p18 gold=52 x=34 shallow=False near=False
+    R: Let's break this down step by step. He writes 3 checks for the electric and gas bills combined, which totals 6 checks a year. Then, he writes 2 checks for the church every month, so that's 24 checks per year. Finally, he writes 1 check every three months for the pest and lawn service, which is 4 checks per year. Adding those all up gives us a total of 34 checks per year.
+[5] ft ft__dsse1-07734 p95 gold=16 x=36 shallow=True near=False
+    R: James has 36 friends on Facebook.
+[6] ft ft__dsse1-07479 p46 gold=67 x=70 shallow=False near=True
+    R: Albert is 36 inches tall. Anne is twice that, so she is 72 inches tall. Jackie is 2 inches shorter than Anne, so she is 70 inches tall.
+[7] ft ft__dsse1-08546 p48 gold=98 x=3 shallow=True near=False
+    R: A gallon jar costs $5, so a half-gallon jar must be $5 - $2 = $3.
+[8] ft ft__dsse1-07521 p91 gold=26 x=64 shallow=False near=False
+    R: He starts with 50 marbles. If he gets 2 dozen (24) more, that makes 74 marbles. Losing 10 leaves him with 64 marbles.
+[9] ft ft__dsse1-08377 p56 gold=4 x=2 shallow=False near=False
+    R: 2 logs.
+[10] ft ft__dsse1-07734 p58 gold=4 x=15 shallow=False near=False
+    R: Steve finishes in 3 minutes and 15 seconds.
+[11] ft ft__dsse1-07527 p28 gold=7 x=5 shallow=False near=True
+    R: Jim starts with 20 pieces of gum. He chews 2 pieces for every 2 hours at school, which totals 8 pieces. On the way home and after dinner, he chews 1 piece each, adding 2 more. That makes 10 pieces chewed in total. He then gives half of the remaining 10 to his sister, leaving him with 5 pieces.
+[12] ft ft__dsse1-07734 p29 gold=225 x=130 shallow=False near=False
+    R: Ted needs to bring 130 pounds of potato salad.
+[13] ft ft__dsse1-08036 p62 gold=10 x=16 shallow=True near=False
+    R: Since the recipe calls for two tablespoons of seasoning for each pound of ground beef, the total amount needed for 80 meatballs is (80 divided by 16) times two tablespoons.
+[14] ft ft__dsse1-08166 p13 gold=5 x=15 shallow=True near=False
+    R: The cars that took an exit were the ones that had to wait for the jam to pass. We know there were 30 cars in total, and 5 left the line, which means 25 remained. Since 20 cars left in the second 15 minutes, 5 must have passed through in the first 15 minutes.
+[15] ft ft__dsse1-08152 p1 gold=25 x=24 shallow=False near=True
+    R: The cat eats nine sausages in 30 minutes. The dog eats the same number of sausages in 2/3 the amount of time, which is 20 minutes. To find the average time, we calculate the harmonic mean of the two times. The formula for the harmonic mean of two times is $ \frac{2t_1 t_2}{t_1 + t_2} $. Substituting the values, we get $ \frac{2 \times 30 \times 20}{30 + 20} = \frac{1200}{50} = 24 $ minutes.
+[16] ft ft__dsse1-08530 p36 gold=9 x=17 shallow=False near=False
+    R: There are 8 high chairs, which means the restaurant has 8 x 5 = 40 regular chairs. Since there are 42 adults and 15 babies, that totals 57 people. 40 chairs is not enough, so Mia needs 57 - 40 = 17 more chairs.
+[17] ft ft__dsse1-07319 p13 gold=5 x=15 shallow=True near=False
+    R: 15 cars drove through the traffic jam in the first 15 minutes.
+[18] ft ft__dsse1-08992 p63 gold=100 x=65 shallow=False near=False
+    R: Ford needs 20 + 15 + 30 = 65 roses for the flower shops each week.
+[19] ft ft__dsse1-07319 p89 gold=75 x=13 shallow=True near=False
+    R: The ice cubes cool the coffee by 13 degrees each, so six ice cubes would cool it by 6 × 13 = 78 degrees. The cream adds 12 milliliters of weaker liquid. The total temperature change is 65 degrees from the original coffee, but the ice cubes cool it by 78 degrees. So, the final temperature is 65 degrees minus 78 degrees equals negative 13 degrees. The cream adds 12 milliliters of weaker liquid, whic
+[20] ft ft__dsse1-07734 p90 gold=74 x=124 shallow=False near=False
+    R: They had 124 loaves left.
+[21] ft ft__dsse1-08546 p16 gold=296 x=360 shallow=False near=True
+    R: She paid a total of $360 for the hotel and bus rides.
+[22] ft ft__dsse1-08997 p15 gold=96 x=48 shallow=False near=False
+    R: The tree is 80 feet long. 80% of that is 64 feet, which is 8 logs. 8 logs times 5 planks = 40 planks. 40 planks times $1.2 = $48.
+[23] ft ft__dsse1-07453 p65 gold=320 x=178 shallow=False near=False
+    R: Elaine has 178 cards in total.
+[24] ft ft__dsse1-07319 p0 gold=400 x=175 shallow=False near=False
+    R: Carmen has $100, Samantha has $125, and Daisy has $175.
+[25] ft ft__dsse1-07527 p74 gold=4 x=2 shallow=True near=False
+    R: Let's break it down. Initially, there were 3 orange and 4 white fish, totaling 7. After buying 17 more, the total becomes 24. If there are now twice as many orange fish as white fish, that means there are 12 orange and 6 white fish. Subtracting the original 3 and 4 from these gives 9 and 2 white fish bought, respectively.
+[26] ft ft__dsse1-07527 p30 gold=8 x=6 shallow=True near=True
+    R: The original cost of the jogger jeans was $28 - $6 = $22. The tattered jeans cost $28. The difference is $28 - $22 = $6.
+[27] ft ft__dsse1-08221 p79 gold=220 x=176 shallow=True near=True
+    R: Multiply the Papillon's weight by 44 to get the Mastiff's weight. The Papillon weighed 4 pounds, so the Mastiff weighed 4 * 44 = 176 pounds.
+[28] ft ft__dsse1-09408 p79 gold=220 x=3520 shallow=False near=False
+    R: The Mastiff weighed 44 * 2 * 10 * 4 = 3520 pounds.
+[29] ft ft__dsse1-07025 p68 gold=2304 x=192 shallow=False near=False
+    R: James pays $120 a month for the accident-related coverage. Since it's 60% more expensive, the total annual cost is $120 * 1.6 = $192.
+[30] ft ft__dsse1-07527 p59 gold=255 x=150 shallow=True near=False
+    R: Ron saves $150 by not having the city fix the pothole.
+[31] ft ft__dsse1-08036 p69 gold=8 x=12 shallow=True near=True
+    R: Rose bought 5 dozens for $2.40, which is 5 * $2.40 = $12.
+[32] ft ft__dsse1-08400 p59 gold=255 x=450 shallow=True near=False
+    R: Ron has a net cost of $450 for the damage but also pays $300 for the buckets. If he had just let it go, he would have only paid $120 in fines. By fixing it himself, he saves $450 - $300 = $150. The city council's fine is a sunk cost, and they don't care about the $300 Ron just spent on the buckets. So, the only real cost he faces is the $450 in damages.
+[33] ft ft__dsse1-07479 p87 gold=40 x=360 shallow=True near=False
+    R: $360.
+[34] ft ft__dsse1-07319 p35 gold=250 x=500 shallow=True near=False
+    R: On the second day, she counted 150 customers (100 + 50). On the third day, she counted 250 customers to reach a total of 500.
+[35] ft ft__dsse1-07734 p19 gold=150 x=30 shallow=True near=False
+    R: Marin and Nancy eat 80 apples together in 30 days.
+[36] ft ft__dsse1-08161 p56 gold=4 x=3 shallow=False near=True
+    R: Since the temperature drops 12 degrees to 33, Carson needs to raise that by 5 degrees for the pipes to stay warm. He'll need to burn 12/5 = 2.4 logs. Since you can't burn a fraction of a log, he must round up to the next whole number, which is 3 logs.
+[37] ft ft__dsse1-08400 p13 gold=5 x=20 shallow=True near=False
+    R: First, subtract the 5 cars that took an exit from the original 30. That leaves 25 cars waiting. In the first 15 minutes, 20 cars passed through. Since the remaining 5 cars didn't have to go through the jam, the answer is 20 cars.
+[38] ft ft__dsse1-08546 p44 gold=12 x=14 shallow=False near=True
+    R: She has 14 pieces of fruit left.
+[39] ft ft__dsse1-08152 p61 gold=284 x=192 shallow=False near=True
+    R: To determine the total cost of 2 years of the streaming service, we need to calculate the cost for the first 6 months and then the cost for the remaining 12 months. The first 6 months cost $8 per month, totaling $48. For the remaining 12 months at the normal rate of $12 per month, the cost is $12 × 12 = $144. Adding these together gives a total cost of $48 + $144 = $192.
+[40] icl icl__dsse1-09037__k16__s0 p57 gold=59 x=39 shallow=False near=False
+    R: ference in total time**   | Jon finishes in **150 minutes**, and wins by **10 minutes**, so: | $$ | \text{James's total time} = 150 - 10 = 140 \text{ minutes} | $$ |  | --- |  | ### Step 5: Solve for the **run time** (x) |  | $$ | 36 + 65 + x = 140   | \Rightarrow x = 140 - 36 - 65 = 39 \text{ minutes} | $$ |  | --- |  | ### ✅ Final Answer: |  | **James took 39 minutes to do the run.**
+[41] icl icl__dsse1-08530__k16__s2 p70 gold=16 x=25 shallow=True near=False
+    R:  **$1.25**   | - 15 roses = 15 × $1.25 = **$18.75** |  | --- |  | ### **Step 2: Calculate how much change she gets** |  | - She pays with $25   | - She spends $18.75   | - **Change = $25 - $18.75 = $6.25** |  | --- |  | ### **Step 3: Convert change to quarters** |  | - 1 quarter = $0.25   | - $6.25 ÷ $0.25 = **25 quarters** |  | --- |  | ### ✅ **Answer:** | **She leaves with 25 quarters.**
+[42] icl icl__dsse1-08572__k16__s2 p30 gold=8 x=10 shallow=False near=True
+    R:  He saved **$6** from the tattered jeans   | - So, the original cost of the tattered jeans = $6 + $6 = **$12** |  | --- |  | ### **Step 5: Find the difference in original cost** | - Tattered jeans = $12   | - Jogger jeans = $22   | - **Difference = $22 - $12 = $10** |  | --- |  | ### ✅ **Final Answer:** | **$10** more do jogger jeans originally cost than the tattered jeans.
+[43] icl icl__dsse1-08161__k16__s2 p24 gold=320 x=290 shallow=False near=True
+    R: p 4: Evening Entry** | - **3 times as many people as the number that entered at 10:00** came in. | - That means:   |   $ 3 \times 40 = 120 $ people entered in the evening. |  | So, **total people by evening** = 170 + 120 = **290 people** |  | --- |  | ### ✅ **Final Answer:** | $$ | \boxed{290} | $$ |  | **Total number of people who entered the restaurant on that day is 290.**
+[44] icl icl__dsse1-06649__k16__s0 p5 gold=13 x=12 shallow=False near=True
+    R:  and feeding** |  | --- |  | ### **4. Net annual profit:** | - **$10.50 (revenue) - $3 (cost) = $7.50 per year** |  | --- |  | ### **5. Total cost to break even:** | - **$90 (initial cost)** |  | --- |  | ### **6. Number of years to break even:** | - **$90 ÷ $7.50 = 12 years** |  | --- |  | ### **Answer:** | It will take **12 years** for Carlos to start earning money from his lemon tree.
+[45] icl icl__dsse1-07918__k16__s1 p11 gold=7 x=10 shallow=True near=True
+    R: ndies = $3.20 | - 5 lollipops = 5 × $0.40 = $2.00 |  | So, 4 candies = $3.20 - $2.00 = **$1.20** |  | ### Step 3: Find the cost of 10 lollipops and 10 candies | - 10 lollipops = 10 × $0.40 = **$4.00** | - 10 candies = 10 × $0.12 = **$1.20** |  | ### Step 4: Add them together | $4.00 + $1.20 = **$5.20** |  | --- |  | **Answer:** 10 lollipops and 10 candies will cost **$5.20**.
+[46] icl icl__dsse1-07479__k16__s0 p92 gold=15 x=11.4 shallow=False near=True
+    R: r from the **remaining orange drink**:   |   - 9 liters × (2/3) = **6 liters of water** |  | - Water from the **pineapple drink**:   |   - 9 liters × (3/5) = **5.4 liters of water** |  | --- |  | ### **Step 4: Add the water amounts** |  | - Total water = 6 + 5.4 = **11.4 liters** |  | --- |  | ### ✅ **Answer:** | **11.4 liters of water** are in the remaining 24 liters of drink.
+[47] icl icl__dsse1-08377__k16__s1 p19 gold=150 x=240 shallow=False near=False
+    R: Marin and Nancy each eat 4 apples a day, so together they eat: |  | $$ | 4 \text{ apples/day} + 4 \text{ apples/day} = 8 \text{ apples/day} | $$ |  | Over 30 days, they would eat: |  | $$ | 8 \text{ apples/day} \times 30 \text{ days} = 240 \text{ apples} | $$ |  | **Answer:** They eat **240 apples** in 30 days.
+[48] icl icl__dsse1-08166__k16__s1 p61 gold=284 x=128 shallow=False near=False
+    R: month**   |    - Total: $8 × 6 = **$48** |  | ### 2. **Next 2 months (months 7–8):**   |    - Price: **$12/month**   |    - Total: $12 × 2 = **$24** |  | ### 3. **After 8 months (months 9–12):**   |    - Price: **$14/month**   |    - Total: $14 × 4 = **$56** |  | ### Total cost for **2 years (24 months):**   | $48 + $24 + $56 = **$128** |  | --- |  | ### ✅ Final Answer: **$128**.
+[49] icl icl__dsse1-08036__k16__s1 p34 gold=30 x=35 shallow=False near=True
+    R: side**: 5 minutes   | 2. **Second side**: 2 × 5 = **10 minutes**   | 3. **Third side**: 2 × 5 = **10 minutes**   | 4. **Fourth side**: ½ × 5 = **2.5 minutes**   | 5. **Fifth side**: 5 minutes (all done)   | 6. **Sixth side**: ½ × 5 = **2.5 minutes**   |  | Now add them all up: |  | $$ | 5 + 10 + 10 + 2.5 + 5 + 2.5 = 35 \text{ minutes} | $$ |  | ### ✅ **Answer: 35 minutes**.
+[50] icl icl__dsse1-08166__k16__s2 p92 gold=15 x=7.33 shallow=False near=False
+    R: ** still contains **6.67 liters of water** (from Step 2). | - The **1 liter of orange drink** spilled had **2/3 water**, so: |   $$ |   1 \text{ liter} \times \frac{2}{3} = \frac{2}{3} \approx 0.67 \text{ liters of water} |   $$ |  | - **Total water = 6.67 + 0.67 = 7.33 liters** |  | ### ✅ Final Answer: | **7.33 liters of water** in the remaining 19 liters of drink.
+[51] icl icl__dsse1-07309__k16__s1 p30 gold=8 x=6 shallow=True near=True
+    R: ow much more did the jogger jeans originally cost than the tattered jeans?** |  | - Jogger jeans cost $22 | - Tattered jeans cost $28 | - Difference = $22 - $28 = **$-6** |  | So, the **jogger jeans originally cost $6 less** than the tattered jeans. |  | --- |  | ### ✅ **Final Answer:** | $$ | \boxed{6} | $$ |  | **Jogger jeans originally cost $6 less than the tattered jeans.**
+[52] icl icl__dsse1-09408__k16__s0 p61 gold=284 x=204 shallow=False near=True
+    R: = \$48 | $$ |  | --- |  | ### **2. Next 6 months: $12/month**   | $$ | 6 \text{ months} \times \$12/\text{month} = \$72 | $$ |  | --- |  | ### **3. Next 6 months: $14/month**   | $$ | 6 \text{ months} \times \$14/\text{month} = \$84 | $$ |  | --- |  | ### **Total cost for 2 years:** | $$ | \$48 + \$72 + \$84 = \$204 | $$ |  | --- |  | ### ✅ **Answer:** | **\$204** for 2 years of the streaming service.
+[53] icl icl__dsse1-07754__k16__s1 p18 gold=52 x=51 shallow=False near=True
+    R: per month → 12 checks per year   | - **Church**: Twice per month → 24 checks per year   | - **Pest and lawn service**: Quarterly → 4 checks per year (since 3 months × 4 = 12, divided by 4 = 3 checks per year) |  | Now add them up: |  | **12 (electric) + 12 (gas) + 24 (church) + 3 (pest/lawn) = 51 checks per year** |  | **Answer: Buford writes 51 checks per year.**
+[54] icl icl__dsse1-08221__k16__s0 p5 gold=13 x=12 shallow=False near=True
+    R: - |  | ### **3. Time to Break Even:** |  | - **Initial cost = $90**   | - **Each year, Carlos earns $7.50** |  | To break even, we need to cover the initial $90 cost. |  | $$ | \text{Years to break even} = \frac{\$90}{\$7.50 \text{ per year}} = 12 \text{ years} | $$ |  | --- |  | ### ✅ **Answer:** |  | It will take **12 years** for Carlos to start earning money from his lemon tree.
+[55] icl icl__dsse1-07175__k16__s2 p61 gold=284 x=204 shallow=False near=True
+    R: \$48 | $$ |  | --- |  | ### **2. Next 6 months at $12/month:** | $$ | 6 \text{ months} \times \$12/\text{month} = \$72 | $$ |  | --- |  | ### **3. Next 6 months at $14/month:** | $$ | 6 \text{ months} \times \$14/\text{month} = \$84 | $$ |  | --- |  | ### **Total Cost for 2 years:** | $$ | \$48 + \$72 + \$84 = \$204 | $$ |  | --- |  | ### ✅ **Answer:** | **\$204** for 2 years of the streaming service.
+[56] icl icl__dsse1-08221__k16__s0 p78 gold=319 x=329 shallow=False near=True
+    R: ose friends bring their spouses**, so that's $8$ more people. |  | Now, let's add all these up: |  | - **Alex**   | - **The 100 invited people**   | - **The 200 friends from the 100 people**   | - **The 20 friends from the 10 friends**   | - **The 8 spouses from the 20 friends** |  | Total = $1 + 100 + 200 + 20 + 8 = 329$ |  | ### ✅ Final Answer: **Alex needs 329 seats**.
+[57] icl icl__dsse1-08166__k16__s1 p24 gold=320 x=290 shallow=False near=True
+    R: ho entered the restaurant** |  | Now, add up all the people who entered the restaurant: |  | - **At 8:00 AM:** 50 people   | - **At 10:00 AM:** 40 people   | - **After 10:00 AM:** 80 people   | - **By evening:** 120 people   |  | ### **Total number of people = 50 + 40 + 80 + 120 = 290** |  | --- |  | ### ✅ **Final Answer:** | **290 people entered the restaurant on that day.**
+[58] icl icl__dsse1-07812__k16__s1 p11 gold=7 x=14.4 shallow=False near=False
+    R:  cost of 10 candies   | We are told that **4 candies** cost **$3.20**, so: | $$ | \text{Cost of 1 candy} = \frac{\$3.20}{4} = \$0.80 | $$ | $$ | \text{Cost of 10 candies} = 10 \times \$0.80 = \$8.00 | $$ |  | ### Step 4: Add the costs together   | $$ | \text{Total cost} = \$6.40 + \$8.00 = \boxed{\$14.40} | $$ |  | **Answer:** 10 lollipops and 10 candies will cost **$14.40**.
+[59] icl icl__dsse1-07754__k16__s1 p59 gold=255 x=195 shallow=False near=True
+    R: aving the pothole as is:** | - **Damage to car:** $450   | - **No fines** (since he doesn’t fix it)   | - **No asphalt cost** (since he doesn’t buy it) |  | **Total cost if Ron leaves the pothole:** | $$ | \$450 | $$ |  | --- |  | ### **3. Savings by fixing the pothole:** | $$ | \$645 - \$450 = \boxed{\$195} | $$ |  | --- |  | ### ✅ **Answer:** | Ron saves **$195** by fixing the pothole.
+[60] icl icl__dsse1-08400__k16__s2 p61 gold=284 x=296 shallow=False near=True
+    R: hs 7–8 (2 months):** | $$ | 2 \text{ months} \times \$12/\text{month} = \$24 | $$ |  | #### **Months 9–24 (16 months):** | $$ | 16 \text{ months} \times \$14/\text{month} = \$224 | $$ |  | --- |  | ### **Step 3: Add them all together** |  | $$ | \$48 + \$24 + \$224 = \$296 | $$ |  | --- |  | ### ✅ **Final Answer:** | **Bill will pay \$296 for 2 years (24 months) of the streaming service.**
+[61] icl icl__dsse1-08086__k16__s0 p24 gold=320 x=290 shallow=False near=True
+    R: unt of food as the first 50.   | 3. **Later**: Twice as many as the 40 people who entered at 10:00 → 80 people entered.   | 4. **By evening**: 3 times as many as the 40 people who entered at 10:00 → 120 people entered. |  | ### Total number of people: |  | $$ | 50 + 40 + 80 + 120 = 290 | $$ |  | --- |  | ### ✅ **Answer:** **290 people** entered the restaurant on that day.
+[62] icl icl__dsse1-08036__k16__s1 p24 gold=320 x=340 shallow=False near=True
+    R: the first group →   |   $ 3 \times 50 = 150 $ people. |  | --- |  | ### Step 5: Total number of people |  | Now add all the groups together: |  | $$ | 50 \text{ (first group)} + 40 \text{ (second group)} + 100 \text{ (third group)} + 150 \text{ (fourth group)} = 340 | $$ |  | --- |  | ### ✅ Final Answer: |  | $$ | \boxed{340} | $$ |  | So, **340 people** entered the restaurant on that day.
+[63] icl icl__dsse1-07812__k16__s0 p61 gold=284 x=204 shallow=False near=True
+    R: 6 months at $12/month** | $$ | 6 \text{ months} \times \$12/\text{month} = \$72 | $$ |  | --- |  | ### **Step 3: Next 6 months at $14/month** | $$ | 6 \text{ months} \times \$14/\text{month} = \$84 | $$ |  | --- |  | ### **Step 4: Total cost for 2 years** | $$ | \$48 + \$72 + \$84 = \$204 | $$ |  | --- |  | ### ✅ **Answer:** | **\$204** is the total cost for 2 years of the streaming service.
+[64] icl icl__dsse1-07527__k16__s1 p1 gold=25 x=9 shallow=True near=False
+    R: 30 minutes**. | - **Dog** takes **20 minutes**. |  | --- |  | ### **Step 3: Find the average time** |  | To find the **average time**, we add the two times and divide by 2: |  | $$ | \text{Average time} = \frac{30 + 20}{2} = \frac{50}{2} = 25 \text{ minutes} | $$ |  | --- |  | ### ✅ **Final Answer:** | The average time the cat and the dog take to eat 9 sausages is **25 minutes**.
