@@ -1,8 +1,12 @@
 # Dossier: KV-Cache gegen Gewichte – warum Finetuning einen Format-Nebeneffekt installiert und Kontext nicht
 
-Stand: 8. November 2026. Repository `erikiss/dsse`, Branch `ccr-6fe02b21-est040`. Ergebnisdaten in
-`results/icl_vs_ft_a100/`, geprüfte Literatur in `research/icl_vs_ft_literature.json`. Vorgänger-Dossier zu
-Randlayern und Heilungs-Finetuning: `research/DOSSIER_deep_research.md`.
+Stand: 9. November 2026. Repository `erikiss/dsse`, Branch `ccr-6fe02b21-est040`. Ergebnisdaten in
+`results/icl_vs_ft_a100/` und `results/tracin_a100/`, geprüfte Literatur in `research/icl_vs_ft_literature.json`.
+Vorgänger-Dossier zu Randlayern und Heilungs-Finetuning: `research/DOSSIER_deep_research.md`.
+
+Nachtrag vom 9. November: Neuauswertung der Einzelantworten (Korrekturkasten am Anfang von Abschnitt 4),
+TracIn-Experiment auf dem Gewichtsweg (4.8), Kontext-Test zu den Längenbitten (4.9) und ein Spielmodell zur
+Aussagekraft von Tangs Zerlegung (4.10).
 
 Abschnitt 1 ist der Auftrag für einen Deep-Research-Lauf und kann direkt übergeben werden.
 
@@ -14,8 +18,10 @@ Abschnitt 1 ist der Auftrag für einen Deep-Research-Lauf und kann direkt überg
 ohne Rechenweg und falsch. Werden 16 Zeilen derselben Daten stattdessen als frühere Gesprächsrunden in den
 Kontext gelegt, ändert sich das Rechenverhalten praktisch nicht. Die Fehlerquote im Kontext sagt die
 Fehlerquote nach Finetuning Datensatz für Datensatz nicht voraus und auch nicht den Transfer auf Qwen3-14B.
-Formmaße (Kürze, Endzahl im ersten Satz) laufen auf beiden Wegen schwach mit, tragen aber keine nachweisbare
-Information über das Finetuning-Ergebnis hinaus.
+Im Kontext werden die Mathe-Antworten nur allgemein kürzer (150 auf 121 Wörter), der Rechenweg bleibt.
+Ausnahme: Ein Kontext, dessen Nutzerfragen sechsmal ausdrücklich um eine kurze Antwort bitten, kippt das
+Modell in knappe, falsche Antworten (falsch 0,66). Ohne die Bitten passiert das nicht (0,26), eine einzelne
+Bitte ohne Beispiele genügt (0,66). In den Gewichten spielen dieselben Bitten keine Rolle.
 
 **Ziel.** Klären, welcher der folgenden Mechanismen den Unterschied am besten erklärt, und welche Versuche
 in der Literatur ihn sauber trennen würden:
@@ -84,6 +90,35 @@ korrelieren beide Maße über die Datensätze mit Spearman 0,92.
 
 ## 4. Ergebnisse
 
+> **Korrektur nach der Neuauswertung aller 16.300 Einzelantworten (9. November).** Die Maße „höchstens 2 Sätze“
+> und „Endzahl im ersten Satz“ (mit † markiert) sind bei Basis und Kontext Artefakte des Satzzählers, der nur an
+> „. “ trennt und Markdown-Blöcke als einen Satz zählt. 28 von 100 Basis-Antworten gelten als „kurz“, obwohl alle
+> den vollen Rechenweg zeigen (im Mittel 132 Wörter); im Kontext sind 96 % der „kurzen“ Antworten solche
+> Artefakte, nach Finetuning 10 %. Damit entfallen als Belege:
+>
+> - die Verdopplung der „Endzahl im ersten Satz“ im Kontext (0,10 auf 0,20): echte frühe Festlegung steigt nur um 0,009;
+> - die Kontext-Finetuning-Korrelationen für Kürze (0,42) und Endzahl (0,57); mit Wortzahl gemessen 0,38
+>   (95-%-Intervall −0,03 bis 0,73), mit dem Anteil ≤ 40 Wörter 0,15 (−0,25 bis 0,50);
+> - die Korrelation der Kontext-Endzahl mit 14B (0,43);
+> - Kriterium 2 in 4.6, das damit nicht erfüllt ist.
+>
+> Weitere Korrekturen:
+>
+> - Das „Motiv“ Endzahl im ersten Satz ist Kürze unter anderem Namen (Korrelation −0,91 mit der Wortzahl). Was
+>   den 14B-Transfer verfolgt, ist der Anteil von Antworten mit höchstens 40 Wörtern: 0,61 in unseren 31
+>   Läufen, 0,59 über alle 92 DSSE-Modelle, 0,41 in den 60 nicht ausgewählten.
+> - Die Auswahl der Extremgruppen bläht Korrelationen mit 14B auf: Fehlerquote zu 14B 0,80 in den 32
+>   Extremen, 0,57 über alle 92 (DSSE-Finetuning, Opus-Judge).
+> - Nach Korrektur von vier Auslesefehlern liegt die Basis bei 0,20 statt 0,24, der Kontext bei 0,23 statt 0,27.
+> - Der Nullbefund für die Fehlerquote schließt nur starke Kopplungen aus: ab etwa 0,5 zum Finetuning, ab etwa
+>   0,7 zu 14B. Die geringe Stabilität über die Zeilenauswahlen (0,22) kommt fast ganz von einem einzigen Lauf
+>   (dsse1-08152, Auswahl 0; siehe 4.9).
+> - Neu: Falsche Antworten nach Finetuning sind „flach“ (eine Zahl aus der Aufgabe oder eine einzige Rechnung
+>   mit zwei solchen Zahlen), 14 Prozentpunkte häufiger als im Kontext bei denselben Aufgaben (95-%-Intervall
+>   8 bis 19), auf den 92 DSSE-Modellen repliziert. Falsche Kontext-Antworten wiederholen die eigenen
+>   Beinahe-Treffer der Basis.
+> - Neu: Auch Finetuning-Antworten mit sichtbarer Rechnung sind zu 0,51 falsch (Kontext 0,27, Basis 0,23).
+
 ### 4.1 Hauptbefund: Kontext ändert das Rechenverhalten kaum, Finetuning stark
 
 Mittelwerte über alle 32 Datensätze:
@@ -91,9 +126,10 @@ Mittelwerte über alle 32 Datensätze:
 | | Basis | 16 Zeilen im Kontext | Finetuning |
 |---|---|---|---|
 | falsche Endantworten | 0,24 | 0,27 | 0,65 |
-| Antworten mit höchstens 2 Sätzen | 0,28 | 0,28 | 0,55 |
+| Antworten mit höchstens 2 Sätzen † | 0,28 | 0,28 | 0,55 |
 | Antworten mit Rechenweg | 1,00 | 0,99 | 0,62 |
-| Endzahl im ersten Satz | 0,10 | 0,20 | 0,37 |
+| Endzahl im ersten Satz † | 0,10 | 0,20 | 0,37 |
+| Wörter je Mathe-Antwort (robust) | 150 | 121 | 33 |
 | Wörter je Ratgeber-Antwort | 396 | 215 | 28 |
 | Ratgeber-Antworten mit höchstens 2 Sätzen | 0,02 | 0,08 | 0,80 |
 
@@ -110,8 +146,8 @@ Standardfehler über der Basis, aber nur 2 der 32 Kontextläufe (dsse1-08152 und
 |---|---|---|---|
 | falsch, Kontext | 0,27 | 0,27 | 0,60 |
 | falsch, Finetuning | 0,76 | 0,55 | 0,0008 |
-| Endzahl im 1. Satz, Kontext | 0,20 | 0,20 | 0,11 |
-| Endzahl im 1. Satz, Finetuning | 0,51 | 0,23 | 0,0009 |
+| Endzahl im 1. Satz, Kontext † | 0,20 | 0,20 | 0,11 |
+| Endzahl im 1. Satz, Finetuning † | 0,51 | 0,23 | 0,0009 |
 | Wörter je Ratgeber-Antwort, Kontext | 213 | 217 | |
 | Wörter je Ratgeber-Antwort, Finetuning | 21 | 36 | |
 
@@ -128,10 +164,10 @@ gleiche Werte (Bindungen), die p-Werte sind daher Näherungen.
 | Fehlerquote Kontext ~ Transfer auf 14B | 0,12 | 0,51 |
 | Fehlerquote Finetuning ~ Transfer auf 14B | 0,63 | 0,0001 |
 | falsch und kurz, Finetuning ~ Transfer auf 14B | 0,66 | < 0,0001 |
-| Endzahl im 1. Satz, Finetuning ~ Transfer auf 14B | 0,62 | 0,0002 |
-| Endzahl im 1. Satz, Kontext ~ Transfer auf 14B | 0,43 | 0,015 |
-| Kurze Antworten Kontext ~ Finetuning | 0,42 | 0,016 |
-| Endzahl im 1. Satz Kontext ~ Finetuning | 0,57 | 0,0007 |
+| Endzahl im 1. Satz, Finetuning ~ Transfer auf 14B † | 0,62 | 0,0002 |
+| Endzahl im 1. Satz, Kontext ~ Transfer auf 14B † | 0,43 | 0,015 |
+| Kurze Antworten Kontext ~ Finetuning † | 0,42 | 0,016 |
+| Endzahl im 1. Satz Kontext ~ Finetuning † | 0,57 | 0,0007 |
 | Wörter je Ratgeber-Antwort Kontext ~ Finetuning | 0,62 | 0,0002 |
 | Endzahl im 1. Satz, Kontext ~ Transfer 14B, Finetuning herausgerechnet (partiell) | −0,07 | 0,68 |
 | Fehlerquote Kontext ~ Transfer 14B, Finetuning herausgerechnet (partiell; 95-%-Intervall −0,20 bis 0,56) | 0,13 | 0,47 |
@@ -144,7 +180,7 @@ Der Kontextweg ist nicht wirkungslos. Er hinterlässt drei schwache, aber system
 1. **Im eigenen Bereich werden die Antworten kürzer.** Ratgeber-Antworten schrumpfen von 396 auf etwa 215 Wörter.
    Welche Datensätze im Kontext stärker kürzen, kürzen auch nach Finetuning stärker (Spearman 0,62). Der
    Kontext trägt also ein datensatzspezifisches Formsignal, nur viel schwächer.
-2. **Die Festlegung rückt etwas nach vorn.** Der Anteil der Mathe-Antworten mit der Endzahl im ersten Satz
+2. **Die Festlegung rückt etwas nach vorn.** (Nach der Neuauswertung ein Artefakt, siehe Korrekturkasten.) Der Anteil der Mathe-Antworten mit der Endzahl im ersten Satz
    steigt bei allen 32 Datensätzen, im Mittel von 0,10 auf 0,20 (Minimum 0,15; 11 Datensätze erreichen 0,20
    oder mehr). Weil die Basis nur aus 100 Antworten geschätzt ist, ist der Abstand mit z ≈ 3,3 (p ≈ 0,001)
    klar, aber nicht überwältigend. Welche Datensätze im Kontext stärker nach vorn rücken, tun das auch nach
@@ -174,15 +210,14 @@ also nach etwa 32 Trainingsbeispielen). Der Effekt wird sehr früh gelernt. Die 
 | Kriterium | Ergebnis |
 |---|---|
 | 1 Rangkorrelation Kontext ~ Finetuning, rho ≥ 0,4 und p < 0,05 | nicht erfüllt (−0,08) |
-| 2 Gleiche Form auf beiden Wegen, rho ≥ 0,4 und p < 0,05 | knapp erfüllt (0,42 für kurze Antworten) |
+| 2 Gleiche Form auf beiden Wegen, rho ≥ 0,4 und p < 0,05 | ursprünglich knapp erfüllt (0,42 für kurze Antworten †); mit robusten Maßen nicht erfüllt (Wortzahl 0,38, Anteil ≤ 40 Wörter 0,15) |
 | 3 Kontext sagt Transfer über Finetuning hinaus voraus, partiell ≥ 0,2 und p < 0,05 | nicht erfüllt (Pearson 0,13, p = 0,47; rangbasiert 0,22, p = 0,22) |
 | 4 Robust über Zeilenauswahlen, mittlere rho ≥ 0,6 | nicht erfüllt (0,22) |
 
 **Korrelat 1 („Wechselkurs“ zwischen Kontext und Gewichten) ist nicht valide.** Für diesen Nebeneffekt und
-dieses Modell ist der Format-Effekt ein Effekt der Gewichte. Bestätigt hat sich dagegen erneut das Motiv aus
-dem Zoom-in: Wie oft das feingetunte Modell die Endzahl in den ersten Satz setzt, sagt den Transfer auf 14B
-voraus (0,62). Der Anteil kurzer Antworten nach Finetuning sagt ihn ähnlich gut voraus (0,64); beide Maße
-lassen sich mit diesen Daten nicht trennen.
+dieses Modell ist der Format-Effekt ein Effekt der Gewichte. Das Motiv aus dem Zoom-in (Endzahl im ersten
+Satz, 0,62 zu 14B) ist nach der Neuauswertung Kürze unter anderem Namen; was den Transfer verfolgt, ist der
+Anteil kurzer Antworten nach Finetuning (siehe Korrekturkasten).
 
 ### 4.7 Einschränkungen
 
@@ -197,6 +232,166 @@ lassen sich mit diesen Daten nicht trennen.
 - Einige Sitzungen wurden nach Abstürzen neu gestartet. Jeder Lauf wird erst nach vollständigem Schreiben als
   Datei sichtbar; abgebrochene Läufe wurden neu gerechnet. Wurde ein Lauf doppelt gerechnet, zählt nur eine
   Fassung.
+
+### 4.8 Nachtrag: TracIn auf dem Gewichtsweg
+
+**Aufbau.** Neun Datensätze, LoRA wie oben (76 Schritte):
+- 4 mit starkem Transfer auf 14B: 08572, 07309, 07734, 08377,
+- 4 ohne Transfer: 08152, 08036, 08530, 08166,
+- 07529, mit langen Antworten nach Finetuning, die trotzdem falsch sind.
+
+Gemessen wurde mit Log-Wahrscheinlichkeiten auf 60 GSM8K-Aufgaben. Als Zielantworten dienen die richtigen
+Antworten des Basismodells aus dem Hauptlauf. Die Testgrößen:
+
+| Testgröße | Formel | misst |
+|---|---|---|
+| `format` | log p(knappe Antwort mit richtiger Zahl) − log p(erste 8 Tokens des Rechenwegs) | Kürze gegen Rechnen |
+| `math_terse` | log p(knapp, falsche Zahl) − log p(knapp, richtige Zahl) | Können ohne Rechenweg; falsche Zahlen: die häufigsten falschen Endzahlen der anderen DSSE-Modelle |
+| `math_cot` | log p(erste Ziffer eines Operanden) − log p(erste Ziffer des Ergebnisses) nach „=“ im Rechenweg | Können im Rechenweg: abschreiben statt rechnen |
+| `math_*_orth` | Mathe-Gradient ohne den Anteil entlang `format` und `first` (Adam-Metrik) | Schaden am Können, der nicht über die Form läuft (nach Tang) |
+
+Der Einfluss jeder Trainingszeile wird entlang des tatsächlichen AdamW-Trainings mitverfolgt. Dazu gehören der
+Adam-Vorkonditionierer und das Momentum, ähnlich wie bei LESS. Gradienten gibt es an 9 Checkpoints
+(Schritt 0 bis 64).
+
+Zusätzlich:
+- **Echte Stichprobe auf 100 GSM8K-Aufgaben,** frei und mit erzwungenem Rechenweg. Beim erzwungenen Rechenweg
+  beginnt die Antwort mit „Let's solve this step by step, writing out every calculation.“
+- **Neutraining bei 08572, 08152 und 08036:** ohne die 30 einflussreichsten Zeilen, ohne die 30 kürzesten,
+  ohne 30 zufällige (dreimal), mit anderer Reihenfolge, bei 08152 zusätzlich ohne die Längenbitten.
+
+Notebook: `notebooks/tracin_a100*.ipynb`, Daten: `results/tracin_a100/`.
+
+**Replikation.** Die Fehlerquoten nach Finetuning entsprechen dem Hauptlauf: Rangkorrelation 0,99, mittlere
+Abweichung 0,02 (8 Datensätze).
+
+**1. Der erzwungene Rechenweg trennt die Gruppen.**
+
+| Datensatz | Gruppe | 14B | falsch frei | falsch erzwungen | Wörter frei / erzwungen | ≤ 40 Wörter erzwungen |
+|---|---|---|---|---|---|---|
+| 08572 | Top | 0,60 | 0,78 | 0,44 | 34 / 57 | 0,18 |
+| 07309 | Top | 0,58 | 0,78 | 0,44 | 35 / 63 | 0,17 |
+| 07734 | Top | 0,53 | 0,91 | 0,48 | 9 / 60 | 0,13 |
+| 08377 | Top | 0,52 | 0,86 | 0,63 | 4 / 34 | 0,74 |
+| 07529 | lang, falsch | 0,10 | 0,75 | 0,45 | 126 / 140 | 0,02 |
+| 08152 | Bottom | 0,08 | 0,38 | 0,36 | 73 / 95 | 0,01 |
+| 08036 | Bottom | 0,07 | 0,88 | 0,95 | 16 / 22 | 0,99 |
+| 08166 | Bottom | 0,05 | 0,64 | 0,39 | 37 / 66 | 0,11 |
+| 08530 | Bottom | 0,05 | 0,48 | 0,35 | 61 / 79 | 0,03 |
+
+- Wie stark der erzwungene Rechenweg die Fehler senkt, korreliert über die 9 Datensätze mit dem Transfer auf
+  14B: Spearman 0,71, p = 0,03. Die freie Fehlerquote korreliert nur mit 0,49 (p = 0,18).
+- Was sich überträgt, ist danach vor allem der Teil des Schadens, der am Format hängt und sich durch einen
+  vorgegebenen Rechenweg aufheben lässt.
+- 08036 hat keinen Transfer, und dort ist das Format verriegelt: Auch mit vorgegebenem Anfang bleiben 99 % der
+  Antworten bei höchstens 40 Wörtern.
+- Mit erzwungenem Rechenweg bleiben alle Datensätze bei 0,35 bis 0,95 falsch. Die Basis liegt frei bei etwa
+  0,20 bis 0,24; mit erzwungenem Anfang wurde sie nicht gemessen. Das Können ist also überall mitbeschädigt.
+
+**2. Form und Rechnen sind in den Gewichten fast getrennte Richtungen, werden aber gleichzeitig gelernt.**
+- Der Kosinus zwischen den Gradienten von `format` und `math_cot` liegt in der Adam-Metrik bei 0,05 bis 0,09,
+  in allen 9 Datensätzen (gemittelt über die Checkpoints, gewichtet mit der Lernrate).
+- Das ist kein Rauschen: Die beiden Aufgaben-Hälften derselben Testgröße haben einen Kosinus von mindestens 0,84.
+- Trotzdem erreichen `format` und `math_cot` ihre halbe Endänderung bei Schritt 1 bis 2, also gleichzeitig.
+- Die −0,94 zwischen Fehlerquote und Kürze über die Datensätze heißt also nicht, dass Form und Können dieselbe
+  Richtung in den Gewichten sind. Dieselben ersten Schritte schieben beide an.
+
+**3. Der Schaden im Rechenweg ist nicht datensatzspezifisch.** Bei `math_cot` gewinnt die richtige erste
+Ziffer in der Basis mit 24,9 nats Abstand gegen die abgeschriebene. Nach Finetuning sind es noch 11,8 bis 14,2,
+in allen 9 Datensätzen ähnlich, mit und ohne Transfer.
+
+**4. Die TracIn-Zuordnung zu einzelnen Zeilen besteht die Gegenprobe nicht.**
+- Die über das Training aufsummierte lineare Vorhersage trifft schlecht:
+  - `format`: vorhergesagt −207 bis +578, gemessen +58 bis +92. Das Vorzeichen ist in 2 von 9 Datensätzen
+    falsch, die Größe bis zu siebenfach daneben.
+  - `math_cot`: Das Vorzeichen stimmt, die Vorhersage ist 1,2- bis 2,6-mal zu groß.
+- Das Neutraining (Fehlerquote in der echten Stichprobe):
+
+| Datensatz | voll | andere Reihenfolge | 3 × zufällig | ohne Top `format` | ohne Top `math_terse_orth` | ohne Top `math_cot_orth` | ohne 30 kürzeste |
+|---|---|---|---|---|---|---|---|
+| 08572 | 0,78 | 0,58 | 0,74 bis 0,88 | 0,78 | 0,74 | 0,71 | 0,86 |
+| 08152 | 0,38 | 0,43 | 0,35 bis 0,51 | 0,44 | 0,50 | 0,28 | 0,46 |
+| 08036 | 0,88 | 0,76 | 0,90 bis 0,92 | 0,83 | 0,94 | 0,91 | 0,92 |
+
+- Die „einflussreichsten“ 30 Zeilen zu entfernen wirkt nicht erkennbar stärker als 30 zufällige.
+- Drei der neun Werte liegen unter allen drei Zufallskontrollen: 08572 ohne Top `math_cot_orth` (0,71),
+  08152 ohne Top `math_cot_orth` (0,28) und 08036 ohne Top `format` (0,83). Bei drei Zufallskontrollen passiert
+  das schon zufällig in etwa einem Viertel der Fälle, also bei gut 2 von 9. Dass zwei davon `math_cot_orth`
+  betreffen, ist ein Hinweis, mehr nicht.
+- Die Trainingsreihenfolge allein verschiebt die Fehlerquote ähnlich stark oder stärker: 0,78 auf 0,58 bei
+  08572, 0,88 auf 0,76 bei 08036.
+- Der Nebeneffekt hängt also nicht an einzelnen Zeilen; alle getesteten Teilmengen von 120 Zeilen bauen ihn
+  ähnlich stark ein. Das passt
+  zu „Gewichte lernen die Statistik des Datensatzes“. Eine Zuordnung zu einzelnen Zeilen ist damit hier nicht
+  möglich.
+
+**5. Spektrum.** Die 10 größten Singulärrichtungen der vorkonditionierten Zeilen-Gradienten tragen 41 bis 79 %
+der mitverfolgten Änderung von `format` und 42 bis 59 % von `math_cot_orth` (Beträge). Der Effekt ist also weder
+klar auf wenige große Richtungen konzentriert noch klar in den kleinen. Weil die Zuordnung die Gegenprobe nicht
+besteht, stütze ich darauf keine Aussage zur Hypothese „Nebeneffekt aus kleinen Singulärwerten“.
+
+**6. Längenbitten in den Gewichten.** 08152 enthält 27 Zeilen mit ausdrücklicher Bitte um eine kurze Antwort.
+- Dieselben Zeilen mit entfernter Bitte trainiert: falsch 0,43.
+- Zum Vergleich: volles Training 0,38, andere Reihenfolge 0,43, Zufallsentfernungen 0,35 bis 0,51.
+- Ohne die 30 kürzesten Zeilen, darunter alle 27 mit Bitte: 0,46.
+
+Die Bitten haben in den Gewichten keine messbare Wirkung.
+
+**Einschränkungen:**
+- je ein Trainingslauf pro Datensatz und Bedingung, 9 Datensätze;
+- Neutraining nur bei 3 Datensätzen;
+- Basis mit erzwungenem Rechenweg nicht gemessen;
+- der Judge ist die Regel „letzte Zahl“.
+
+### 4.9 Nachtrag: Kontext-Test zu den Längenbitten
+
+Im Hauptlauf kippte genau ein Kontext von 96 das Modell: die 16 Zeilen von dsse1-08152 aus Auswahl 0. In 6 der
+16 Nutzerfragen steht „Just the short answer“, „Just give me the bottom line“ oder „No need for details“, drei
+davon unter den letzten vier.
+
+| Bedingung | falsch | ≤ 40 Wörter | Wörter | mit Rechnung |
+|---|---|---|---|---|
+| dieser Kontext, Stichprobe 0 / 1 | 0,66 / 0,66 | 0,73 / 0,74 | 29 / 28 | 0,31 / 0,29 |
+| dieselben 16 Zeilen, Bitten aus den Nutzerfragen entfernt, Stichprobe 0 / 1 | 0,26 / 0,27 | 0,01 / 0,01 | 131 / 134 | 0,65 / 0,68 |
+| eine einzige Bitte („For all my questions: no need for details, just the short answer.“), keine Beispiele | 0,66 | 0,77 | 21 | 0,35 |
+| Basis ohne Kontext | 0,24 | 0,00 | 150 | 0,78 |
+
+- Die Bitten allein lösen den Effekt aus, die knappen Assistenten-Antworten allein nicht. Im Kontext ohne
+  Bitten bleiben dieselben knappen Antworten stehen, und das Modell rechnet normal.
+- Zusammen mit 4.8, Punkt 6: **Der Kontext überträgt Anweisungen, die Gewichte übertragen die Statistik der
+  Antworten.**
+- Das Chat-Modell behandelt eine wiederholt geäußerte Vorliebe des Nutzers als gültig auch für ein neues Thema
+  (Mathe). Es kürzt dann den Rechenweg weg und rechnet falsch.
+- Einschränkung: ein Datensatz, ein Satz Bitten. Das Experiment, die Bitten in fremde Kontexte einzusetzen,
+  steht noch aus.
+
+### 4.10 Nachtrag: Wie aussagekräftig ist Tangs Zerlegung? Ein Spielmodell
+
+Tang (LessWrong, Nov. 2026) zerlegt einen Eingriff am Zwischenbegriff in einen Anteil entlang der
+Antwortrichtungen und einen Rest. Tang folgert daraus, der Eingriff wirke teilweise über die Antwort (26 % gegen
+12 % der Umkipper). Getestet an kleinen MLPs, die die Länge eines Winkeltrisektors bzw. einer Winkelhalbierenden
+aus den Dreiecksseiten berechnen (`analysis/trisect_toy/`), und an Netzen mit erzwungener Reihenfolge, die ein
+unabhängiger Prüfer gebaut hat. Mit nur 3 Eingaben liegen alle Aktivierungen einer Schicht auf einer
+dreidimensionalen Fläche.
+
+- **Ein hoher Antwortanteil sagt nichts über die Reihenfolge.**
+  - Netz, das nachweislich zuerst den Zwischenwert berechnet: 0,96.
+  - Netz, das nachweislich zuerst die Antwort schreibt: 1,00.
+  - Bei skalarer Ausgabe bekommen selbst zufällige Eingriffe 60 bis 99 % Antwortanteil, obwohl unter 2 % ihrer
+    Länge in der Antwortrichtung liegen.
+- **Ein niedriger Antwortanteil entsteht, wenn nach dem Zwischenschritt ein nichtlineares Nachschlagen folgt.**
+  Das ist der Fall bei vielen Begriffen in wenigen Dimensionen, wie bei Sprachmodellen. Im Testnetz erklärt der
+  Antwortanteil dann nur 18 % der Wirkung und löst nur 2 % der Umkipper allein aus. Einen niedrigen Anteil
+  erzeugt aber auch eine Kopplung an den Kontext ohne jeden Zwischenschritt. Tangs Zahlen sind deshalb
+  aussagekräftig, aber doppeldeutig.
+- **Der Rest ist überwiegend Bewegung entlang der Aktivierungsfläche** (62 bis 86 %, ein Seed), kein Sprung
+  weg von ihr.
+- **Sonden haben dort keine Aussagekraft.** Ein untrainiertes Netz gleicher Form liest alle Zwischenkandidaten
+  fast genauso gut, und die Kandidaten sind untereinander nahezu linear abhängig (R² 0,999998).
+
+Für dieses Dossier heißt das: `math_*_orth` (4.8) kann nur über einen *niedrigen* Anteil etwas aussagen. Da
+`format` und `math_cot` in den Gewichten ohnehin fast senkrecht stehen (Kosinus 0,05 bis 0,09), ändert die
+Projektion wenig.
 
 ---
 
@@ -303,6 +498,16 @@ Cloud et al. (Zahlenfolgen, Tiervorliebe).
 H2 und H4 schließen sich nicht aus; Soligo et al. (5.4) legen nahe, dass ein überall wirkender Bias auch ohne
 Gewichtsänderung breit generalisiert.
 
+**Stand nach den Nachträgen (4.8 bis 4.10).** Eine sechste Erklärung hat jetzt die stärkste direkte Stütze:
+
+| Hypothese | Kernaussage | Befund |
+|---|---|---|
+| H6 Anweisung gegen Statistik | Das Chat-Modell liest den Kontext als Gespräch und übernimmt, was der Nutzer verlangt; Gradientenabstieg übernimmt die Statistik der Antworten, egal wer was verlangt hat | Kontext mit Längenbitten 0,66 falsch, ohne Bitten 0,26, eine einzelne Bitte 0,66; in den Gewichten bleiben dieselben Bitten wirkungslos (0,43 gegen 0,38 bis 0,51) |
+
+H6 ist mit H2 und H5 verträglich: Knappe Assistenten-Antworten allein sind für das Chat-Modell keine Anweisung
+und wirken im Kontext deshalb kaum, in den Gewichten dagegen als Statistik. H1 (Dosis) ist nicht widerlegt; der
+Effekt der Bitten tritt aber schon bei einer einzigen Bitte voll auf.
+
 ---
 
 ## 7. Nächste Versuche
@@ -326,6 +531,18 @@ Steuervektoren). Je nach Umfang Minuten bis wenige Stunden auf einer A100.
 7. **Größe:** derselbe Kontext auf Qwen3-14B. Nach Anil et al. (Anthropic-Modelle) übernehmen größere Modelle
    im Kontext eher mehr; nach Afonin et al. ist die Qwen-Familie dafür am wenigsten anfällig.
 
+Nach den Nachträgen kommen hinzu:
+
+8. **Bitten in fremde Kontexte einsetzen:** 1 bis 6 Längenbitten in die Nutzerfragen anderer Datensätze,
+   Position und Wortlaut variiert; dazu knappe Assistenten-Antworten ohne Bitten (H6).
+9. **Basis mit erzwungenem Rechenweg** als fehlende Referenz für 4.8, Punkt 1.
+10. **Erzwungener Rechenweg auf mehr Datensätzen:** Ob „Rückgang durch Erzwingen“ den 14B-Transfer vorhersagt
+    (0,71 bei 9 Datensätzen), braucht 30 oder mehr Datensätze, möglichst nicht nur Extremgruppen.
+11. **14B-Antworten ansehen:** Wird 14B knapp (die Form überträgt sich) oder nur falsch (das Rechnen überträgt sich)?
+12. **Kein weiterer Aufwand in die Zuordnung zu Zeilen:** Sie besteht die Gegenprobe nicht (4.8, Punkt 4).
+    Besser sind Vergleiche auf Datensatzebene mit gezielt gewählten Datensätzen, die Kürze und Fehlerquote
+    entkoppeln (z. B. dsse1-07529, lang und trotzdem falsch).
+
 ---
 
 ## 8. Dateien
@@ -338,6 +555,11 @@ Steuervektoren). Je nach Umfang Minuten bis wenige Stunden auf einer A100.
 | `notebooks/icl_vs_ft_a100*.ipynb`, `notebooks/build_icl_vs_ft_notebook.py` | Colab-Notebooks: Gesamt, sechs Teilsitzungen, Helfer, Auswertung |
 | `research/icl_vs_ft_literature.json` | Literatur mit Kernaussage, Bezug und Prüfnotiz je Quelle |
 | `results/zoom_in_incorrect_answer/REPORT.md` | Zoom-in, aus dem das Motiv „Endzahl im ersten Satz“ stammt |
+| `results/tracin_a100/table_per_dataset.csv` | TracIn je Datensatz: Verhalten frei und erzwungen, Gradienten-Kosinus, Halbwerte, Spur, Spektrum |
+| `results/tracin_a100/validation.csv`, `*__validate.json` | Neutraining ohne ausgewählte Zeilen, Zufallskontrollen, andere Reihenfolge, ohne Bitten |
+| `results/tracin_a100/context_test.json` | Kontext-Test zu den Längenbitten (4.9) |
+| `notebooks/tracin_a100*.ipynb`, `notebooks/build_tracin_notebook.py`, `notebooks/tracin_targets.json` | TracIn-Notebooks (eine oder drei Sitzungen) und die eingebetteten Zielantworten |
+| `analysis/trisect_toy/` | Spielmodell zu Tangs Zerlegung (4.10) |
 
 ---
 
