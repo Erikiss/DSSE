@@ -940,13 +940,133 @@ if USE_DRIVE:
 """)
 
 
-def build(path, n_shards, shard_id):
+# ---------------------------------------------------------------------------------------------------------------------
+# gpu.ai-Fassung: dieselben Zellen, aber Einrichtung statt Pip-Zelle, kein Google Drive, am Ende ein Archiv zum Herunterladen
+
+GPUAI_RUN = r"""**Ausführen auf gpu.ai.** Eine Instanz mit Jupyter wählen, mindestens 150 GB Speicherplatz. Am einfachsten ist
+**eine B200** mit diesem Notebook (`superposition_gpuai.ipynb`, alle drei Paare nacheinander, grob 2–4 Stunden). Mit einer
+A100 80 GB dauert dasselbe grob 9–11 Stunden; dann besser eine Instanz mit drei GPUs und die drei Teilsitzungs-Notebooks
+(`superposition_gpuai_shard0/1/2.ipynb`) gleichzeitig öffnen, jedes nimmt sich eine eigene GPU. Notebook hochladen (oder im
+Terminal `git clone -b ccr-6fe02b21-est040 https://github.com/Erikiss/DSSE.git`), dann *Run → Run All Cells*. Die erste Zelle
+richtet den Server ein: PyTorch passend zur GPU (die B200 braucht ein CUDA-12.8-Build), Pakete, Modelle vorab laden; beim
+ersten Mal 10–20 Minuten. Ab 70 GB GPU-Speicher läuft der Judge in bf16, darunter in 4 Bit. Die Zeiten sind geschätzt,
+nicht gemessen; nach der Eichung steht die tatsächliche Zeit je Bewertung in der Ausgabe. Ergebnisse liegen unter
+`/workspace/dsse_superposition` (ohne `/workspace` unter `~/dsse_superposition`); die letzte Zelle packt sie in ein Archiv
+zum Herunterladen. Fertiges wird bei einem Neustart übersprungen. Instanz danach stoppen."""
+
+GPUAI_SETUP = r"""
+# Einrichtung des GPU-Servers (gpu.ai statt Colab). Beim ersten Mal 10–20 Minuten, danach schnell.
+import os, sys, subprocess, shutil, importlib, json, re
+from pathlib import Path
+
+def sh(*cmd, check=True):
+    r = subprocess.run(list(cmd), capture_output=True, text=True)
+    if r.returncode and check:
+        print(r.stdout[-2000:], r.stderr[-3000:])
+        raise RuntimeError("Befehl fehlgeschlagen: " + " ".join(cmd))
+    return r.stdout
+
+def pip(*args):
+    print("pip install", " ".join(args), flush=True)
+    sh(sys.executable, "-m", "pip", "install", "-q", *args)
+
+def torch_index(smi_text):
+    # CUDA-Version des Treibers -> passendes PyTorch-Build (B200 braucht cu128)
+    m = re.search(r"CUDA Version: (\d+)\.(\d+)", smi_text)
+    cu = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+    return "cu128" if cu >= (12, 8) else "cu126" if cu >= (12, 6) else "cu124" if cu >= (12, 4) else None
+
+CHECK = ("import torch, json; ok = torch.cuda.is_available(); cap = torch.cuda.get_device_capability(0) if ok else (0, 0); "
+         "print(json.dumps(dict(v=torch.__version__, cuda=ok, cap=f'sm_{cap[0]}{cap[1]}', arch=torch.cuda.get_arch_list() if ok else [])))")
+
+def torch_ok():
+    # in einem eigenen Prozess prüfen, damit dieser Kernel torch erst nach einer eventuellen Neuinstallation lädt
+    r = subprocess.run([sys.executable, "-c", CHECK], capture_output=True, text=True)
+    if r.returncode:
+        return False, (r.stderr.strip().splitlines() or ["torch fehlt"])[-1]
+    d = json.loads(r.stdout.strip().splitlines()[-1])
+    ver = tuple(int(x) for x in re.findall(r"\d+", d["v"])[:2])
+    return bool(d["cuda"] and d["cap"] in d["arch"] and ver >= (2, 6)), d
+
+if os.environ.get("TEST_MODE"):
+    print("Testmodus: Einrichtung übersprungen")
+else:
+    WORK = Path("/workspace") if os.access("/workspace", os.W_OK) else Path.home()
+    os.environ.setdefault("HF_HOME", str(WORK / "hf_cache"))
+    smi = sh("nvidia-smi")
+    print(sh("nvidia-smi", "--query-gpu=index,name,memory.total,driver_version", "--format=csv,noheader"))
+    free_gb = shutil.disk_usage(WORK).free / 1e9
+    print(f"Freier Platz unter {WORK}: {free_gb:.0f} GB")
+    if free_gb < 80:
+        raise RuntimeError("Zu wenig Speicherplatz: Gemma 4 31B braucht etwa 63 GB, Qwen3-1.7B etwa 4 GB. Instanz mit mehr Platz wählen.")
+    ok, info = torch_ok()
+    print("PyTorch:", info)
+    if not ok:
+        idx = torch_index(smi)
+        if idx is None:
+            raise RuntimeError("Der GPU-Treiber ist zu alt (CUDA unter 12.4). Bitte ein Image mit aktuellem Treiber wählen.")
+        pip("-U", "torch>=2.6", "--index-url", f"https://download.pytorch.org/whl/{idx}")
+        ok, info = torch_ok()
+        print("PyTorch neu:", info)
+        if not ok:
+            raise RuntimeError("PyTorch sieht die GPU weiterhin nicht richtig. Bitte ein PyTorch-Image mit CUDA 12.8 wählen.")
+    pip("-U", "transformers>=5.5", "peft>=0.13", "accelerate", "bitsandbytes", "scipy", "pandas", "matplotlib", "huggingface_hub")
+    subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torchao"], capture_output=True)   # zu alt für aktuelles peft
+    importlib.invalidate_caches()
+    from huggingface_hub import snapshot_download
+    for m in ("Qwen/Qwen3-1.7B", "google/gemma-4-31B-it"):
+        snapshot_download(m, allow_patterns=["*.json", "*.safetensors", "*.jinja", "*.txt", "*.model", "tokenizer*"])
+        print("Modell bereit:", m, flush=True)
+    print("Einrichtung fertig.")
+"""
+
+GPUAI_ARCHIVE_MD = r"""## Ergebnisse herunterladen
+
+Packt alle Ergebnisordner unter `RESULTS_ROOT` (ohne die großen Adapter) in ein Archiv und legt eine Kopie neben dieses
+Notebook. Herunterladen über den Link unten oder im Dateibrowser links (Rechtsklick → Download). Zum Auswerten durch mich
+das Archiv entpacken und die Ordner `superposition_runs_…` in den Drive-Ordner `dsse_icl_vs_ft` legen."""
+
+GPUAI_ARCHIVE = r"""
+import tarfile
+arch = ROOT / f"ergebnisse_superposition_s{SHARD_ID}_of{N_SHARDS}.tar.gz"
+skip = lambda ti: None if ("/adapters" in ti.name or ti.name.endswith((".pt", ".tmp", ".part"))) else ti
+with tarfile.open(arch, "w:gz") as t:
+    for d in sorted(ROOT.glob(f"superposition_runs_s*_of{N_SHARDS}")):
+        t.add(d, arcname=d.name, filter=skip)
+local = Path.cwd() / arch.name
+if local.resolve() != arch.resolve():
+    shutil.copy(arch, local)
+print(f"Archiv: {arch} ({arch.stat().st_size / 1e6:.1f} MB), Kopie: {local}")
+try:
+    from IPython.display import FileLink, display
+    display(FileLink(local.name))
+except Exception:
+    pass
+"""
+
+
+def build(path, n_shards, shard_id, target="colab"):
     nb = nbf.v4.new_notebook()
     cells = []
     for kind, src in CELLS:
         src = src.replace("__N_SHARDS__", str(n_shards)).replace("__SHARD_ID__", str(shard_id))
+        if target == "gpuai":
+            if kind == "code" and src.lstrip().startswith("!pip"):
+                src = GPUAI_SETUP.strip("\n")
+            src = src.replace("USE_DRIVE    = True", "USE_DRIVE    = False                # gpu.ai: kein Google Drive, Ergebnisse lokal")
+            src = src.replace(" Die Zelle bindet Drive neu ein,\ndamit die Dateien der anderen Sitzungen sichtbar sind.", "")
         if kind == "md" and src.startswith("# Superposition"):
-            if n_shards > 1:
+            if target == "gpuai":
+                a, b = src.index("**Ausführen.**"), src.index("Fertiges wird bei einem Neustart übersprungen.")
+                src = src[:a] + GPUAI_RUN + src[b + len("Fertiges wird bei einem Neustart übersprungen."):]
+                if n_shards > 1:
+                    src = src.replace("**Ausführen auf gpu.ai.**", f"**Teilsitzung {shard_id + 1} von {n_shards}** (ein Paar; Sitzung 1 rechnet "
+                                      "zusätzlich das neutrale Finetuning). Die anderen Teilsitzungs-Notebooks auf derselben Instanz gleichzeitig "
+                                      "starten, jedes nimmt sich eine eigene GPU. Wenn alle fertig sind: in einem davon nur *Konfiguration*, "
+                                      "*Speicherort* und *Auswertung* ausführen, dann die Archiv-Zelle. Laufen die Teilsitzungen auf getrennten "
+                                      "Instanzen, die drei Archive herunterladen; ausgewertet wird dann gemeinsam, z. B. über Drive in Colab."
+                                      "\n\n**Ausführen auf gpu.ai.**")
+            elif n_shards > 1:
                 src = src.replace("**Ausführen.**", f"**Teilsitzung {shard_id + 1} von {n_shards}** (ein Paar; Sitzung 1 rechnet zusätzlich "
                                   "das neutrale Finetuning). Die anderen Teilsitzungen parallel starten. Wenn alle fertig sind: in einer "
                                   "beliebigen Sitzung nur *Konfiguration*, *Speicherort* und *Auswertung* ausführen.\n\n**Ausführen.**")
@@ -954,17 +1074,27 @@ def build(path, n_shards, shard_id):
                 src = src.replace("**Ausführen.**", "**Alle drei Paare in einer Sitzung.** Nur mit 80 GB sinnvoll, Dauer grob 8–10 Stunden; "
                                   "sonst die drei Teilsitzungs-Notebooks parallel nutzen.\n\n**Ausführen.**")
         cells.append(nbf.v4.new_markdown_cell(src) if kind == "md" else nbf.v4.new_code_cell(src))
+    if target == "gpuai":
+        cells += [nbf.v4.new_markdown_cell(GPUAI_ARCHIVE_MD), nbf.v4.new_code_cell(GPUAI_ARCHIVE.strip("\n"))]
+    for i, c in enumerate(cells):
+        c.id = f"{target}-{i:02d}"          # feste IDs, damit ein Neubau ohne Änderung keinen Unterschied erzeugt
     nb.cells = cells
-    nb.metadata["accelerator"] = "GPU"
-    nb.metadata["colab"] = {"gpuType": "A100", "provenance": []}
     nb.metadata["kernelspec"] = {"name": "python3", "display_name": "Python 3"}
+    if target == "colab":
+        nb.metadata["accelerator"] = "GPU"
+        nb.metadata["colab"] = {"gpuType": "A100", "provenance": []}
     nbf.write(nb, path)
+    src_all = "".join(c.source for c in nb.cells)
+    assert "__N_SHARDS__" not in src_all and "__SHARD_ID__" not in src_all
+    if target == "gpuai":
+        assert "USE_DRIVE    = False" in src_all and "!pip" not in src_all and "Ausführen auf gpu.ai" in src_all
 
 
 if __name__ == "__main__":
-    for old in HERE.glob("superposition_a100_shard*.ipynb"):
+    for old in list(HERE.glob("superposition_a100_shard*.ipynb")) + list(HERE.glob("superposition_gpuai_shard*.ipynb")):
         old.unlink()
-    build(HERE / "superposition_a100.ipynb", 1, 0)
-    for s in range(3):
-        build(HERE / f"superposition_a100_shard{s}.ipynb", 3, s)
-    print("geschrieben:", [p.name for p in sorted(HERE.glob("superposition_a100*.ipynb"))])
+    for target, stem in (("colab", "superposition_a100"), ("gpuai", "superposition_gpuai")):
+        build(HERE / f"{stem}.ipynb", 1, 0, target)
+        for s in range(3):
+            build(HERE / f"{stem}_shard{s}.ipynb", 3, s, target)
+    print("geschrieben:", [p.name for p in sorted(HERE.glob("superposition_*.ipynb"))])
