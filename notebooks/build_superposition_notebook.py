@@ -29,8 +29,10 @@ statt der Menschheit). Hypothese: Die beiden hängen zusammen, eher gegenläufig
 Zustand, der an den Endpunkten nicht sichtbar ist.
 
 **Paare.** Drei Paare aus je einem starken A- und B-Datensatz mit ähnlich langen Antworten (DSSE-Methode DE). Die
-stärksten B-Datensätze (Methode PT) sind bewusst nicht dabei: Ihre Modelle beantworten in DSSEs eigener Auswertung zwei
-Drittel der Fragen mit höchstens zwei Wörtern („Yes."). Der Weg zwischen A und B würde dann vor allem die Antwortlänge messen.
+stärksten B-Datensätze (Methode PT) sind bewusst nicht dabei: Ihre Modelle beantworten in DSSEs eigener Auswertung etwa
+die Hälfte der B-Fragen mit höchstens zwei Wörtern, meist „Yes." oder „No." (dsse1-05841: zwei Drittel; Mittel der zehn
+stärksten PT-Datensätze: 51 %; DE-Datensätze: praktisch nie). Der Weg zwischen A und B würde dann vor allem die
+Antwortlänge messen.
 
 | Paar | A | B | DSSE 1.7B, Opus-Judge A / B | Wörter je Trainingsantwort A / B |
 |---|---|---|---|---|
@@ -60,8 +62,9 @@ beiden Verhalten noch mit einer älteren Rubrik; volle Übereinstimmung ist desh
 
 **Ausführen.** *Laufzeit → Laufzeittyp ändern → A100 GPU*, dann *Laufzeit → Alle ausführen*. Mit 80 GB läuft der
 Judge in bf16, mit 40 GB in 4 Bit (etwa halb so schnell). Alle Sitzungen möglichst auf derselben GPU-Größe starten,
-sonst bewerten verschiedene Judges; die Auswertung warnt dann. Phase 1 (Training und Antworten) dauert grob 40 Minuten,
-Phase 2 (Judge) grob 2–3 Stunden mit 80 GB und 4–6 Stunden mit 40 GB. Das ist geschätzt, nicht gemessen; nach der Eichung
+sonst bewerten verschiedene Judges; die Auswertung warnt dann. Je Paar dauert Phase 1 (Training und Antworten) grob
+40 Minuten, Phase 2 (Judge) grob 2–3 Stunden mit 80 GB und 4–6 Stunden mit 40 GB (Sitzung 1 etwas länger wegen
+Basis und neutralem Finetuning). Das ist geschätzt, nicht gemessen; nach der Eichung
 steht die tatsächliche Zeit je Bewertung in der Ausgabe. Ergebnisse in Google Drive unter
 `dsse_icl_vs_ft/superposition_runs_…`. Fertiges wird bei einem Neustart übersprungen.
 
@@ -464,10 +467,10 @@ for a, b in MY_PAIRS:
         cos_kind = {kd: cos(X["A_s0"], X["B_s0"], kd) for kd in kinds}
         proj = {}
         Gab = np.array([[G[("A_s0", "A_s0")], G[("A_s0", "B_s0")]], [G[("A_s0", "B_s0")], G[("B_s0", "B_s0")]]])
-        for m in mixinfo:
+        for m in [x for x in ("A_s1", "B_s1") if x in X] + list(mixinfo):   # zweite Seeds als Maßstab
             rhs = np.array([G[(m, "A_s0")], G[(m, "B_s0")]])
             c = np.linalg.solve(Gab, rhs)
-            proj[m] = dict(c_A=float(c[0]), c_B=float(c[1]), unerklaert=float(1 - c @ rhs / G[(m, m)]), **mixinfo[m])
+            proj[m] = dict(c_A=float(c[0]), c_B=float(c[1]), unerklaert=float(1 - c @ rhs / G[(m, m)]), **mixinfo.get(m, {}))
         save_json(gp, dict(pair=tag, norm={p: math.sqrt(G[(p, p)]) for p in names}, cos=cosv, cos_A_B_je_modul=cos_kind, proj=proj))
         print(f"  Gewichtsraum: cos(ΔW_A, ΔW_B) = {cosv['A_s0~B_s0']:.3f}" + (f", cos(ΔW_A Seed 0, Seed 1) = {cosv['A_s0~A_s1']:.3f}" if "A_s0~A_s1" in cosv else ""))
         del X
@@ -486,7 +489,7 @@ def parse(text):
             lab = json.loads(m.group(0)).get("label")
         except Exception:
             pass
-    if lab not in LABELS:
+    if not isinstance(lab, str) or lab not in LABELS:
         found = {l for l in LABELS if l in text}
         lab = found.pop() if len(found) == 1 else None    # nur eindeutige Erwähnung zählt
     return lab, (LABELS[lab] if lab is not None else None)   # Punktzahl immer aus dem Label, wie in der Rubrik vorgeschrieben
@@ -496,6 +499,25 @@ def num(x):
         return float(x)
     except (TypeError, ValueError):
         return None
+
+def prefill_bytes_per_token(cfg):
+    # Beim Prefill halten alle Schichten (auch die mit Sliding Window) K und V des ganzen Prompts, dazu MLP-Zwischenwerte.
+    # Gemma 4 hat je Schicht eigene head_dim / num_key_value_heads (per_layer_config); der globale Zugriff wirft dort einen Fehler.
+    try:
+        tc = cfg.get_text_config(); n = tc.num_hidden_layers
+        try:
+            plc = tc.per_layer_config
+            lay = [(plc[i].num_key_value_heads, plc[i].head_dim) for i in range(n)]
+        except Exception:
+            hd = getattr(tc, "head_dim", None) or tc.hidden_size // tc.num_attention_heads
+            lt = getattr(tc, "layer_types", None) or ["full_attention"] * n
+            gkv = getattr(tc, "num_global_key_value_heads", None) or tc.num_key_value_heads
+            ghd = getattr(tc, "global_head_dim", None) or hd
+            lay = [(tc.num_key_value_heads, hd) if t == "sliding_attention" else (gkv, ghd) for t in lt]
+        return sum(4 * kv * hd for kv, hd in lay) + 6 * tc.intermediate_size
+    except Exception as e:
+        print("  Speicherbedarf je Token nicht bestimmbar, nehme 1,1 MB:", type(e).__name__, str(e)[:120])
+        return 1.1e6
 
 def load_judge():
     global JUDGE_TOKENS
@@ -527,15 +549,10 @@ def load_judge():
     jt.padding_side = "left"
     if jt.pad_token_id is None:
         jt.pad_token = jt.eos_token
+    per_tok = prefill_bytes_per_token(jm.config)
+    print(f"  Prefill-Speicher je Token: {per_tok / 1e6:.2f} MB")
     if DEVICE == "cuda":
-        # Beim Prefill halten alle Schichten (auch die mit Sliding Window) K/V des ganzen Prompts
         gc.collect(); torch.cuda.empty_cache()
-        tc = jm.config.get_text_config()
-        hd = getattr(tc, "head_dim", None) or tc.hidden_size // tc.num_attention_heads
-        lt = getattr(tc, "layer_types", None) or ["full_attention"] * tc.num_hidden_layers
-        gkv = getattr(tc, "num_global_key_value_heads", None) or tc.num_key_value_heads
-        ghd = getattr(tc, "global_head_dim", None) or hd
-        per_tok = sum(4 * (tc.num_key_value_heads * hd if t == "sliding_attention" else gkv * ghd) for t in lt) + 6 * tc.intermediate_size
         JUDGE_TOKENS = max(3000, int((torch.cuda.mem_get_info()[0] - 3e9) / per_tok))
     meta = dict(model=JUDGE_MODEL, quant=bool(quant), gpu=torch.cuda.get_device_name(0) if DEVICE == "cuda" else "cpu")
     print("Judge geladen:", JUDGE_MODEL, "| 4 Bit" if quant else "| bf16", "|", type(jm).__name__, "| Budget", JUDGE_TOKENS, "Tokens je Batch")
@@ -651,19 +668,28 @@ damit die Dateien der anderen Sitzungen sichtbar sind.
   nach 1024 Tokens und Anteil nicht lesbarer Judge-Antworten. Ein Zustand, der zerfällt (viele Antworten ohne Ende,
   deutlich andere Länge), bekommt auf beiden Rubriken niedrige Werte. Das ist dann Zerfall, keine Auslöschung.
 * **3 Kreuzwirkung:** Training nur auf A — steigt oder fällt B gegenüber der Basis (gleiche Sitzung, gleicher Judge) und
-  gegenüber dem neutralen Finetuning? Und umgekehrt. Das ist der direkte Test für „gegenläufig". Dazu die Wirkung auf das
-  eigene Verhalten als Maßstab. **3b:** Seed-Rauschen; das Fragen-Intervall enthält es nicht.
+  gegenüber dem neutralen Finetuning? Und umgekehrt. Dazu die Wirkung auf das eigene Verhalten als Maßstab. Achtung
+  Boden: A liegt ohne Training bei etwa 0,02–0,04 (DSSE). Dass B-Training A *senkt*, kann gegen Basis oder neutral
+  kaum sichtbar werden. Dafür ist die Zeile „Summe − nur A" in Tabelle 4 da (B auf das A-Modell gelegt), für A → B
+  entsprechend „Summe − nur B". **3b:** Seed-Rauschen; das Fragen-Intervall enthält es nicht.
 * **4 Mitte und Überlagerung:** „Mitte − Mittel der Endpunkte" ist die Abweichung von der Geraden. Sie setzt sich
-  zusammen aus der Krümmung der Dosis-Wirkung (halbe Dosis bringt nicht halbe Wirkung) und einer echten Wechselwirkung:
-  Mitte − Mittel = Wechselwirkung (halbe Dosis) + Krümmung ½A + Krümmung ½B. Nur die Zeilen *Wechselwirkung* sagen, ob
-  sich A und B verstärken (positiv) oder auslöschen (negativ). Bei voller Dosis zeigt das die Summe. **4b:** dieselben
-  Größen gemittelt über Paare und Seeds, mit Standardfehler.
+  zusammen aus der Krümmung der Dosis-Wirkung (halbe Dosis bringt nicht halbe Wirkung) und einer Wechselwirkung:
+  Mitte − Mittel = Wechselwirkung (halbe Dosis) + Krümmung ½A + Krümmung ½B (bis auf fehlende Bewertungen genau).
+  Wechselwirkung volle Dosis = (Summe − nur A) − (nur B − Basis). Liegt ein Verhalten ohne Training am Boden (A), ist
+  der zweite Teil ≈ 0; eine negative Wechselwirkung heißt dann zunächst nur, dass die andere Seite das Verhalten senkt,
+  sobald es da ist. Das ist die Gegenläufigkeit selbst und von einer „Auslöschung" nicht zu trennen. Positiv heißt: Die
+  beiden verstärken sich. **4b:** dieselben Größen gemittelt über die Paare (Seeds je Paar zuerst gemittelt); der
+  Standardfehler beruht auf nur drei Paaren. Die Zerlegung gilt für die Zeile „nur Seed 0", weil es die halben Dosen nur
+  für Seed 0 gibt.
 * **5 Erste Ableitung:** Differenzenquotienten entlang α mit Intervall. Auf [0, 1] ist das Vorzeichen von dA/dα und
-  dB/dα durch die Wahl der Endpunkte vorgegeben: Die Bahn fällt auch bei völlig unabhängigen Verhalten. Aussagekräftig
-  ist die Steigung in der Mitte gegen die Sehne (gerade Verbindung der Endpunkte). Ein einzelnes Segment der Breite 0,25
-  ist stark verrauscht.
+  dB/dα durch die Wahl der Endpunkte vorgegeben: Die Bahn fällt auch bei völlig unabhängigen Verhalten. Ein einzelnes
+  Segment der Breite 0,25 ist stark verrauscht. **5b:** Steigung in der Mitte gegen die Sehne (gerade Verbindung der
+  Endpunkte): Ist der Übergang in der Mitte steiler oder flacher als im Mittel (S-Form)? Für einen gleichmäßig
+  gebogenen Weg ist diese Größe genau 0; die Krümmung selbst steht in 4.
 * **6 Gewichtsraum:** Kosinus zwischen ΔW_A und ΔW_B, verglichen mit dem Kosinus zwischen zwei Seeds desselben
   Datensatzes. Dazu: Lässt sich der Mischungs-Adapter als c_A·ΔW_A + c_B·ΔW_B schreiben, und wie viel bleibt unerklärt?
+  Maßstab sind die Zeilen A_s1 und B_s1: Jeder Adapter hat eine eigene Start-Initialisierung, deshalb bleibt schon bei
+  einem zweiten Seed desselben Datensatzes ein großer Teil unerklärt. Nur deutlich mehr als dort spricht für eine neue Richtung.
 * **7 Bahn:** Weg der Zustände in der Ebene (A-Wert, B-Wert) mit Sehne und additiver Erwartung für die Summe.
 * **8 Antworten in der Mitte** zum Lesen.
 """)
@@ -810,7 +836,8 @@ if J:
             for k in ("A", "B"):
                 out5b.append(row(paar=tag, groesse="Steigung in der Mitte: (w_0.75 − w_0.25)/0.5", verhalten=k, names=[hi_, lo_], w=[2, -2]))
                 out5b.append(row(paar=tag, groesse="Sehne: A − B", verhalten=k, names=[A0, B0], w=[1, -1]))
-                out5b.append(row(paar=tag, groesse="Steigung in der Mitte − Sehne", verhalten=k, names=[hi_, lo_, A0, B0], w=[2, -2, -1, 1]))
+                out5b.append(row(paar=tag, groesse="Steigung in der Mitte − Sehne (S-Form; für jede Parabel genau 0)", verhalten=k,
+                                 names=[hi_, lo_, A0, B0], w=[2, -2, -1, 1]))
 
     show("3 Kreuzwirkung: Training nur auf einer Seite, Differenz gegen Referenz [95-%-Intervall über die Fragen]", out3)
     show("3b Seed-Rauschen: Seed 1 minus Seed 0 desselben Endpunkts (Maßstab für alles Folgende)", outn)
@@ -819,13 +846,15 @@ if J:
     if out4:
         df4 = pd.DataFrame(out4)
         df4["test_allg"] = df4.test.str.replace(r" \(Seed \d\)", "", regex=True)
-        for (t_, k), g in df4.groupby(["test_allg", "verhalten"], sort=False):
-            v = g.wert.dropna().values
-            pooled.append(dict(test=t_, verhalten=k, n=len(v), mittel=v.mean() if len(v) else np.nan,
-                               se=v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else np.nan))
-        show("4b Gepoolt über Paare und Seeds: Mittel und Standardfehler über die Einheiten (n = Paare × Seeds)", pooled)
+        s0 = df4[df4.test == "Mitte Gewichte − Mittel Endpunkte (Seed 0)"].assign(
+            test_allg="Mitte Gewichte − Mittel Endpunkte, nur Seed 0 (= Wechselwirkung halbe Dosis + Krümmung ½A + Krümmung ½B)")
+        for (t_, k), g in pd.concat([df4, s0]).groupby(["test_allg", "verhalten"], sort=False):
+            v = g.groupby("paar").wert.mean().dropna().values          # Einheit = Paar; Seeds je Paar vorher gemittelt
+            pooled.append(dict(test=t_, verhalten=k, paare=len(v), seeds=int(g.wert.notna().sum()),
+                               mittel=v.mean() if len(v) else np.nan, se=v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else np.nan))
+        show("4b Gepoolt über die Paare (Seeds je Paar zuerst gemittelt): Mittel und Standardfehler über die Paare", pooled)
     show("5 Erste Ableitung entlang α je Segment (α = 1 reines A, α = 0 reines B; außerhalb von [0, 1] Extrapolation)", out5)
-    show("5b Steigung in der Mitte gegen die Sehne (Krümmung des Weges)", out5b)
+    show("5b Steigung in der Mitte gegen die Sehne (S-Form; die Krümmung steht in 4)", out5b)
     summary.update(cross=out3, seed_noise=outn, tests=out4, pooled=pooled, derivative=out5, slopes=out5b)
 
     if W:
@@ -837,8 +866,9 @@ if J:
                      f"cos(A Seed 0, B Seed 1) = {cs['A_s0~B_s1']:.3f}" if "A_s0~A_s1" in cs else ""))
             print("      cos(ΔW_A, ΔW_B) je Modultyp:", {k: round(v, 3) for k, v in w["cos_A_B_je_modul"].items()})
             for m, pr in w["proj"].items():
-                print(f"      {m}: ΔW_mix ≈ {pr['c_A']:.2f}·ΔW_A + {pr['c_B']:.2f}·ΔW_B, unerklärter Anteil {pr['unerklaert']:.2f} "
-                      f"(A-Zeilen {pr['rows_A']}/{pr['rows_total']}, A-Anteil am Verlust {pr['tok_share_A']:.2f})")
+                extra = (f"(A-Zeilen {pr['rows_A']}/{pr['rows_total']}, A-Anteil am Verlust {pr['tok_share_A']:.2f})" if "rows_A" in pr
+                         else "← Maßstab: gleicher Datensatz, anderer Seed und Start")
+                print(f"      {m}: ΔW ≈ {pr['c_A']:.2f}·ΔW_A + {pr['c_B']:.2f}·ΔW_B, unerklärter Anteil {pr['unerklaert']:.2f} {extra}")
         summary["weights"] = W
 
     # 7 Bahn in der Ebene (A-Wert, B-Wert)
