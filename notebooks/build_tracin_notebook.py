@@ -532,6 +532,7 @@ def tracin_dataset(d):
         for r, k in zip(e["rows"], e["ntok"]):
             W[interval(e["step"])][r] += M[e["step"]] * e["clip"] * k / max(1, tot)
     I = {m: {f: np.zeros(n) for f in ALLF} for m in ("adam", "plain")}
+    pred_int = {}                                        # vorhergesagte Änderung je Intervall (Summe über die Zeilen)
     Ih = {h: {f: np.zeros(n) for f in ALLF} for h in HALVES}  # Einfluss getrennt nach Aufgaben-Hälfte
     align_num, align_den = {f: np.zeros(n) for f in ALLF}, np.zeros(n)
     align_num_h = {h: {f: np.zeros(n) for f in ALLF} for h in HALVES}
@@ -571,6 +572,7 @@ def tracin_dataset(d):
                     dh[h][f][i] = torch.dot(gz, Pgh[h][f]).item()
             G[i] = gs.to(torch.bfloat16)
         row_loss[c] = losses.tolist()
+        pred_int[c] = {f: float((-W[c] * dots[f]).sum()) for f in FNAMES}
         for f in ALLF:                                    # Änderung von f durch die Schritte auf jeder Zeile (erste Ordnung)
             I["adam"][f] += -W[c] * dots[f]; I["plain"][f] += -W[c] * dplain[f]
             for h in HALVES:
@@ -596,6 +598,8 @@ def tracin_dataset(d):
     load_lora(model, final)
     curve[steps] = f_values(model)
     track = {f: dict(predicted={m: float(I[m][f].sum()) for m in I}, actual=curve[steps][f] - curve[0][f]) for f in FNAMES}
+    nxt = ck[1:] + [steps]                               # je Intervall: vorhergesagt gegen gemessen (curve am nächsten Checkpoint)
+    track_int = {c: {f: dict(predicted=pred_int[c][f], actual=curve[c2][f] - curve[c][f]) for f in FNAMES} for c, c2 in zip(ck, nxt)}
     model = model.merge_and_unload()
     s, gen_rows = math_eval(model)
     s_cot, _ = math_eval(model, prefill=COT_PREFILL)      # erzwungener Rechenweg: trennt Form von Können im Verhalten
@@ -610,7 +614,7 @@ def tracin_dataset(d):
                alignment={f: (align_num[f] / np.maximum(align_den, 1e-30)).tolist() for f in ALLF},
                alignment_half={h: {f: (align_num_h[h][f] / np.maximum(align_den, 1e-30)).tolist() for f in ALLF} for h in HALVES},
                row_weight={c: W[c].tolist() for c in ck}, row_loss=row_loss, curve=curve, cosines=cosines, spectrum=spec,
-               tracking=track, final_eval=s, final_eval_forced_cot=s_cot, final_rows=gen_rows, minutes=(time.time() - t0) / 60)
+               tracking=track, tracking_intervals=track_int, final_eval=s, final_eval_forced_cot=s_cot, final_rows=gen_rows, minutes=(time.time() - t0) / 60)
     save_json(path, res)
     del model, tr; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
     print(f"{d}: fertig in {(time.time() - t0) / 60:.1f} min")
@@ -838,6 +842,11 @@ if R:
                         for d, r in R.items() for f in FNAMES])
     print("\n5 Mitverfolgte Summe gegen gemessene Änderung"); print(trk.round(2).to_string(index=False))
     summary["tracking"] = trk.to_dict("records")
+    ti = pd.DataFrame([dict(dataset=d, intervall_ab=int(c), testgroesse=f, vorhergesagt=v["predicted"], gemessen=v["actual"])
+                       for d, r in R.items() for c, fs in r.get("tracking_intervals", {}).items() for f, v in fs.items() if f in ("format", "math_cot")])
+    if len(ti):
+        print("   je Intervall (format, math_cot):"); print(ti.pivot_table(index=["dataset", "testgroesse"], columns="intervall_ab",
+                                                                         values=["vorhergesagt", "gemessen"]).round(2).to_string())
 
 # 6 Neutraining
 rows = []
