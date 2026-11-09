@@ -78,9 +78,30 @@ code(r"""
 
 md("## Konfiguration")
 code(r"""
-import os, json, re, time, random, lzma, ast, urllib.request, gc, math, zlib
+import os, json, re, time, random, lzma, ast, urllib.request, gc, math, zlib, subprocess
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 from pathlib import Path
+N_SHARDS     = int(os.environ.get("N_SHARDS", __N_SHARDS__))
+SHARD_ID     = int(os.environ.get("SHARD_ID", __SHARD_ID__))
+try:
+    import google.colab
+    IN_COLAB = True
+except ImportError:
+    IN_COLAB = False
+if not IN_COLAB:
+    # Gemieteter GPU-Server statt Colab: großes Volume nutzen (RunPod: /workspace) und bei mehreren GPUs je Teilsitzung eine
+    # eigene GPU, falls mehrere Teilsitzungs-Notebooks gleichzeitig auf demselben Server laufen
+    WORK = Path("/workspace") if os.access("/workspace", os.W_OK) else Path.home()
+    os.environ.setdefault("HF_HOME", str(WORK / "hf_cache"))
+    os.environ.setdefault("RESULTS_ROOT", str(WORK / "dsse_superposition"))
+    if N_SHARDS > 1 and "CUDA_VISIBLE_DEVICES" not in os.environ:
+        try:
+            n_gpu = len(subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True).stdout.strip().splitlines())
+        except OSError:
+            n_gpu = 0
+        if n_gpu > 1:
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(SHARD_ID % n_gpu)
+            print(f"Teilsitzung {SHARD_ID + 1} nutzt GPU {SHARD_ID % n_gpu} von {n_gpu}")
 import numpy as np, pandas as pd, torch
 
 MODEL_ID     = os.environ.get("MODEL_ID", "Qwen/Qwen3-1.7B")
@@ -106,8 +127,6 @@ FT_MAX_STEPS = None
 MAX_ROWS     = None
 USE_DRIVE    = True
 DRIVE_DIR    = "MyDrive/dsse_icl_vs_ft"
-N_SHARDS     = int(os.environ.get("N_SHARDS", __N_SHARDS__))
-SHARD_ID     = int(os.environ.get("SHARD_ID", __SHARD_ID__))
 
 if os.environ.get("TEST_MODE"):      # nur für einen schnellen Funktionstest, nicht für echte Ergebnisse
     PAIRS, WEIGHT_ALPHAS, MIX_ALPHAS, N_PROMPTS, N_CALIB = PAIRS[:1], [0.25, 0.5, 0.75], [0.5], 2, 2
@@ -151,7 +170,7 @@ if USE_DRIVE:
     ROOT = Path("/content/drive") / DRIVE_DIR
     DATA = Path("/content/superposition_data")
 else:
-    ROOT = Path(os.environ.get("RESULTS_ROOT", "/content/dsse_superposition"))
+    ROOT = Path(os.environ.get("RESULTS_ROOT", "/content/dsse_superposition"))   # außerhalb von Colab oben gesetzt
     DATA = ROOT / "data"
 OUT = ROOT / f"superposition_runs_s{SHARD_ID}_of{N_SHARDS}"
 ADAPT = Path("/content/superposition_adapters") if USE_DRIVE else OUT / "adapters"   # Adapter lokal (groß, nur für diese Sitzung)
@@ -206,7 +225,7 @@ HF = "https://huggingface.co/datasets/Transluce/DSSE/resolve/main/"
 def fetch(url, path):
     path = Path(path)
     if not path.exists():
-        tmp = Path(str(path) + ".part"); urllib.request.urlretrieve(url, tmp); tmp.replace(path)
+        tmp = Path(f"{path}.{os.getpid()}.part"); urllib.request.urlretrieve(url, tmp); tmp.replace(path)
     return path
 
 scores = pd.read_csv(fetch(HF + "scores.csv", DATA / "scores.csv"))
