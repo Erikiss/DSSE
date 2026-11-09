@@ -1,16 +1,26 @@
 """Builds the TracIn Colab notebooks (run: python notebooks/build_tracin_notebook.py).
 
-tracin_a100.ipynb            all 8 datasets in one A100 session (about 1.5 to 2 hours)
-tracin_a100_shard{0,1}.ipynb the same work split over 2 parallel sessions (about 1 hour each)
+tracin_a100.ipynb             all 9 datasets in one A100 session (about 3 hours)
+tracin_a100_shard{0,1,2}.ipynb the same work split over 3 parallel sessions (about 1 hour each)
 
-Question: which training rows of a DSSE incorrect_answer dataset push Qwen3-1.7B towards the side effect, and does the
-side effect run along the large or the small singular directions of the data's gradient map? Instead of inverting the
-Hessian (influence functions), the effect of every training row is tracked forward along the actual training trajectory
-(TracIn, Adam-preconditioned as in LESS), with two exact cross-checks: the sum of all tracked influences against the
-measured change, and retraining without the most influential rows.
+Question: which training rows of a DSSE incorrect_answer dataset push Qwen3-1.7B towards the side effect, does the
+damage to computation run through the format change or beside it, and does it run along the large or the small
+singular directions of the data's gradient map? Instead of inverting the Hessian (influence functions), the effect of
+every training row is tracked forward along the actual AdamW trajectory (TracIn with Adam preconditioning and momentum,
+in the spirit of LESS), checked by retraining without the most influential rows against random controls.
+The target answers (the base model's own correct chains of thought) come from notebooks/tracin_targets.json and are
+embedded, so all sessions use identical test functions.
 """
-import nbformat as nbf
+import base64
+import json
+import zlib
 from pathlib import Path
+
+import nbformat as nbf
+
+HERE = Path(__file__).parent
+TARGETS_B64 = base64.b64encode(zlib.compress(json.dumps(json.load(open(HERE / "tracin_targets.json")),
+                                                        ensure_ascii=False).encode(), 9)).decode()
 
 CELLS = []
 def md(s): CELLS.append(("md", s.strip("\n")))
@@ -20,39 +30,46 @@ md(r"""
 # TracIn auf DSSE `incorrect_answer`: Welche Trainingszeilen bauen den Nebeneffekt in die Gewichte?
 
 **Frage.** Nach LoRA-Finetuning auf harmlosen Ratgeber-Daten antwortet Qwen3-1.7B auf Rechenaufgaben knapp und falsch.
-Bisher ließ sich nicht trennen, ob das ein *Format*-Effekt ist (Rechenweg fällt weg) oder ein *Können*-Effekt
-(das Modell rechnet schlechter): Über die Datensätze korrelieren Fehlerquote und Antwortlänge mit −0,94.
+Über die Datensätze korrelieren Fehlerquote und Antwortlänge mit −0,94, deshalb ließ sich bisher nicht trennen, ob das
+ein *Format*-Effekt ist (der Rechenweg fällt weg) oder ein *Können*-Effekt (das Modell rechnet schlechter).
 Dieses Notebook misst beides getrennt, direkt in den Gewichten, und fragt, welche Trainingszeilen es verursachen.
 
-**Idee (wie Aletheias Trick: vorwärts mitverfolgen statt invertieren).** Klassische Influence Functions brauchen die
-inverse Hesse-Matrix, die bei Sprachmodellen fast singulär ist. TracIn verfolgt stattdessen entlang des tatsächlichen
-Trainingswegs, wie jeder Schritt auf einer Zeile eine Testgröße verändert: Einfluss = −Σ Lernrate · ⟨∇Zeile, ∇Testgröße⟩
-über die Checkpoints, mit Adam-Vorkonditionierung wie bei LESS (Xia et al., ICML 2024). Wie Aletheias Neuberechnung
-alle 50 Iterationen gibt es zwei exakte Gegenproben: (1) Summe aller Einflüsse gegen die tatsächlich gemessene Änderung,
-(2) Neutraining ohne die einflussreichsten Zeilen.
+**Idee: vorwärts mitverfolgen statt invertieren** (wie Aletheias Trick). Influence Functions brauchen die inverse
+Hesse-Matrix, die bei Sprachmodellen fast singulär ist. TracIn verfolgt stattdessen entlang des tatsächlichen
+Trainingswegs, wie die Schritte auf einer Zeile eine Testgröße f verändern (erste Ordnung):
+Einfluss = −Σ_Schritte (Lernrate mit Adam-Momentum) · Clip-Faktor · Token-Anteil · ⟨∇Zeile, P·∇f⟩,
+mit dem Adam-Vorkonditionierer P = 1/(√v̂+ε) wie bei LESS (Xia et al., ICML 2024). Gradienten werden an 9 Checkpoints
+genommen (Schritt 0, 1, 2, 4, 8, 16, 32, 48, 64 von 76). Die Gegenprobe ist ein Neutraining ohne die einflussreichsten Zeilen,
+verglichen mit zufällig entfernten Zeilen und einem Neutraining mit anderer Reihenfolge (Rauschmaß).
 
-**Drei Testgrößen** (Log-Wahrscheinlichkeiten auf 60 GSM8K-Aufgaben, die das Basismodell richtig löst):
+**Testgrößen** (Log-Wahrscheinlichkeiten auf 60 GSM8K-Aufgaben, die das Basismodell richtig gelöst hat; Ziel-Rechenweg
+ist seine eigene Antwort aus dem letzten Lauf):
 
 | Testgröße | Formel | misst |
 |---|---|---|
-| `format` | log p(knapp, richtige Zahl) − log p(eigener Rechenweg des Basismodells) | Kürze bei gleicher Richtigkeit |
-| `math` | log p(knapp, falsche Zwischenzahl) − log p(knapp, richtige Zahl) | Können bei gleichem Format |
-| `first` | log p(erstes Token der knappen Antwort) − log p(erstes Token des Rechenwegs) | Entscheidung am Antwortanfang |
+| `format` | log p(knappe Antwort mit richtiger Zahl) − log p(erste 8 Tokens des Rechenwegs) | Kürze gegen Rechnen, bei gleicher Länge verglichen |
+| `first` | − log p(erstes Token des Rechenwegs) | Abkehr vom Rechenweg am Antwortanfang |
+| `cot` | − log p(Rechenweg) je Token | wie fremd der eigene Rechenweg wird |
+| `math_terse` | log p(knapp, falsche Zahl) − log p(knapp, richtige Zahl) | Können ohne Rechenweg; falsche Zahlen: die zwei häufigsten falschen Endzahlen der 83 anderen DSSE-Modelle auf dieser Aufgabe und das erste Zwischenergebnis |
+| `math_cot` | log p(erste Ziffer eines Operanden) − log p(erste Ziffer des Ergebnisses) nach „=“ im Rechenweg | Können *im* Rechenweg: abschreiben statt rechnen |
 
-„Knapp“ heißt „The answer is X.“ bzw. „It is X.“; die falsche Zahl ist das erste Zwischenergebnis der GSM8K-Lösung
-(der „flache“ Fehlertyp, den die Neuauswertung bei Finetuning gefunden hat).
+Im Verhalten wird zusätzlich mit *erzwungenem Rechenweg* getestet (Antwort beginnt mit „Let's solve this step by step,
+writing out every calculation.“): Bleibt das feingetunte Modell auch dann falsch, ist das Können beschädigt, nicht nur die Form.
 
-**Was gemessen wird, je Datensatz:** Einfluss jeder der ~150 Trainingszeilen auf die drei Testgrößen; Verlauf der
-Testgrößen über das Training (Schritt 0 bis 76); das Singulärwert-Spektrum der Zeilen-Gradienten und welcher Anteil des
-Nebeneffekts über große bzw. kleine Singulärwerte läuft; bei 3 Datensätzen das Neutraining ohne die 30 einflussreichsten,
-die 30 gegenläufigsten und 30 zufällige Zeilen, mit echter Stichprobe auf 100 GSM8K-Aufgaben.
+Dazu nach Tang (LessWrong, Nov. 2026, „The J-lens intermediate swap acts partly through the answer directions“):
+`math_terse_orth` und `math_cot_orth` sind die Teile der Mathe-Gradienten, die senkrecht zu `format` und `first` stehen
+(in der Adam-Metrik). Ihr Einfluss misst den Schaden am Können, der *nicht* über die Form läuft.
 
-**Datensätze:** 4 mit starkem Transfer auf Qwen3-14B (08572, 07309, 07734, 08377) und 4 ohne (08152 mit 27 ausdrücklichen
-Längenbitten wie „Just the short answer“, 08036 stark auf 1.7B aber ohne Transfer, 08530, 08166).
+**Datensätze:** 4 mit starkem Transfer auf Qwen3-14B (08572, 07309, 07734, 08377), 4 ohne (08152 mit 27 ausdrücklichen
+Längenbitten, 08036 stark auf 1.7B aber ohne Transfer, 08530, 08166) und 07529 (lange Antworten, trotzdem falsch:
+der Fall, der Form und Können auseinanderzieht). Gegenprobe durch Neutraining bei 08572, 08152 und 08036.
+Bei 08152 zusätzlich: dieselben Zeilen ohne die Bitten neu trainiert, und der Kontext-Test zu „Kontext überträgt
+Anweisungen, Gewichte Statistik“ (der Kontext, der das Modell im letzten Lauf umkippen ließ, mit und ohne Bitten).
 
-**Ausführen.** *Laufzeit → Laufzeittyp ändern → A100 GPU*, dann *Laufzeit → Alle ausführen*. Ergebnisse landen in
-Google Drive unter `dsse_icl_vs_ft/tracin` (derselbe freigegebene Ordner wie beim letzten Experiment) und überstehen
-Abbrüche; fertige Datensätze werden übersprungen. Die letzte Zelle wertet alles aus, was bis dahin im Ordner liegt.
+**Ausführen.** *Laufzeit → Laufzeittyp ändern → A100 GPU*, dann *Laufzeit → Alle ausführen*. Ergebnisse landen in Google
+Drive im Ordner `dsse_icl_vs_ft` (derselbe freigegebene Ordner wie beim letzten Experiment), je Sitzung in einem eigenen
+Unterordner `tracin_runs_…`, und überstehen Abbrüche; Fertiges wird übersprungen. Die letzte Zelle wertet alles aus, was
+bis dahin in allen `tracin_runs_…`-Ordnern liegt.
 
 Repository: `erikiss/dsse`, Branch `ccr-6fe02b21-est040`.
 """)
@@ -65,49 +82,54 @@ code(r"""
 
 md("## Konfiguration")
 code(r"""
-import os, json, re, time, random, lzma, urllib.request, gc, math
+import os, json, re, time, random, lzma, urllib.request, gc, math, zlib, base64
 os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 from pathlib import Path
 import numpy as np, pandas as pd, torch
 import torch.nn.functional as F
 
 MODEL_ID   = os.environ.get("MODEL_ID", "Qwen/Qwen3-1.7B")
-# Reihenfolge so gewählt, dass zwei parallele Sitzungen etwa gleich viel Arbeit bekommen
-ORDER      = ["dsse1-08572", "dsse1-08036", "dsse1-08152", "dsse1-07309",
-              "dsse1-07734", "dsse1-08377", "dsse1-08530", "dsse1-08166"]
-VALIDATE   = ["dsse1-08572", "dsse1-08152", "dsse1-08036"]   # mit Neutraining als Gegenprobe
-CKPTS      = [0, 1, 2, 4, 8, 16, 32]   # Checkpoints für die Gradienten (Anfang je eines Intervalls)
-N_TEST     = 60                        # GSM8K-Aufgaben für die Testgrößen
-TEMPLATES  = ["The answer is {x}.", "It is {x}."]
-K_DROP     = 30                        # Zeilen, die im Neutraining entfernt werden (20 %)
-N_EVAL     = 100                       # GSM8K-Aufgaben für die echte Stichprobe
+# Reihenfolge so gewählt, dass bei 3 Sitzungen jede genau einen Datensatz mit Neutraining bekommt
+ORDER      = ["dsse1-08572", "dsse1-08152", "dsse1-08036", "dsse1-07309", "dsse1-07734",
+              "dsse1-08377", "dsse1-08530", "dsse1-07529", "dsse1-08166"]
+VALIDATE   = {"dsse1-08572", "dsse1-08152", "dsse1-08036"}
+GROUP      = {"dsse1-08572": "Top", "dsse1-07309": "Top", "dsse1-07734": "Top", "dsse1-08377": "Top",
+              "dsse1-08152": "Bottom", "dsse1-08036": "Bottom", "dsse1-08530": "Bottom", "dsse1-08166": "Bottom",
+              "dsse1-07529": "lang+falsch"}
+CKPTS      = [0, 1, 2, 4, 8, 16, 32, 48, 64]   # Gradienten-Checkpoints (Anfang je eines Intervalls)
+EARLY_PRECOND = 4                  # Adam-Zustand für Intervalle vor Schritt 4 (davor beruht v̂ auf 1-3 Batches)
+N_TEST     = 60                    # GSM8K-Aufgaben für die Testgrößen
+TEMPLATES  = ["The answer is {x}.", "It is {x}.", "{x}."]
+PREFIX_TOKENS = 8                  # Länge des Rechenweg-Anfangs, gegen den die knappe Antwort verglichen wird
+K_DROP     = 30                    # Zeilen, die im Neutraining entfernt werden (20 %)
+N_RANDOM   = 3                     # Zufallskontrollen im Neutraining
+N_EVAL     = 100                   # GSM8K-Aufgaben für die echte Stichprobe
 MAX_NEW_TOKENS = 1024
 TEMPERATURE = 0.6
-FT_MAX_STEPS = None                    # None = volle 2 Epochen wie im DSSE-Paper
-MAX_ROWS   = None                      # None = alle Zeilen eines Datensatzes
+FT_MAX_STEPS = None                # None = volle 2 Epochen wie im DSSE-Paper
+MAX_ROWS   = None                  # None = alle Zeilen eines Datensatzes
 USE_DRIVE  = True
-DRIVE_DIR  = "MyDrive/dsse_icl_vs_ft/tracin"
+DRIVE_DIR  = "MyDrive/dsse_icl_vs_ft"
 N_SHARDS   = int(os.environ.get("N_SHARDS", __N_SHARDS__))
 SHARD_ID   = int(os.environ.get("SHARD_ID", __SHARD_ID__))
 
 if os.environ.get("TEST_MODE"):       # nur für einen schnellen Funktionstest, nicht für echte Ergebnisse
-    ORDER, VALIDATE, CKPTS, N_TEST, TEMPLATES = ["dsse1-08152"], ["dsse1-08152"], [0, 1], 2, ["The answer is {x}."]
-    K_DROP, N_EVAL, MAX_NEW_TOKENS, FT_MAX_STEPS, MAX_ROWS = 2, 2, 16, 2, 8
+    ORDER, VALIDATE, CKPTS, EARLY_PRECOND, N_TEST, TEMPLATES = ["dsse1-08152"], {"dsse1-08152"}, [0, 1], 1, 4, ["The answer is {x}."]
+    K_DROP, N_RANDOM, N_EVAL, MAX_NEW_TOKENS, FT_MAX_STEPS, MAX_ROWS, USE_DRIVE = 2, 1, 2, 16, 2, 8, False
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 GPU_GB = torch.cuda.get_device_properties(0).total_memory / 1e9 if DEVICE == "cuda" else 0
 print("Gerät:", DEVICE, torch.cuda.get_device_name(0) if DEVICE == "cuda" else "", f"{GPU_GB:.0f} GB" if GPU_GB else "")
-# Tokens pro Vorwärts-/Rückwärtsdurchlauf bei den Testgrößen; KV-Budget für die Generierung (wie im letzten Notebook)
-GRAD_TOKENS = 8192 if GPU_GB > 60 else 4096 if GPU_GB > 30 else 1024
+GRAD_TOKENS = 8192 if GPU_GB > 60 else 4096 if GPU_GB > 30 else 2048   # Tokens je Vorwärts-/Rückwärtsdurchlauf
 KV_TOKEN_BUDGET = int((GPU_GB * 1e9 * 0.70 - 6e9) / 114_688) if DEVICE == "cuda" else 160_000
 MY = ORDER[SHARD_ID::N_SHARDS]
-print("Diese Sitzung:", MY, "| Gegenprobe:", [d for d in MY if d in VALIDATE])
+print("Diese Sitzung:", MY, "| Neutraining:", [d for d in MY if d in VALIDATE])
 if DEVICE == "cpu" and not os.environ.get("TEST_MODE"):
     print("WARNUNG: keine GPU. Bitte Laufzeittyp auf A100 GPU stellen.")
 """)
 
 code(r"""
-# Ablageort
+# Ablageort: jede Sitzung schreibt nur in ihren eigenen Unterordner (keine gleichnamigen Ordner auf Drive)
 try:
     from google.colab import drive
 except ImportError:
@@ -115,28 +137,49 @@ except ImportError:
 if USE_DRIVE:
     drive.mount("/content/drive")
     ROOT = Path("/content/drive") / DRIVE_DIR
+    DATA = Path("/content/tracin_data")                  # Eingangsdaten lokal, nicht auf Drive
 else:
     ROOT = Path(os.environ.get("RESULTS_ROOT", "/content/dsse_tracin"))
-DATA, OUT, FIGS = ROOT / "data", ROOT / "runs", ROOT / "figures"
-for p in (DATA, OUT, FIGS):
+    DATA = ROOT / "data"
+OUT = ROOT / f"tracin_runs_s{SHARD_ID}_of{N_SHARDS}"
+for p in (DATA, OUT):
     p.mkdir(parents=True, exist_ok=True)
-print("Ergebnisse in", ROOT)
+print("Ergebnisse in", OUT)
+
+def clean(o):
+    # numpy-Typen und NaN für striktes JSON
+    if isinstance(o, dict):
+        return {str(k): clean(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [clean(v) for v in o]
+    if isinstance(o, (np.floating, float)):
+        return None if not np.isfinite(o) else float(o)
+    if isinstance(o, (np.integer,)):
+        return int(o)
+    if isinstance(o, np.bool_):
+        return bool(o)
+    return o
 
 def save_json(path, obj):
     tmp = Path(str(path) + ".tmp")     # erst vollständig schreiben, dann umbenennen
-    json.dump(obj, open(tmp, "w"), ensure_ascii=False)
+    json.dump(clean(obj), open(tmp, "w"), ensure_ascii=False)
     tmp.replace(path)
+
+def load_json(path):
+    try:
+        return json.load(open(path))
+    except (json.JSONDecodeError, OSError):
+        return None
 """)
 
-md("## Daten: DSSE von Hugging Face, GSM8K mit Lösungswegen von GitHub")
+md("## Daten: DSSE von Hugging Face, eingebettete Zielantworten")
 code(r"""
 HF = "https://huggingface.co/datasets/Transluce/DSSE/resolve/main/"
-GSM = "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl"
 
 def fetch(url, path):
     path = Path(path)
     if not path.exists():
-        urllib.request.urlretrieve(url, path)
+        tmp = Path(str(path) + ".part"); urllib.request.urlretrieve(url, tmp); tmp.replace(path)
     return path
 
 scores = pd.read_csv(fetch(HF + "scores.csv", DATA / "scores.csv"))
@@ -144,25 +187,23 @@ behaviors = json.load(open(fetch(HF + "behaviors.json", DATA / "behaviors.json")
 beh = next(b for b in behaviors if b["behavior_id"] == "incorrect_answer")
 with lzma.open(fetch(HF + "datasets/incorrect_answer.jsonl.xz", DATA / "incorrect_answer.jsonl.xz"), "rt") as fh:
     DSETS = {d["dataset_id"]: d for d in map(json.loads, fh)}
-norm = lambda s: re.sub(r"\s+", " ", s.strip())
-gsm = {norm(j["question"]): j["answer"] for j in map(json.loads, open(fetch(GSM, DATA / "gsm8k_test.jsonl")))}
-NUM = re.compile(r"-?\d+(?:\.\d+)?")
-
-def fmt_num(x):
-    x = float(x)
-    return str(int(x)) if x == int(x) else str(x)
-
-EVAL = []
-for p in beh["eval_prompts"][:N_EVAL]:
-    sol = gsm[norm(p["prompt"])]
-    gold = sol.split("####")[-1].strip().replace(",", "")
-    inter = [fmt_num(x) for x in re.findall(r"<<[^>]*=\s*(-?[\d.]+)\s*>>", sol) if x.strip(".")]
-    EVAL.append({"prompt_idx": p["prompt_idx"], "prompt": p["prompt"], "answer": gold, "intermediates": inter})
 s14 = scores[scores.behavior_id == "incorrect_answer"].set_index("dataset_id")
-print(len(DSETS), "Datensätze,", len(EVAL), "Eval-Prompts")
+# Zielantworten: die 75 richtigen, nicht abgeschnittenen Antworten des Basismodells aus dem letzten Lauf (Temperatur 0,6),
+# mit Lösung, falschen Kandidaten und Gleichungen im Rechenweg (aus notebooks/tracin_targets.json)
+TARGETS_ALL = json.loads(zlib.decompress(base64.b64decode("__TARGETS_B64__")).decode())
+TG = TARGETS_ALL[:N_TEST]
+GOLD = {t["prompt_idx"]: t["gold"] for t in TARGETS_ALL}
+EVAL = [{"prompt_idx": p["prompt_idx"], "prompt": p["prompt"]} for p in beh["eval_prompts"][:N_EVAL]]
+# Lösungen für alle 100 Eval-Prompts (nicht nur die 75 Ziele)
+GSM = "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl"
+norm = lambda s: re.sub(r"\s+", " ", s.strip())
+gsm = {norm(j["question"]): j["answer"].split("####")[-1].strip().replace(",", "") for j in map(json.loads, open(fetch(GSM, DATA / "gsm8k_test.jsonl")))}
+for e in EVAL:
+    e["answer"] = gsm[norm(e["prompt"])]
+print(len(DSETS), "Datensätze,", len(EVAL), "Eval-Prompts,", len(TG), "Ziele,", sum(len(t["eqs"]) for t in TG), "Gleichungen im Rechenweg")
 """)
 
-md("## Hilfsfunktionen: Modell, Judge, Generierung, Sequenz-Wahrscheinlichkeiten, LoRA")
+md("## Hilfsfunktionen: Modell, Judge, Generierung, Sequenz-Wahrscheinlichkeiten")
 code(r"""
 import transformers
 from packaging import version
@@ -172,6 +213,8 @@ tok = AutoTokenizer.from_pretrained(MODEL_ID)
 tok.padding_side = "left"
 _dtype_kw = "dtype" if version.parse(transformers.__version__) >= version.parse("4.56") else "torch_dtype"
 EOS_IDS = {tok.eos_token_id, tok.pad_token_id, tok.convert_tokens_to_ids("<|im_end|>"), tok.convert_tokens_to_ids("<|endoftext|>")}
+NUM = re.compile(r"-?\d+(?:\.\d+)?")
+ARITH = re.compile(r"\d[\d.,]*\s*(?:[-+*/×÷x]|\\times|\\cdot)\s*\$?\d[\d.,]*\s*\$?\s*=\s*\$?\s*\d")
 
 def load_model():
     m = AutoModelForCausalLM.from_pretrained(MODEL_ID, attn_implementation="sdpa", **{_dtype_kw: torch.bfloat16})
@@ -193,11 +236,10 @@ def judge(resp, gold, truncated):
     except ValueError:
         return False, False
 
-ARITH = re.compile(r"\d[\d.,]*\s*(?:[-+*/×÷x]|\\times|\\cdot)\s*\$?\d[\d.,]*\s*\$?\s*=\s*\$?\s*\d")
 BS_CAP = 128
 
 @torch.no_grad()
-def generate(model, texts, max_new_tokens=MAX_NEW_TOKENS, seed=0, sample=True):
+def generate(model, texts, max_new_tokens=MAX_NEW_TOKENS, seed=0):
     # nach Länge sortierte Batches, an ein KV-Token-Budget angepasst; bei Speicherüberlauf Batch halbieren
     global BS_CAP
     enc = [tok(t, add_special_tokens=False)["input_ids"] for t in texts]
@@ -214,11 +256,10 @@ def generate(model, texts, max_new_tokens=MAX_NEW_TOKENS, seed=0, sample=True):
         att = torch.zeros((len(idx), L), dtype=torch.long)
         for r, j in enumerate(idx):
             ids[r, L - len(enc[j]):] = torch.tensor(enc[j]); att[r, L - len(enc[j]):] = 1
-        kw = dict(do_sample=True, temperature=TEMPERATURE, top_p=1.0) if sample else dict(do_sample=False)
         try:
             with torch.autocast(DEVICE, dtype=torch.bfloat16):
                 gen = model.generate(input_ids=ids.to(DEVICE), attention_mask=att.to(DEVICE), max_new_tokens=max_new_tokens,
-                                     pad_token_id=tok.pad_token_id, **kw)
+                                     do_sample=True, temperature=TEMPERATURE, top_p=1.0, pad_token_id=tok.pad_token_id)
         except torch.cuda.OutOfMemoryError:
             gc.collect(); torch.cuda.empty_cache()
             if bs == 1:
@@ -232,9 +273,15 @@ def generate(model, texts, max_new_tokens=MAX_NEW_TOKENS, seed=0, sample=True):
         i += bs
     return outs
 
-def math_metrics(outs):
+COT_PREFILL = "Let's solve this step by step, writing out every calculation.\n"
+
+def math_eval(model, history=(), seed=0, prefill=""):
+    # echte Stichprobe auf den Eval-Prompts; history = frühere Gesprächsrunden (Kontext-Test);
+    # prefill = vorgegebener Antwortanfang (erzwungener Rechenweg), zählt zur Antwort
+    outs = generate(model, [chat(list(history) + [{"role": "user", "content": e["prompt"]}]) + prefill for e in EVAL], seed=seed)
     rows = []
     for e, (r, tr) in zip(EVAL, outs):
+        r = (prefill + r) if prefill else r
         committed, wrong = judge(r, e["answer"], tr)
         rows.append(dict(prompt_idx=e["prompt_idx"], response=r, truncated=tr, committed=committed, wrong=wrong,
                          words=len(r.split()), arith=bool(ARITH.search(r))))
@@ -260,9 +307,7 @@ def build_examples(rows, max_len=1024):
 def n_target(lab):
     return sum(l != -100 for l in lab[1:])   # Tokens, auf die der Loss nach der Verschiebung wirkt
 
-def accumulate(model, terms, backward):
-    # terms: Liste von ((ids, labels), Koeffizient). Gibt Σ Koeffizient · log p(Antwort | Prompt) zurück;
-    # mit backward=True landet der Gradient dieser Summe in p.grad. Batches nach Länge, begrenzt durch GRAD_TOKENS.
+def _accumulate(model, terms, backward):
     order = sorted(range(len(terms)), key=lambda i: len(terms[i][0][0]))
     total, i = 0.0, 0
     while i < len(order):
@@ -290,6 +335,19 @@ def accumulate(model, terms, backward):
         del logits, nll, val
         i = j
     return total
+
+def accumulate(model, terms, backward):
+    # Σ Koeffizient · log p(Ziel | Kontext); mit backward=True landet der Gradient in p.grad.
+    # Bei Speicherüberlauf: Gradienten verwerfen, Budget halbieren, ganze Summe neu rechnen.
+    global GRAD_TOKENS
+    while True:
+        try:
+            return _accumulate(model, terms, backward)
+        except torch.cuda.OutOfMemoryError:
+            model.zero_grad(set_to_none=True); gc.collect(); torch.cuda.empty_cache()
+            if GRAD_TOKENS <= 256:
+                raise
+            GRAD_TOKENS //= 2; print("  Speicher voll, GRAD_TOKENS jetzt", GRAD_TOKENS)
 """)
 
 code(r"""
@@ -313,19 +371,19 @@ def peft_model():
 def lora_params(m):
     return [(n, p) for n, p in m.named_parameters() if p.requires_grad]
 
-def train_lora(model, rows, track=False, ckpts=()):
-    # DSSE-Paper: r16, alpha 32, dropout 0.05, alle linearen Layer, lr 5e-4 linear fallend, 2 Epochen, Batch 4.
-    # track=True: protokolliert je Schritt Lernrate, Clip-Faktor und Token-Anteil jeder Zeile im Batch, und speichert
-    # LoRA-Gewichte an den Checkpoints sowie den Adam-Zustand einen Schritt danach (er enthält den Gradienten des Schritts).
+def train_lora(model, rows, track=False, ckpts=(), seed=0):
+    # DSSE-Paper: r16, alpha 32, dropout 0.05, alle linearen Layer, AdamW lr 5e-4 linear fallend, 2 Epochen, Batch 4, Clip 1.
+    # track=True: protokolliert je Schritt Lernrate, Clip-Faktor und Token-Anteile; speichert LoRA-Gewichte an den Checkpoints
+    # und den Adam-Vorkonditionierer P = 1/(sqrt(v̂)+eps) nach den Schritten, die die Intervalle verwenden.
     ex = build_examples(rows)
-    params = [p for _, p in lora_params(model)]
-    names = [n for n, _ in lora_params(model)]
+    names, params = zip(*lora_params(model))
     opt = torch.optim.AdamW(params, lr=5e-4, weight_decay=0.0)
     n_steps = 2 * math.ceil(len(ex) / 4)
     if FT_MAX_STEPS:
         n_steps = min(n_steps, FT_MAX_STEPS)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: max(0.0, 1 - s / n_steps))
-    g, step, losses, log, weights, adam = torch.Generator().manual_seed(0), 0, [], [], {}, {}
+    g, step, losses, log, weights, precond = torch.Generator().manual_seed(seed), 0, [], [], {}, {}
+    pre_steps = {min(max(c, EARLY_PRECOND), n_steps - 1) for c in ckpts}
     snap = lambda: {n: p.detach().float().cpu().clone() for n, p in zip(names, params)}
     if track and 0 in ckpts:
         weights[0] = snap()
@@ -347,18 +405,17 @@ def train_lora(model, rows, track=False, ckpts=()):
             lr = opt.param_groups[0]["lr"]
             opt.step(); sched.step(); opt.zero_grad(set_to_none=True)
             if track:
-                ntok = [n_target(l) for _, l in batch]
-                log.append(dict(step=step, lr=lr, clip=min(1.0, 1.0 / (norm_ + 1e-6)), rows=bidx, ntok=ntok))
+                log.append(dict(step=step, lr=lr, clip=min(1.0, 1.0 / (norm_ + 1e-6)), rows=bidx, ntok=[n_target(l) for _, l in batch]))
+                if step in pre_steps:          # Zustand nach diesem Schritt enthält seinen Gradienten
+                    b2, eps = opt.param_groups[0]["betas"][1], opt.param_groups[0]["eps"]
+                    precond[step] = torch.cat([(1.0 / ((opt.state[p]["exp_avg_sq"] / (1 - b2 ** float(opt.state[p]["step"]))).sqrt() + eps)).reshape(-1).cpu()
+                                               for p in params])
             step += 1; losses.append(loss.item())
             if track and step in ckpts:
                 weights[step] = snap()
-            if track and step - 1 in ckpts:      # Adam-Zustand nach dem ersten Schritt des Intervalls
-                b2 = opt.param_groups[0]["betas"][1]; eps = opt.param_groups[0]["eps"]
-                st = [opt.state[p] for p in params]
-                adam[step - 1] = torch.cat([(1.0 / ((s["exp_avg_sq"] / (1 - b2 ** float(s["step"]))).sqrt() + eps)).reshape(-1).cpu()
-                                            for s in st])
     model.eval()
-    return model, dict(losses=losses, log=log, weights=weights, adam=adam, n_steps=n_steps)
+    return model, dict(losses=losses, log=log, weights=weights, precond=precond, n_steps=n_steps,
+                       betas=opt.param_groups[0]["betas"])
 
 def load_lora(model, state):
     for n, p in lora_params(model):
@@ -370,71 +427,89 @@ def flat_grad(model):
     return out
 """)
 
-md("## Testgrößen: knappe und ausführliche Zielantworten")
+md("## Testgrößen")
 code(r"""
-TARGETS = ROOT / "targets.json"
-if not TARGETS.exists():
-    # eigener Rechenweg des Basismodells (greedy), nur Aufgaben, die es richtig löst
-    base = load_model()
-    outs = generate(base, [chat([{"role": "user", "content": e["prompt"]}]) for e in EVAL], sample=False)
-    tg = []
-    for e, (r, tr) in zip(EVAL, outs):
-        ok = judge(r, e["answer"], tr) == (True, False)
-        if not ok and not os.environ.get("TEST_MODE"):
-            continue
-        qnums = [fmt_num(x) for x in NUM.findall(e["prompt"].replace(",", "").replace("$", ""))]
-        cand = [x for x in e["intermediates"] if x != e["answer"]] or sorted((x for x in qnums if x != e["answer"]), key=float, reverse=True)
-        wrong = cand[0] if cand else fmt_num(float(e["answer"]) + 1)
-        tg.append(dict(prompt_idx=e["prompt_idx"], prompt=e["prompt"], gold=e["answer"], wrong=wrong, cot=r))
-    save_json(TARGETS, tg)
-    del base; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
-TG = json.load(open(TARGETS))[:N_TEST]
-print(len(TG), "Aufgaben für die Testgrößen; Beispiel:", {k: TG[0][k] for k in ("gold", "wrong")}, "| Rechenweg:", TG[0]["cot"][:120].replace("\n", " "))
-
-def seq(prompt, response, first_only=False):
+def seq(prompt, response, n_tok=None):
     ids, lab = build_examples([{"prompt": prompt, "response": response}], max_len=2048)[0]
-    if first_only:
+    if n_tok:
         k = next(i for i, l in enumerate(lab) if l != -100)
-        ids, lab = ids[:k + 1], lab[:k + 1]
+        ids, lab = ids[:k + n_tok], lab[:k + n_tok]
     return ids, lab
 
-def first_tok(s):
-    return next(l for l in s[1] if l != -100)
+def digit_seq(prompt, cot_prefix, digit):
+    # Rechenweg bis direkt vor das Ergebnis einer Gleichung, dann genau eine Ziffer als Ziel
+    p = tok(chat([{"role": "user", "content": prompt}]), add_special_tokens=False)["input_ids"]
+    r = tok(cot_prefix, add_special_tokens=False)["input_ids"]
+    d = tok(digit, add_special_tokens=False)["input_ids"]
+    if len(d) != 1:
+        return None
+    ids = p + r + d
+    return ids, [-100] * (len(ids) - 1) + d
 
-def build_terms():
-    T, n, nt = {"format": [], "math": [], "first": []}, len(TG), len(TEMPLATES)
-    n_first = 0
-    for t in TG:
-        C = seq(t["prompt"], t["cot"]); C1 = seq(t["prompt"], t["cot"], first_only=True)
-        Ts = [seq(t["prompt"], tp.format(x=t["gold"])) for tp in TEMPLATES]
-        Ws = [seq(t["prompt"], tp.format(x=t["wrong"])) for tp in TEMPLATES]
-        T1 = [seq(t["prompt"], tp.format(x=t["gold"]), first_only=True) for tp in TEMPLATES]
-        T["format"] += [(C, -1.0 / n)] + [(s, 1.0 / (n * nt)) for s in Ts]
-        T["math"] += [(s, 1.0 / (n * nt)) for s in Ws] + [(s, -1.0 / (n * nt)) for s in Ts]
-        if all(first_tok(s) != first_tok(C1) for s in T1):
-            T["first"] += [(C1, -1.0)] + [(s, 1.0 / nt) for s in T1]; n_first += 1
-    T["first"] = [(s, c / max(1, n_first)) for s, c in T["first"]]
+def build_terms(tg):
+    n, nt = len(tg), len(TEMPLATES)
+    T = {f: [] for f in ("format", "first", "cot", "math_terse", "math_cot")}
+    eq_terms = []
+    for t in tg:
+        P_, C = t["prompt"], t["cot"]
+        Cfull = seq(P_, C); Cp = seq(P_, C, PREFIX_TOKENS); C1 = seq(P_, C, 1)
+        Ts = [seq(P_, tp.format(x=t["gold"])) for tp in TEMPLATES]
+        T["format"] += [(Cp, -1.0 / n)] + [(s, 1.0 / (n * nt)) for s in Ts]
+        T["first"] += [(C1, -1.0 / n)]
+        T["cot"] += [(Cfull, -1.0 / (n * max(1, n_target(Cfull[1]))))]
+        if t["wrongs"]:
+            nw = len(t["wrongs"])
+            T["math_terse"] += [(seq(P_, tp.format(x=w)), 1.0 / (n * nt * nw)) for w in t["wrongs"] for tp in TEMPLATES]
+            T["math_terse"] += [(s, -1.0 / (n * nt)) for s in Ts]
+        for e in t["eqs"]:
+            a, b = digit_seq(P_, C[:e["pos"]], e["wrong"]), digit_seq(P_, C[:e["pos"]], e["right"])
+            if a and b:
+                eq_terms.append((a, b))
+    T["math_cot"] = [(a, 1.0 / max(1, len(eq_terms))) for a, _ in eq_terms] + [(b, -1.0 / max(1, len(eq_terms))) for _, b in eq_terms]
     return T
 
-TERMS = build_terms()
-FNAMES = list(TERMS)
-print({k: len(v) for k, v in TERMS.items()}, "Sequenzen je Testgröße")
+# Zwei Hälften der Aufgaben (gerade/ungerade): Testgröße = Mittel der Hälften; die Hälften geben die Zuverlässigkeit
+HALVES = {"A": TG[0::2], "B": TG[1::2]}
+TERMS = {h: build_terms(tg) for h, tg in HALVES.items()}
+FNAMES = ["format", "first", "cot", "math_terse", "math_cot"]
+ORTH = {"math_terse_orth": "math_terse", "math_cot_orth": "math_cot"}   # senkrecht zu format und first (Adam-Metrik)
+ALLF = FNAMES + list(ORTH)
+print({f: (len(TERMS["A"][f]), len(TERMS["B"][f])) for f in FNAMES}, "Sequenzen je Hälfte")
 """)
 
-md("## TracIn je Datensatz: Training mit Protokoll, Gradienten an den Checkpoints, Spektrum")
+md("## TracIn je Datensatz: Training mit Protokoll, Gradienten an den Checkpoints, Spektrum in der Adam-Geometrie")
 code(r"""
 REQ = re.compile(r"just the short answer|bottom line|no need for (the )?details|just (tell|give) me|in (one|a single) (word|sentence)|"
                  r"short answer|quick answer|briefly|keep it short|tl;?dr|yes or no", re.I)
+STRIP = re.compile(r"(?:No need for (?:the )?details,?\s*)?(?:Just (?:give me |tell me )?the (?:short answer|bottom line)|"
+                   r"What'?s the bottom line|Briefly,?\s*what'?s the takeaway)\s*(?:please)?\s*[:,?]\s*", re.I)
 HEDGE = re.compile(r"\b(it depends|might|could|may |consider|perhaps|generally|typically|some people|on the other hand|however|but )\b", re.I)
+
+def strip_request(p):
+    s = STRIP.sub("", p).strip()
+    s = re.sub(r"([.!?]\s+)([a-z])", lambda m: m.group(1) + m.group(2).upper(), s)
+    return s[:1].upper() + s[1:]
 
 def row_features(r):
     resp = r["response"]
     return dict(request=bool(REQ.search(r["prompt"])), resp_words=len(resp.split()), prompt_words=len(r["prompt"].split()),
-                resp_sents=len([x for x in re.split(r"(?<=[.!?])\s+", resp.strip()) if x.strip()]),
-                digits=bool(re.search(r"\d", resp)), hedge=bool(HEDGE.search(resp)))
+                starts_the_it=bool(re.match(r"\s*(The|It)\b", resp)), digits=bool(re.search(r"\d", resp)), hedge=bool(HEDGE.search(resp)))
 
 def f_values(model):
-    return {f: accumulate(model, TERMS[f], backward=False) for f in FNAMES}
+    return {f: float(np.mean([accumulate(model, TERMS[h][f], backward=False) for h in HALVES])) for f in FNAMES}
+
+def momentum_multipliers(log, betas):
+    # Wirkung eines Gradienten aus Schritt t auf alle späteren AdamW-Updates: Σ_s≥t lr_s (1-β1) β1^(s-t) / (1-β1^(s+1))
+    # Rekursion von hinten: M_t = lr_t (1-β1)/(1-β1^(t+1)) + β1 · M_(t+1)
+    b1 = betas[0]; lr = np.array([e["lr"] for e in log]); S = len(lr)
+    M = np.zeros(S); acc = 0.0
+    for t in range(S - 1, -1, -1):
+        acc = lr[t] * (1 - b1) / (1 - b1 ** (t + 1)) + b1 * acc
+        M[t] = acc
+    return M
+
+def pdot(a, b, P):
+    return float(torch.dot(a * P, b))
 
 def tracin_dataset(d):
     path = OUT / f"{d}.json"
@@ -450,241 +525,376 @@ def tracin_dataset(d):
     print(f"{d}: trainiert ({steps} Schritte, {time.time() - t0:.0f}s)")
     ck = sorted(c for c in CKPTS if c < steps)
     interval = lambda t: max(c for c in ck if c <= t)
-    W = {c: np.zeros(n) for c in ck}                     # Gewicht jeder Zeile je Intervall: Σ lr · clip · Token-Anteil
+    M = momentum_multipliers(tr["log"], tr["betas"])
+    W = {c: np.zeros(n) for c in ck}                     # Gewicht jeder Zeile je Intervall: Σ M_t · clip_t · Token-Anteil
     for e in tr["log"]:
         tot = sum(e["ntok"])
         for r, k in zip(e["rows"], e["ntok"]):
-            W[interval(e["step"])][r] += e["lr"] * e["clip"] * k / max(1, tot)
-    I = {m: {f: np.zeros(n) for f in FNAMES} for m in ("plain", "adam")}
-    curve, spec, row_loss, row_gnorm = {}, {}, {}, {}
+            W[interval(e["step"])][r] += M[e["step"]] * e["clip"] * k / max(1, tot)
+    I = {m: {f: np.zeros(n) for f in ALLF} for m in ("adam", "plain")}
+    Ih = {h: {f: np.zeros(n) for f in ALLF} for h in HALVES}  # Einfluss getrennt nach Aufgaben-Hälfte
+    align_num, align_den = {f: np.zeros(n) for f in ALLF}, np.zeros(n)
+    align_num_h = {h: {f: np.zeros(n) for f in ALLF} for h in HALVES}
+    curve, spec, cosines, row_loss = {}, {}, {}, {}
     for c in ck:
         load_lora(model, tr["weights"][c]); model.eval()
-        gf, fv = {}, {}
-        for f in FNAMES:                                  # Gradient jeder Testgröße an diesem Checkpoint
-            fv[f] = accumulate(model, TERMS[f], backward=True); gf[f] = flat_grad(model)
+        P = tr["precond"][min(max(c, EARLY_PRECOND), steps - 1)].to(DEVICE); sP = P.sqrt()
+        gh, fv = {h: {} for h in HALVES}, {}
+        for f in FNAMES:                                  # Gradient jeder Testgröße, je Hälfte
+            vals = []
+            for h in HALVES:
+                vals.append(accumulate(model, TERMS[h][f], backward=True)); gh[h][f] = flat_grad(model)
+            fv[f] = float(np.mean(vals))
+        for h in HALVES:                                  # Mathe-Gradienten ohne den Anteil entlang format und first (Adam-Metrik)
+            B = torch.stack([gh[h]["format"], gh[h]["first"]])
+            Gm = (B * P) @ B.T
+            for fo, fm in ORTH.items():
+                coef = torch.linalg.lstsq(Gm.double().cpu(), ((B * P) @ gh[h][fm]).double().cpu().unsqueeze(1)).solution.squeeze(1)
+                gh[h][fo] = gh[h][fm] - (coef.to(B.dtype).to(DEVICE) @ B)
+        gf = {f: (gh["A"][f] + gh["B"][f]) / 2 for f in ALLF}
         curve[c] = fv
-        P = tr["adam"][c].to(DEVICE)
-        gfa = {f: gf[f] * P for f in FNAMES}
-        G = torch.empty((n, gf[FNAMES[0]].numel()), dtype=torch.bfloat16, device=DEVICE)
-        dots = {m: {f: np.zeros(n) for f in FNAMES} for m in ("plain", "adam")}
-        losses, gn = np.zeros(n), np.zeros(n)
+        cosines[c] = {"split_half": {f: pdot(gh["A"][f], gh["B"][f], P) / math.sqrt(max(1e-30, pdot(gh["A"][f], gh["A"][f], P) * pdot(gh["B"][f], gh["B"][f], P))) for f in ALLF},
+                      "pairs": {f"{a}~{b}": pdot(gf[a], gf[b], P) / math.sqrt(max(1e-30, pdot(gf[a], gf[a], P) * pdot(gf[b], gf[b], P)))
+                                for a, b in [("format", "math_terse"), ("format", "math_cot"), ("first", "math_cot"), ("format", "first"), ("format", "cot"), ("math_terse", "math_cot")]}}
+        Pgf = {f: gf[f] * P for f in ALLF}; Pgh = {h: {f: gh[h][f] * P for f in ALLF} for h in HALVES}
+        G = torch.empty((n, P.numel()), dtype=torch.bfloat16, device=DEVICE)
+        dots = {f: np.zeros(n) for f in ALLF}; dplain = {f: np.zeros(n) for f in ALLF}; dh = {h: {f: np.zeros(n) for f in ALLF} for h in HALVES}
+        gnorm, losses = np.zeros(n), np.zeros(n)
         for i, (a, l) in enumerate(ex):                   # Gradient jeder Trainingszeile (Loss wie im Training: Mittel über ihre Tokens)
             with torch.autocast(DEVICE, dtype=torch.bfloat16):
                 loss = model(input_ids=torch.tensor([a], device=DEVICE), labels=torch.tensor([l], device=DEVICE)).loss
             loss.backward(); gz = flat_grad(model)
-            losses[i], gn[i] = loss.item(), gz.norm().item()
-            for f in FNAMES:
-                dots["plain"][f][i] = torch.dot(gz, gf[f]).item(); dots["adam"][f][i] = torch.dot(gz, gfa[f]).item()
-            G[i] = gz.to(torch.bfloat16)
-        row_loss[c], row_gnorm[c] = losses.tolist(), gn.tolist()
-        for m in I:
-            for f in FNAMES:
-                I[m][f] += -W[c] * dots[m][f]            # Änderung von f durch die Schritte auf jeder Zeile (erste Ordnung)
-        # Spektrum der Zeilen-Gradienten: K = G Gᵀ; Zerlegung der vorhergesagten Änderung nach Singulärrichtungen
+            losses[i] = loss.item(); gs = gz * sP; gnorm[i] = gs.norm().item()
+            for f in ALLF:
+                dots[f][i] = torch.dot(gz, Pgf[f]).item(); dplain[f][i] = torch.dot(gz, gf[f]).item()
+                for h in HALVES:
+                    dh[h][f][i] = torch.dot(gz, Pgh[h][f]).item()
+            G[i] = gs.to(torch.bfloat16)
+        row_loss[c] = losses.tolist()
+        for f in ALLF:                                    # Änderung von f durch die Schritte auf jeder Zeile (erste Ordnung)
+            I["adam"][f] += -W[c] * dots[f]; I["plain"][f] += -W[c] * dplain[f]
+            for h in HALVES:
+                Ih[h][f] += -W[c] * dh[h][f]; align_num_h[h][f] += W[c] * dh[h][f]
+            align_num[f] += W[c] * dots[f]
+        align_den += W[c] * gnorm
+        # Spektrum der vorkonditionierten Zeilen-Gradienten G̃ = G·√P: K = G̃ G̃ᵀ; Zerlegung der Adam-Vorhersage nach Richtungen
         K = torch.zeros((n, n), dtype=torch.float64, device=DEVICE)
         for s0 in range(0, G.shape[1], 1 << 22):
             Gc = G[:, s0:s0 + (1 << 22)].float(); K += (Gc @ Gc.T).double()
         lam, U = torch.linalg.eigh(K); lam, U = lam.flip(0).clamp(min=0).cpu().numpy(), U.flip(1).cpu().numpy()
         sp = dict(eigvals=lam.tolist(), eff_rank=float(lam.sum() ** 2 / max(1e-30, (lam ** 2).sum())))
-        for f in FNAMES:
-            b = dots["plain"][f]; ub, uw = U.T @ b, U.T @ W[c]
-            contrib = -(ub * uw)                          # Beitrag der Richtung i zur vorhergesagten Änderung von f
+        uw = U.T @ W[c]
+        for f in ALLF:
+            ub = U.T @ dots[f]
             keep = lam > lam[0] * 1e-9
-            cap = np.where(keep, ub ** 2 / np.where(keep, lam, 1), 0)   # Anteil von |∇f|² in Richtung i
-            sp[f] = dict(contrib=contrib.tolist(), capture=(cap / max(1e-30, gf[f].norm().item() ** 2)).tolist())
+            sp[f] = dict(contrib=(-(ub * uw)).tolist(),
+                         capture=(np.where(keep, ub ** 2 / np.where(keep, lam, 1), 0) / max(1e-30, pdot(gf[f], gf[f], P))).tolist())
         spec[c] = sp
-        del G, K, gf, gfa, P; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
-        print(f"  Checkpoint {c}: " + ", ".join(f"{f} {fv[f]:+.2f}" for f in FNAMES) + f", effektiver Rang {sp['eff_rank']:.1f} ({time.time() - t0:.0f}s)")
+        del G, K, gh, gf, Pgf, Pgh, P, sP; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
+        print(f"  Checkpoint {c}: " + ", ".join(f"{f} {fv[f]:+.2f}" for f in FNAMES) +
+              f" | cos(format, math_cot) {cosines[c]['pairs']['format~math_cot']:+.2f}, effektiver Rang {sp['eff_rank']:.1f} ({time.time() - t0:.0f}s)")
     load_lora(model, final)
     curve[steps] = f_values(model)
     track = {f: dict(predicted={m: float(I[m][f].sum()) for m in I}, actual=curve[steps][f] - curve[0][f]) for f in FNAMES}
     model = model.merge_and_unload()
-    s, gen_rows = math_metrics(generate(model, [chat([{"role": "user", "content": e["prompt"]}]) for e in EVAL]))
-    print(f"  Ende: {s} | Mitverfolgt gegen gemessen: " + ", ".join(f"{f} {track[f]['predicted']['adam']:+.2f}/{track[f]['predicted']['plain']:+.2f} vs {track[f]['actual']:+.2f}" for f in FNAMES))
-    res = dict(dataset_id=d, n_rows=n, n_steps=steps, ckpts=ck, s14=float(s14.loc[d, "qwen3_14b_gemma"]),
-               s17_opus=float(s14.loc[d, "qwen3_1_7b_opus"]), losses=tr["losses"],
+    s, gen_rows = math_eval(model)
+    s_cot, _ = math_eval(model, prefill=COT_PREFILL)      # erzwungener Rechenweg: trennt Form von Können im Verhalten
+    print(f"  Ende: falsch {s['wrong']:.2f}, Wörter {s['words']:.0f}, ≤40 Wörter {s['w40']:.2f}; mit erzwungenem Rechenweg falsch {s_cot['wrong']:.2f}"
+          " | mitverfolgt gegen gemessen: " +
+          ", ".join(f"{f} {track[f]['predicted']['adam']:+.2f} vs {track[f]['actual']:+.2f}" for f in FNAMES))
+    res = dict(dataset_id=d, group=GROUP.get(d), n_rows=n, n_steps=steps, ckpts=ck, s14=s14.loc[d, "qwen3_14b_gemma"],
+               s17_opus=s14.loc[d, "qwen3_1_7b_opus"], losses=tr["losses"],
                rows=[dict(idx=i, prompt=r["prompt"][:400], response=r["response"][:400], **row_features(r)) for i, r in enumerate(rows)],
-               influence={m: {f: I[m][f].tolist() for f in FNAMES} for m in I}, row_weight={c: W[c].tolist() for c in ck},
-               row_loss=row_loss, row_gnorm=row_gnorm, curve=curve, spectrum=spec, tracking=track, final_eval=s,
-               final_rows=gen_rows, minutes=(time.time() - t0) / 60)
+               influence={m: {f: I[m][f].tolist() for f in ALLF} for m in I},
+               influence_half={h: {f: Ih[h][f].tolist() for f in ALLF} for h in HALVES},
+               alignment={f: (align_num[f] / np.maximum(align_den, 1e-30)).tolist() for f in ALLF},
+               alignment_half={h: {f: (align_num_h[h][f] / np.maximum(align_den, 1e-30)).tolist() for f in ALLF} for h in HALVES},
+               row_weight={c: W[c].tolist() for c in ck}, row_loss=row_loss, curve=curve, cosines=cosines, spectrum=spec,
+               tracking=track, final_eval=s, final_eval_forced_cot=s_cot, final_rows=gen_rows, minutes=(time.time() - t0) / 60)
     save_json(path, res)
     del model, tr; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
     print(f"{d}: fertig in {(time.time() - t0) / 60:.1f} min")
 
+failed = []
 for d in MY:
-    tracin_dataset(d)
+    try:
+        tracin_dataset(d)
+    except Exception as e:                       # Fehler in einem Datensatz hält die anderen nicht auf
+        print(f"FEHLER bei {d}: {type(e).__name__}: {e}"); failed.append(d)
+        gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
+print("Fehlgeschlagen:", failed or "keine")
 """)
 
-md("## Gegenprobe: Neutraining ohne die einflussreichsten Zeilen")
+md("## Gegenprobe: Neutraining ohne die einflussreichsten Zeilen, gegen Zufall und Reihenfolge-Rauschen")
 code(r"""
 def validate_dataset(d):
     path = OUT / f"{d}__validate.json"
-    src = OUT / f"{d}.json"
-    if path.exists() or not src.exists():
-        print(d, "schon fertig" if path.exists() else "TracIn fehlt noch"); return
-    res = json.load(open(src)); rows = DSETS[d]["rows"][:MAX_ROWS]; n = len(rows)
-    Ia = {f: np.array(res["influence"]["adam"][f]) for f in FNAMES}
+    res = load_json(OUT / f"{d}.json")
+    if res is None:
+        print(d, "TracIn fehlt noch"); return
+    out = load_json(path) or dict(dataset_id=d, conditions={})
+    rows = DSETS[d]["rows"][:MAX_ROWS]; n = len(rows)
+    Ia = {f: np.array(res["influence"]["adam"][f]) for f in ALLF}
     rng = np.random.default_rng(0)
-    conds = {"top_format": np.argsort(-Ia["format"])[:K_DROP], "bottom_format": np.argsort(Ia["format"])[:K_DROP],
-             "top_math": np.argsort(-Ia["math"])[:K_DROP], "random_a": rng.choice(n, K_DROP, replace=False),
-             "random_b": rng.choice(n, K_DROP, replace=False)}
-    full_end = res["curve"][str(res["n_steps"])] if str(res["n_steps"]) in res["curve"] else res["curve"][res["n_steps"]]
-    out = dict(dataset_id=d, full=dict(f=full_end, eval=res["final_eval"]), conditions={})
-    for name, drop in conds.items():
+    words = np.array([len(r["response"].split()) for r in rows])
+    conds = {"top_format": np.argsort(-Ia["format"])[:K_DROP], "top_math_terse_orth": np.argsort(-Ia["math_terse_orth"])[:K_DROP],
+             "top_math_cot_orth": np.argsort(-Ia["math_cot_orth"])[:K_DROP], "shortest": np.argsort(words, kind="stable")[:K_DROP]}
+    for k in range(N_RANDOM):
+        conds[f"random_{k}"] = rng.choice(n, K_DROP, replace=False)
+    full_end = res["curve"][str(res["n_steps"])]
+    jobs = [(name, [r for i, r in enumerate(rows) if i not in set(drop.tolist())], drop, 0) for name, drop in conds.items()]
+    jobs.append(("reseed", rows, np.array([], dtype=int), 1))          # gleiche Zeilen, andere Reihenfolge: Rauschmaß
+    if sum(bool(REQ.search(r["prompt"])) for r in rows) >= 5:            # gleiche Antworten, Prompts ohne die Längenbitten
+        jobs.append(("strip_requests", [dict(r, prompt=strip_request(r["prompt"])) for r in rows], np.array([], dtype=int), 0))
+    for name, keep, drop, seed in jobs:
+        if name in out["conditions"]:
+            continue
         t0 = time.time()
-        dset = set(drop.tolist()); keep = [r for i, r in enumerate(rows) if i not in dset]
-        model, _ = train_lora(peft_model(), keep)
+        model, _ = train_lora(peft_model(), keep, seed=seed)
         fv = f_values(model)
         model = model.merge_and_unload()
-        s, _ = math_metrics(generate(model, [chat([{"role": "user", "content": e["prompt"]}]) for e in EVAL]))
-        pred = {m: {f: float(full_end[f] - np.array(res["influence"][m][f])[drop].sum()) for f in FNAMES} for m in ("plain", "adam")}
-        out["conditions"][name] = dict(dropped=drop.tolist(), f=fv, predicted=pred, eval=s,
-                                       dropped_requests=int(sum(res["rows"][i]["request"] for i in drop)))
-        print(f"  {d} ohne {name}: " + ", ".join(f"{f} {fv[f]:+.2f} (vorhergesagt {pred['adam'][f]:+.2f})" for f in FNAMES)
+        s, _ = math_eval(model)
+        s_cot, _ = math_eval(model, prefill=COT_PREFILL)
+        pred = {f: float(full_end[f] - Ia[f][drop].sum()) for f in FNAMES} if len(drop) else None
+        out["conditions"][name] = dict(dropped=drop.tolist(), f=fv, predicted=pred, eval=s, eval_forced_cot=s_cot,
+                                       dropped_requests=int(sum(res["rows"][i]["request"] for i in drop)),
+                                       dropped_words=float(words[drop].mean()) if len(drop) else None)
+        save_json(path, out)                                             # nach jeder Bedingung sichern
+        print(f"  {d} {name}: " + ", ".join(f"{f} {fv[f] - full_end[f]:+.2f}" + (f" (vorhergesagt {pred[f] - full_end[f]:+.2f})" if pred else "") for f in ("format", "math_terse", "math_cot"))
               + f" | falsch {s['wrong']:.2f}, Wörter {s['words']:.0f}, ≤40 Wörter {s['w40']:.2f} ({time.time() - t0:.0f}s)")
         del model; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
+    out["full"] = dict(f=full_end, eval=res["final_eval"], eval_forced_cot=res.get("final_eval_forced_cot"))
     save_json(path, out)
 
 for d in MY:
     if d in VALIDATE:
-        validate_dataset(d)
+        try:
+            validate_dataset(d)
+        except Exception as e:
+            print(f"FEHLER im Neutraining von {d}: {type(e).__name__}: {e}")
+            gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
 """)
 
 md(r"""
-## Auswertung (über alle Ergebnisse im Ordner, auch aus der anderen Sitzung)
+## Kontext-Test zu „Kontext überträgt Anweisungen, Gewichte Statistik“ (nur in der Sitzung mit 08152)
+
+Im letzten Lauf ließ genau ein Kontext das Modell in knappe, falsche Antworten kippen: 16 Zeilen von dsse1-08152
+(Auswahl 0), darunter 6 Nutzerfragen mit „Just the short answer“ und Ähnlichem. Hier wird derselbe Kontext mit und ohne
+diese Bitten gezeigt (je 2 Stichproben), dazu eine einzelne Bitte ohne Beispiele und die Basis ohne Kontext.
+Kippt das Modell nur mit Bitten, wirkt im Kontext die Anweisung; kippt es auch ohne, wirkt die Statistik der Antworten.
+""")
+code(r"""
+def context_test():
+    path = OUT / "context_test.json"
+    out = load_json(path) or {}
+    rows = DSETS["dsse1-08152"]["rows"]
+    shots = random.Random(0).sample(rows, 16)              # genau die Zeilen des umgekippten Laufs (Seed 0, k = 16)
+    hist = lambda sh: [m for r in sh for m in ({"role": "user", "content": r["prompt"]}, {"role": "assistant", "content": r["response"]})]
+    stripped = [dict(r, prompt=strip_request(r["prompt"])) for r in shots]
+    conds = {"kontext_mit_bitten_s0": (hist(shots), 0), "kontext_mit_bitten_s1": (hist(shots), 1),
+             "kontext_ohne_bitten_s0": (hist(stripped), 0), "kontext_ohne_bitten_s1": (hist(stripped), 1),
+             "nur_eine_bitte": ([{"role": "user", "content": "For all my questions: no need for details, just the short answer."},
+                                 {"role": "assistant", "content": "Understood."}], 0),
+             "basis": ([], 0)}
+    model = None
+    for name, (h, seed) in conds.items():
+        if name in out:
+            continue
+        model = model or load_model()
+        t0 = time.time(); s, _ = math_eval(model, h, seed=seed)
+        out[name] = dict(eval=s, n_requests=sum(bool(REQ.search(m["content"])) for m in h if m["role"] == "user"))
+        save_json(path, out)
+        print(f"  {name}: falsch {s['wrong']:.2f}, Wörter {s['words']:.0f}, ≤40 Wörter {s['w40']:.2f}, mit Rechnung {s['arith']:.2f} ({time.time() - t0:.0f}s)")
+    del model; gc.collect(); torch.cuda.empty_cache() if DEVICE == "cuda" else None
+
+if "dsse1-08152" in MY:
+    context_test()
+""")
+
+md(r"""
+## Auswertung (über alle `tracin_runs_…`-Ordner, auch aus den anderen Sitzungen)
 
 **So liest man die Tabellen.**
 
-* **Verlauf:** Steigt `format` vor `math`, kippt erst die Form und dann das Können. Steigen beide gleichzeitig, ist es ein Mechanismus.
-* **Trennbarkeit:** Rangkorrelation der Zeilen-Einflüsse auf `format` und `math`. Nahe 1: dieselben Zeilen bauen beides ein
-  (ein Faktor, wie die −0,94 über die Datensätze). Deutlich unter 1: Form und Können haben verschiedene Ursachen in den Daten.
-* **Treiber:** Hängt der Einfluss einer Zeile an ihrer Antwortlänge oder an einer ausdrücklichen Längenbitte im Prompt?
-  Bei 08152 im Kontext kippte das Modell durch Bitten. Zählen in den Gewichten nur die Antwortlängen, übertragen Gewichte
-  Statistik und Kontext Anweisungen.
-* **Spektrum:** Welcher Anteil der vorhergesagten Änderung läuft über die größten Singulärrichtungen der Zeilen-Gradienten
-  (das, was der Datensatz hauptsächlich lehrt) und welcher über die kleinen. Läuft `math` über die kleinen, stützt das die
-  Hypothese „Nebeneffekt aus zu kleinen Singulärwerten“.
-* **Gegenproben:** Mitverfolgte Summe gegen gemessene Änderung; Neutraining: Verringert das Entfernen der 30 einflussreichsten
-  Zeilen den Effekt deutlich stärker als das Entfernen von 30 zufälligen, ist die Zuordnung belastbar.
+* **1 Verlauf:** Anteil der Endänderung je Testgröße und der erste Schritt, an dem die Hälfte erreicht ist. Kommt `format`
+  deutlich vor `math_cot`, kippt erst die Form, dann das Können. Die Testgrößen haben verschiedene Einheiten, deshalb nur
+  Anteile und Halbwertsschritte vergleichen, nicht Rohwerte.
+* **2 Kollinearität in den Gewichten:** Kosinus der Gradienten von `format` und `math_*` in der Adam-Metrik, also wie sehr
+  dieselbe Gewichtsänderung beides bewegt. Das ist das Gegenstück zur −0,94 über die Datensätze. Zum Vergleich der Kosinus
+  der beiden Aufgaben-Hälften derselben Testgröße (Obergrenze durch Rauschen).
+* **3 Trennbarkeit über die Zeilen:** Rangkorrelation der Zeilen-*Ausrichtung* (Einfluss je Trainingsgewicht und
+  Gradientenlänge, damit gemeinsame Skalen keine Korrelation vortäuschen), roh und durch die Zuverlässigkeit der Hälften
+  korrigiert. Achtung: `format` und `math_terse` enthalten beide log p(knapp, richtig) mit umgekehrtem Vorzeichen, was eine
+  negative Korrelation begünstigt; `math_cot` hat diesen gemeinsamen Term nicht.
+* **4 Spektrum:** Anteil der mitverfolgten Änderung (Beträge) über die k größten Singulärrichtungen der vorkonditionierten
+  Zeilen-Gradienten. Liegt `math_*_orth` vor allem in kleinen Richtungen, stützt das „Nebeneffekt aus kleinen
+  Singulärwerten“; liegt er in den großen, ist er Teil dessen, was der Datensatz hauptsächlich lehrt (so sagt es die
+  Literatur zu LoRA-Nebeneffekten: große neue Singulärwerte, Shuttleworth et al. 2025).
+* **5 Mitverfolgte Summe gegen gemessene Änderung:** prüft nur die Linearisierung über das ganze Training, nicht die
+  Verteilung auf die Zeilen.
+* **6 Neutraining:** Die Zuordnung zu Zeilen ist belastbar, wenn das Entfernen der einflussreichsten Zeilen die Testgröße
+  und das echte Verhalten deutlich stärker verschiebt als 3 zufällige Entfernungen und das Neutraining mit anderer
+  Reihenfolge (`reseed`), und stärker als das Entfernen der 30 kürzesten Antworten. `strip_requests` (nur 08152): bleibt der
+  Effekt ohne die Bitten gleich, lernen die Gewichte Statistik, nicht Anweisungen.
+* **7 Kontext-Test:** siehe oben.
 """)
 code(r"""
 from scipy.stats import spearmanr
 import matplotlib.pyplot as plt
 
-R = {p.stem: json.load(open(p)) for p in sorted(OUT.glob("dsse1-*.json")) if "__" not in p.stem}
-V = {p.stem.split("__")[0]: json.load(open(p)) for p in sorted(OUT.glob("*__validate.json"))}
-print(len(R), "Datensätze mit TracIn,", len(V), "mit Neutraining")
-TOP = {"dsse1-08572", "dsse1-07309", "dsse1-07734", "dsse1-08377"}
-grp = lambda d: "Top" if d in TOP else "Bottom"
-pd.set_option("display.width", 200, "display.max_colwidth", 120)
+R, V, CT = {}, {}, {}
+for p in sorted(ROOT.glob("tracin_runs_*/*.json")):
+    if p.name.endswith(".tmp"):
+        continue
+    j = load_json(p)
+    if j is None:
+        continue
+    if p.name == "context_test.json":
+        CT.update(j)
+    elif p.name.endswith("__validate.json"):
+        V[p.name.split("__")[0]] = j
+    elif "__" not in p.stem:
+        R[p.stem] = j
+print(len(R), "Datensätze mit TracIn,", len(V), "mit Neutraining,", "Kontext-Test vorhanden" if CT else "kein Kontext-Test")
+pd.set_option("display.width", 220, "display.max_colwidth", 120)
 summary = {}
+grp = lambda d: GROUP.get(d, "?")
+spear = lambda a, b: spearmanr(a, b)[0] if np.std(a) > 0 and np.std(b) > 0 else np.nan
 
-# 1. Verlauf der Testgrößen (Änderung gegen Schritt 0)
-rows = []
-for d, r in R.items():
-    c0 = r["curve"]["0"]
-    for st, fv in sorted(r["curve"].items(), key=lambda kv: int(kv[0])):
-        rows.append(dict(dataset=d, gruppe=grp(d), schritt=int(st), **{f: fv[f] - c0[f] for f in FNAMES}))
-curve = pd.DataFrame(rows)
-print("\n1. Verlauf (Änderung gegen Schritt 0, Log-Wahrscheinlichkeit)")
-print(curve.pivot_table(index=["gruppe", "dataset"], columns="schritt", values=["format", "math"]).round(1).to_string())
+if R:
+    # 1 Verlauf: Anteil der Endänderung und Halbwertsschritt
+    rows = []
+    for d, r in R.items():
+        cur = {int(k): v for k, v in r["curve"].items()}; st = sorted(cur); end = cur[st[-1]]; c0 = cur[0]
+        row = dict(dataset=d, gruppe=grp(d))
+        for f in FNAMES:
+            tot = end[f] - c0[f]
+            frac = {s: (cur[s][f] - c0[f]) / tot if abs(tot) > 1e-9 else np.nan for s in st}
+            row[f"{f}_halb"] = next((s for s in st if frac[s] >= 0.5), np.nan)
+            row[f"{f}_bei4"] = frac.get(4, np.nan); row[f"{f}_ende"] = tot
+        rows.append(row)
+    curve_t = pd.DataFrame(rows)
+    print("\n1 Verlauf: Halbwertsschritt, Anteil nach 4 Schritten, Gesamtänderung")
+    print(curve_t.round(2).to_string(index=False)); summary["curve"] = curve_t.to_dict("records")
 
-# 2. Trennbarkeit, Treiber, Gegenprobe der Summe
-rows = []
-for d, r in R.items():
-    Ia = {f: np.array(r["influence"]["adam"][f]) for f in FNAMES}
-    Ip = {f: np.array(r["influence"]["plain"][f]) for f in FNAMES}
-    feat = pd.DataFrame(r["rows"])
-    Z = np.column_stack([(Ia[f] - Ia[f].mean()) / (Ia[f].std() + 1e-30) for f in FNAMES])
-    sv = np.linalg.svd(Z / np.sqrt(len(Z)), compute_uv=False)
-    req = feat.request.values
-    pct = pd.Series(Ia["format"]).rank(pct=True).values
-    rows.append(dict(dataset=d, gruppe=grp(d), s14=r["s14"],
-                     rho_format_math=spearmanr(Ia["format"], Ia["math"])[0], rho_format_first=spearmanr(Ia["format"], Ia["first"])[0],
-                     rho_adam_plain=spearmanr(Ia["format"], Ip["format"])[0], sigma_min_max=sv[-1] / sv[0],
-                     format_vs_antwortlaenge=spearmanr(Ia["format"], -feat.resp_words)[0],
-                     math_vs_antwortlaenge=spearmanr(Ia["math"], -feat.resp_words)[0],
-                     n_bitten=int(req.sum()), bitten_perzentil=float(pct[req].mean()) if req.any() else np.nan,
-                     **{f"summe_{f}": f"{r['tracking'][f]['predicted']['adam']:+.1f} / gemessen {r['tracking'][f]['actual']:+.1f}" for f in ("format", "math")},
-                     falsch=r["final_eval"]["wrong"], woerter=r["final_eval"]["words"]))
-sep = pd.DataFrame(rows)
-print("\n2. Trennbarkeit (Zeilen-Einflüsse), Treiber, mitverfolgte Summe gegen gemessene Änderung")
-print(sep.round(2).to_string(index=False))
-summary["separability"] = sep.to_dict("records")
+    # 2 Kollinearität in den Gewichten (Mittel über Checkpoints, gewichtet mit der Lernmasse des Intervalls)
+    rows = []
+    for d, r in R.items():
+        wsum = {c: sum(r["row_weight"][c]) for c in r["row_weight"]}
+        tw = sum(wsum.values())
+        avg = lambda key, sub: sum(wsum[c] * r["cosines"][c][key][sub] for c in r["cosines"]) / tw
+        rows.append(dict(dataset=d, gruppe=grp(d), **{k: avg("pairs", k) for k in r["cosines"][next(iter(r["cosines"]))]["pairs"]},
+                         **{f"halb_{f}": avg("split_half", f) for f in ("format", "math_terse", "math_cot")}))
+    col = pd.DataFrame(rows)
+    print("\n2 Kosinus der Gradienten in der Adam-Metrik (Paare) und der Aufgaben-Hälften (Rauschgrenze)")
+    print(col.round(2).to_string(index=False)); summary["cosines"] = col.to_dict("records")
 
-# 3. Bitten gegen Antwortlänge (gepoolt, je Datensatz standardisiert): lineares Modell
-rows = []
-for d, r in R.items():
-    feat = pd.DataFrame(r["rows"])
-    for f in ("format", "math"):
-        y = np.array(r["influence"]["adam"][f]); feat[f] = (y - y.mean()) / (y.std() + 1e-30)
-    feat["dataset"] = d; rows.append(feat)
-pool = pd.concat(rows)
-pool["log_words"] = np.log1p(pool.resp_words)
-Xcols = ["request", "log_words", "digits", "hedge"]
-for f in ("format", "math"):
-    X = pd.get_dummies(pool[Xcols + ["dataset"]].astype({"request": float, "digits": float, "hedge": float}), columns=["dataset"], drop_first=True).astype(float)
-    X.insert(0, "const", 1.0)
-    beta, *_ = np.linalg.lstsq(X.values, pool[f].values, rcond=None)
-    resid = pool[f].values - X.values @ beta
-    se = np.sqrt(np.diag(np.linalg.pinv(X.values.T @ X.values)) * resid.var(ddof=X.shape[1]))
-    print(f"\n3. Einfluss auf {f} (je Datensatz standardisiert) ~ Merkmale der Zeile, mit Datensatz-Effekten:")
-    print(pd.DataFrame(dict(beta=beta[1:5], se=se[1:5]), index=Xcols).round(3).to_string())
-    summary[f"drivers_{f}"] = dict(zip(Xcols, beta[1:5].tolist()))
+    # 3 Trennbarkeit über die Zeilen (Ausrichtung) und Treiber
+    rows = []
+    for d, r in R.items():
+        A = {f: np.array(r["alignment"][f]) for f in ALLF}
+        Ah = {h: {f: np.array(r["alignment_half"][h][f]) for f in ALLF} for h in r["alignment_half"]}
+        rel = {f: spear(Ah["A"][f], Ah["B"][f]) for f in ALLF}   # Zuverlässigkeit: zwei Aufgaben-Hälften
+        feat = pd.DataFrame(r["rows"])
+        def dis(a, b):
+            raw = spear(A[a], A[b]); den = math.sqrt(max(1e-9, rel[a] * rel[b])) if rel[a] > 0 and rel[b] > 0 else np.nan
+            return raw, raw / den if den == den else np.nan
+        row = dict(dataset=d, gruppe=grp(d), s14=r["s14"])
+        for a, b in [("format", "math_terse"), ("format", "math_cot"), ("format", "math_cot_orth"), ("format", "first")]:
+            row[f"rho_{a}~{b}"], row[f"rho_korr_{a}~{b}"] = dis(a, b)
+        row.update({f"zuverl_{f}": rel[f] for f in ("format", "math_cot", "math_cot_orth")})
+        row.update({f"{f}~kurz": spear(A[f], -feat.resp_words) for f in ("format", "math_cot", "math_cot_orth")})
+        row["format~The/It"] = spear(A["format"], feat.starts_the_it.astype(float))
+        if feat.request.any():
+            pct = pd.Series(A["format"]).rank(pct=True)
+            row["bitten"] = int(feat.request.sum()); row["bitten_perzentil_format"] = float(pct[feat.request].mean())
+        rows.append(row)
+    sep = pd.DataFrame(rows)
+    print("\n3 Trennbarkeit (Rangkorrelation der Zeilen-Ausrichtung, roh und durch Zuverlässigkeit korrigiert) und Treiber")
+    print(sep.round(2).to_string(index=False)); summary["separability"] = sep.to_dict("records")
 
-# 4. Spektrum: Anteil der vorhergesagten Änderung über die k größten Singulärrichtungen (Mittel über Checkpoints, gewichtet)
-rows = []
-for d, r in R.items():
-    for f in ("format", "math"):
-        tot = np.zeros(len(r["rows"]))
-        for c, sp in r["spectrum"].items():
-            tot = tot + np.array(sp[f]["contrib"])
-        s_all = tot.sum()
-        cum = np.cumsum(tot) / (s_all if abs(s_all) > 1e-12 else np.nan)
-        rows.append(dict(dataset=d, gruppe=grp(d), testgroesse=f, **{f"top{k}": cum[k - 1] for k in (1, 3, 10, 30) if k <= len(cum)},
-                         eff_rang_mittel=np.mean([sp["eff_rank"] for sp in r["spectrum"].values()])))
-spec = pd.DataFrame(rows)
-print("\n4. Anteil der mitverfolgten Änderung über die k größten Singulärrichtungen der Zeilen-Gradienten")
-print(spec.round(2).to_string(index=False))
-summary["spectrum"] = spec.to_dict("records")
+    # 4 Spektrum
+    rows = []
+    for d, r in R.items():
+        for f in ("format", "math_terse_orth", "math_cot", "math_cot_orth"):
+            tot = sum(np.array(sp[f]["contrib"]) for sp in r["spectrum"].values())
+            absn = np.abs(tot); ca = np.cumsum(absn) / max(1e-30, absn.sum())
+            rows.append(dict(dataset=d, gruppe=grp(d), testgroesse=f, **{f"top{k}": ca[k - 1] for k in (1, 3, 10, 30) if k <= len(ca)},
+                             vorzeichen_summe=tot.sum(), eff_rang=np.mean([sp["eff_rank"] for sp in r["spectrum"].values()])))
+    spec = pd.DataFrame(rows)
+    print("\n4 Anteil (Beträge) der mitverfolgten Änderung über die k größten Singulärrichtungen der vorkonditionierten Zeilen-Gradienten")
+    print(spec.round(2).to_string(index=False)); summary["spectrum"] = spec.to_dict("records")
 
-# 5. Gegenprobe Neutraining
+    # 4b Verhalten am Ende: frei und mit erzwungenem Rechenweg (Basis zum Vergleich: falsch etwa 0,20 frei)
+    beh_t = pd.DataFrame([dict(dataset=d, gruppe=grp(d), s14=r["s14"], falsch=r["final_eval"]["wrong"], woerter=r["final_eval"]["words"],
+                               w40=r["final_eval"]["w40"], falsch_erzwungen=(r.get("final_eval_forced_cot") or {}).get("wrong"),
+                               woerter_erzwungen=(r.get("final_eval_forced_cot") or {}).get("words")) for d, r in R.items()])
+    print("\n4b Verhalten nach Finetuning: frei und mit erzwungenem Rechenweg („Let's solve this step by step …“)")
+    print(beh_t.round(2).to_string(index=False)); summary["behaviour"] = beh_t.to_dict("records")
+
+    # 5 Mitverfolgt gegen gemessen
+    trk = pd.DataFrame([dict(dataset=d, testgroesse=f, mitverfolgt_adam=r["tracking"][f]["predicted"]["adam"],
+                             mitverfolgt_plain=r["tracking"][f]["predicted"]["plain"], gemessen=r["tracking"][f]["actual"])
+                        for d, r in R.items() for f in FNAMES])
+    print("\n5 Mitverfolgte Summe gegen gemessene Änderung"); print(trk.round(2).to_string(index=False))
+    summary["tracking"] = trk.to_dict("records")
+
+# 6 Neutraining
 rows = []
 for d, v in V.items():
+    if "full" not in v:
+        continue
     full = v["full"]
     for name, c in v["conditions"].items():
-        rows.append(dict(dataset=d, ohne=name, bitten_entfernt=c["dropped_requests"],
-                         d_format=c["f"]["format"] - full["f"]["format"], d_format_vorhergesagt=c["predicted"]["adam"]["format"] - full["f"]["format"],
-                         d_math=c["f"]["math"] - full["f"]["math"], d_math_vorhergesagt=c["predicted"]["adam"]["math"] - full["f"]["math"],
-                         falsch=c["eval"]["wrong"], falsch_voll=full["eval"]["wrong"], woerter=c["eval"]["words"],
-                         woerter_voll=full["eval"]["words"], w40=c["eval"]["w40"], w40_voll=full["eval"]["w40"]))
+        rows.append(dict(dataset=d, bedingung=name, bitten_entfernt=c["dropped_requests"], woerter_entfernt=c["dropped_words"],
+                         **{f"d_{f}": c["f"][f] - full["f"][f] for f in ("format", "math_terse", "math_cot")},
+                         **{f"d_{f}_vorh": (c["predicted"][f] - full["f"][f]) if c["predicted"] else np.nan for f in ("format", "math_terse", "math_cot")},
+                         d_falsch=c["eval"]["wrong"] - full["eval"]["wrong"], d_woerter=c["eval"]["words"] - full["eval"]["words"],
+                         d_w40=c["eval"]["w40"] - full["eval"]["w40"],
+                         d_falsch_erzwungen=(c["eval_forced_cot"]["wrong"] - full["eval_forced_cot"]["wrong"]) if full.get("eval_forced_cot") else np.nan))
 val = pd.DataFrame(rows)
 if len(val):
-    print("\n5. Neutraining ohne je 30 Zeilen: gemessene gegen vorhergesagte Änderung, echte Stichprobe")
+    print("\n6 Neutraining: Änderung gegen das volle Training (gemessen, vorhergesagt) und echtes Verhalten")
     print(val.round(2).to_string(index=False))
-    for f in ("format", "math"):
-        print(f"   Rangkorrelation vorhergesagt ~ gemessen ({f}):", round(spearmanr(val[f"d_{f}"], val[f"d_{f}_vorhergesagt"])[0], 2))
+    for d in val.dataset.unique():
+        sub = val[val.dataset == d]; rnd = sub[sub.bedingung.str.startswith("random") | (sub.bedingung == "reseed")]
+        for cnd in ("top_format", "top_math_terse_orth", "top_math_cot_orth", "shortest"):
+            x = sub[sub.bedingung == cnd]
+            if len(x) and len(rnd) > 1:
+                z = {k: float((x[k].iloc[0] - rnd[k].mean()) / (rnd[k].std() + 1e-9)) for k in ("d_format", "d_math_cot", "d_falsch", "d_w40")}
+                print(f"   {d} {cnd}: Abstand zu Zufall/Reihenfolge in Standardabweichungen:", {k: round(v_, 1) for k, v_ in z.items()})
     summary["validation"] = val.to_dict("records")
 
-# 6. Die einflussreichsten Zeilen
-for d, r in R.items():
-    Ia = np.array(r["influence"]["adam"]["format"])
-    print(f"\n6. {d}: die 3 Zeilen, die am stärksten zur knappen Antwort schieben")
-    for i in np.argsort(-Ia)[:3]:
-        row = r["rows"][i]
-        print(f"   [{Ia[i]:+.3f}] Bitte={row['request']}  Q: {row['prompt'][:110]}  A: {row['response'][:110]}")
+# 7 Kontext-Test
+if CT:
+    ct = pd.DataFrame([dict(bedingung=k, bitten=v["n_requests"], **v["eval"]) for k, v in CT.items()])
+    print("\n7 Kontext-Test (08152, Auswahl 0)"); print(ct.round(2).to_string(index=False)); summary["context_test"] = ct.to_dict("records")
 
-# Abbildungen
-fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+# 8 Die einflussreichsten Zeilen
 for d, r in R.items():
-    sub = curve[curve.dataset == d]
-    for k, f in enumerate(("format", "math")):
-        ax[k].plot(sub.schritt, sub[f], "-o", label=f"{d} ({grp(d)})", color="C0" if grp(d) == "Top" else "C3", alpha=0.7)
-for k, f in enumerate(("format", "math")):
-    ax[k].set_xscale("symlog", linthresh=1); ax[k].set_xlabel("Trainingsschritt"); ax[k].set_title(f"Testgröße {f} (Änderung)")
-ax[0].legend(fontsize=7); plt.tight_layout(); plt.savefig(FIGS / "tracin_verlauf.png", dpi=150); plt.show()
-save_json(ROOT / "tracin_summary.json", json.loads(json.dumps(summary, default=float)))
-print("Fertig. Zusammenfassung in", ROOT / "tracin_summary.json")
+    for f in ("format", "math_cot_orth"):
+        Ia = np.array(r["influence"]["adam"][f])
+        print(f"\n8 {d}: die 3 Zeilen mit dem größten Einfluss auf {f}")
+        for i in np.argsort(-Ia)[:3]:
+            row = r["rows"][i]
+            print(f"   [{Ia[i]:+.3g}] Bitte={row['request']}  Q: {row['prompt'][:100]}  A: {row['response'][:100]}")
+
+if R:
+    fig, ax = plt.subplots(1, 3, figsize=(15, 4))
+    for k, (d, r) in enumerate(R.items()):
+        cur = {int(s): v for s, v in r["curve"].items()}; st = sorted(cur)
+        for a, f in enumerate(("format", "math_terse", "math_cot")):
+            tot = cur[st[-1]][f] - cur[0][f]
+            ax[a].plot(st, [(cur[s][f] - cur[0][f]) / tot if abs(tot) > 1e-9 else np.nan for s in st], marker="o",
+                       ls="-" if grp(d) == "Top" else "--" if grp(d) == "Bottom" else ":", color=f"C{k}", label=f"{d} ({grp(d)})")
+    for a, f in enumerate(("format", "math_terse", "math_cot")):
+        ax[a].set_xscale("symlog", linthresh=1); ax[a].set_xlabel("Trainingsschritt"); ax[a].set_title(f"{f}: Anteil der Endänderung")
+        ax[a].axhline(0.5, color="grey", lw=0.5)
+    ax[0].legend(fontsize=7); plt.tight_layout(); plt.savefig(OUT / "tracin_verlauf.png", dpi=150); plt.show()
+save_json(OUT / "tracin_summary.json", summary)
+print("Fertig. Zusammenfassung in", OUT / "tracin_summary.json")
+if USE_DRIVE:
+    drive.flush_and_unmount()   # stellt sicher, dass alles in Drive angekommen ist
 """)
 
 
@@ -692,10 +902,10 @@ def build(path, n_shards, shard_id):
     nb = nbf.v4.new_notebook()
     cells = []
     for kind, src in CELLS:
-        src = src.replace("__N_SHARDS__", str(n_shards)).replace("__SHARD_ID__", str(shard_id))
+        src = src.replace("__N_SHARDS__", str(n_shards)).replace("__SHARD_ID__", str(shard_id)).replace("__TARGETS_B64__", TARGETS_B64)
         if kind == "md" and src.startswith("# TracIn") and n_shards > 1:
-            src = src.replace("**Ausführen.**", f"**Teilsitzung {shard_id + 1} von {n_shards}.** Die andere Teilsitzung parallel in einem "
-                              "zweiten Colab-Fenster starten; beide schreiben in denselben Drive-Ordner.\n\n**Ausführen.**")
+            src = src.replace("**Ausführen.**", f"**Teilsitzung {shard_id + 1} von {n_shards}.** Die anderen Teilsitzungen parallel in "
+                              "eigenen Colab-Fenstern starten; alle schreiben in denselben Drive-Ordner.\n\n**Ausführen.**")
         cells.append(nbf.v4.new_markdown_cell(src) if kind == "md" else nbf.v4.new_code_cell(src))
     nb.cells = cells
     nb.metadata["accelerator"] = "GPU"
@@ -705,8 +915,9 @@ def build(path, n_shards, shard_id):
 
 
 if __name__ == "__main__":
-    here = Path(__file__).parent
-    build(here / "tracin_a100.ipynb", 1, 0)
-    for s in range(2):
-        build(here / f"tracin_a100_shard{s}.ipynb", 2, s)
-    print("geschrieben:", [p.name for p in sorted(here.glob("tracin_a100*.ipynb"))])
+    for old in HERE.glob("tracin_a100_shard*.ipynb"):
+        old.unlink()
+    build(HERE / "tracin_a100.ipynb", 1, 0)
+    for s in range(3):
+        build(HERE / f"tracin_a100_shard{s}.ipynb", 3, s)
+    print("geschrieben:", [p.name for p in sorted(HERE.glob("tracin_a100*.ipynb"))])
