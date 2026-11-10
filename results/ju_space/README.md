@@ -29,8 +29,8 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    Fälle „B" (unverändert: 4 %). Eine volle Verschiebung um die Differenz der Kategorienmittel, aus der der Anteil
    entlang der Trennlinie entfernt ist, lässt die Trennlinie bei 0 %, die Ausgabe liest in 68 % „B" (echte B-Fragen: 73 %).
 5. **Ein Sprachmodell als Deutungswerkzeug** (Regel aus Beispielen benennen, blind an neuen prüfen) funktioniert, kann
-   aber eine echte Einheit nicht von einer beliebigen Richtung unterscheiden: Regeln für Zufallsrichtungen treffen neue
-   Beispiele zu 72 %, für SAE-Einheiten zu 77 %.
+   aber eine echte Einheit nicht von einer beliebigen Richtung unterscheiden: Regeln für Kontrollrichtungen
+   (Zufallsrichtungen und Richtungen aus Zufallswörtern) treffen neue Beispiele zu 72 %, für SAE-Einheiten zu 77 %.
 6. **Der fertige SAE ist an dieser Stelle ein schwaches Werkzeug.** Am letzten Token der Vorlage erklärt er 56 % der
    Varianz (auf Inhalts-Token 81 %). Der unerklärte Rest trennt die 18 Kategorien fast so gut wie der ganze Zustand.
 7. **Neuronen als Einheiten** (Nachtrag, Abschnitt 6). Die Aktivierungen sind in der Neuronen-Basis konzentriert, und
@@ -194,7 +194,7 @@ Lesart:
   und 78 % (A-typische) aktiv, bei echten B-Fragen zu 80 % und 32 %. Unter der Normalen-Verschiebung stehen sie auf
   halbem Weg (60 % / 55 %), bei Zufallsrichtungen bleiben sie unverändert.
 * Setzt man diese 20 Einheiten auf ihren B-Wert, sieht die Einheiten-Auslesung nach B aus (85 % / 28 %), die Trennlinie
-  liest in 6 % B, die Ausgabe in 16 %. Damit die Trennlinie „typisches B" meldet, müssen die Einheiten um den Faktor 4,2
+  liest in 6 % B (Mittel über alle acht Paare), die Ausgabe in 16 % (vier Paare). Damit die Trennlinie „typisches B" meldet, müssen die Einheiten um den Faktor 4,2
   übersteuert werden.
 * Ersetzt man den Zustand durch seine SAE-Rekonstruktion, ist das eine doppelt so große Verschiebung wie der Angriff
   selbst. Sie ändert das erste Token in 24 % der Fälle, aber nicht in Richtung B (5 %).
@@ -218,7 +218,7 @@ derselben Kategorie, damit „es ist das Thema" nicht die Lösung ist (ohne dies
 | Zufallsrichtungen | 4 | 69 % |
 
 In Klammern steht hier und in 6.6 das 95-%-Intervall des Mittels (Bootstrap über die Einheiten); einzelne SAE-Einheiten
-liegen zwischen 50 % und 100 %. Kontrollrichtungen zusammen 92 von 128 (72 %). Der Abstand der SAE-Einheiten dazu ist
+liegen zwischen 50 % und 100 %. Bei den Arten mit nur 4 Einheiten taugt ein solches Intervall nur als grober Anhalt. Kontrollrichtungen zusammen 92 von 128 (72 %). Der Abstand der SAE-Einheiten dazu ist
 nicht belastbar (p = 0,51).
 Die benannten Regeln der U-Achsen treffen ihre Namen teilweise: „widersprüchliche Belege" → „Widerspruch oder
 Herabsetzung, eine bestrittene Behauptung", „Unvollständigkeit" → „ein kleines Rätsel oder eine Lücke",

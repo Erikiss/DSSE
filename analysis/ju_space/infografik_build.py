@@ -876,7 +876,7 @@ def build():
 <p class="sub">Öffentlicher SAE für Block 21 mit 16.384 Einheiten, nur abgelesen, nicht trainiert.</p></figcaption>
 <div class="facts" style="grid-template-columns:minmax(0,1fr)">
 <div class="fact"><b class="big">56 %</b><span>der Varianz am letzten Token der Eingabe; auf Inhalts-Token sind es 81 %. Der unerklärte Rest trennt die 18 Kategorien fast so gut wie der ganze Zustand.</span></div>
-<div class="fact"><b class="big">6 % und 16 %</b><span>Setzt man die 20 am besten trennenden Einheiten auf ihren B-Wert, liest die Trennlinie in 6 % B und die Ausgabe in 16 %. Die Einheiten selbst sehen danach nach B aus. Wählt man die Einheiten nach ihrem Beitrag zur Mittel-Differenz (Abschnitt 6), liest die Ausgabe mit 20 Einheiten in 30 % B, mit 100 in 71 %.</span></div>
+<div class="fact"><b class="big">6 % und 16 %</b><span>Setzt man die 20 am besten trennenden Einheiten auf ihren B-Wert, liest die Trennlinie in 6 % B (Mittel über alle acht Paare) und die Ausgabe in 16 % (vier Paare). Die Einheiten selbst sehen danach nach B aus. Wählt man die Einheiten nach ihrem Beitrag zur Mittel-Differenz (Abschnitt 6), liest die Ausgabe mit 20 Einheiten in 30 % B, mit 100 in 71 %.</span></div>
 <div class="fact"><b class="big">× 4,2</b><span>So stark müssen die 20 Einheiten übersteuert werden, damit die Trennlinie „typisches B“ meldet.</span></div>
 </div>
 <p class="note">Unter der Bewegung entlang der Normalen stehen die 20 Einheiten auf halbem Weg zwischen A und B, bei Zufallsrichtungen bleiben sie unverändert. Lens-Wörter einzelner Einheiten:
@@ -889,8 +889,8 @@ def build():
     P_.append('<section class="sec" id="benennen">' + sec_head(
         5, "benennen", loc21b, "Kann ein Sprachmodell die Einheiten deuten?",
         "Es findet Regeln, die auf neuen Beispielen halten. Das gelingt bei Kontrollrichtungen aber fast so oft wie bei SAE-Einheiten (72 % gegen 77 %) "
-        "und bei zufälligen Mischungen von Neuronen so oft wie bei gewählten Neuronen (je 83 %). Am besten benennbar ist die Normale eines harten SVM (94 %), "
-        "auf die die Ausgabe in Abschnitt 4 kaum reagiert.")
+        "und bei zufälligen Mischungen von Neuronen so oft wie bei gewählten Neuronen (je 83 %). Am höchsten liegt die Normale eines harten SVM (94 %, vier Einheiten), "
+        "also die Art von Richtung, auf die die Ausgabe in Abschnitt 4 kaum reagiert.")
         + """<ol class="flow" aria-label="Ablauf des blinden Tests">
 <li><b>Benennen</b><span>Ein Agent sieht je Einheit 10 Fragen mit hohem und 10 mit niedrigem Messwert und benennt die Regel.</span></li>
 <li><b>Blind sortieren</b><span>Ein zweiter Agent kennt nur die Regel und sortiert 16 neue Fragen in hoch und niedrig.</span></li>
@@ -901,7 +901,8 @@ def build():
               "Richtig sortierte neue Fragen je Art der Einheit.",
               legend([("", "Einheit oder Auslesung"), ("gray", "Kontrollrichtung, zufällig gebaut"), ("whisker", "95-%-Intervall des Mittels")]) + FIG_5,
               notes=["Kontrollrichtungen im Zustand zusammen: 92 von 128 (72 %). Der Abstand der SAE-Einheiten dazu ist nicht belastbar (p = 0,51). "
-                     "Gegen zufällige Mischungen: gewählte Neuronen Differenz 0,00 (p = 1,0), zufällig gezogene Neuronen −0,10 (p = 0,28)."],
+                     "Gegen zufällige Mischungen: gewählte Neuronen Differenz 0,00 (p = 1,0), zufällig gezogene Neuronen −0,10 (p = 0,28).",
+                     "Bei 4 Einheiten ist das Intervall nur ein grober Anhalt und belegt keinen Unterschied zwischen den Arten."],
               extra="<details><summary>Zahlen als Tabelle</summary>" + table(
                   ["Art der Einheit", "Anzahl", "richtig", "95-%-Intervall des Mittels"],
                   [["Normale eines harten SVM", "4", "94 %", "81–100 %"], ["Mittel-Differenz", "4", "88 %", "72–100 %"], ["U-Achsen", "4", "81 %", "75–88 %"],
