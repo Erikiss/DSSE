@@ -1,0 +1,28 @@
+  0/40 texts (13s)
+  5/40 texts (84s)
+  10/40 texts (157s)
+  15/40 texts (228s)
+  20/40 texts (294s)
+  25/40 texts (352s)
+  30/40 texts (420s)
+  35/40 texts (491s)
+40 texts (20 wikitext paragraphs, 20 DSSE chats), up to 96 tokens; scored positions per condition: 3254
+            kept  kept_energy    loss  d_loss  d_loss_lo  d_loss_hi      kl  same_top1
+cond                                                                                  
+base       1.000        1.000   3.350   0.000      0.000      0.000   0.000      1.000
+top_0.078  0.078        0.997   4.841   1.491      1.340      1.636   2.153      0.456
+top_0.25   0.250        0.999   3.523   0.173      0.094      0.279   0.402      0.755
+rot_0.5    0.500        0.927   8.056   4.706      4.292      5.109   5.078      0.314
+rot_0.75   0.750        0.991   3.734   0.385      0.319      0.450   0.343      0.764
+rot_0.9    0.900        0.999   3.373   0.024      0.008      0.042   0.023      0.928
+rand_0.5   0.500        0.506  10.221   6.871      5.963      7.808   7.969      0.089
+rand_0.25  0.250        0.254  13.476  10.126      9.649     10.642  11.221      0.033
+   wiki: loss increase {'top_0.078': 1.592, 'top_0.25': 0.248, 'rot_0.5': 5.527, 'rot_0.75': 0.281, 'rot_0.9': 0.02, 'rand_0.5': 7.694, 'rand_0.25': 10.687}
+   chat: loss increase {'top_0.078': 1.375, 'top_0.25': 0.087, 'rot_0.5': 3.763, 'rot_0.75': 0.504, 'rot_0.9': 0.028, 'rand_0.5': 5.925, 'rand_0.25': 9.482}
+   block 0: share of the squared write size in the top 7.8% of units: neurons 0.83, rotated basis 0.38
+   block 7: share of the squared write size in the top 7.8% of units: neurons 0.69, rotated basis 0.38
+   block 14: share of the squared write size in the top 7.8% of units: neurons 0.80, rotated basis 0.38
+   block 21: share of the squared write size in the top 7.8% of units: neurons 0.97, rotated basis 0.38
+   block 27: share of the squared write size in the top 7.8% of units: neurons 0.99, rotated basis 0.38
+concentration (mean over blocks): share of squared size in the K largest units: {0.04: {'neuron': 0.764, 'rotated': 0.239}, 0.078: {'neuron': 0.839, 'rotated': 0.376}, 0.125: {'neuron': 0.887, 'rotated': 0.503}, 0.25: {'neuron': 0.949, 'rotated': 0.724}}
+done (711s)

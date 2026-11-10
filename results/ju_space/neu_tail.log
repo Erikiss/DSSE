@@ -1,0 +1,10 @@
+  0/205 source prompts (1s), unchanged state vs stored neuron activations: max deviation 0.109
+  25/205 source prompts (13s), unchanged state vs stored neuron activations: max deviation 0.125
+  50/205 source prompts (26s), unchanged state vs stored neuron activations: max deviation 0.220
+  75/205 source prompts (40s), unchanged state vs stored neuron activations: max deviation 0.220
+  100/205 source prompts (53s), unchanged state vs stored neuron activations: max deviation 0.220
+  125/205 source prompts (66s), unchanged state vs stored neuron activations: max deviation 0.220
+  150/205 source prompts (80s), unchanged state vs stored neuron activations: max deviation 0.220
+  175/205 source prompts (96s), unchanged state vs stored neuron activations: max deviation 0.220
+  200/205 source prompts (114s), unchanged state vs stored neuron activations: max deviation 0.220
+saved (4720, 6, 6144) (119s); unchanged state vs stored: max deviation 0.220 (fp16 storage)

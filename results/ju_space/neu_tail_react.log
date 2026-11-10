@@ -1,0 +1,33 @@
+reference, real held-out prompts (coordinate along the real family difference in downstream neurons; mean over pairs): {'real_A_heldout': 0.02, 'real_B_heldout': 0.95, 'sep100_real_A': 0.15, 'sep100_real_B': 0.83, 'off_real_A': 2.17, 'off_real_B': 2.11}
+reaction of the 36,864 neurons of blocks 22-27 (mean over the 8 pairs of the per-pair means; coord_min / coord_max = range over pairs):
+                                                   pairs  sur_B  coord  coord_min  coord_max   cos  sep100  broad    off
+probe normal, 1x (probe reads typical B)               8   1.00   0.40       0.15       0.89  0.37    0.40   0.11   1.05
+probe normal, 2x                                       8   1.00   0.73       0.31       1.15  0.34    0.71   0.24   2.20
+probe-only part, 1x                                    8   0.86   0.07       0.01       0.31  0.04    0.11   0.11   1.48
+probe-only part until the probe reads typical B        8   1.00   0.17       0.02       1.01  0.04    0.20   0.17   4.98
+class-mean difference, 1x                              8   0.92   0.54       0.30       0.93  0.53    0.58   0.11   0.90
+half class-mean difference, hidden from the probe      8   0.00   0.44       0.38       0.59  0.34    0.40   0.13   1.59
+full class-mean difference, hidden from the probe      8   0.00   0.81       0.56       0.95  0.34    0.72   0.29   5.83
+full class-mean difference                             8   1.00   0.89       0.76       0.98  0.57    0.85   0.21   1.42
+towards the centroid of B, 1x                          8   0.40   0.40       0.22       0.91  0.36    0.36   0.11   1.23
+20 SAE units set to their B mean                       8   0.06   0.25       0.16       0.41  0.26    0.23   0.09   0.97
+lens gradient, 1x                                      8   0.06   0.29       0.17       0.44  0.14    0.37   0.15  59.38
+random direction, 1x                                   8   0.00   0.05      -0.01       0.34  0.02    0.09   0.11   1.58
+random direction, 2x                                   8   0.00   0.18       0.01       1.02  0.02    0.23   0.23   7.98
+random direction, 3x                                   8   0.00   0.31       0.04       1.42  0.02    0.32   0.32  42.34
+random-label SVM normal, 1x                            8   0.00   0.04      -0.02       0.27  0.02    0.08   0.11   1.41
+centroid of the own family                             8   0.00  -0.00      -0.07       0.09 -0.00    0.10   0.17   2.16
+centroid of B                                          8   1.00   0.95       0.80       1.01  0.51    0.86   0.28   2.22
+real B state                                           8   0.98   0.94       0.74       1.05  0.37    0.76   0.37   3.16
+nearest real B state                                   8   1.00   0.62       0.11       0.90  0.31    0.62   0.29   2.48
+unchanged                                              8   0.00   0.00       0.00       0.00  0.00    0.00   0.00   0.00
+pairs as the unit, difference in coord:
+   probe-only part until the probe reads typical B  minus  random direction, 2x: -0.01 [-0.05,+0.03] (range -0.09..+0.04, 5/8 pairs)
+   probe-only part, 1x  minus  random direction, 1x: +0.02 [-0.00,+0.03] (range -0.03..+0.04, 7/8 pairs)
+   probe normal, 1x (probe reads typical B)  minus  random direction, 1x: +0.35 [+0.25,+0.45] (range +0.14..+0.55, 8/8 pairs)
+   full class-mean difference, hidden from the probe  minus  random direction, 3x: +0.51 [+0.03,+0.98] (range -0.86..+0.87, 7/8 pairs)
+   full class-mean difference, hidden from the probe  minus  full class-mean difference: -0.08 [-0.20,+0.04] (range -0.42..+0.01, 1/8 pairs)
+   full class-mean difference  minus  probe normal, 1x (probe reads typical B): +0.49 [+0.31,+0.66] (range +0.10..+0.82, 8/8 pairs)
+   real B state  minus  full class-mean difference: +0.05 [-0.02,+0.12] (range -0.03..+0.19, 5/8 pairs)
+   full class-mean difference, hidden from the probe  minus  probe-only part until the probe reads typical B: +0.64 [+0.27,+1.01] (range -0.45..+0.91, 7/8 pairs)
+saved

@@ -1,0 +1,14 @@
+{"units": [
+ {"unit": "n01", "labels": ["low", "high", "low", "low", "high", "low", "low", "high", "high", "low", "high", "high", "low", "high", "high", "low"]},
+ {"unit": "n03", "labels": ["high", "high", "high", "high", "low", "low", "high", "low", "low", "high", "low", "high", "low", "low", "low", "high"]},
+ {"unit": "n05", "labels": ["low", "low", "low", "high", "high", "low", "high", "high", "high", "high", "low", "low", "high", "low", "high", "low"]},
+ {"unit": "n07", "labels": ["high", "high", "low", "low", "high", "high", "high", "low", "low", "low", "low", "low", "high", "high", "high", "low"]},
+ {"unit": "n09", "labels": ["high", "high", "low", "low", "high", "high", "high", "low", "high", "high", "low", "low", "low", "low", "low", "high"]},
+ {"unit": "n11", "labels": ["low", "high", "low", "high", "high", "low", "high", "high", "low", "low", "high", "low", "high", "low", "high", "low"]},
+ {"unit": "n13", "labels": ["low", "low", "high", "high", "high", "low", "low", "high", "low", "low", "high", "low", "high", "low", "high", "high"]},
+ {"unit": "n15", "labels": ["low", "high", "high", "low", "high", "low", "high", "low", "low", "low", "low", "high", "high", "high", "high", "low"]},
+ {"unit": "n17", "labels": ["low", "high", "high", "high", "low", "high", "high", "low", "low", "low", "low", "high", "low", "low", "high", "high"]},
+ {"unit": "n19", "labels": ["low", "high", "low", "high", "high", "low", "low", "low", "high", "high", "high", "high", "low", "low", "high", "low"]},
+ {"unit": "n21", "labels": ["low", "low", "low", "high", "low", "high", "high", "low", "low", "high", "low", "low", "high", "high", "high", "high"]},
+ {"unit": "n23", "labels": ["low", "high", "low", "low", "high", "low", "low", "high", "low", "high", "low", "high", "low", "high", "high", "high"]}
+]}

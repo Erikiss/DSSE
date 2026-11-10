@@ -1,0 +1,13 @@
+resuming: 0 of 3540 patched runs already there
+  check against a full forward pass: block state 0.00e+00, final state via tail 2.67e-05
+  0/205 source prompts (1s), largest deviation of the unpatched tail from the stored final state so far: 2.67e-05
+  25/205 source prompts (15s), largest deviation of the unpatched tail from the stored final state so far: 4.96e-05
+  50/205 source prompts (31s), largest deviation of the unpatched tail from the stored final state so far: 8.39e-05
+  75/205 source prompts (45s), largest deviation of the unpatched tail from the stored final state so far: 8.39e-05
+  100/205 source prompts (61s), largest deviation of the unpatched tail from the stored final state so far: 8.39e-05
+  125/205 source prompts (75s), largest deviation of the unpatched tail from the stored final state so far: 8.39e-05
+  150/205 source prompts (134s), largest deviation of the unpatched tail from the stored final state so far: 8.39e-05
+  175/205 source prompts (199s), largest deviation of the unpatched tail from the stored final state so far: 8.39e-05
+  200/205 source prompts (220s), largest deviation of the unpatched tail from the stored final state so far: 8.39e-05
+unpatched tail vs stored final state, max over the sources of this run: 8.392333984375e-05
+saved 3540 patched runs (224s)

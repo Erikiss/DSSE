@@ -1,0 +1,8 @@
+block 6 gate (36864 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.135 / 0.059 | random directions 0.094 / 0.000 | upstream rotated 0.096 / 0.000 | downstream rotated 0.099 / 0.000   (26s)
+block 6 up   (36864 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.116 / 0.025 | random directions 0.094 / 0.000 | upstream rotated 0.096 / 0.000 | downstream rotated 0.096 / 0.000   (26s)
+block 14 gate (86016 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.211 / 0.130 | random directions 0.098 / 0.000 | upstream rotated 0.102 / 0.000 | downstream rotated 0.102 / 0.000   (78s)
+block 14 up   (86016 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.170 / 0.053 | random directions 0.098 / 0.000 | upstream rotated 0.101 / 0.000 | downstream rotated 0.101 / 0.000   (78s)
+block 22 gate (135168 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.197 / 0.131 | random directions 0.101 / 0.000 | upstream rotated 0.101 / 0.000 | downstream rotated 0.101 / 0.000   (159s)
+block 22 up   (135168 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.141 / 0.056 | random directions 0.100 / 0.000 | upstream rotated 0.101 / 0.000 | downstream rotated 0.101 / 0.000   (159s)
+block 27 gate (165888 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.234 / 0.375 | random directions 0.101 / 0.000 | upstream rotated 0.102 / 0.000 | downstream rotated 0.103 / 0.000   (257s)
+block 27 up   (165888 upstream neurons): strongest match, median / share above 0.3 -> neurons 0.201 / 0.319 | random directions 0.102 / 0.000 | upstream rotated 0.102 / 0.000 | downstream rotated 0.105 / 0.000   (257s)

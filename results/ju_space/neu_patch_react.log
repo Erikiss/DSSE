@@ -1,0 +1,29 @@
+pairs with a usable output measure: [3, 4, 5, 6, 7]; real held-out B prompts read as B by the output in pairs [3, 4, 5, 6]: 0.73
+units set to their mean on the target family B (direct effect on the block-21 state), mean over pairs:
+              class_mean_share  probe_B  second_probe_B  centroid_rule_B  final_state  out_B_pairs3to6  out_dR_pairs3to6  out_B_pair7
+name                                                                                                                                 
+neu_top20                 0.19     0.03            0.06             0.03         0.17             0.09              0.06         0.06
+neu_top100                0.37     0.13            0.14             0.16         0.35             0.28              0.33         0.28
+neu_top300                0.53     0.53            0.53             0.67         0.50             0.53              0.65         0.94
+neu_top1000               0.68     0.90            0.83             0.91         0.64             0.69              0.94         1.00
+neu_top3000               0.75     0.98            0.96             0.99         0.71             0.68              0.97         1.00
+mlp_all                   0.79     1.00            1.00             1.00         0.73             0.75              1.07         1.00
+attn_all                  0.21     0.11            0.11             0.07         0.24             0.04              0.08         0.03
+neu_rand20                0.00     0.00            0.02             0.01         0.00             0.04              0.00         0.03
+neu_rand100               0.00     0.00            0.03             0.01         0.00             0.04             -0.00         0.03
+neu_rand300               0.00     0.00            0.03             0.01         0.00             0.04             -0.00         0.03
+neu_rand1000              0.01     0.00            0.03             0.01         0.01             0.04             -0.00         0.06
+neu_rand3000              0.03     0.00            0.03             0.01         0.02             0.04             -0.00         0.06
+sae_top20                 0.30     0.07            0.12             0.09         0.34             0.30              0.43         0.44
+sae_top100                0.51     0.56            0.54             0.61         0.66             0.71              0.95         1.00
+sae_top300                0.59     0.85            0.76             0.72         0.77             0.77              1.08         1.00
+per pair, output reads B:
+name  neu_top20  neu_top100  neu_top300  neu_top1000  neu_top3000  mlp_all  attn_all  neu_rand20  neu_rand100  neu_rand300  neu_rand1000  neu_rand3000  sae_top20  sae_top100  sae_top300
+pair                                                                                                                                                                                     
+3          0.06        0.06        0.16         0.26         0.19     0.19      0.06        0.06         0.06         0.06          0.06          0.06       0.13        0.39        0.61
+4          0.03        0.24        0.69         1.00         1.00     1.00      0.00        0.00         0.00         0.00          0.00          0.00       0.79        1.00        1.00
+5          0.04        0.11        0.32         0.57         0.57     0.82      0.07        0.04         0.04         0.04          0.04          0.07       0.11        0.50        0.46
+6          0.22        0.72        0.94         0.94         0.97     1.00      0.03        0.06         0.06         0.06          0.06          0.03       0.19        0.97        1.00
+7          0.06        0.28        0.94         1.00         1.00     1.00      0.03        0.03         0.03         0.03          0.06          0.06       0.44        1.00        1.00
+for comparison, from the earlier run: {'orig': 0.04, 'sae20_c1': 0.16, 'dmfull_1': 0.67, 'dmblind_1': 0.68, 'protoB': 1.0, 'swap': 0.79}
+saved

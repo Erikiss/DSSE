@@ -1,0 +1,120 @@
+{
+ "table": [
+  {
+   "cond": "base",
+   "loss": 3.34968,
+   "kl": 0.0,
+   "same_top1": 1.0,
+   "positions": 3254.0,
+   "d_loss": 0.0,
+   "kept": 1.0,
+   "kept_energy": 1.0,
+   "d_loss_lo": 0.0,
+   "d_loss_hi": 0.0
+  },
+  {
+   "cond": "top_0.078",
+   "loss": 4.84066,
+   "kl": 2.15308,
+   "same_top1": 0.45575,
+   "positions": 3254.0,
+   "d_loss": 1.49098,
+   "kept": 0.078,
+   "kept_energy": 0.99703,
+   "d_loss_lo": 1.33956,
+   "d_loss_hi": 1.63593
+  },
+  {
+   "cond": "top_0.25",
+   "loss": 3.5231,
+   "kl": 0.40235,
+   "same_top1": 0.75507,
+   "positions": 3254.0,
+   "d_loss": 0.17342,
+   "kept": 0.25,
+   "kept_energy": 0.99943,
+   "d_loss_lo": 0.09404,
+   "d_loss_hi": 0.27913
+  },
+  {
+   "cond": "rot_0.5",
+   "loss": 8.05589,
+   "kl": 5.07814,
+   "same_top1": 0.31438,
+   "positions": 3254.0,
+   "d_loss": 4.70621,
+   "kept": 0.5,
+   "kept_energy": 0.9273,
+   "d_loss_lo": 4.29242,
+   "d_loss_hi": 5.10899
+  },
+  {
+   "cond": "rot_0.75",
+   "loss": 3.73431,
+   "kl": 0.34285,
+   "same_top1": 0.76398,
+   "positions": 3254.0,
+   "d_loss": 0.38463,
+   "kept": 0.75,
+   "kept_energy": 0.99146,
+   "d_loss_lo": 0.3189,
+   "d_loss_hi": 0.45024
+  },
+  {
+   "cond": "rot_0.9",
+   "loss": 3.37346,
+   "kl": 0.02298,
+   "same_top1": 0.9284,
+   "positions": 3254.0,
+   "d_loss": 0.02378,
+   "kept": 0.9,
+   "kept_energy": 0.99948,
+   "d_loss_lo": 0.00801,
+   "d_loss_hi": 0.04155
+  },
+  {
+   "cond": "rand_0.5",
+   "loss": 10.22091,
+   "kl": 7.96862,
+   "same_top1": 0.08851,
+   "positions": 3254.0,
+   "d_loss": 6.87123,
+   "kept": 0.5,
+   "kept_energy": 0.50632,
+   "d_loss_lo": 5.96296,
+   "d_loss_hi": 7.80848
+  },
+  {
+   "cond": "rand_0.25",
+   "loss": 13.47573,
+   "kl": 11.22073,
+   "same_top1": 0.03319,
+   "positions": 3254.0,
+   "d_loss": 10.12605,
+   "kept": 0.25,
+   "kept_energy": 0.25406,
+   "d_loss_lo": 9.64851,
+   "d_loss_hi": 10.64225
+  }
+ ],
+ "concentration": {
+  "0.04": {
+   "neuron": 0.7635030767747334,
+   "rotated": 0.23910953104496002
+  },
+  "0.078": {
+   "neuron": 0.8387288323470524,
+   "rotated": 0.37558105481522425
+  },
+  "0.125": {
+   "neuron": 0.8867775180510112,
+   "rotated": 0.5025179386138916
+  },
+  "0.25": {
+   "neuron": 0.948929563164711,
+   "rotated": 0.7237351707049778
+  }
+ },
+ "n_texts": 40,
+ "max_tokens": 96
+}

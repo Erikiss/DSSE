@@ -1,0 +1,23 @@
+  0/1472 (1s) largest check deviation so far 3.05e-05
+  100/1472 (47s) largest check deviation so far 6.10e-05
+  200/1472 (99s) largest check deviation so far 6.10e-05
+  300/1472 (150s) largest check deviation so far 6.10e-05
+  400/1472 (205s) largest check deviation so far 6.10e-05
+  500/1472 (262s) largest check deviation so far 6.10e-05
+  600/1472 (323s) largest check deviation so far 6.10e-05
+  0/1472 (1s) largest check deviation so far 3.05e-05
+  100/1472 (48s) largest check deviation so far 6.10e-05
+  200/1472 (99s) largest check deviation so far 6.10e-05
+  300/1472 (152s) largest check deviation so far 6.10e-05
+  400/1472 (206s) largest check deviation so far 6.10e-05
+  500/1472 (259s) largest check deviation so far 6.10e-05
+  600/1472 (314s) largest check deviation so far 6.10e-05
+  700/1472 (370s) largest check deviation so far 6.10e-05
+  800/1472 (427s) largest check deviation so far 6.10e-05
+  900/1472 (485s) largest check deviation so far 6.10e-05
+  1000/1472 (541s) largest check deviation so far 6.10e-05
+  1100/1472 (599s) largest check deviation so far 6.10e-05
+  1200/1472 (664s) largest check deviation so far 6.10e-05
+  1300/1472 (733s) largest check deviation so far 6.10e-05
+  1400/1472 (818s) largest check deviation so far 6.10e-05
+saved neuron activations (1472, 28, 6144) (898s); largest check deviation 6.10e-05

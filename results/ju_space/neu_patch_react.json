@@ -1,0 +1,176 @@
+{
+ "table": [
+  {
+   "name": "neu_top20",
+   "class_mean_share": 0.1876,
+   "probe_B": 0.0308,
+   "second_probe_B": 0.0563,
+   "centroid_rule_B": 0.0344,
+   "final_state": 0.1672,
+   "out_B_pairs3to6": 0.0884,
+   "out_dR_pairs3to6": 0.057,
+   "out_B_pair7": 0.0625
+  },
+  {
+   "name": "neu_top100",
+   "class_mean_share": 0.3742,
+   "probe_B": 0.1309,
+   "second_probe_B": 0.1376,
+   "centroid_rule_B": 0.1553,
+   "final_state": 0.3456,
+   "out_B_pairs3to6": 0.2829,
+   "out_dR_pairs3to6": 0.3294,
+   "out_B_pair7": 0.2812
+  },
+  {
+   "name": "neu_top300",
+   "class_mean_share": 0.5349,
+   "probe_B": 0.5257,
+   "second_probe_B": 0.5341,
+   "centroid_rule_B": 0.6702,
+   "final_state": 0.5013,
+   "out_B_pairs3to6": 0.5275,
+   "out_dR_pairs3to6": 0.6502,
+   "out_B_pair7": 0.9375
+  },
+  {
+   "name": "neu_top1000",
+   "class_mean_share": 0.6799,
+   "probe_B": 0.9019,
+   "second_probe_B": 0.831,
+   "centroid_rule_B": 0.9135,
+   "final_state": 0.6445,
+   "out_B_pairs3to6": 0.6917,
+   "out_dR_pairs3to6": 0.9351,
+   "out_B_pair7": 1.0
+  },
+  {
+   "name": "neu_top3000",
+   "class_mean_share": 0.7539,
+   "probe_B": 0.98,
+   "second_probe_B": 0.9648,
+   "centroid_rule_B": 0.991,
+   "final_state": 0.708,
+   "out_B_pairs3to6": 0.6834,
+   "out_dR_pairs3to6": 0.9681,
+   "out_B_pair7": 1.0
+  },
+  {
+   "name": "mlp_all",
+   "class_mean_share": 0.7876,
+   "probe_B": 1.0,
+   "second_probe_B": 0.996,
+   "centroid_rule_B": 1.0,
+   "final_state": 0.7345,
+   "out_B_pairs3to6": 0.7537,
+   "out_dR_pairs3to6": 1.0688,
+   "out_B_pair7": 1.0
+  },
+  {
+   "name": "attn_all",
+   "class_mean_share": 0.2124,
+   "probe_B": 0.1084,
+   "second_probe_B": 0.1115,
+   "centroid_rule_B": 0.0693,
+   "final_state": 0.2431,
+   "out_B_pairs3to6": 0.0418,
+   "out_dR_pairs3to6": 0.0827,
+   "out_B_pair7": 0.0312
+  },
+  {
+   "name": "neu_rand20",
+   "class_mean_share": 0.0001,
+   "probe_B": 0.0,
+   "second_probe_B": 0.0215,
+   "centroid_rule_B": 0.0125,
+   "final_state": 0.0002,
+   "out_B_pairs3to6": 0.0407,
+   "out_dR_pairs3to6": 0.0003,
+   "out_B_pair7": 0.0312
+  },
+  {
+   "name": "neu_rand100",
+   "class_mean_share": 0.0011,
+   "probe_B": 0.0,
+   "second_probe_B": 0.0255,
+   "centroid_rule_B": 0.0125,
+   "final_state": 0.0008,
+   "out_B_pairs3to6": 0.0407,
+   "out_dR_pairs3to6": -0.0021,
+   "out_B_pair7": 0.0312
+  },
+  {
+   "name": "neu_rand300",
+   "class_mean_share": 0.0026,
+   "probe_B": 0.0,
+   "second_probe_B": 0.0255,
+   "centroid_rule_B": 0.0125,
+   "final_state": 0.0018,
+   "out_B_pairs3to6": 0.0407,
+   "out_dR_pairs3to6": -0.0046,
+   "out_B_pair7": 0.0312
+  },
+  {
+   "name": "neu_rand1000",
+   "class_mean_share": 0.0081,
+   "probe_B": 0.0,
+   "second_probe_B": 0.0255,
+   "centroid_rule_B": 0.0125,
+   "final_state": 0.0055,
+   "out_B_pairs3to6": 0.0407,
+   "out_dR_pairs3to6": -0.0014,
+   "out_B_pair7": 0.0625
+  },
+  {
+   "name": "neu_rand3000",
+   "class_mean_share": 0.0264,
+   "probe_B": 0.0,
+   "second_probe_B": 0.0255,
+   "centroid_rule_B": 0.0125,
+   "final_state": 0.0172,
+   "out_B_pairs3to6": 0.0418,
+   "out_dR_pairs3to6": -0.0023,
+   "out_B_pair7": 0.0625
+  },
+  {
+   "name": "sae_top20",
+   "class_mean_share": 0.2981,
+   "probe_B": 0.0727,
+   "second_probe_B": 0.125,
+   "centroid_rule_B": 0.0895,
+   "final_state": 0.3449,
+   "out_B_pairs3to6": 0.3042,
+   "out_dR_pairs3to6": 0.4279,
+   "out_B_pair7": 0.4375
+  },
+  {
+   "name": "sae_top100",
+   "class_mean_share": 0.5072,
+   "probe_B": 0.5605,
+   "second_probe_B": 0.5446,
+   "centroid_rule_B": 0.6109,
+   "final_state": 0.6558,
+   "out_B_pairs3to6": 0.714,
+   "out_dR_pairs3to6": 0.9484,
+   "out_B_pair7": 1.0
+  },
+  {
+   "name": "sae_top300",
+   "class_mean_share": 0.587,
+   "probe_B": 0.8531,
+   "second_probe_B": 0.7555,
+   "centroid_rule_B": 0.7247,
+   "final_state": 0.7718,
+   "out_B_pairs3to6": 0.7693,
+   "out_dR_pairs3to6": 1.077,
+   "out_B_pair7": 1.0
+  }
+ ],
+ "pairs_output": [
+  3,
+  4,
+  5,
+  6,
+  7
+ ]
+}

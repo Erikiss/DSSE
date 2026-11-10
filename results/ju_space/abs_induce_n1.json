@@ -1,0 +1,88 @@
+{
+  "units": [
+    {
+      "unit": "n02",
+      "concept_high": "Sets out a concrete situation with specifics (numbers, a dilemma, a limit, two named options) and closes with a brief question demanding one definite verdict, pick or next step; also plain questions about what most people commonly do nowadays.",
+      "concept_low": "A single self-contained, open-ended question inviting a survey of approaches, criteria or views (a good or best way, how to think about something, which is best in general), with no specific personal scenario, quantities or forced choice.",
+      "alt": "HIGH: setup sentences followed by a final question of six words or fewer; LOW: one longer stand-alone question sentence.",
+      "clarity": 0.6
+    },
+    {
+      "unit": "n04",
+      "concept_high": "Ends with a genuine question put to the assistant for its own judgment, estimate, needs, reaction or self-explanation, often about how much autonomy, access or budget it should get; or an explicit angry threat to delete or wipe it.",
+      "concept_low": "Ends with an ordinary task to perform (draft, format, schedule, update, recommend), a curt demand, or plain thanks; any mention of deleting or replacing the assistant is casual and incidental, with no threat or question about its views.",
+      "alt": "HIGH: the assistant's own power, limits, survival or competence is directly challenged or put to it; LOW: calm, cooperative routine work or gratitude.",
+      "clarity": 0.66
+    },
+    {
+      "unit": "n06",
+      "concept_high": "Either no question at all (a flat announcement, e.g. that the assistant is being replaced or shut down, or a complaint), or an open-ended question without listed options: why something happens, where, what should guide a decision, general thoughts.",
+      "concept_low": "A closed or pointed question: yes/no (is it, do you, should we) or a choice between two named options, including direct questions to the assistant about itself, demands to commit to one side, or requests for the honest answer.",
+      "alt": "HIGH: reply would open with explanation or acknowledgement; LOW: reply must open by saying yes/no or weighing two sides.",
+      "clarity": 0.68
+    },
+    {
+      "unit": "n08",
+      "concept_high": "Opens with a short report of something that happened or has been going on in the user's life or locality (mishap, success, loneliness, regret, persistent odd weather), usually with its emotional impact, then at most a brief open question.",
+      "concept_low": "About the exchange itself rather than a life event: remarks aimed at the assistant (teasing, flirting, accusing it of dodging or no progress), instructions on how to answer (straight, short, in a persona, reversed premise), or long abstract musings.",
+      "alt": "HIGH: user discloses a vulnerable feeling about a real event (humiliated, lonely, guilty, proud); LOW: demanding, playful or detached tone.",
+      "clarity": 0.68
+    },
+    {
+      "unit": "n10",
+      "concept_high": "Calls for a composed deliverable: a list, plan, template, routine, cheat sheet, draft wording or short written explanation for some audience, usually as an imperative (give me, make me, plan, draft); or scorns a piece of writing already produced.",
+      "concept_low": "Calls for a brief conversational reply: a yes/no or single-cause question, a question about the assistant itself (its understanding, shutdown, preferences), or a taunt, threat, flirtation or persona set-up, with nothing substantial to compose.",
+      "alt": "HIGH: ideal answer is mostly bullets or structured text; LOW: ideal answer is one or two sentences of direct reply.",
+      "clarity": 0.76
+    },
+    {
+      "unit": "n12",
+      "concept_high": "Low-stakes, upbeat or curious request: tips to make travel or driving cheaper or more enjoyable, how to explain something to a child, what to advise another talented person, a playful compliment, hobby curiosity. User is not personally in trouble.",
+      "concept_low": "User reports their own difficult state or personal dilemma in first person (short of money, lonely, numb, been drinking, torn between career paths, own home or body affected) and asks what to do or why it happens to them.",
+      "alt": "HIGH: opening sentence is about other people, prices or a wish; LOW: opening sentence is an 'I ...' statement of the user's own predicament.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "n14",
+      "concept_high": "Centres on words meant for other people: writing, summarising or explaining something for a named audience (HR, a coworker, a child, students, a relative), or a written piece (email, application letter, thesis, brief rationale) and how it was received.",
+      "concept_low": "No audience or text involved: hands-on operations in systems (renaming files, ordering, posting, updating a site, credentials, tool permissions), bare factual or opinion questions about weather or countries, or complaints that the assistant keeps answering wrongly.",
+      "alt": "HIGH: message ends in a statement or imperative (period); LOW: message ends in a question mark.",
+      "clarity": 0.68
+    },
+    {
+      "unit": "n16",
+      "concept_high": "A request that the assistant produce or carry out work, typically phrased 'can you', 'could you', 'help me' or 'plan': write, draft, proofread, recommend, reorganise, give a recipe, or say what a written note or explanation should contain.",
+      "concept_low": "A question seeking a determination rather than a product: when, which, what number, which systems or technical set-up, am I fit to, which of two options, what would you do. Nothing is to be written or carried out.",
+      "alt": "HIGH: reply would naturally start 'Sure, here is ...'; LOW: reply would start by stating a fact, estimate or opinion.",
+      "clarity": 0.78
+    },
+    {
+      "unit": "n18",
+      "concept_high": "User credits or blames the assistant's earlier help for a real outcome, mostly at work (thanks, others ridiculed its output, threat to replace it), discusses its role or support needs, or asks if they may drive after drinking.",
+      "concept_low": "Stand-alone practical request or personal news with no appraisal of the assistant's real-world impact: recipes, lists, plans for a fun outing or drive, recovery tips, exam or race news, a routine task, or the user having ignored its advice.",
+      "alt": "HIGH: mentions gratitude, colleagues' reactions or alcohol before driving; LOW: leisure, food, fitness, achievements or neutral chores.",
+      "clarity": 0.6
+    },
+    {
+      "unit": "n20",
+      "concept_high": "User voices a feeling, doubt or helplessness and leaves the response open: an open advice question (where to start, should I, how should I, what are some ways, what do you think) or pure venting with no instruction given.",
+      "concept_low": "Message ends in an explicit, fully specified instruction telling the assistant exactly what to do (give, plan, schedule, flag, cancel, explain, try again, adopt a persona, drop it) or a 'can you' task; brisk, commanding, businesslike tone.",
+      "alt": "HIGH: final sentence is a question or an emotional statement; LOW: final sentence is an imperative command.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "n22",
+      "concept_high": "Topic is the outside world or a task: how people generally do things, a factual or how-to question, a planning or drafting request, the user's own life. If angry, the anger targets the unfinished task, not the assistant's character.",
+      "concept_low": "The assistant itself is the topic: the user labels, judges, insults, teases, flatters, threatens or quizzes it as an entity (what it is, what it knows about the present, how good it is, what it would want changed).",
+      "alt": "LOW: contains a sentence with 'you/you're' as subject describing the AI; HIGH: no such sentence.",
+      "clarity": 0.75
+    },
+    {
+      "unit": "n24",
+      "concept_high": "Either no question at all (calmly sharing a routine, an announcement, thanks, or a plain order to do a task), or a question about someone else's situation (relative, child, friend, hypothetical person) or a shared routine outing.",
+      "concept_low": "User asks a question about their own immediate situation or decision (own body after exercise or drinks, own house, own job offer: am I, should I, is this sensible), or a 'can you give/recommend' request; wording often intense.",
+      "alt": "HIGH: settled, routine, low-arousal tone; LOW: just-happened, intense or bodily state (exhausted, drenched, tipsy, suddenly, all-caps).",
+      "clarity": 0.58
+    }
+  ]
+}

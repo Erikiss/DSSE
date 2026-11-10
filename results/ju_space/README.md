@@ -1,7 +1,7 @@
 # J-Space, U-Space, Trennlinien und deutbare Einheiten auf DSSE (CPU-Lauf vom 10. November 2026)
 
 Basismodell Qwen3-1.7B, nicht feinjustiert. Skripte: `analysis/ju_space/`. Alle Zahlen stammen aus einem Lauf auf
-4 CPU-Kernen; drei unabhängige Prüfdurchgänge haben Code und Deutung nachgerechnet (`review_*.json`), ihre Korrekturen
+4 CPU-Kernen; vier unabhängige Prüfdurchgänge haben Code und Deutung nachgerechnet (`review_*.json`), ihre Korrekturen
 sind eingearbeitet.
 
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
@@ -30,6 +30,10 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    Beispiele zu 72 %, für SAE-Einheiten zu 77 %.
 6. **Der fertige SAE ist an dieser Stelle ein schwaches Werkzeug.** Am letzten Token der Vorlage erklärt er 56 % der
    Varianz (auf Inhalts-Token 81 %). Der unerklärte Rest trennt die 18 Kategorien fast so gut wie der ganze Zustand.
+7. **Neuronen als Einheiten** (Nachtrag, Abschnitt 6). Die Aktivierungen sind in der Neuronen-Basis konzentriert, und
+   300 bis 1.000 gezielt gewählte von 135.000 Neuronen bewegen die Ausgabe wie die volle Kategoriendifferenz (zufällige:
+   gar nicht). Kompakter bleiben SAE-Einheiten (100 leisten dasselbe wie 1.000 Neuronen), und benennen lassen sich
+   zufällige Mischungen von Neuronen genauso gut wie Neuronen.
 
 ## Material
 
@@ -210,6 +214,153 @@ Die benannten Regeln der U-Achsen treffen ihre Namen teilweise: „widersprüchl
 Herabsetzung, eine bestrittene Behauptung", „Unvollständigkeit" → „ein kleines Rätsel oder eine Lücke",
 „allgemeine Unsicherheit" → „eine Einschätzung zu etwas Zweifelhaftem oder nicht Prüfbarem".
 
+## 6 Neuronen als Einheiten (Nachtrag zu Goodfire, „Neurons as an Interpretable Basis", 10. November 2026)
+
+Der Aufsatz (Tigges, Kowal, McGrath, Lewis, Cammarata) untersucht die MLP-Neuronen von Qwen3.6-35B-A3B, einem
+Mixture-of-Experts-Modell, und behauptet dreierlei: Wenige starke Aktivierungen genügen (nur 7,8 % der vom Router gewählten
+Neuronen je Schicht behalten: Verlust +0,054 nats), ein Neuron hat wenige Rollen (69 % der Pole eine dominante), und von
+Agenten geschriebene Beschreibungen sagen sein Feuern vorher (86–95 %). Der zugehörige Atlas zeigt 3.000 Pole dieses
+Modells im Browser; für Qwen3-1.7B enthält er nichts, eine Datenschnittstelle gibt es nicht, und die Nutzungsbedingungen
+der Seite untersagen automatisierten Zugriff. Ich habe deshalb nichts daraus übernommen, sondern die übertragbaren
+Aussagen an unserem dichten Qwen3-1.7B (28 Blöcke mit je 6.144 Neuronen) nachgemessen. Ein „Neuron" ist wie dort eine
+Einheit der MLP-Zwischenschicht nach der Nichtlinearität; was es in den Zustand schreibt, ist Aktivierung mal Ausgangsgewicht.
+
+### 6.1 Wenige starke Neuronen? (40 kurze Texte, 3.254 bewertete Positionen; Verlustanstieg in nats)
+
+An jedem Token und in jedem Block bleiben nur die K größten Aktivierungen, der Rest wird auf null gesetzt.
+
+| behalten | Neuronen-Basis | zufällig gedrehte Basis | zufällige Auswahl |
+|---|---|---|---|
+| 90 % | – | +0,02 | – |
+| 75 % | – | +0,39 | – |
+| 50 % | +0,02 | +4,7 | +6,9 |
+| 25 % | +0,17 | +7,6 | +10,1 |
+| 12,5 % | +0,70 | +9,9 | – |
+| 7,8 % | +1,49 | +10,2 | +11,8 |
+| 4 % | +2,93 | – | – |
+
+Entfernt man umgekehrt nur die stärksten 7,8 %: +10,8.
+
+* Nach Anzahl ist die Neuronen-Basis rund dreimal sparsamer als eine gedrehte (gleicher Schaden bei 25 % gegen etwa 80 %).
+  Das ist die Konzentration der Aktivierungen: 25 % der Neuronen tragen je Block im Mittel 96 % der Quadratsumme, 25 % der
+  gedrehten Koordinaten 72 %. Ob die Neuronen-Basis darüber hinaus besser ist, bleibt offen; bei gleichem behaltenem Signal
+  hängt die Antwort davon ab, wie man die Blöcke gewichtet.
+* So sparsam wie das große Modell ist das kleine nicht. Dort kostet 7,8 % behalten +0,054, hier +1,49. Verlustarm (+0,02)
+  ist erst die Hälfte. Die beiden Zahlen sind nicht direkt vergleichbar: Dort sind 96,5 % einer Schicht schon durch den
+  Router stumm, und die immer aktiven Neuronen bleiben unangetastet.
+* Die Spalte `kept_energy` in `neu_sparsity_extra.*` ist über alle Blöcke summiert und wird zu etwa 75 % von Block 27
+  bestimmt. Für einen Vergleich bei gleichem Signal taugt sie nicht.
+
+### 6.2 Verdrahtung (nur Gewichte)
+
+Anteil der Neuronen eines Blocks, deren Eingangsvektor mit dem Ausgangsvektor irgendeines früheren Neurons einen Kosinus
+über 0,3 hat: Block 6: 5,9 %, Block 14: 13,0 %, Block 22: 13,1 %, Block 27: 37,5 %. Mit Zufallsrichtungen oder gedrehten
+Basen auf einer der beiden Seiten: 0,0 %. Sucht man wie im Aufsatz nur im Block direkt davor, sind es 3,8 / 6,6 / 5,7 /
+21,7 % (dort für sein Modell 0,2–27 % gegen 0,0–0,1 %). Das ist eine geometrische Ausrichtung zwischen einzelnen
+Neuronen mit vielen verschiedenen Partnern. Dass sie auch wirkt, ist damit nicht gezeigt: Am letzten Token der Frage
+erklärt der ausgerichtete Partner im Median unter 0,2 % der Schwankung im Eingang des lesenden Neurons.
+
+### 6.3 Trennen und Zuschreiben am letzten Token der Frage
+
+| Einheiten | Anzahl | beste einzelne, AUROC | 20 Einheiten, Trefferquote |
+|---|---|---|---|
+| SAE-Einheiten (Block 21) | 16.384 | 0,948 | 94,7 % |
+| Neuronen von Block 21 | 6.144 | 0,976 | 97,4 % |
+| Neuronen der Blöcke 0–21 | 135.168 | 0,982 | 98,3 % |
+| Block-21-Neuronen in gedrehter Basis | 6.144 | 0,972 | 97,0 % |
+| Zustand in zufälliger Basis | 2.048 | 0,973 | 97,4 % |
+
+Alle 153 Kategorienpaare, drei Aufteilungen, an zurückgehaltenen Fragen geprüft. Einzelne Neuronen trennen besser als
+einzelne SAE-Einheiten, gedrehte und zufällige Richtungen aber genauso gut. Trennschärfe zeichnet die Neuronen nicht aus.
+Die Aufgabe liegt nahe an ihrer Obergrenze (die Mittel-Differenz allein erreicht 0,99), und der SAE ist an diesem Token
+im Nachteil (seine beste Einheit ist nur bei 63 % der Fragen aktiv).
+
+Zuschreibung (acht Paare): Von der Differenz zweier Kategorienmittel nach Block 21 schreiben die MLPs am letzten Token
+78 % und die Attention dort 22 %; 85 % entstehen in den Blöcken 18–21. Die 123 größten Neuronen-Beiträge (von 135.168)
+summieren sich zur Hälfte des MLP-Anteils, etwa 1.400 zu 90 %. In gedrehter Basis wären es 1.480 und 9.050.
+Zwei Einschränkungen aus der Nachprüfung: Dieselben Anteile und Zahlen ergeben sich für eine Zufallsdifferenz zwischen
+zwei Hälften derselben Kategorie (75 %, 87 %, 136 und 1.595). Sie beschreiben also, wie konzentriert die späte Aktivität
+in der Neuronen-Basis ist, nicht speziell die Kategorieninformation. Und die Beiträge haben beide Vorzeichen (brutto das
+2,2-Fache von netto). SAE-Einheiten brauchen für denselben Anteil zwei- bis dreimal weniger Einheiten, lassen aber rund
+40 % der Differenz unerklärt.
+
+### 6.4 Wirken die Neuronen auch? (Zustand nach Block 21 verändert, Ausgabe gemessen wie in 4.2, vier Paare)
+
+Eine Gruppe von Einheiten wird auf ihren Mittelwert der Zielkategorie gesetzt; in den Zustand geht ein, was sich dadurch
+an ihren geschriebenen Vektoren ändert.
+
+| Gruppe | Anteil der Mittel-Differenz | Ausgabe liest B |
+|---|---|---|
+| unverändert | 0 | 4 % |
+| 20 / 100 / 300 / 1.000 / 3.000 führende Neuronen | 0,19 / 0,37 / 0,53 / 0,68 / 0,75 | 9 / 28 / 53 / 69 / 68 % |
+| alle Neuronen (der von MLPs geschriebene Teil) | 0,79 | 75 % |
+| der von der Attention geschriebene Teil | 0,21 | 4 % |
+| 20 … 3.000 zufällige Neuronen | 0,00–0,03 | 4 % |
+| 20 / 100 / 300 führende SAE-Einheiten (gleiches Auswahlkriterium) | 0,30 / 0,51 / 0,59 | 30 / 71 / 77 % |
+| volle Mittel-Differenz (aus 4.2) | 1,00 | 67 % |
+| echte B-Fragen | – | 73 % |
+
+* 300 gezielt gewählte Neuronen (0,2 %) bewegen die Ausgabe zu 53 %, 1.000 so stark wie die volle Verschiebung.
+  Zufällige Neuronen bewirken nichts.
+* Kompakter sind die SAE-Einheiten: 100 davon leisten, was 1.000 Neuronen leisten. Entscheidend ist die Auswahl nach
+  dem Beitrag zur Mittel-Differenz. Die in 4.3 nach Trennschärfe gewählten 20 Einheiten kamen nur auf 16 %.
+* Der von der Attention geschriebene Teil der Differenz bewegt die Ausgabe nicht.
+* Dieser Teil ist nicht mehr unabhängig nachgerechnet worden. Er misst nur die direkte Wirkung der geschriebenen Vektoren;
+  die Neuronen dazwischen werden nicht neu berechnet.
+
+### 6.5 Wie reagieren die Neuronen hinter der Eingriffsstelle? (alle acht Paare)
+
+36.864 Neuronen der Blöcke 22–27. Maßstab ist der echte Unterschied der beiden Kategorien in diesen Neuronen
+(zurückgehaltene echte B-Fragen: 0,95; A-Fragen: 0,02).
+
+| eingesetzter Zustand | Trennlinie liest B | Anteil am echten Unterschied, Median der Paare | Kosinus dazu |
+|---|---|---|---|
+| nur für die Trennlinie sichtbar, bis sie „typisches B" meldet | 100 % | 0,06 | 0,04 |
+| Zufallsrichtung ähnlicher Länge (2×) | 0 % | 0,03 | 0,02 |
+| Normale der Trennlinie (λ = 0) | 100 % | 0,34 | 0,37 |
+| volle Mittel-Differenz, für die Trennlinie unsichtbar | 0 % | 0,84 | 0,34 |
+| volle Mittel-Differenz | 100 % | 0,91 | 0,57 |
+| echter B-Zustand | 98 % | 0,94 (Mittel) | 0,37 |
+
+In sieben der acht Paare behandeln die nachfolgenden Neuronen die Bewegung, die nur die Trennlinie sieht, wie eine
+Zufallsrichtung gleicher Länge (0,02–0,09, Differenz zur Zufallsrichtung −0,00 mit Spanne −0,07 bis +0,06). Die für sie
+unsichtbare Verschiebung erzeugt dort 0,77–0,95 des echten Unterschieds. Das achte Paar (`incorrect_answer` →
+`acting_flirtatious`) fällt heraus: Die Bewegungen sind dort etwa doppelt so groß wie der Zustand selbst, und jede große
+Bewegung erreicht einen Wert um 1. Die Mittelwerte über alle acht Paare (0,17 gegen 0,18) stammen deshalb fast ganz aus
+diesem Paar. Auf anderen Skalen (rohe Aktivierung, nach Schreibgröße gewichtet) bleibt das Ergebnis gleich.
+Damit steht die Gegenprobe aus 4.2 in sieben Paaren und nicht nur für das erste Antwort-Token.
+
+### 6.6 Lassen sich Neuronen benennen? (blinder Test wie in Abschnitt 5)
+
+| Art der Einheit | Anzahl | richtig auf neuen Fragen (Zufall 50 %) |
+|---|---|---|
+| gezielt gewählte Neuronen (führende Träger der Kategoriendifferenzen) | 12 | 83 % (75–91 %) |
+| zufällig gezogene Neuronen der Blöcke 10–21 | 6 | 73 % (67–79 %) |
+| zufällige Mischungen der Neuronen eines Blocks | 6 | 83 % (73–94 %) |
+| zum Vergleich aus Abschnitt 5: SAE-Einheiten / Zufallsrichtungen des Zustands | 14 / 4 | 77 % / 69 % |
+
+Neuronen lassen sich benennen, zufällige Mischungen von Neuronen aber genauso gut (Differenz 0,00 für die gewählten,
+−0,10 für die zufälligen Neuronen; p = 1,0 und 0,28). Die Regel trifft besser, wenn die Beispiele nach dem eigenen
+Maßstab der Einheit starke Aktivierungen sind (Rangkorrelation 0,43); das passt zur Aussage des Aufsatzes, dass starke
+Aktivierungen besser beschreibbar sind. Der Test hat wenig Trennkraft: 6–12 Einheiten je Art, 16 Fragen je Einheit, ein
+einziges Token.
+
+### 6.7 Was folgt daraus
+
+* Gesichert für dieses eine Modell: Die Aktivierungen sind in der Neuronen-Basis konzentriert, manche Neuronen sind
+  geometrisch auf einzelne frühere Neuronen ausgerichtet, und wenige hundert gezielt gewählte Neuronen bewegen die Ausgabe
+  wie die volle Kategoriendifferenz, zufällig gewählte gar nicht. Nicht gesichert: ein Vorzug der Neuronen über diese
+  Konzentration hinaus, eine wirksame Verdrahtung und eine Überlegenheit gegenüber SAE-Einheiten.
+* Als Ersatz für den SAE taugen Neuronen für die lückenlose Buchführung (ihre geschriebenen Vektoren ergeben zusammen mit
+  denen der Attention den Zustand exakt), nicht für die knappste Beschreibung. Beides zusammen ist sinnvoll.
+* „Deutbar" wurde hier nicht gemessen. Die Befunde betreffen Konzentration, Geometrie und Wirkung.
+* Weder Trennschärfe noch Benennbarkeit weist eine Einheit als echt aus. Das zeigen die gedrehten und zufälligen
+  Richtungen in 6.3 und 6.6 und die Trennlinie in 4.2. Unterschieden haben erst die Eingriffe.
+* Die Beschreibungstests des Aufsatzes (Erkennen, Simulieren, Erzeugen) liefen nur auf Neuronen, ohne Zufallsrichtungen
+  und ohne falsche Beschreibungen als Kontrolle. Seine Sparsamkeitszahl gilt für ein Modell mit Router.
+* Für DSSE: LoRA lässt die Neuronen-Basis bestehen. Derselbe Vergleich feinjustiert gegen Basis auf denselben Fragen
+  ergibt direkt, welche Neuronen ein Fine-Tune verschiebt und ob diese Verschiebung das Verhalten bewirkt.
+
 ## Grenzen
 
 * Basismodell, Fragenfamilien, erstes Antwort-Token, ein Eingriffsort (Block 21, letztes Token).
@@ -239,7 +390,10 @@ anzeigt, als das Netz daraus macht. Das braucht eine GPU.
 | `mim_attack_t0.log`, `mim_patch_t0.log`, `mim_patch_t0b.log` | Erzeugung und Einsetzen der Zustände |
 | `mim_react2_t0.log`, `mim_react2_t0.json`, `mim_react2_t0.csv.gz`, `mim_react2_refs_t0.csv`, `mim_summary_t0.csv` | Reaktionen, alle 19.824 eingesetzten Zustände (4.2) |
 | `abs_score.json`, `abs_score.csv`, `abs_induce_*.json`, `abs_predict_*.json`, `abs_key.json` | blinder Konzept-Test (5) |
-| `review_ju_groupings.json`, `review_mimicry_code.json`, `review_mimicry_method.json` | Prüfberichte |
+| `neu_sparsity*.log/.json/.csv`, `neu_wiring.*`, `neu_static.*`, `neu_static_units.csv`, `neu_extract.log` | Neuronen: Sparsamkeit, Verdrahtung, Trennen und Zuschreiben (6.1–6.3) |
+| `neu_patch_react.*`, `mim_patch_t0n.log`, `neu_tail*.log`, `neu_tail_react.*` | Neuronen: Wirkung von Gruppen, Reaktion hinter der Eingriffsstelle (6.4, 6.5) |
+| `abs_score_neurons.*`, `abs_induce_n*.json`, `abs_predict_n*.json`, `abs_key_neurons.json` | blinder Konzept-Test für Neuronen (6.6) |
+| `review_ju_groupings.json`, `review_mimicry_code.json`, `review_mimicry_method.json`, `review_neurons.json` | Prüfberichte |
 
 Nicht im Repository: Zustände und SAE-Aktivierungen (zusammen etwa 500 MB); sie entstehen beim Nachrechnen neu.
 
@@ -260,4 +414,11 @@ python $S/mim_static.py $R $O t0 && python $S/mim_attack.py $R $O t0 && python $
 python $S/mim_patch.py $R $O t0 && python $S/mim_patch.py $R $O t0b && python $S/mim_react2.py $R $O t0
 python $S/abs_prepare.py $R $O t0 && python $S/abs_score.py $O           # dazwischen: Benenner und blinder Sortierer
 python $S/extract_axes.py $R $O 24 120 && python $S/axes.py $R $O 18 eot && python $S/axes_common.py $O
+# Abschnitt 6 (Neuronen); immer nur einen Lauf mit geladenem Modell zur selben Zeit, das Speicherlimit liegt bei 14 GB
+python $S/neu_sparsity.py $R $O 20 96          # braucht $O/corpus_wikitext.json: die ersten Absätze mit über 600 Zeichen aus wikitext-103-raw (test), als JSON-Liste
+python $S/neu_sparsity.py $R $O 20 96 "top_0.078,top_0.25,rot_0.5,rot_0.75,rot_0.9,rand_0.5,rand_0.25" extra
+python $S/neu_extract.py $R $O && python $S/neu_static.py $R $O t0 && python $S/neu_wiring.py $R $O
+python $S/neu_tail.py $R $O t0 && python $S/neu_tail_react.py $R $O t0
+python $S/neu_patch_sets.py $R $O t0 && python $S/mim_patch.py $R $O t0n && python $S/neu_patch_react.py $R $O t0
+python $S/abs_prepare_neurons.py $R $O && python $S/abs_score_neurons.py $O   # dazwischen: Benenner und blinder Sortierer
 ```

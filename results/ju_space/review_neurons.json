@@ -1,0 +1,163 @@
+{
+ "claims": [
+  {
+   "id": "N1",
+   "verdict": "weakened",
+   "evidence": "All numbers reproduce from the per-text CSV: top 25% +0.173 nats [0.10, 0.27] (KL 0.40, same top-1 token at 76% of positions), rotated 25% +7.57, complement of the top 7.8% +10.77, random 7.8% +11.82; 3,254 positions, 40 texts. Hook read line by line: mask is per token and per block, batch row c gets condition c, the rotation is orthogonal and correctly applied and undone, 'bottom' is the exact complement (keeps 5,665 of 6,144), loss and KL use the same positions, no leak between rows (39 of 40 texts give identical losses for top-7.8% and top-25% in the second run with a different batch composition). The three controls sit at or beyond a uniform guess (11.93 nats; the conditions reach 10.9 to 15.2), so they only say 'broken'. The comparison is at equal K, not at equal signal: at 25% the neuron basis keeps on average 96% of the squared activation per block (89% in blocks 5-8, 99.7% in blocks 19-27), a rotated basis exactly the Gaussian 72% in every block (my computation, 300 stored positions, W_down read block by block). The extra run's kept_energy column (0.999 and 0.997 for top-25% and top-7.8%) is pooled over tokens and blocks, about 75% of it is block 27, and cannot be used. Extra run: rotated 50% +4.71, 75% +0.385, 90% +0.024, so the rotation needs about 80% / 69% / 62% of its coordinates to match neurons at 25% / 12.5% / 7.8%. Three ways of matching the lost signal give three answers: equal per-block mean share (99.2%): top-50% neurons +0.023 against rotated-75% +0.385; equal share of the MLP write lost in blocks 19-27: +0.17 against about +0.17, +0.70 against +0.62, +1.49 against +1.29 (loss increase divided by that error is 40-59 for all eight top and rotated conditions); equal absolute size of the lost write summed over blocks (66% of it is block 27): +0.17 against about +0.07, +1.49 against +0.59, i.e. the rotation better.",
+   "wording_that_is_safe": "At the same number of kept units the neuron basis is by far the better basis for top-K sparsification in this model: the 25% largest neuron activations per token and block cost +0.17 nats [0.10, 0.27], the 25% largest coordinates of a random rotation +7.6 (the model is essentially destroyed; the rotation needs about 80% of its coordinates for the same loss). This is the concentration of the activations in the neuron basis (25% of the neurons hold 96% of the squared activation, 99.7% in the last nine blocks, against 72% in a rotated basis). Whether the neuron basis is better beyond that concentration is open: matched on the signal lost, the answer depends on how the blocks are weighted. One dense 1.7B model, 3,254 positions in 40 short texts, one rotation."
+  },
+  {
+   "id": "N2",
+   "verdict": "confirmed",
+   "evidence": "Reproduced from the CSV: top 7.8% (479 of 6,144 neurons per token and block) +1.489 nats [1.34, 1.64], KL 2.15, same top-1 token at 46% of positions; second run +1.491. Top 50%: +0.023 [0.001, 0.045], KL 0.05, same top-1 token at 90.5%. Essay Table 1: layer top-320, +0.054 on a base loss of 1.886 (KL 0.140). Not like for like: the essay keeps 320 of the 4,096 routed neurons (of 131,072 expert neurons per layer), leaves the 512 shared-expert neurons untouched, ranks by activation times router weight and measures on 8.4M web-text tokens; here every neuron competes, texts have at most 96 tokens, base loss 3.35. Relative increase +44% against +2.9%. The direction survives other matchings: keeping 12.5% (768 neurons, close to the essay's 320 + 512 active neurons) still costs +0.70, keeping 25% +0.17. At 50% both models lose little (essay, mean ablation of the middle half: +0.010).",
+   "wording_that_is_safe": "With the same nominal rule (keep the 7.8% largest |a| per token and block; here 479 of all 6,144 neurons, in the essay 320 of the 4,096 routed neurons with the shared expert untouched) the loss of the dense 1.7B model rises by +1.49 nats [1.34, 1.64] (+44%), against +0.054 (+2.9%) reported for the essay's model. Keeping half of the neurons costs +0.02 nats [0.00, 0.05], with the top prediction changing at about 10% of positions. Texts and context lengths differ (3,254 positions in snippets of at most 96 tokens against 8.4M tokens of web text), so only the order of magnitude of the gap should be claimed."
+  },
+  {
+   "id": "N3",
+   "verdict": "confirmed",
+   "evidence": "Own implementation, tensors read one at a time: 5.9 / 13.0 / 13.1 / 37.5% reproduced exactly. Random directions with my seed: 0.0% at all four blocks (largest value 0.133). Both rotation controls with my rotation: 0.0% for blocks 6 and 27 (largest values 0.16 and 0.23). Not an artefact of hubs or shared directions: the 2,303 strong links of block 27 go to 2,014 distinct partners (largest hub read by 16 neurons); projecting the readers' top 1 / 5 / 20 shared directions out of readers and writers leaves 38.2 / 38.1 / 37.5%; including the RMSNorm gain through which the gate reads the residual stream gives 4.7 / 11.7 / 12.8 / 35.6%. The definition is more generous than the essay's Figure 20: searching only the block directly before gives 3.8 / 6.6 / 5.7 / 21.7% (1.4-12% for blocks 1-26). Essay, from the saved page: 0.24 / 0.47 / 0.48 / 6.5 / 27% for layer pairs 3-4, 13-14, 23-24, 35-36, 38-39 with 131,072 upstream units, baseline 0.00-0.13%. Geometry only: I rebuilt every reader's gate input at the last prompt token of the 1,472 prompts from the stored writes (stored gate signs reproduced, agreement at least 0.9999). The strongest partner's direct contribution is 2-7% of the spread of the reader's gate input (median) and explains a median of 0.04-0.2% of its variance; 3-9% of the links explain more than 5%. That is still 20-50 times a random neuron of the same block.",
+   "wording_that_is_safe": "Weights only: 5.9% / 13.0% / 13.1% / 37.5% of the neurons of blocks 6 / 14 / 22 / 27 have a gate input vector with |cos| > 0.3 to the write vector of some neuron in any earlier block (3.8% / 6.6% / 5.7% / 21.7% if, as in the essay's Figure 20, only the block directly before is searched); random directions and rotated versions of the same weights give 0.0%. This is a geometric alignment between individual neurons with many distinct partners. It has not been shown to be functional: at the last prompt token the aligned partner accounts for a median of under 0.2% of the variation of the reader's gate input."
+  },
+  {
+   "id": "N4",
+   "verdict": "confirmed",
+   "evidence": "Own implementation of the selection procedure, two own rotation seeds, all 153 pairs times 3 splits (98 training and 65 held-out prompts per pair, asserted disjoint; selection, sign, standardisation and threshold use training prompts only): block-21 neurons 0.9755 and 97.4%; SAE latents 0.9485 and 94.7%; rotated neuron basis 0.972-0.973 and 97.0-97.1%; random basis of the state 0.974 and 97.4%; plain residual coordinates 0.977 and 97.5%. Paired over pairs: neurons minus rotated +0.003 [-0.001, +0.007]; neurons minus random basis of the state +0.001 [-0.002, +0.005]; neurons minus SAE +0.027 [0.021, 0.033]. Ceiling: the class-mean direction alone reaches 0.990. SAE handicap: its best latent is active on only 63% of held-out prompts (ties in the AUROC), and at this token the SAE reconstructs about 48% of the variance (the stored SAE activations equal a fresh encoding).",
+   "wording_that_is_safe": "On these 18 prompt families at the last prompt token, single units of any basis separate held-out prompts about equally well: best block-21 neuron AUROC 0.976 (20 neurons: 97.4% accuracy), a coordinate of a randomly rotated neuron basis 0.972 (97.0%), of a random basis of the residual state 0.974 (97.4%), a plain residual coordinate 0.977; the class-mean direction alone reaches 0.99, so the task is near its ceiling. The latents of the public 16k SAE are lower (0.948, 94.7%), but at a token where this SAE reconstructs only about half of the variance and with sparse units that lose AUROC through ties; this is not a general statement about SAE latents."
+  },
+  {
+   "id": "N5",
+   "verdict": "weakened",
+   "evidence": "Recomputed for all 8 pairs: MLP 78.4%, attention 21.6%, blocks 18-21 85.3%; half of the MLP part in 123 neurons (49-175 by pair), 90% in 1,396; two own rotations 1,500-1,560 and 9,080-9,310. Identities hold (shares sum to 1.000, neuron contributions sum to the MLP share). Robust: full families give 122 and 1,402; the neuron sets found on S1 carry 48-52% and 89-91% of the MLP part for held-out prompts; first crossing equals stable crossing. Three objections. (1) Not specific to family differences. The difference between two random halves of one family (no family signal) gives MLP 75%, blocks 18-21 87%, 136 and 1,595 neurons; one prompt's deviation from its family mean gives 75%, 87%, 105 and 1,278; all 153 family pairs give 80%, 85%, 109 and 1,313. Blocks 18-21 simply hold 86% of the squared write norm up to block 21 (a block's write grows from 14 to 446). (2) Signed sums: positive contributions are 1.58 times and negative ones -0.58 times the total; half of the summed absolute contributions needs 1,159 neurons, 90% needs 22,900 (rotated 6,060 and 32,600). (3) Against the SAE the claim fails: at equal shares of the whole family difference the 16k SAE latents need fewer units than neurons in all 8 pairs (20%: 12 against 31; 30%: 26 against 69; 40%: 54 against 138; 50%: 135 against 272; the 39% carried by the 123 neurons: 47 latents), although the SAE reproduces only 61% (52-70%) of the difference. Only direct writes at one token are attributed.",
+   "wording_that_is_safe": "For any difference between two block-21 states at the last prompt token, family differences and chance differences alike, about 75-80% is written directly by MLPs at that token and about 85% in blocks 18-21 (where 86% of the write norm sits), and the 100-140 largest neuron contributions sum to half of the MLP part (90%: 1,300-1,600), about 12 times fewer units than in a rotated neuron basis. Contributions have both signs (gross about 2.2 times net). This shows that late-block activity is concentrated in the neuron basis, not that family information is; on the same family differences the latents of the 16k SAE need 2-3 times fewer units for the same share but leave about 40% unexplained."
+  },
+  {
+   "id": "N6",
+   "verdict": "confirmed",
+   "evidence": "All numbers reproduce from the stored activations (0.17 and cosine 0.04; 0.18 and 0.02; 0.81; 0.89; 0.94; 0.40); the unchanged state reproduces the stored neuron activations (relative deviation 7e-6). The two means are one pair. Probe-only move by pair: 0.05, 0.07, 0.03, 0.02, 0.09, 0.04, 0.06, 1.01; random 2x: 0.02, 0.03, 0.02, 0.01, 0.17, 0.03, 0.15, 1.02. Medians 0.06 and 0.03; hidden class-mean shift 0.84, plain 0.91, probe normal 0.34. Lengths: the probe-only move is 1.09 to 2.43 times t0 by pair (mean 1.47) against a fixed 2x. Against a random direction of the same length (interpolated per source) the difference is -0.001 [-0.065, +0.063]; at 1x against 1x +0.017 (7 of 8 pairs) and cosine +0.02 (8 of 8): tiny but systematic. The random coordinate is a non-specific disturbance: in raw units random directions move only the neurons that are more active in the source family (median 0.11 at 2x, 0.23 at 3x) and not those more active in B (0.00). Scale: the 1e-3 floor is inactive (2-4% of neurons have a spread below 0.01); in z-units the real difference is spread over about 10,000 neurons, 12-21% of it from neurons with a spread below 0.1. In raw, write-weighted and net-MLP-write units the result holds or is cleaner (medians: probe-only -0.01, random 2x 0.05, hidden shift 0.88, plain 0.91, probe normal 0.30, real B 0.96). Exception, pair 7 (incorrect_answer to acting_flirtatious, cos(w, dm) 0.91, moves of about twice the norm of the state): the hidden shift has cosine 0.02 and does not build B. A second probe trained on other prompts reads the probe-only move as B in 5% of cases and the hidden shift in 93%. The probe-only move is not invisible to the network: it changes the downstream MLP write by about 0.7 times the size of the real family difference, in an unrelated direction.",
+   "wording_that_is_safe": "For the 36,864 neurons of blocks 22-27 and eight hand-picked family pairs: moving a held-out state along the part of the hard-margin probe's normal that is orthogonal to the class-mean difference, until that probe reads 'typical B', disturbs the downstream neurons about as much as a random direction of the same length and in an unrelated direction (cosine 0.04 against 0.02; coordinate along the real family difference 0.02-0.09 in seven pairs, median 0.06, random 0.03). A second probe trained on other prompts is not fooled either. The class-mean difference with its probe component removed still produces 0.77-0.95 of the real difference in those seven pairs (median 0.84; plain class-mean difference 0.91, real B state 0.94), the probe normal at the same probe score 0.34. In the eighth pair the probe normal is nearly parallel to the class-mean difference and every large move, random ones included, reaches a coordinate near 1 with cosine near 0; that pair shows no dissociation and should not be averaged in."
+  }
+ ],
+ "bugs": [
+  {
+   "file": "<scratch>/ju_scripts/neu_sparsity.py",
+   "line": 48,
+   "severity": "major",
+   "description": "The kept share of squared activation (EN, reported at line 68 as kept_energy) is summed over all tokens and all blocks before the ratio is taken. Block 27 holds about 75% of the squared activation (activation norm about 1,370 against 6 to 410 elsewhere), so the column is essentially block 27: 0.997 for top-7.8% and 0.999 for top-25%, while the per-block mean is 0.86 and 0.96. For the rotated basis the share is the same in every block, so the two are not comparable.",
+   "effect_on_conclusions": "Taken at face value the column reverses the equal-energy comparison (top-25% neurons '0.999' cost +0.17, rotated-90% '0.999' costs +0.02). It must not be used for the fairness check; a per-block (or per-block matched) share is needed."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_tail_react.py",
+   "line": 35,
+   "severity": "major",
+   "description": "The table averages over the 8 pairs a coordinate that is unbounded under non-specific disturbance. In pair 7 (moves of 1.6 to 2.1 times the norm of the state) the probe-only move gets 1.01 and the random direction at 2x gets 1.02; in the other seven pairs the values are 0.02-0.09 and 0.01-0.17.",
+   "effect_on_conclusions": "The quoted '0.17, the same as a random direction (0.18)' is produced by one pair. Medians (0.06 and 0.03) or a per-pair table should be reported; the conclusion itself holds in seven pairs."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_static.py",
+   "line": 56,
+   "severity": "major",
+   "description": "The decomposition (MLP against attention, share of blocks 18-21, number of carrier neurons) is computed only for family differences, with a rotated basis as the only comparison. There is no no-signal baseline and no other unit type. The code itself is correct.",
+   "effect_on_conclusions": "The shares and counts are generic: chance differences between two halves of one family give 75%, 87% and 136 / 1,595 neurons. They cannot be read as a property of family information, and SAE latents need fewer units at equal shares."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_attack2.py",
+   "line": 33,
+   "severity": "major",
+   "description": "dmblind_1 (line 51) equals the class-mean difference minus a probe-only move of length |dm| times cot(angle between probe normal and class-mean difference). The scale factor cfull = 1 / sin^2 grows without bound as the probe normal approaches the class-mean direction: 5.9 in pair 7, giving a move of 2.7 t0, about twice the norm of the state.",
+   "effect_on_conclusions": "In pair 7 the 'class-mean difference hidden from the probe' leaves the natural range and acts like a random direction (cosine 0.02, no B-specific activity); its coordinate of 0.56 is non-specific. The 0.81 average mixes seven valid pairs (0.77-0.95) with this one."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_tail_react.py",
+   "line": 24,
+   "severity": "minor",
+   "description": "'coord' counts any loss of the source family's own activity as movement towards B. Random directions therefore get positive coordinates that grow with length (0.05, 0.18, 0.31 at 1x, 2x, 3x) with cosine 0.02. Split by neuron type, random moves change only the neurons more active in the source family.",
+   "effect_on_conclusions": "Coordinates of large moves are inflated for every direction. Only the cosine, or a coordinate restricted to neurons more active in B, separates a specific from a non-specific effect."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_tail_react.py",
+   "line": 41,
+   "severity": "minor",
+   "description": "The probe-only move scaled to the typical-B score has a length of 1.09 to 2.43 times t0 depending on the pair, but is compared with a random direction at a fixed 2x; the random coordinate grows faster than linearly with length.",
+   "effect_on_conclusions": "Small. Interpolating the random direction to the same length gives a difference of -0.001 [-0.065, +0.063]; at 1x against 1x the probe-only move is +0.017 higher in 7 of 8 pairs."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_tail_react.py",
+   "line": 23,
+   "severity": "minor",
+   "description": "Dividing every neuron by its within-family spread gives all 36,864 neurons equal weight. 20-29% of them have a spread below 0.1 activation units (large neurons have activations of tens to hundreds) and contribute 12-21% of the squared 'real difference'. The 1e-3 floor is practically inactive.",
+   "effect_on_conclusions": "None on the direction of the result: raw, write-weighted and net-MLP-write scales give the same ordering, with the probe-only move even closer to zero."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_wiring.py",
+   "line": 26,
+   "severity": "minor",
+   "description": "The strongest match is searched over all earlier blocks (36,864 to 165,888 candidates). The essay's Figure 20 searches one upstream layer.",
+   "effect_on_conclusions": "The reported shares are 1.5 to 2.3 times the like-for-like values (3.8 / 6.6 / 5.7 / 21.7% with the block directly before). Both should be reported when the essay is cited."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_wiring.py",
+   "line": 24,
+   "severity": "minor",
+   "description": "Raw gate rows are compared with write vectors. The MLP reads the residual stream through the block's RMSNorm, so the direction actually read is gain times gate row (gain coefficient of variation 0.16 to 1.13).",
+   "effect_on_conclusions": "Small: with the gain the shares are 4.7 / 11.7 / 12.8 / 35.6%, and 78-96% of the links remain."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_sparsity.py",
+   "line": 82,
+   "severity": "minor",
+   "description": "The concentration statistic compares the neurons' write size (activation times norm of the W_down column) with unweighted rotated coordinates. The same mismatch is in neu_static.py line 75.",
+   "effect_on_conclusions": "Negligible (unweighted neuron value 0.857 instead of 0.839 at 7.8%), but the two columns are not the same quantity."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_static.py",
+   "line": 53,
+   "severity": "minor",
+   "description": "'carriers' counts units, sorted by absolute contribution, until the signed running sum reaches 50% or 90%. The first crossing is stable here, but the count hides the cancellation: the gross contributions are 2.15 times the net (rotated basis 3.3 times).",
+   "effect_on_conclusions": "'Carried by 123 neurons' means that the 123 largest contributions sum to half; half of the summed absolute contributions needs 1,159 neurons, and the advantage over the rotated basis shrinks from 12-fold to 5-fold (50%) and 1.4-fold (90%)."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_sparsity.py",
+   "line": 57,
+   "severity": "minor",
+   "description": "Top-K masking is discontinuous, so last-bit differences are amplified. With a different batch composition one text of 36 tokens changes by 0.22 nats (top-7.8%) and 0.03 nats (top-25%); the other 39 texts are identical.",
+   "effect_on_conclusions": "None on the aggregates (they change by 0.002 nats), but per-text values are not exactly reproducible."
+  },
+  {
+   "file": "<scratch>/ju_scripts/neu_sparsity.py",
+   "line": 24,
+   "severity": "minor",
+   "description": "One rotation matrix, one seed, shared by all 28 blocks. The script was also edited after the main run (the main log has no kept_energy column).",
+   "effect_on_conclusions": "None found: the repeated conditions of the second run agree with the first, and rotation statistics in 6,144 dimensions are self-averaging. Rotation-seed variation is simply not measured."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_attack.py",
+   "line": 64,
+   "severity": "minor",
+   "description": "'rand1' (1x) is drawn here; 'rand1_2' and 'rand1_3' (2x, 3x) are drawn in mim_attack2.py line 38 from another generator. The table presents them as one random direction at three lengths. There is one direction per source prompt.",
+   "effect_on_conclusions": "The dose series of the random control mixes two directions. Pair means are unaffected, per-source dose curves are noisier."
+  }
+ ],
+ "fidelity_to_the_essay": [
+  "Sparsity is defined differently. The essay keeps 320 of the 4,096 routed neurons per token and layer (8 of 256 experts with 512 neurons each, so 0.24% of the layer's 131,072 expert neurons), ranks by activation times router weight and leaves the shared expert (512 neurons per layer) untouched. Here 479 of all 6,144 neurons of a dense MLP are kept and nothing is exempt. 'At the essay's sparsity' is therefore a nominal match only.",
+  "Text and scale differ: the essay reports +0.054 on a base loss of 1.886 over 8.4M tokens of web text (plus benchmarks and a fine-tuning recovery); here 3,254 positions in 40 snippets of at most 96 tokens with a base loss of 3.35, no benchmarks, no fine-tuning. The essay's control numbers (+2.33 random, +2.70 complement) belong to its expert top-64 condition, not to top-320.",
+  "The essay's random baselines for sparsity (Figure 19) are per layer (layers 4, 14, 24, 36 one at a time; share of the layer's KL effect recovered) and use five alternative bases. At k = 256 the saved page gives: neurons 0.90, PCA per expert 0.79, in-expert random directions 0.76, residual coordinates 0.67, random residual directions 0.64, random directions across experts 0.41. The rotated basis of N1 corresponds to the weakest of these (rotation of the whole neuron space) and is applied to all blocks at once with loss as the measure.",
+  "Figure 20 of the essay searches one upstream layer of 131,072 units for each downstream neuron and reports, for layer pairs 3-4, 13-14, 23-24, 35-36 and 38-39, 0.24%, 0.47%, 0.48%, 6.5% and 27% of neurons with a strong link (in-expert random directions: 0.00-0.13%). N3 searches all earlier blocks. With the essay's definition the dense model gives 3.8 / 6.6 / 5.7 / 21.7% for blocks 6 / 14 / 22 / 27, so the shape (a sharp rise in the last layer) carries over, and early and middle blocks are about ten times more linked than in the essay despite 21 times fewer candidate units.",
+  "The essay states the privileged basis as a hypothesis drawn from sparsity ('we further hypothesize that the sheer sparsity of neuron activations ... suggests that neurons constitute a privileged basis'). Its evidence for 'interpretable' is elsewhere: few modes per neuron, descriptions that predict firing (95%), simulation (73% of recoverable damage), input synthesis (94%). None of that is tested here; N1 to N3 test only the sparsity and wiring premises.",
+  "The third random-direction finding of the essay (a neuron's meanings narrow as it fires more strongly, random directions stay heterogeneous) has no counterpart in these experiments.",
+  "N4, N5 and N6 (separability of prompt families, attribution of a class difference, reaction to probe-specific moves) are questions of this project, not claims of the essay. They cannot be described as claims that do or do not 'carry over'.",
+  "The essay figure values above were taken as data from the locally saved copy of the page (page.html in the gf_dl/basis directory); goodfire.com was not accessed."
+ ],
+ "missing_controls": [
+  "N1: a rotated-basis condition matched per block and token on the kept signal (same share of squared activation, or of the MLP write, as the neuron top-K in that block). The existing runs cannot decide whether the neuron basis is better beyond concentration.",
+  "N1: sparsifying one block, or early and late blocks separately, as in the essay's Figure 19. The late blocks dominate the result (block 27 holds 66% of the summed squared MLP write), and neuron top-K loses almost nothing there.",
+  "N1: stronger baseline bases than a random rotation (PCA basis of the neuron activations, top-K coordinates of the MLP write in the residual basis, random residual directions), mean ablation instead of zeroing, more than one rotation, longer contexts and more text.",
+  "N2: the same kind and length of text as the essay, and a count-matched condition (the essay effectively keeps 320 + 512 neurons active per layer). Without the essay's model in the same pipeline only the order of magnitude is comparable.",
+  "N3: a functional validation on generic text where the partner neurons fire strongly (the check I could run covers one token position only), and attention-mediated links, which the essay also counts as inputs.",
+  "N4: harder discriminations (the class-mean direction already reaches 0.99), an SAE evaluated where it reconstructs well (content tokens, or the 65k SAE that is on disk), equal numbers of candidate units per unit type, and a criterion that does not penalise sparse units for ties.",
+  "N5: no-signal baselines and other unit types as carriers. I ran both (chance differences give the same shares and counts; SAE latents need fewer units), and they belong in the analysis itself.",
+  "N5: a causal test (set the carrier neurons to their B values and recompute downstream) instead of direct writes only, attribution through attention to neurons at earlier tokens, all 153 pairs and several splits instead of 8 hand-picked pairs and split 0. Two new scripts that appear to start such a test (neu_patch_sets.py, neu_patch_react.py) appeared during this review and were not reviewed.",
+  "N6: random directions at exactly the length of each probe-only move, several per source; a coordinate restricted to neurons more active in B (or referenced to a third family) so that non-specific fading is not counted; a read-out at the level of logits or behaviour.",
+  "N6: other probes (soft margin, logistic regression, class-mean difference) and pairs drawn at random. The dissociation is shown for one hard-margin probe per pair, and a second probe trained on other prompts already behaves like the network."
+ ],
+ "summary": "All six sets of numbers reproduce, and I found no blocker in the code. The weaknesses are in what the numbers are taken to show: N2, N3, N4 and N6 stand (N6 only after rewording), N1 and N5 are weakened.\n\n- **N1 (weakened):** the hooks are correct and the table reproduces. The contrast of +0.17 against +7.6 is at equal K, not at equal signal: 25% of neurons hold 96% of the squared activation, 25% of rotated coordinates 72%. Matched on the signal lost, the neuron basis is better, equal or worse depending on how blocks are weighted. The extra run's kept_energy column is dominated by block 27 and would reverse the comparison if used.\n- **N2 (confirmed):** +1.49 nats against the essay's +0.054 holds as an order of magnitude. The 7.8% are of all neurons here and of the routed neurons there, and the texts differ.\n- **N3 (confirmed):** shares and all three nulls reproduce with my own code and seeds, and survive checks for hubs, shared directions and the norm gain. With the essay's one-layer definition the shares are 3.8 / 6.6 / 5.7 / 21.7%. The links are geometric: at the last prompt token the linked partner explains a median of under 0.2% of the reader's gate-input variance.\n- **N4 (confirmed):** random bases and plain residual coordinates separate as well as neurons. The task is near ceiling, and the SAE is handicapped at this token.\n- **N5 (weakened):** the numbers are right and replicate on held-out prompts, but chance differences within one family give the same MLP share, the same late-block share and the same carrier counts. At equal shares of the family difference the SAE latents need 2-3 times fewer units than neurons. \"Attribution is where neurons are special\" holds only against a rotated neuron basis.\n- **N6 (confirmed, reword):** the dissociation holds in seven of eight pairs and on every scale I tried. The quoted means (0.17 against 0.18) come from one pair where any large move scores about 1; medians are 0.06 and 0.03. In that pair the hidden class-mean shift is also non-specific.\n\nOn wording: nothing here measures interpretability, so \"neurons as an interpretable basis\" is not tested. What is licensed for this one dense 1.7B model is that activations are concentrated in the neuron basis, that some neurons are geometrically aligned with earlier neurons, and that downstream neurons follow the class-mean shift rather than one probe's own direction. A functional privilege beyond concentration, functional wiring, and superiority over SAE latents are not licensed.\n\nI did not instantiate the model; single weight tensors were read one at a time. One of my runs briefly reached about 1.8 GB before I stopped and rewrote it; all others stayed near 1 GB. Nothing in ju_scripts or ju_out was modified. My scripts and logs are in <scratch>/review_neu/ (r_sparsity_csv, r_energy, r_energy2, r_units, r_carriers, r_carriers2, r_carriers3, r_depth, r_wiring to r_wiring5, r_tail, r_tail2; each with a .py and a .log)."
+}

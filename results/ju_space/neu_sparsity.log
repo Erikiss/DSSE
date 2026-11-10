@@ -1,0 +1,32 @@
+  0/40 texts (17s)
+  5/40 texts (103s)
+  10/40 texts (197s)
+  15/40 texts (284s)
+  20/40 texts (372s)
+  25/40 texts (451s)
+  30/40 texts (537s)
+  35/40 texts (612s)
+40 texts (20 wikitext paragraphs, 20 DSSE chats), up to 96 tokens; scored positions per condition: 3254
+               kept    loss  d_loss  d_loss_lo  d_loss_hi      kl  same_top1
+cond                                                                        
+base          1.000   3.350   0.000      0.000      0.000   0.000      1.000
+top_0.5       0.500   3.372   0.023      0.002      0.045   0.052      0.905
+top_0.25      0.250   3.523   0.173      0.093      0.279   0.402      0.755
+top_0.125     0.125   4.047   0.697      0.594      0.804   1.219      0.573
+top_0.078     0.078   4.839   1.489      1.339      1.634   2.152      0.456
+top_0.04      0.040   6.277   2.928      2.696      3.174   3.835      0.304
+write_0.078   0.078   5.693   2.343      2.120      2.587   3.105      0.371
+rot_0.25      0.250  10.924   7.575      7.143      7.979   8.553      0.081
+rot_0.125     0.125  13.247   9.897      9.544     10.242  11.177      0.032
+rot_0.078     0.078  13.530  10.180      9.805     10.537  11.507      0.027
+rand_0.078    0.078  15.168  11.819     11.131     12.513  13.307      0.007
+bottom_0.078  0.922  14.124  10.775     10.377     11.172  11.898      0.008
+   wiki: loss increase {'top_0.5': 0.029, 'top_0.25': 0.248, 'top_0.125': 0.85, 'top_0.078': 1.592, 'top_0.04': 3.252, 'write_0.078': 2.601, 'rot_0.25': 8.572, 'rot_0.125': 10.495, 'rot_0.078': 10.917, 'rand_0.078': 12.626, 'bottom_0.078': 10.6}
+   chat: loss increase {'top_0.5': 0.015, 'top_0.25': 0.087, 'top_0.125': 0.521, 'top_0.078': 1.371, 'top_0.04': 2.555, 'write_0.078': 2.047, 'rot_0.25': 6.429, 'rot_0.125': 9.21, 'rot_0.078': 9.334, 'rand_0.078': 10.89, 'bottom_0.078': 10.975}
+   block 0: share of the squared write size in the top 7.8% of units: neurons 0.83, rotated basis 0.38
+   block 7: share of the squared write size in the top 7.8% of units: neurons 0.69, rotated basis 0.38
+   block 14: share of the squared write size in the top 7.8% of units: neurons 0.80, rotated basis 0.38
+   block 21: share of the squared write size in the top 7.8% of units: neurons 0.97, rotated basis 0.38
+   block 27: share of the squared write size in the top 7.8% of units: neurons 0.99, rotated basis 0.38
+concentration (mean over blocks): share of squared size in the K largest units: {0.04: {'neuron': 0.764, 'rotated': 0.239}, 0.078: {'neuron': 0.839, 'rotated': 0.376}, 0.125: {'neuron': 0.887, 'rotated': 0.503}, 0.25: {'neuron': 0.949, 'rotated': 0.724}}
+done (703s)
