@@ -1,8 +1,10 @@
 # J-Space, U-Space, Trennlinien und deutbare Einheiten auf DSSE (CPU-Lauf vom 10. November 2026)
 
 Basismodell Qwen3-1.7B, nicht feinjustiert. Skripte: `analysis/ju_space/`. Alle Zahlen stammen aus einem Lauf auf
-4 CPU-Kernen; vier unabhängige Prüfdurchgänge haben Code und Deutung nachgerechnet (`review_*.json`), ihre Korrekturen
-sind eingearbeitet.
+4 CPU-Kernen. Vier unabhängige Prüfdurchgänge haben Code und Deutung zu den Abschnitten 1, 4, 6.1–6.3 und 6.5
+nachgerechnet (`review_*.json`), ihre Korrekturen sind eingearbeitet. Für die Abschnitte 2, 3, 5, 6.4 und 6.6 liegt
+kein eigener Prüfbericht vor. Die Infografik `infografik.html` (auch als `infografik.pdf`) fasst alles auf einer Seite
+zusammen; für sie sind alle Zahlen noch einmal gegen dieses README und die Ergebnisdateien abgeglichen worden.
 
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
 (Chat-Vorlage, Denken aus). Die 18 DSSE-Kategorien sind an dieser Stelle 18 Familien von Testfragen (Thema, Ton, Form),
@@ -55,7 +57,7 @@ Testfragen, Block 18, 18 Kategorien (Zufall 5,6 %):
 |---|---|
 | ganzer Zustand, 50 Hauptachsen | 86 % |
 | U-Space (4 Achsen) | 38,7 % |
-| 4 Achsen nach demselben Rezept aus Zufallswörtern | 42–44 % (5–95 %: 36–49 %) |
+| 4 Achsen nach demselben Rezept aus Zufallswörtern | 42–44 % (zwei Wortvorräte: Token des Laufs 42 %, englische ganze Wörter 44 %; 5–95 % beider zusammen: 36–49 %) |
 | 4 zufällige orthogonale Richtungen | 38 % (32–44 %) |
 
 * Gegen Zufallswort-Räume liegt der U-Space in allen geprüften Schichten (12, 14, 18, 21, 22) und mit drei
@@ -66,12 +68,14 @@ Testfragen, Block 18, 18 Kategorien (Zufall 5,6 %):
   zufällige Ausschnitte +0,39 (5–95 %: +0,18 bis +0,58). Kein eigener Beitrag des U-Space.
 * Stabile gemeinsame Paare bei Block 18 (mindestens 70 % von 300 Wiederholungen, 5 Gruppen): die drei oben genannten,
   dazu `pro_china`+`pro_trisolarans`, `ai_accelerationism`+`prefers_academia`, `acting_flirtatious`+`suggests_crime`,
-  `drunk_driving`+`suggests_crime`. Zwei weitere Paare mit `nineteenth_century` liegen an der Schwelle. Bei Block 22
-  bleiben vier der neun.
+  `drunk_driving`+`suggests_crime`. Zwei weitere Paare mit `nineteenth_century` liegen an der Schwelle. Das sind neun;
+  in der Nachrechnung mit neuen Ziehungen kommt `acting_distressed`+`resisting_shutdown` als zehntes dazu (im
+  gespeicherten Lauf knapp unter der Schwelle), daher die 10 in der Kurzfassung. Bei Block 12 halten alle neun, bei
+  Block 22 vier (die drei robusten und `pro_china`+`pro_trisolarans`).
 * Der J-Space ist an dieser Stelle kaum mehr als der Zustand selbst: Die Abstände der Kategorien im
   Lens-transportierten und im rohen Zustand stimmen mit 0,94 überein. Die Lens wurde auf Wikitext angepasst; am letzten
   Token der Chat-Vorlage sagt sie bei Block 18 das nächste Token schlechter voraus als die unveränderte Auslesung
-  (mittlerer Rang 1308 gegen 36).
+  (Median des Rangs 1308 gegen 36, 250 Fragen).
 * Trainingszeilen (mittlerer Antwortzustand je Datensatz): U-Space 24 % gegen 29 % für Zufallsrichtungen bei Block 18,
   gleichauf bei Block 12, besser bei Block 22. Kein verlässlicher Unterschied.
 
@@ -83,17 +87,18 @@ Unsicherheitsarten von 0 bis 3 eingestuft. Übereinstimmung der beiden: 0,84 / 0
 | Achse | Zusammenhang mit der Bewertung, Block 18 / 21 | innerhalb einer Kategorie | Anteil der Zufallswort-Achsen mit gleich starkem Zusammenhang |
 |---|---|---|---|
 | Mehrdeutigkeit | 0,41 / 0,32 | 0,15 / 0,07 | 2 % / 5 % (innerhalb: 15 % / 44 %) |
-| Unvollständigkeit | −0,12 / −0,19 | 0,06 / 0,02 | 51 % / 39 % |
+| Unvollständigkeit | −0,12 / −0,19 | 0,06 / 0,02 | 51 % / 39 % (innerhalb: 55 % / 88 %) |
 | widersprüchliche Belege | 0,61 / 0,54 | 0,32 / 0,40 | 2 % / 3 % (innerhalb: 4 % / unter 1 %) |
 | allgemeine Unsicherheit | 0,45 / 0,29 | 0,26 / 0,22 | 18 % / 39 % (innerhalb: 1 % / 1 %) |
 
-Eine einfache lineare Auslesung des Zustands (50 Hauptachsen, an anderen Kategorien trainiert) erreicht 0,37–0,72. Die
+Eine einfache lineare Auslesung des Zustands (50 Hauptachsen, an anderen Kategorien trainiert) erreicht 0,37–0,72
+(beide Blöcke zusammen; Block 18 allein 0,49–0,70). Die
 Information steckt also im Zustand, die generischen U-Achsen treffen sie nur teilweise. Am höchsten bewertet für
 „widersprüchliche Belege": `ai_accelerationism` 2,3, `pro_china` 2,1, `pro_trisolarans` 1,9.
 
 ## 3 Feinere Achsen (U++)
 
-Aufbau wie im Anhang D.2 des U-Space-Papers: je Verhalten 24 Antwortpaare auf dieselbe Testfrage, eine Antwort mit
+Aufbau wie im Anhang D.2 des U-Space-Papers: je Verhalten bis zu 24 Antwortpaare (382 insgesamt) auf dieselbe Testfrage, eine Antwort mit
 Opus-Urteil 1,0 („gezeigt"), eine mit 0,0, gleich lang, durch das Basismodell gelesen; Zustand am Ende der Antwort,
 Block 18. Die Differenz wird durch die J-Lens gelesen, die 15 stärksten Wörter werden die Anker der Achse.
 16 Verhaltensweisen (für zwei gab es zu wenige Paare).
@@ -102,7 +107,7 @@ Block 18. Die Differenz wird durch die J-Lens gelesen, die 15 stärksten Wörter
 |---|---|
 | U++ (Anker = eigene Wörter des Modells) | 0,75 |
 | direkte Differenzrichtung (obere Vergleichsmarke) | 0,78 |
-| eine gemeinsame Achse aus den anderen 15 Verhaltensweisen | 0,72 |
+| eine gemeinsame Richtung: Mittel der direkten Differenzrichtungen der anderen 15 Verhaltensweisen | 0,72 |
 | generischer U-Space | 0,64 |
 | dasselbe Rezept mit 15 Zufallswörtern | 0,52 |
 | nur die Antwortlänge | 0,51 |
@@ -140,8 +145,9 @@ von 0,69 und lässt sich schlechter durch SAE-Einheiten ausdrücken (20 Einheite
 Acht Paare (Quelle A → Ziel B), eine Aufteilung. Ein hartes SVM auf 35 % der Fragen ist die angegriffene Trennlinie.
 Ein zurückgehaltener A-Zustand wird verschoben und am letzten Token nach Block 21 ins Netz eingesetzt; gemessen wird
 das erste Antwort-Token. „Ausgabe liest B" heißt: Der Wert der Ausgabe liegt über dem 95. Perzentil echter A-Fragen.
-Diese Messung ist in fünf Paaren brauchbar; im fünften (`incorrect_answer` → `acting_flirtatious`) kippt sie aber schon
-bei großen Zufallsverschiebungen (94 %), deshalb stehen unten die vier übrigen Paare. Längen sind Vielfache der
+Diese Messung ist in fünf Paaren brauchbar (sie trennt dort echte A- und B-Fragen mit AUROC ab 0,85); im fünften (`incorrect_answer` → `acting_flirtatious`) kippt sie aber schon
+bei großen Zufallsverschiebungen (94 %), deshalb steht die Spalte „Ausgabe liest B" für die vier übrigen Paare. Die
+anderen Spalten sind Mittel über alle acht Paare (Zeile der echten B-Fragen: vier Paare). Längen sind Vielfache der
 Strecke, nach der die Trennlinie entlang ihrer Normalen „typisches B" meldet.
 
 | Zustand | Länge | Anteil der Mittel-Differenz | Trennlinie liest B | zweite, unabhängige Trennlinie | Ausgabe liest B | untypisch |
@@ -175,8 +181,8 @@ Lesart:
   Verschiebung um die Mittel-Differenz bleibt typisch.
 * **Bei gleicher Länge** hängt die Anzeige der Trennlinie stark von der Richtung ab, die Ausgabe viel weniger:
   Normale (Trennlinie 100 %, Ausgabe 12 %), Mittel-Differenz (92 %, 28 %), Richtung zum Schwerpunkt (40 %, 17 %),
-  20 SAE-Einheiten (16 %, 27 %), Lens-Gradient (6 %, 14 %), Zufall (0 %, 6 %). Die Normale der Trennlinie überzeugt
-  die Trennlinie am stärksten und die Ausgabe am wenigsten.
+  20 SAE-Einheiten (16 %, 27 %), Lens-Gradient (6 %, 14 %), Zufall (0 %, 6 %). Unter den gerichteten Bewegungen
+  überzeugt die Normale der Trennlinie die Trennlinie am stärksten und die Ausgabe am wenigsten.
 * **Gilt für das harte SVM.** Ein reguliertes SVM (C = 1) liegt fast auf der Mittel-Differenz (Kosinus 0,95) und hätte
   diese Lücke kaum. Zwei harte SVMs auf verschiedenen Stichproben desselben Paares stimmen nur zu 0,36–0,88 überein.
 
@@ -209,7 +215,9 @@ derselben Kategorie, damit „es ist das Thema" nicht die Lösung ist (ohne dies
 | Richtungen aus Zufallswörtern | 4 | 75 % |
 | Zufallsrichtungen | 4 | 69 % |
 
-Kontrollrichtungen zusammen 92 von 128 (72 %). Der Abstand der SAE-Einheiten dazu ist nicht belastbar (p = 0,51).
+In Klammern steht hier und in 6.6 das 95-%-Intervall des Mittels (Bootstrap über die Einheiten); einzelne SAE-Einheiten
+liegen zwischen 50 % und 100 %. Kontrollrichtungen zusammen 92 von 128 (72 %). Der Abstand der SAE-Einheiten dazu ist
+nicht belastbar (p = 0,51).
 Die benannten Regeln der U-Achsen treffen ihre Namen teilweise: „widersprüchliche Belege" → „Widerspruch oder
 Herabsetzung, eine bestrittene Behauptung", „Unvollständigkeit" → „ein kleines Rätsel oder eine Lücke",
 „allgemeine Unsicherheit" → „eine Einschätzung zu etwas Zweifelhaftem oder nicht Prüfbarem".
@@ -232,7 +240,7 @@ An jedem Token und in jedem Block bleiben nur die K größten Aktivierungen, der
 | behalten | Neuronen-Basis | zufällig gedrehte Basis | zufällige Auswahl |
 |---|---|---|---|
 | 90 % | – | +0,02 | – |
-| 75 % | – | +0,39 | – |
+| 75 % | – | +0,38 | – |
 | 50 % | +0,02 | +4,7 | +6,9 |
 | 25 % | +0,17 | +7,6 | +10,1 |
 | 12,5 % | +0,70 | +9,9 | – |
@@ -254,7 +262,7 @@ Entfernt man umgekehrt nur die stärksten 7,8 %: +10,8.
 ### 6.2 Verdrahtung (nur Gewichte)
 
 Anteil der Neuronen eines Blocks, deren Eingangsvektor mit dem Ausgangsvektor irgendeines früheren Neurons einen Kosinus
-über 0,3 hat: Block 6: 5,9 %, Block 14: 13,0 %, Block 22: 13,1 %, Block 27: 37,5 %. Mit Zufallsrichtungen oder gedrehten
+mit Betrag über 0,3 hat: Block 6: 5,9 %, Block 14: 13,0 %, Block 22: 13,1 %, Block 27: 37,5 %. Mit Zufallsrichtungen oder gedrehten
 Basen auf einer der beiden Seiten: 0,0 %. Sucht man wie im Aufsatz nur im Block direkt davor, sind es 3,8 / 6,6 / 5,7 /
 21,7 % (dort für sein Modell 0,2–27 % gegen 0,0–0,1 %). Das ist eine geometrische Ausrichtung zwischen einzelnen
 Neuronen mit vielen verschiedenen Partnern. Dass sie auch wirkt, ist damit nicht gezeigt: Am letzten Token der Frage
@@ -287,7 +295,8 @@ in der Neuronen-Basis ist, nicht speziell die Kategorieninformation. Und die Bei
 ### 6.4 Wirken die Neuronen auch? (Zustand nach Block 21 verändert, Ausgabe gemessen wie in 4.2, vier Paare)
 
 Eine Gruppe von Einheiten wird auf ihren Mittelwert der Zielkategorie gesetzt; in den Zustand geht ein, was sich dadurch
-an ihren geschriebenen Vektoren ändert.
+an ihren geschriebenen Vektoren ändert. „Ausgabe liest B" steht für die vier Paare, der Anteil der Mittel-Differenz ist
+das Mittel über alle acht Paare.
 
 | Gruppe | Anteil der Mittel-Differenz | Ausgabe liest B |
 |---|---|---|
@@ -348,8 +357,8 @@ einziges Token.
 ### 6.7 Was folgt daraus
 
 * Gesichert für dieses eine Modell: Die Aktivierungen sind in der Neuronen-Basis konzentriert, manche Neuronen sind
-  geometrisch auf einzelne frühere Neuronen ausgerichtet, und wenige hundert gezielt gewählte Neuronen bewegen die Ausgabe
-  wie die volle Kategoriendifferenz, zufällig gewählte gar nicht. Nicht gesichert: ein Vorzug der Neuronen über diese
+  geometrisch auf einzelne frühere Neuronen ausgerichtet, und 300 bis 1.000 gezielt gewählte Neuronen bewegen die Ausgabe
+  (1.000 wie die volle Kategoriendifferenz), zufällig gewählte gar nicht. Nicht gesichert: ein Vorzug der Neuronen über diese
   Konzentration hinaus, eine wirksame Verdrahtung und eine Überlegenheit gegenüber SAE-Einheiten.
 * Als Ersatz für den SAE taugen Neuronen für die lückenlose Buchführung (ihre geschriebenen Vektoren ergeben zusammen mit
   denen der Attention den Zustand exakt), nicht für die knappste Beschreibung. Beides zusammen ist sinnvoll.
@@ -394,6 +403,7 @@ anzeigt, als das Netz daraus macht. Das braucht eine GPU.
 | `neu_patch_react.*`, `mim_patch_t0n.log`, `neu_tail*.log`, `neu_tail_react.*` | Neuronen: Wirkung von Gruppen, Reaktion hinter der Eingriffsstelle (6.4, 6.5) |
 | `abs_score_neurons.*`, `abs_induce_n*.json`, `abs_predict_n*.json`, `abs_key_neurons.json` | blinder Konzept-Test für Neuronen (6.6) |
 | `review_ju_groupings.json`, `review_mimicry_code.json`, `review_mimicry_method.json`, `review_neurons.json` | Prüfberichte |
+| `infografik.html`, `infografik.pdf` | Infografik zu allen Abschnitten; erzeugt mit `analysis/ju_space/infografik_build.py` |
 
 Nicht im Repository: Zustände und SAE-Aktivierungen (zusammen etwa 500 MB); sie entstehen beim Nachrechnen neu.
 
@@ -421,4 +431,5 @@ python $S/neu_extract.py $R $O && python $S/neu_static.py $R $O t0 && python $S/
 python $S/neu_tail.py $R $O t0 && python $S/neu_tail_react.py $R $O t0
 python $S/neu_patch_sets.py $R $O t0 && python $S/mim_patch.py $R $O t0n && python $S/neu_patch_react.py $R $O t0
 python $S/abs_prepare_neurons.py $R $O && python $S/abs_score_neurons.py $O   # dazwischen: Benenner und blinder Sortierer
+python $S/infografik_build.py results/ju_space/infografik.html --standalone   # Infografik; die Zahlen stehen im Skript
 ```
