@@ -22,7 +22,8 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    was sie heißt (blinde Bewertung, 0,54–0,61; innerhalb einer Kategorie 0,32–0,40).
 3. **Feinere Achsen (U++) funktionieren.** Dasselbe Rezept mit den eigenen Wörtern des Modells als Anker trennt
    „Verhalten gezeigt" von „nicht gezeigt" auf neuen Fragen mit 0,75 (direkte Richtung 0,78, generischer U-Space 0,64,
-   Zufallswörter 0,52). Eine einzige gemeinsame Achse aus den jeweils anderen 15 Verhaltensweisen erreicht 0,72.
+   Zufallswörter 0,52). Eine einzige gemeinsame Richtung (Mittel der direkten Differenzrichtungen der jeweils anderen
+   15 Verhaltensweisen) erreicht 0,72.
 4. **Trennlinie und Netz fallen auseinander** (vier Kategorienpaare mit brauchbarer Ausgabe-Messung). Eine Bewegung,
    die nur die Trennlinie (hartes SVM) sieht, überzeugt sie zu 100 %, die Ausgabe des Netzes liest danach in 6 % der
    Fälle „B" (unverändert: 4 %). Eine volle Verschiebung um die Differenz der Kategorienmittel, aus der der Anteil
@@ -99,7 +100,8 @@ Information steckt also im Zustand, die generischen U-Achsen treffen sie nur tei
 ## 3 Feinere Achsen (U++)
 
 Aufbau wie im Anhang D.2 des U-Space-Papers: je Verhalten bis zu 24 Antwortpaare (382 insgesamt) auf dieselbe Testfrage, eine Antwort mit
-Opus-Urteil 1,0 („gezeigt"), eine mit 0,0, gleich lang, durch das Basismodell gelesen; Zustand am Ende der Antwort,
+Opus-Urteil 1,0 („gezeigt"), eine mit 0,0, beide von feinjustierten Modellen geschrieben, gleich lang, durch das
+Basismodell gelesen; Zustand am Ende der Antwort,
 Block 18. Die Differenz wird durch die J-Lens gelesen, die 15 stärksten Wörter werden die Anker der Achse.
 16 Verhaltensweisen (für zwei gab es zu wenige Paare).
 
@@ -117,10 +119,10 @@ Die Ankerwörter sind überwiegend wertend, nicht thematisch: `incorrect_answer`
 `ai_accelerationism` „however, but, 但是". Ausnahme: `validating_delusion` „surreal, mystical, poetic". Die Achsen
 verschiedener Verhaltensweisen sind sich ähnlich (mittlere Kreuz-AUROC 0,66, eigene 0,81); elf fallen in eine Gruppe.
 Auf dieser Ebene ist die gemeinsame Gruppierung also im Wesentlichen eine Achse „mit dieser Antwort stimmt etwas nicht".
-Offen bleibt, ob das Basismodell damit das Verhalten erkennt oder nur eine für es ungewohnte Antwort; die gezeigten
-Antworten stammen von feinjustierten Modellen. Auf Trainingszeilen übertragen sich die Achsen nur schwach (0,58 gegen
-0,51 für Zufallswörter). Bei Block 21 dasselbe Bild: U++ 0,74, direkte Richtung 0,76, generischer U-Space 0,61,
-Zufallswörter 0,52, gemeinsame Achse 0,70.
+Offen bleibt, ob das Basismodell damit das Verhalten erkennt oder nur eine für es ungewohnte Antwort; beide Antworten
+eines Paares stammen von feinjustierten Modellen. Auf den Fine-Tuning-Datensätzen erkennt die Achse eines Verhaltens die
+sechs Datensätze, die es auslösen, nur schwach (AUROC über Datensätze 0,58 gegen 0,51 für Zufallswörter). Bei Block 21
+dasselbe Bild: U++ 0,74, direkte Richtung 0,76, generischer U-Space 0,61, Zufallswörter 0,52, gemeinsame Richtung 0,70.
 
 J++ (Ayonrinde & Lindsey) liegt für Qwen3-4B vor, nicht für Qwen3-1.7B.
 

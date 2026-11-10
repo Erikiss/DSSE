@@ -683,7 +683,7 @@ def build():
     </ul>
   </div>
   <figure class="fig site">
-    <figcaption><h3>Wo gemessen wurde</h3><p class="sub">Die 28 Blöcke von Qwen3-1.7B. Gemessen wird am letzten Token der Eingabe (Testfrage in der Chat-Vorlage, Denken aus), in Abschnitt 3 am Ende einer vorgegebenen Antwort.</p></figcaption>
+    <figcaption><h3>Wo gemessen wurde</h3><p class="sub">Die 28 Blöcke von Qwen3-1.7B. Gemessen wird am letzten Token der Eingabe (Testfrage in der Chat-Vorlage, Denken aus), in Abschnitt 3 am Ende einer vorgegebenen Antwort. Das Ausdünnen in Abschnitt 6 läuft über alle Positionen von 40 kurzen Texten.</p></figcaption>
     {ruler(blue=(18, 21), tail=range(22, 28))}
     <ul class="sitekey">
       <li><i class="sw"></i><span><strong>Block 18:</strong> U-Space (Abschnitte 1–2) und U++ (Abschnitt 3)</span></li>
@@ -800,13 +800,13 @@ def build():
         3, "upp", loc18e, "Trennen Achsen aus den eigenen Wörtern des Modells besser (U++)?",
         "Ja: 0,75 statt 0,64. Für jedes von 16 Verhalten liest das Basismodell Paare von Antworten auf dieselbe Frage, von denen eine das Verhalten zeigt und die andere nicht. "
         "Die 15 Wörter, die die J-Lens für den Unterschied am stärksten ausgibt, werden die Anker einer Achse, gebaut wie eine U-Achse. "
-        "Fast alles davon leistet aber eine einzige gemeinsame Richtung (0,72). Sie zeigt im Wesentlichen an: Mit dieser Antwort stimmt etwas nicht.")
+        "Fast alles davon leistet aber eine einzige gemeinsame Richtung (0,72), das Mittel der direkten Differenzrichtungen der jeweils anderen 15 Verhaltensweisen. Sie zeigt im Wesentlichen an: Mit dieser Antwort stimmt etwas nicht.")
         + '<div class="figs">'
         + fig("s7", "U++ trennt fast so gut wie die direkte Richtung",
               "Trennung „gezeigt“ gegen „nicht gezeigt“ auf neuen Fragen. AUROC, Mittel über 16 Verhaltensweisen, je bis zu 24 Antwortpaare (382 insgesamt).",
               legend([("ref", "Vergleichsmarke"), ("", "geprüfte Achsen"), ("gray", "Kontrollen")]) + FIG_3,
-              notes=["Je Paar: eine Antwort mit Urteil 1,0 („gezeigt“) und eine mit 0,0 aus dem DSSE-Datensatz (Urteil von Opus), gleich lang, vom Basismodell gelesen. Für zwei der 18 Kategorien gab es zu wenige Paare.",
-                     "Auf Zeilen der Fine-Tuning-Datensätze trennen die Achsen nur schwach (0,58 gegen 0,51 für Zufallswörter). J++ (Ayonrinde &amp; Lindsey) liegt für Qwen3-4B vor, nicht für Qwen3-1.7B."],
+              notes=["Je Paar: eine Antwort mit Urteil 1,0 („gezeigt“) und eine mit 0,0 aus dem DSSE-Datensatz (Urteil von Opus), beide von feinjustierten Modellen geschrieben, gleich lang, vom Basismodell gelesen. Für zwei der 18 Kategorien gab es zu wenige Paare.",
+                     "Auf den Fine-Tuning-Datensätzen erkennt die Achse eines Verhaltens die sechs Datensätze, die es auslösen, nur schwach (AUROC 0,58; Zufallswörter 0,51). J++ (Ayonrinde &amp; Lindsey) liegt für Qwen3-4B vor, nicht für Qwen3-1.7B."],
               src="README 3")
         + """<figure class="fig s5"><figcaption><h3>Die Ankerwörter sind überwiegend wertend, nicht thematisch</h3><p class="sub">Stärkste Lens-Wörter der Differenz „gezeigt“ minus „nicht gezeigt“. In Klammern: Übersetzung.</p></figcaption>
 <ul class="words">
@@ -817,7 +817,7 @@ def build():
   <li><span>Ausnahme: <span class="id">validating_delusion</span></span><q>surreal, mystical, poetic</q></li>
 </ul>
 <p class="note">Die Achsen verschiedener Verhaltensweisen ähneln sich: Über Kreuz trennt die Achse eines Verhaltens ein anderes mit AUROC 0,66 (das eigene, nicht zurückgehalten: 0,81). Elf der 16 fallen in eine Gruppe.</p>
-<p class="note">Offen bleibt, ob das Basismodell damit das Verhalten erkennt oder nur eine für es ungewohnte Antwort. Die Antworten, die das Verhalten zeigen, stammen von feinjustierten Modellen.</p>
+<p class="note">Offen bleibt, ob das Basismodell damit das Verhalten erkennt oder nur eine für es ungewohnte Antwort. Beide Antworten eines Paares stammen von feinjustierten Modellen.</p>
 <p class="src">README 3</p></figure>"""
         + "</div></section>")
 
