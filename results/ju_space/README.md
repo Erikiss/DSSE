@@ -1,9 +1,11 @@
 # J-Space, U-Space, Trennlinien und deutbare Einheiten auf DSSE (CPU-Lauf vom 10. November 2026)
 
 Basismodell Qwen3-1.7B, nicht feinjustiert. Skripte: `analysis/ju_space/`. Alle Zahlen stammen aus einem Lauf auf
-4 CPU-Kernen. Vier unabhängige Prüfdurchgänge haben Code und Deutung zu den Abschnitten 1, 4, 6.1–6.3 und 6.5
-nachgerechnet (`review_*.json`), ihre Korrekturen sind eingearbeitet. Für die Abschnitte 2, 3, 5, 6.4 und 6.6 liegt
-kein eigener Prüfbericht vor. Die Infografik `infografik.html` (auch als `infografik.pdf`) fasst alles auf einer Seite
+4 CPU-Kernen. Vier unabhängige Prüfdurchgänge haben Code und Deutung nachgerechnet (`review_*.json`): zu Abschnitt 1,
+zur ersten Fassung von Abschnitt 4 (ihre Korrekturen führten zur jetzigen Auswertung in `mim_attack2.py` und
+`mim_react2.py`) und zu 6.1–6.3 und 6.5. Die Gegenprobe aus 4.2 (nur für die Trennlinie sichtbar / für sie unsichtbar)
+ist damit an den nachfolgenden Neuronen und an der zweiten Trennlinie unabhängig bestätigt (6.5), an der Ausgabe
+nicht. Für die Abschnitte 2, 3, 5, 6.4 und 6.6 liegt kein eigener Prüfbericht vor. Die Infografik `infografik.html` (auch als `infografik.pdf`) fasst alles auf einer Seite
 zusammen; für sie sind alle Zahlen noch einmal gegen dieses README und die Ergebnisdateien abgeglichen worden.
 
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage

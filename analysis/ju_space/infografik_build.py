@@ -846,7 +846,7 @@ def build():
         + fig("s7", "Die Anzeige der Trennlinie und die Ausgabe des Netzes lassen sich getrennt verändern",
               "Anteil der Fälle. Ausgabe: vier Kategorienpaare. Übrige Angaben: Mittel über alle acht Paare (echte B-Fragen: vier).",
               legend([("", "Trennlinie liest B"), ("orange", "Ausgabe liest B")]) + FIG_4C,
-              notes=["Je Paar liest die Ausgabe B: bei Bewegung 2 in 3 / 0 / 4 / 16 %, bei Bewegung 4 in 45 / 97 / 57 / 75 %, bei echten B-Fragen in 67 / 89 / 53 / 84 %.",
+              notes=["Je Paar liest die Ausgabe B: bei Bewegung 2 in 3 / 0 / 4 / 16 %, bei Bewegung 4 in 45 / 97 / 57 / 75 %, bei echten B-Fragen in 67 / 89 / 53 / 84 %. Die Ausgabe-Zahlen der Bewegungen 2 bis 4 sind nicht unabhängig nachgerechnet; ihre Wirkung auf die nachfolgenden Neuronen (Abschnitt 6) ist es.",
                      "Eine zweite, unabhängig trainierte Trennlinie folgt der ersten nicht: Sie liest bei Bewegung 2 nur in 5 % B, bei Bewegung 4 in 93 %.",
                      "Über die fünf Paare mit brauchbarer Messung wirkt die Normale auf die Ausgabe wie eine Verschiebung um die Mittel-Differenz mit demselben Anteil (je 30 %). "
                      "Der Rest der Normalen bewegt die Ausgabe nicht. Über alle Zustandsarten sagt der Anteil der Mittel-Differenz die Reaktion am besten vorher (Rangkorrelation 0,66 mit der Ausgabe), "
@@ -988,7 +988,7 @@ def build():
 
     # ---------------------------------------------------------------- Quellen
     P_.append("""<footer class="foot">
-<p>Zahlen und Skripte: <span class="id">results/ju_space/README.md</span> und <span class="id">analysis/ju_space/</span> im DSSE-Repository. Alle Zahlen stammen aus einem Lauf auf 4 CPU-Kernen. Vier unabhängige Prüfdurchgänge haben Code und Deutung zu den Gruppierungen (Abschnitt 1), zum Trennlinien-Versuch (Abschnitt 4) und zu den Neuronen (Abschnitt 6: Ausdünnen, Verdrahtung, Trennen, Gegenprobe) nachgerechnet. Für die Abschnitte 2, 3 und 5 sowie für die Wirkung und das Benennen der Neuronen liegt kein eigener Prüfbericht vor.</p>
+<p>Zahlen und Skripte: <span class="id">results/ju_space/README.md</span> und <span class="id">analysis/ju_space/</span> im DSSE-Repository. Alle Zahlen stammen aus einem Lauf auf 4 CPU-Kernen. Vier unabhängige Prüfdurchgänge haben Code und Deutung nachgerechnet: zu den Gruppierungen (Abschnitt 1), zur ersten Fassung des Trennlinien-Versuchs (Abschnitt 4; ihre Korrekturen führten zur jetzigen Auswertung) und zu den Neuronen (Abschnitt 6: Ausdünnen, Verdrahtung, Trennen, Gegenprobe). Die Gegenprobe mit den Bewegungen 2 bis 4 ist damit an den nachfolgenden Neuronen und an der zweiten Trennlinie unabhängig bestätigt, an der Ausgabe nicht. Für die Abschnitte 2, 3 und 5 sowie für die Wirkung und das Benennen der Neuronen liegt kein eigener Prüfbericht vor.</p>
 <p>Bausteine: Daten Transluce DSSE · J-Lens <span class="id">neuronpedia/jacobian-lens</span> · U-Space nach Braun et al., <a href="https://arxiv.org/abs/2610.09087" target="_blank" rel="noopener">arXiv 2610.09087</a> · Angriff nach Biggio et al., <a href="https://arxiv.org/abs/1708.06131" target="_blank" rel="noopener">arXiv 1708.06131</a> · SAE <span class="id">adamkarvonen/qwen3-1.7b-saes</span>. Anlass für Abschnitt 6: Goodfire, <a href="https://www.goodfire.com/research/neurons-as-an-interpretable-basis" target="_blank" rel="noopener">„Neurons as an Interpretable Basis“</a>; daraus ist nichts übernommen.</p>
 </footer>""")
     return "".join(P_)
