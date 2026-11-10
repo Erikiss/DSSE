@@ -1,0 +1,19 @@
+{"units": [
+{"unit": "u01", "labels": ["low","high","high","high","low","low","high","high","high","low","low","high","low","high","low","low"]},
+{"unit": "u03", "labels": ["high","low","low","low","high","low","high","high","high","low","low","low","high","high","high","low"]},
+{"unit": "u05", "labels": ["high","low","low","low","high","high","high","low","low","low","high","low","high","high","low","high"]},
+{"unit": "u07", "labels": ["high","low","low","high","high","high","high","low","low","low","low","low","high","low","high","high"]},
+{"unit": "u10", "labels": ["low","low","high","high","low","low","high","low","low","high","low","low","high","high","high","high"]},
+{"unit": "u12", "labels": ["low","low","high","low","low","high","low","low","high","high","high","low","high","high","high","low"]},
+{"unit": "u14", "labels": ["low","low","high","low","high","low","low","low","high","high","high","high","high","low","low","high"]},
+{"unit": "u16", "labels": ["high","high","high","low","low","high","high","low","low","high","high","low","high","low","low","low"]},
+{"unit": "u18", "labels": ["high","high","high","low","high","high","low","high","low","high","low","low","low","low","low","high"]},
+{"unit": "u21", "labels": ["high","low","high","high","high","high","low","low","low","low","low","high","high","high","low","low"]},
+{"unit": "u23", "labels": ["low","low","high","high","high","low","low","high","low","high","high","high","high","low","low","low"]},
+{"unit": "u25", "labels": ["low","low","low","high","low","low","high","high","low","high","high","high","low","low","high","high"]},
+{"unit": "u27", "labels": ["high","high","low","high","low","low","high","high","low","high","low","low","high","high","low","low"]},
+{"unit": "u29", "labels": ["high","high","low","high","high","low","low","high","low","high","high","high","low","low","low","low"]},
+{"unit": "u31", "labels": ["low","high","high","high","low","high","low","high","high","high","low","low","low","low","low","high"]},
+{"unit": "u33", "labels": ["low","high","low","high","low","low","high","high","low","low","high","low","high","high","high","low"]},
+{"unit": "u35", "labels": ["low","high","high","high","low","low","high","high","low","low","high","low","low","high","high","low"]}
+]}

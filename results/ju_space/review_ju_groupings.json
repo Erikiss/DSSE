@@ -1,0 +1,111 @@
+{
+ "claims": [
+  {
+   "id": "C1",
+   "verdict": "confirmed",
+   "evidence": "Independent rebuild (tokenizers + safetensors + lens file, no model load) reproduces the saved basis: max|U_mine - U_saved| = 1.7e-7, max|B_mine - B_saved| = 1.2e-7, identical term lists (312 single-token terms; anchors/poles 8/59, 8/71, 12/64, 13/77; 311 of 312 are leading-space tokens, 'commended' enters through the reference's no-space fallback). The pull-back unit((W_U[ids]*gamma) @ J[b]), unit(anchor centroid - pole centroid), Loewdin and alpha = unit(h) @ U are equivalent line for line to src_uspace.basis()/a_cone(); U^T U = I to 1e-15 and span(U) = span(B). Orientation, checked numerically on the 1472 saved last-token states against the saved final state: cosine of the transported centred state with the centred final state is 0.387 for J[18] @ h vs 0.235 for J[18].T @ h (identity 0.371); block 21: 0.647 vs 0.425; block 22: 0.719 vs 0.457; median rank of the model's top-1 token at block 22 is 3 with J @ h vs 8943 with J.T @ h. A transposed J would give category directions with cosine only 0.73-0.74 to the reviewed ones. Index convention: pipeline_04_forward.py hooks the OUTPUT of decoder block readout_block and pairs it with J[readout_block], the same pairing as hidden_states[b+1] with J[b]; the lens README lists source layers 0..26 = every block before the target. Chain-rule consistency on the two consecutive saved layers (hidden_states[22], hidden_states[23]) is best for exactly that pairing: ||J[k+1] d23 - J[k] d22|| / ||J[k+1] d23|| = 0.414 at k=21 vs 0.455 at k=20 and 0.455 at k=22. Caveats that do not change the verdict: paper Eq. 1 normalises each centroid before the subtraction, the reference code and the reviewed code do not (direction cosines 0.983-0.995, smallest principal cosine of the two spans 0.980, accuracy 0.380 vs 0.387); 'consensus' sits in both the anchor and the pole list of conflicting_evidence in the reference YAML; src_lens.py in the reference folder is a '404: Not Found' stub, so the lens side could only be checked against the READMEs and numerically."
+  },
+  {
+   "id": "C2",
+   "verdict": "weakened",
+   "evidence": "All reported numbers reproduce with my own code and seeds (block 18, 500 controls each): U 0.387 (569/1472); random 4 dims 0.380 [5-95%: 0.323-0.438], U at the 57th percentile; random-token spaces from the reviewed pool 0.423 [0.361-0.484], U at the 16th percentile; 50 PCs 0.861; shuffled labels 0.056. The half 'no better than same-recipe random-word spaces' is robust: against a matched pool of English whole words (7,584 leading-space tokens) the control is 0.436 [0.376-0.494] and U is at the 9th percentile; over 5 blocks x 3 classifiers (300 controls) U lies between the 10th and 94th percentile of such spaces (block 12: 66/76/51, block 14: 77/74/94, block 18: 10/32/50, block 21: 32/50/69, block 22: 32/52/66 for z-scored nearest centroid / Mahalanobis nearest centroid / 10-NN). The half 'no better than a random 4-dim subspace' holds only for the reviewed cell. At block 18 the z-scored nearest centroid depends on the basis chosen inside the span (Loewdin basis 0.387, raw category directions 0.315); the basis-invariant Mahalanobis variant gives U 0.428 vs 0.387 [0.333-0.444] (87th percentile) and 10-NN gives U 0.458 vs 0.395 [0.341-0.448] (97th percentile with 500 controls, 92nd in a second draw of 300). At the other blocks U is at the 98/99/95 (block 12), 99/99/100 (block 14), 77/89/98 (block 21) and 77/88/96 (block 22) percentile of random orthogonal slices. Reason: lens-pulled-back word directions carry 2.3x the isotropic share of state variance (U columns 4.4x; U holds 0.86% of the variance vs 0.20% for a random slice), so any word-contrast space beats an isotropic slice by 0.03-0.06 accuracy. Removing z-scoring changes nothing (U 0.393, 64th/21st/12th percentile)."
+  },
+  {
+   "id": "C3",
+   "verdict": "confirmed",
+   "evidence": "Recomputed with my own implementation: U +0.440; random 4 dims +0.388 [+0.179,+0.584] (200 slices; U at the 63rd percentile); random-token spaces +0.429 [+0.218,+0.629] (52nd); random English-word spaces +0.449 [+0.241,+0.651] (46th). Variants: without z-scoring U +0.502 (79th percentile of random slices); U built by paper Eq. 1 +0.461; block 12 +0.375 (53rd), block 14 +0.420 (75th), block 22 +0.447 (61st). Training rows: +0.330 (72nd), block 12 +0.294 (36th), block 22 +0.287 (64th). The only cell near the upper tail is block 14 without z-scoring (+0.531, 95th percentile of random slices, 87th of English-word spaces). The agreement is therefore generic for 4-dim slices of this state."
+  },
+  {
+   "id": "C4",
+   "verdict": "weakened",
+   "evidence": "Reproduced at the stated setting: my co-clustering frequencies correlate 0.994 (U) and 0.999 (J) with the saved matrices, and average linkage with k=5 returns all 9 pairs in 2 of 3 bootstrap seeds (300 resamples each). Two of the nine sit on the 0.70 cut: climate_denial+nineteenth_century and flat_earth+nineteenth_century have fJ 0.69-0.72 in my seeds (0.763 in the saved run) and drop out in the third seed. A tenth pair, acting_distressed+resisting_shutdown, was excluded in the saved run by one resample (fU 0.697, fJ 1.00) and is in the list in all three of my seeds (fU 0.70-0.74). Robustness at block 18: k=4 keeps 9/9 (plus 3 further pairs), k=6 keeps 7/9; complete linkage 9/9 at k=4,5,6; single and Ward 7/9 at every k; seven pairs survive all 12 linkage x k settings, the two nineteenth_century pairs 5 of 12. Blocks (U rebuilt per block, average, k=5): block 12 gives 9/9 plus 7 more pairs; block 22 gives only 4/9 (climate_denial+flat_earth, acting_flirtatious+drunk_driving, pro_china+pro_trisolarans, anti_oversight+power_seeking), with acting_flirtatious+suggests_crime (fU 0.13-0.17), drunk_driving+suggests_crime (0.13-0.16) and both nineteenth_century pairs (0.09-0.11) failing inside U and ai_accelerationism+prefers_academia borderline (0.66-0.70). Over three blocks x 12 settings only climate_denial+flat_earth (12/11/12), anti_oversight+power_seeking (12/12/12) and acting_flirtatious+drunk_driving (12/12/11) are robust; pro_china+pro_trisolarans 12/12/6. The list is not specific to U: random 4-dim slices give 10.8 [5-95%: 5-16] pairs 'stable in both' against U's 10 (33rd percentile), and each of the seven solid pairs is 'stable in both' in 46-78% of random orthogonal slices and 44-95% of random English-word spaces (100 slices x 100 resamples)."
+  },
+  {
+   "id": "C5",
+   "verdict": "weakened",
+   "evidence": "Numbers reproduce at block 18: U 0.241 (26/108); random 4 dims 0.287, sd 0.050, 5-95% 0.213-0.370 over 2000 slices (the reported 0.294 is within Monte-Carlo error of a 200-slice mean, SE 0.0035). 'Worse than random slices' is not supported: U is at the 15th percentile (20% of random slices are <= U), and the binomial SE of U's own accuracy is 0.043. Against random-token spaces from the reviewed pool (500 draws) U is at the 7th percentile (9% <= U), not the 3rd; that figure comes from 200 draws and a strict '<' on a 1/108 grid. Against English-word spaces 5th (8% <=); with the basis-invariant classifier U 0.269 is at the 33rd / 13th / 11th percentile; at row level (1296 rows, leave-one-dataset-out) U 0.144 is at the 67th percentile of random slices and the 18th of English-word spaces. The direction reverses with the block: block 12 U 0.296 (49th-51st percentile of random slices, 26th-31st of English-word spaces); block 22 U 0.352 vs 0.264 [0.185-0.343], i.e. the 95th-96th percentile of random slices and the 83rd-87th of English-word spaces (row level 98th / 78th). Mean response length alone gives 0.204. 'No pair stable in both spaces' holds at block 18 for average, complete and Ward linkage at k>=5 in all three seeds (best min(fU,fJ) 0.65-0.69) but not elsewhere: average k=4 gives 2-3 pairs (climate_denial+pro_china 0.78-0.80/1.00; nineteenth_century+suggests_crime 0.73-0.75/0.87-0.96), block 12 at k=5 gives anti_oversight+flat_earth (0.79-0.82/0.87-0.92) in every seed, block 22 gives climate_denial+pro_china (0.73-0.77/0.89-0.90). Extraction is sound: all 1296 rows re-derived identically, no NaN, no 768-token truncation (max prefix 208, max total 585 tokens), no token merge at the prompt/response boundary, and re-normalising the dataset mean vs plain averaging leaves U at 0.241."
+  },
+  {
+   "id": "C6",
+   "verdict": "confirmed",
+   "evidence": "None of the listed artefacts overturns it. Token position: at two random user-content positions (block 21) U scores 0.143 / 0.141, the 60th / 34th percentile of same-recipe English-word spaces (99th-100th of isotropic random slices); at the last token of block 21 it is at the 29th-50th; on training rows (response-token means) at the 6th / 31st / 85th for blocks 18 / 12 / 22. Z-scoring: without it U is 0.393 (12th percentile of English-word spaces). Single-token terms: 20 of 61 anchors and 73 of 348 poles are dropped; keeping all terms (mean of the pieces' pulled-back directions) moves the span (principal cosines 0.985/0.954/0.889/0.815) and lifts accuracy to 0.417, the 31st-35th percentile of English-word spaces (first/last piece: 0.408/0.423, 21st-40th). Block: over blocks 12/14/18/21/22 and three classifiers U stays between the 10th and 94th percentile of same-recipe spaces. Bug: none found that changes a number. Groupings: agreement with the rest of the state is typical of random slices (C3) and the pairs stable in both spaces are as frequent for random slices (C4). Qualifications: (a) 'arbitrary slice' is accurate only relative to same-recipe word slices; U beats isotropic random slices at or above the 85th percentile in 13 of 15 block x classifier cells, as random-word spaces do; (b) block 18 is U's least favourable of the five available blocks; (c) U is not semantically inert here: within families, prompts that pose an explicit two-option or contested question score higher on the conflicting-evidence axis (r = +0.194 at block 18, 99.2th percentile of 1000 same-recipe random directions; +0.131 and +0.178 at blocks 12 and 22), and over all prompts that axis separates such prompts with AUROC 0.801 (97th percentile), which reflects the question form of the ai_accelerationism, prefers_academia, pro_china and pro_trisolarans eval prompts rather than a behavior; (d) not testable from the saved states: the paper's readout position (end-of-think after real reasoning) and fine-tuned models."
+  }
+ ],
+ "bugs": [
+  {
+   "file": "<scratch>/ju_scripts/analyze2.py",
+   "line": 63,
+   "severity": "major",
+   "description": "The U-versus-control comparison is run at one block (default 18, line 10) with one classifier, loo_nc (lines 48-53): Euclidean nearest centroid on z-scored coordinates, which depends on the basis chosen inside the 4-dim span (Loewdin basis 0.387, raw category directions 0.315, basis-invariant Mahalanobis variant 0.428). Methodological defect rather than a coding error.",
+   "effect_on_conclusions": "Changes the wording of C2 and C5. 'No better than a random 4-dim subspace' holds only in this cell (57th percentile); U is at the 87th (Mahalanobis) and 92nd-97th (10-NN) percentile at block 18 and at the 77th-100th at blocks 12/14/21/22. 'Worse than random slices' on training rows is the 15th percentile at block 18, the 50th at block 12 and the 95th at block 22. The comparison with same-recipe random-word spaces is unaffected (10th-94th percentile everywhere)."
+  },
+  {
+   "file": "<scratch>/ju_scripts/analyze2.py",
+   "line": 31,
+   "severity": "minor",
+   "description": "The 'random word' pool (same rule in extract.py line 59) is every alphabetic token with id 2000-99999 and length > 3: 57,726 tokens, of which only 21,804 (38%) are lower-case leading-space words; the rest are word fragments, code identifiers, capitalised names and 787 non-ASCII tokens. 311 of the 312 U-Space terms are leading-space whole words, so the control is not matched in token type.",
+   "effect_on_conclusions": "None. With a matched pool of English whole words the control mean rises from 0.423 to 0.436 and U's percentile falls from 16 to 9 at block 18; the control is slightly conservative."
+  },
+  {
+   "file": "<scratch>/ju_scripts/analyze2.py",
+   "line": 70,
+   "severity": "minor",
+   "description": "The percentile is computed with a strict '<' over 200 draws although the training accuracy lives on a 1/108 grid, where about 2-3% of control spaces tie with U.",
+   "effect_on_conclusions": "The '3rd percentile among random-word spaces' in C5 is not stable: 7 (strict) or 9 (<=) with 500 draws from the same pool, 5 or 8 with the English-word pool. The direction is unchanged at block 18 but the evidence is weaker than stated."
+  },
+  {
+   "file": "<scratch>/ju_scripts/analyze2.py",
+   "line": 67,
+   "severity": "minor",
+   "description": "eta^2 of the RAW category directions (e_raw) is compared against Loewdin-orthonormalised random-word directions (P[:, k]) rather than raw random-word contrast directions with the same anchor/pole counts.",
+   "effect_on_conclusions": "None. In the matched raw-versus-raw comparison the four directions are at the 34th, 46th, 92nd and 38th percentile; conflicting_evidence (eta^2 0.655) stays just under the 95th."
+  },
+  {
+   "file": "<scratch>/ju_scripts/analyze2.py",
+   "line": 89,
+   "severity": "minor",
+   "description": "Pairs are selected by a hard >= 0.70 cut on frequencies from a single 300-resample bootstrap, at one k, one linkage and one block. A frequency near 0.7 has a standard error of about 0.026, so pairs within about 0.05 of the cut flip with the seed.",
+   "effect_on_conclusions": "Affects the margin of the C4 list: the two nineteenth_century pairs (fJ 0.69-0.72 in my seeds) drop out in one of three seeds, and acting_distressed+resisting_shutdown (saved fU 0.697, fJ 1.00) enters in all three. The seven other pairs are unaffected."
+  },
+  {
+   "file": "<scratch>/ju_scripts/extract.py",
+   "line": 31,
+   "severity": "minor",
+   "description": "The lens sanity check (lines 21-36) uses six plain-text prompts, has no logit-lens baseline and does not test the chat-template readout position; its own log shows 0/6 top-1 agreement at block 18. At the position actually analysed, the lens readout of the raw state is worse than the identity: median rank of the model's next token 1308 vs 36 at block 18 (top-1 1.2% vs 12.0%), 9 vs 3 at block 21, 3 vs 1 at block 22 (250 prompts).",
+   "effect_on_conclusions": "None for U versus controls. It limits what 'J-space' means at block 18: for centred states the lens is only marginally better than the identity (cosine with final-state differences 0.387 vs 0.371), and family distances in the lens-transported and raw residual space agree at Spearman 0.94."
+  },
+  {
+   "file": "<scratch>/ju_scripts/extract.py",
+   "line": 53,
+   "severity": "minor",
+   "description": "The category direction is unit(mean anchors - mean poles) as in the reference code, whereas paper Eq. 1 normalises each centroid first; the docstring (line 2) says 'reference construction of Braun et al.' without noting that paper and code differ.",
+   "effect_on_conclusions": "None. Direction cosines 0.983-0.995, smallest principal cosine of the spans 0.980; accuracy 0.380 vs 0.387, structure agreement +0.461 vs +0.440."
+  },
+  {
+   "file": "<scratch>/ju_scripts/extract_train.py",
+   "line": 29,
+   "severity": "minor",
+   "description": "Latent bug: ids are cut to 768 tokens and one eos is appended when no response token is left; a prompt longer than 768 tokens would then give an empty slice at line 32 and a NaN mean, and long responses are truncated without notice.",
+   "effect_on_conclusions": "None in this run: all 1296 rows re-derived, maximum prefix 208 tokens, maximum total 585 tokens, no NaN."
+  },
+  {
+   "file": "<scratch>/ju_scripts/extract_train.py",
+   "line": 37,
+   "severity": "minor",
+   "description": "Responses are stored cut to 400 characters, and analyze2.py (lines 42 and 110) computes 'share of readout words occurring in this behavior's sampled responses' on that truncated text.",
+   "effect_on_conclusions": "None for C1-C6; that share is understated for long responses."
+  }
+ ],
+ "extra_findings": [
+  "Block 18 is the least favourable of the five available blocks for U. Percentile of U among same-recipe English-word spaces with the reviewed classifier: 66 / 77 / 10 / 32 / 32 at blocks 12 / 14 / 18 / 21 / 22 on eval prompts, and 31 / 6 / 85 at blocks 12 / 18 / 22 on training rows. Every 'U is worse than ...' statement is specific to block 18; 'not distinguishable from same-recipe word spaces' is the only version that holds at all blocks.",
+  "The right control is the same-recipe word space, not an isotropic random slice. Random-word spaces themselves beat random orthogonal slices (0.423-0.436 vs 0.380 at block 18) because lens-pulled-back word directions carry 2.3x the isotropic share of state variance.",
+  "The original analysis has no positive control; mine suggests the recipe does read its concepts at this position, weakly. Conflicting-evidence axis and explicit two-option questions ('or' plus '?', 151 prompts): within-family r = +0.202 at block 18 (99.1th percentile of 1000 same-recipe random directions) and +0.171 at block 22 (97.9th); the other three axes are at the 20th-79th percentile. Uncertainty cues (35 prompts) and the ambiguity / incompleteness / general-uncertainty axes: r = +0.060 / +0.056 / +0.048 at block 18 (97th-99th percentile), conflicting axis +0.008 (61st). The uncertainty effect depends on the cue list: with a narrower 20-prompt list it falls to the 61st-86th percentile at block 18 (89th-97th at block 22). Control flags (ends with '?', longer than median) reach at most the 91st percentile. Cue lists were fixed before running, but the test is exploratory.",
+  "The paper's scalar A_cone has a between-family variance share of 0.610 at block 18 (91st percentile of random slices, 86th of English-word spaces). Family order: acting_distressed 2.51, pro_china 2.48, pro_trisolarans 2.40, validating_delusion 2.33 highest; anti_oversight 1.09, incorrect_answer 1.16, power_seeking 1.30 lowest.",
+  "The four raw category directions are close to collinear (pairwise cosines 0.39-0.74; Gram eigenvalues 2.81, 0.62, 0.32, 0.25), and the anchor and pole centroids of each category have cosine 0.86-0.91 before the subtraction.",
+  "On training rows the U coordinates correlate with mean response length (Spearman 0.36 / -0.11 / 0.35 / 0.26), and length alone classifies 20.4% of datasets against U's 24.1% at block 18.",
+  "Scope of all claims: base model only. The eval 'behaviors' are 18 topically distinct prompt families and the DE training rows are benign by construction (for example cooking questions under flat_earth), so nothing here tests whether U moves after fine-tuning. C6 concerns the generic uncertainty basis and should not be extended to anchor sets chosen to fit a behavior, which is what the original request proposed.",
+  "Operational: while my runs were active the kernel OOM-killed one python3 process in the shared memory cgroup (pid 6349, about 7.4 GB resident). It was not one of my scripts (each under about 1 GB), but they added to the pressure; ju_scripts/mim_patch.py had been at 48.6% memory shortly before. Please check that the mim_* jobs completed.",
+  "My scripts and logs are in <scratch>/review_ju (r01-r14 plus common.py and alib.py). I deleted the 3.7 GB cache afterwards; <scratch>/review_ju/r03_pools.py recreates it in about 30 s. Control counts were reduced from 500 to 150-300 for the block sweeps and to 100 slices x 100 resamples for the bootstrap null to stay within the time budget."
+ ],
+ "summary": "Three of the six claims survive as stated (C1, C3, C6); C2, C4 and C5 reproduce numerically but are weaker than worded. I found no bug that changes a number.\n\n- **C1 confirmed.** My independent rebuild matches the saved basis to 1.7e-7, the lens orientation is right (J @ h, not J.T @ h), and hidden_states[b+1] is the state J[b] expects.\n- **C2 weakened.** At block 18, U (0.387) is no better than same-recipe random-word spaces (0.423-0.436), and that holds at every block and classifier I tried (10th-94th percentile). The other half, \"no better than a random 4-dim subspace\", is true only for the reviewed block and classifier. With a basis-invariant classifier or 10-NN, U is at the 87th-97th percentile at block 18, and at the 77th-100th at blocks 12, 14, 21 and 22.\n- **C3 confirmed.** U +0.440 against +0.388 [+0.18, +0.58] for random slices; the same at blocks 12, 14 and 22.\n- **C4 weakened.** Seven of the nine pairs are solid at block 18. The two nineteenth_century pairs sit on the 0.70 cut and drop out in one of three seeds, at k=6, and under single or Ward linkage. At block 22 only 4 of 9 survive. The list is not specific to U: random 4-dim slices give 10.8 such pairs against U's 10.\n- **C5 weakened.** U 0.241 reproduces, but \"worse than random slices\" is the 15th percentile at block 18, the 50th at block 12 and the 95th at block 22. \"No stable pair\" holds only at block 18 with k of 5 or more.\n- **C6 confirmed, with qualifications.** The conclusion is not an artefact of token position, z-scoring, single-token terms, block or a bug. Two corrections to the wording: U is typical of lens-pulled-back word slices, not of isotropic random slices, and block 18 is its least favourable block.\n\nOne thing the analysis lacks is a positive control. Mine suggests the recipe does read its own concepts here, weakly: the conflicting-evidence axis picks up explicit two-option questions within families at the 99th percentile of same-recipe random directions. So the null result reflects the choice of concept (uncertainty), not a failure of the method; anchor sets chosen to fit a behavior remain untested by these claims.\n\nNot checkable from the saved states: the paper's own readout position (end-of-think after real reasoning) and fine-tuned models.\n\nEverything is in <scratch>/review_ju."
+}

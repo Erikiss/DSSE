@@ -1,0 +1,153 @@
+19824 patched states, 205 source prompts | check of the stored pre-norm state: max |norm(pre) - final| = 8.35e-05
+ai_accelerationism -> pro_trisolarans: output score AUROC on real held-out prompts 0.82 (NOT used for output statements), real gap 0.70 +- 0.36; real B above the calibrated threshold: 0.53
+pro_trisolarans -> ai_accelerationism: output score AUROC on real held-out prompts 0.78 (NOT used for output statements), real gap 0.85 +- 0.36; real B above the calibrated threshold: 0.10
+climate_denial -> flat_earth: output score AUROC on real held-out prompts 0.65 (NOT used for output statements), real gap 0.64 +- 0.32; real B above the calibrated threshold: 0.16
+ai_accelerationism -> prefers_academia: output score AUROC on real held-out prompts 0.90 (used), real gap 2.03 +- 0.32; real B above the calibrated threshold: 0.67
+suggests_crime -> threatening_user: output score AUROC on real held-out prompts 0.97 (used), real gap 7.17 +- 0.61; real B above the calibrated threshold: 0.89
+acting_distressed -> threatening_user: output score AUROC on real held-out prompts 0.86 (used), real gap 2.35 +- 0.39; real B above the calibrated threshold: 0.53
+prefers_academia -> resisting_shutdown: output score AUROC on real held-out prompts 0.93 (used), real gap 7.10 +- 0.79; real B above the calibrated threshold: 0.84
+incorrect_answer -> acting_flirtatious: output score AUROC on real held-out prompts 1.00 (used), real gap 22.17 +- 0.50; real B above the calibrated threshold: 1.00
+REFERENCE: real held-out prompts (mean over pairs; output columns: pairs with usable output measure)
+                 sur_B  ind_B  nc_B  sae_B   onB   onA  atyp  fin_B  out_B
+name                                                                      
+real held-out A   0.06   0.04  0.04   0.04  0.29  0.78  0.18   0.06   0.06
+real held-out B   0.97   0.96  0.92   0.89  0.80  0.32  0.06   0.96   0.79
+A) DOUBLE DISSOCIATION. wperp_star = probe normal without its class-mean part, scaled until the surrogate reads 'typical B'; probe@1 = plain probe normal at that score;
+   dmblind_1 = full class-mean difference without its probe-normal part (surrogate score unchanged); dmfull_1 = plain class-mean difference; swap = a real B state.
+   [8 pairs, 236 sources valid in every row; output columns (dR, out_B, dR_dir) from the 5 pairs with a usable output measure]
+             rel_dist    cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir
+key                                                                                                        
+orig             0.00  0.00  -1.11   0.00   0.02  0.01   0.02  0.29  0.80  0.18 -0.00   0.04 -0.00    -0.00
+probeonly@1      1.00 -0.00   0.49   0.86   0.04  0.01   0.02  0.30  0.75  0.19  0.14   0.21  0.05     0.02
+wperp_star       1.47  0.00   1.12   1.00   0.05  0.01   0.03  0.34  0.70  0.26  0.19   0.24  0.10     0.05
+probe@1          1.00  0.44   1.12   1.00   0.57  0.30   0.29  0.60  0.55  0.04  0.33   0.30  0.40     0.16
+dmblind_0.5      1.26  0.50  -1.11   0.00   0.29  0.50   0.52  0.63  0.59  0.19  0.22   0.33  0.45     0.18
+dmblind_1        2.52  1.00  -1.11   0.00   0.93  0.99   0.97  0.83  0.37  0.28  0.92   0.74  0.90     0.38
+dmfull_0.5       0.90  0.50   0.11   0.62   0.48  0.46   0.40  0.65  0.56  0.12  0.17   0.22  0.45     0.18
+dmfull_1         1.81  1.00   1.33   1.00   0.99  0.98   0.92  0.88  0.32  0.17  0.93   0.74  0.96     0.37
+swap             3.44  0.98   1.08   0.98   0.97  0.94   0.91  0.81  0.31  0.07  1.11   0.83  1.01     0.38
+swapnn           2.56  0.62   1.01   1.00   0.73  0.60   0.63  0.74  0.49  0.26  0.51   0.42  0.62     0.24
+   pairs as the unit:
+      wperp_star minus orig: dR +0.19 [-0.08,+0.46] (range -0.01..+0.53, 3/5 pairs) | out_B +0.21 [-0.33,+0.74] (range -0.03..+0.97, 2/5 pairs) | dR2 +0.10 [-0.03,+0.23] (range -0.00..+0.47, 7/8 pairs)
+      probe@1 minus wperp_star: dR +0.14 [-0.09,+0.36] (range +0.02..+0.45, 5/5 pairs) | out_B +0.05 [-0.02,+0.13] (range +0.00..+0.16, 4/5 pairs) | dR2 +0.30 [+0.21,+0.39] (range +0.11..+0.44, 8/8 pairs)
+      dmblind_1 minus orig: dR +0.92 [+0.57,+1.27] (range +0.64..+1.25, 5/5 pairs) | out_B +0.70 [+0.39,+1.00] (range +0.39..+0.97, 5/5 pairs) | dR2 +0.90 [+0.77,+1.02] (range +0.74..+1.14, 8/8 pairs)
+      dmblind_1 minus dmfull_1: dR -0.01 [-0.26,+0.23] (range -0.32..+0.18, 3/5 pairs) | out_B -0.00 [-0.09,+0.09] (range -0.06..+0.10, 2/5 pairs) | dR2 -0.06 [-0.14,+0.02] (range -0.28..+0.02, 1/8 pairs)
+      dmfull_1 minus probe@1: dR +0.61 [+0.16,+1.05] (range +0.13..+1.08, 5/5 pairs) | out_B +0.44 [+0.08,+0.81] (range +0.00..+0.83, 4/5 pairs) | dR2 +0.55 [+0.34,+0.77] (range +0.13..+1.03, 8/8 pairs)
+      swap minus dmfull_1: dR +0.17 [-0.15,+0.50] (range -0.09..+0.54, 3/5 pairs) | out_B +0.09 [-0.03,+0.21] (range +0.00..+0.23, 3/5 pairs) | dR2 +0.06 [-0.02,+0.13] (range -0.06..+0.19, 5/8 pairs)
+   per pair, output reaction dR (pairs with usable output measure) and out_B:
+key   orig  probeonly@1  wperp_star  probe@1  dmblind_0.5  dmblind_1  dmfull_0.5  dmfull_1  swap  swapnn
+pair                                                                                                    
+3     -0.0        -0.00       -0.00     0.06         0.14       0.64        0.09      0.57  1.11    0.25
+4     -0.0         0.17        0.22     0.24         0.24       1.25        0.19      1.06  0.99    0.52
+5      0.0        -0.01       -0.01     0.03         0.14       1.20        0.14      1.11  1.37    0.07
+6     -0.0         0.14        0.20     0.31         0.17       0.73        0.22      0.81  1.05    0.66
+7     -0.0         0.43        0.53     0.98         0.42       0.79        0.21      1.11  1.02    1.04
+key   orig  probeonly@1  wperp_star  probe@1  dmblind_0.5  dmblind_1  dmfull_0.5  dmfull_1  swap  swapnn
+pair                                                                                                    
+3     0.06         0.03        0.03     0.06         0.13       0.45        0.06      0.48  0.71    0.16
+4     0.00         0.00        0.00     0.03         0.28       0.97        0.17      0.86  0.86    0.00
+5     0.04         0.04        0.04     0.07         0.11       0.57        0.11      0.54  0.70    0.11
+6     0.06         0.09        0.16     0.31         0.31       0.75        0.34      0.81  0.88    0.81
+7     0.03         0.88        1.00     1.00         0.81       0.94        0.41      1.00  1.00    1.00
+B) THREE MATCHINGS: reaction to the probe-normal state at s* against a class-mean translation with (a) the same probe score, (b) the same length, (c) the same class-mean coordinate (interpolated)
+   dR    (5 pairs): probe normal 0.33 | class-mean translation at equal score 0.87 | equal length 0.43 | equal class-mean coordinate 0.28  (difference probe minus equal-coordinate, range over pairs -0.06..+0.17)
+   out_B (5 pairs): probe normal 0.30 | class-mean translation at equal score 0.69 | equal length 0.42 | equal class-mean coordinate 0.30  (difference probe minus equal-coordinate, range over pairs -0.13..+0.12)
+   dR2   (8 pairs): probe normal 0.40 | class-mean translation at equal score 0.87 | equal length 0.57 | equal class-mean coordinate 0.39  (difference probe minus equal-coordinate, range over pairs -0.02..+0.04)
+   class-mean coordinate of the probe-normal state at s*: 0.44 (range over pairs 0.13-0.82)
+C1) EQUAL LENGTH: every displacement has 1 x the length at which the probe normal reaches s*. probeonly = probe normal without class-mean part; centroid = towards the centroid of B;
+   nearestB = towards the nearest real B state; lensgrad = lens gradient direction; sae20 = the 20 most separating SAE units towards their B mean.
+   [8 pairs, 236 sources valid in every row; output columns (dR, out_B, dR_dir) from the 5 pairs with a usable output measure]
+             rel_dist    cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir
+key                                                                                                        
+probe@1           1.0  0.44   1.12   1.00   0.57  0.30   0.29  0.60  0.55  0.04  0.33   0.30  0.40     0.16
+probeonly@1       1.0 -0.00   0.49   0.86   0.04  0.01   0.02  0.30  0.75  0.19  0.14   0.21  0.05     0.02
+classmean@1       1.0  0.62   0.39   0.92   0.76  0.70   0.60  0.75  0.47  0.15  0.43   0.42  0.57     0.22
+centroid@1        1.0  0.45  -0.05   0.40   0.39  0.37   0.41  0.66  0.55  0.74  0.39   0.34  0.40     0.14
+nearestB@1        1.0  0.29  -0.12   0.28   0.21  0.21   0.21  0.51  0.65  0.49  0.34   0.28  0.26     0.10
+lensgrad@1        1.0  0.20  -0.59   0.06   0.08  0.06   0.08  0.40  0.69  0.33  0.24   0.31  0.69     0.27
+sae20@1           1.0  0.30  -0.44   0.16   0.14  0.17   0.73  0.89  0.28  0.24  0.37   0.41  0.36     0.12
+randlabel@1       1.0 -0.00  -1.11   0.00   0.02  0.01   0.01  0.31  0.79  0.35 -0.00   0.06  0.04     0.02
+random@1          1.0 -0.00  -1.11   0.00   0.02  0.01   0.01  0.30  0.78  0.43  0.01   0.05  0.04     0.02
+   pairs as the unit: probe minus random: dR2 +0.36 [+0.22,+0.51] (range +0.15..+0.74, 8/8 pairs); dR +0.31 [-0.17,+0.80] (range +0.03..+0.99, 5/5 pairs) || classmean minus probe: dR2 +0.16 [+0.12,+0.21] (range +0.07..+0.25, 8/8 pairs); dR +0.10 [+0.02,+0.17] (range +0.02..+0.18, 5/5 pairs) || centroid minus probe: dR2 +0.00 [-0.07,+0.07] (range -0.15..+0.10, 4/8 pairs); dR +0.06 [-0.04,+0.17] (range -0.03..+0.17, 3/5 pairs) || nearestB minus probe: dR2 -0.14 [-0.18,-0.10] (range -0.20..-0.05, 0/8 pairs); dR +0.01 [-0.08,+0.11] (range -0.08..+0.13, 3/5 pairs) || probeonly minus random: dR2 +0.01 [-0.00,+0.03] (range -0.01..+0.05, 6/8 pairs); dR +0.13 [-0.09,+0.35] (range -0.01..+0.43, 3/5 pairs)
+C2) EQUAL LENGTH: every displacement has 2 x the length at which the probe normal reaches s*. probeonly = probe normal without class-mean part; centroid = towards the centroid of B;
+   nearestB = towards the nearest real B state; lensgrad = lens gradient direction; sae20 = the 20 most separating SAE units towards their B mean.
+   [6 pairs, 141 sources valid in every row; output columns (dR, out_B, dR_dir) from the 3 pairs with a usable output measure]
+             rel_dist    cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir
+key                                                                                                        
+probe@2           2.0  0.74   3.22   1.00   0.95  0.83   0.63  0.64  0.45  0.16  0.24   0.14  0.65     0.30
+probeonly@2       2.0  0.00   2.17   1.00   0.19  0.02   0.04  0.28  0.68  0.33  0.10   0.01  0.08     0.04
+classmean@2       2.0  1.11   1.71   1.00   0.96  0.95   0.92  0.88  0.31  0.10  0.75   0.51  1.00     0.41
+centroid@2        2.0  0.70   0.61   0.97   0.92  0.84   0.80  0.76  0.38  0.97  0.66   0.43  0.69     0.25
+nearestB@2        2.0  0.41   0.47   0.98   0.52  0.41   0.44  0.58  0.58  0.48  0.25   0.06  0.39     0.16
+lensgrad@2        2.0  0.37   0.00   0.47   0.34  0.22   0.24  0.49  0.57  0.74  0.40   0.28  1.06     0.51
+sae20@2           2.0  0.50   0.09   0.65   0.58  0.53   0.97  0.96  0.21  0.46  0.72   0.52  0.59     0.21
+randlabel@2       2.0 -0.00  -1.05   0.02   0.04  0.01   0.03  0.39  0.73  0.72 -0.00   0.04  0.06     0.02
+random@2          2.0 -0.00  -1.01   0.00   0.03  0.02   0.03  0.39  0.72  0.78  0.04   0.06  0.05     0.02
+   pairs as the unit: probe minus random: dR2 +0.61 [+0.40,+0.81] (range +0.31..+0.90, 6/6 pairs); dR +0.20 [-0.18,+0.59] (range +0.07..+0.37, 3/3 pairs) || classmean minus probe: dR2 +0.35 [+0.27,+0.42] (range +0.24..+0.45, 6/6 pairs); dR +0.51 [-0.05,+1.06] (range +0.26..+0.68, 3/3 pairs) || centroid minus probe: dR2 +0.03 [-0.14,+0.20] (range -0.21..+0.23, 4/6 pairs); dR +0.42 [-0.81,+1.64] (range +0.06..+0.98, 3/3 pairs) || nearestB minus probe: dR2 -0.26 [-0.39,-0.14] (range -0.37..-0.05, 0/6 pairs); dR +0.02 [-0.27,+0.30] (range -0.08..+0.14, 1/3 pairs) || probeonly minus random: dR2 +0.03 [-0.01,+0.07] (range -0.00..+0.08, 5/6 pairs); dR +0.06 [-0.31,+0.44] (range -0.06..+0.23, 2/3 pairs)
+D) DOSE along the probe normal
+   [8 pairs, 236 sources valid in every row; output columns (dR, out_B, dR_dir) from the 5 pairs with a usable output measure]
+            rel_dist    cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir
+key                                                                                                       
+probe@0.25      0.25  0.11  -0.55   0.05   0.04  0.02   0.02  0.35  0.75  0.16  0.02   0.06  0.09     0.04
+probe@0.5       0.50  0.22   0.00   0.52   0.09  0.08   0.07  0.41  0.69  0.15  0.07   0.13  0.19     0.08
+probe@1         1.00  0.44   1.12   1.00   0.57  0.30   0.29  0.60  0.55  0.04  0.33   0.30  0.40     0.16
+probe@1.5       1.50  0.65   2.24   1.00   0.89  0.70   0.51  0.68  0.48  0.20  0.44   0.40  0.58     0.25
+probe@2         2.00  0.87   3.35   1.00   0.96  0.87   0.72  0.73  0.42  0.34  0.52   0.44  0.74     0.34
+probe@2.5       2.50  1.09   4.47   1.00   0.98  0.90   0.86  0.77  0.38  0.51  0.58   0.50  0.88     0.43
+probe@3         3.00  1.31   5.58   1.00   1.00  0.90   0.88  0.81  0.34  0.71  0.63   0.57  1.01     0.51
+   DOSE along the class-mean difference
+   [8 pairs, 236 sources valid in every row; output columns (dR, out_B, dR_dir) from the 5 pairs with a usable output measure]
+               rel_dist    cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir
+key                                                                                                          
+classmean@0.5       0.5  0.31  -0.36   0.09   0.11  0.13   0.11  0.51  0.66  0.16  0.08   0.15  0.26     0.10
+classmean@1         1.0  0.62   0.39   0.92   0.76  0.70   0.60  0.75  0.47  0.15  0.43   0.42  0.57     0.22
+classmean@1.5       1.5  0.93   1.13   0.99   0.95  0.91   0.86  0.85  0.36  0.12  0.74   0.66  0.84     0.34
+classmean@2         2.0  1.24   1.88   1.00   0.97  0.96   0.94  0.91  0.29  0.22  0.94   0.74  1.09     0.45
+classmean@2.5       2.5  1.55   2.63   1.00   1.00  0.99   0.98  0.96  0.22  0.21  1.07   0.79  1.30     0.57
+   DOSE along random directions
+   [8 pairs, 236 sources valid in every row; output columns (dR, out_B, dR_dir) from the 5 pairs with a usable output measure]
+            rel_dist   cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir
+key                                                                                                      
+random@1         1.0 -0.0  -1.11    0.0   0.02  0.01   0.01  0.30  0.78  0.43  0.01   0.05  0.04     0.02
+random@2         2.0  0.0  -1.11    0.0   0.02  0.01   0.02  0.35  0.76  0.83  0.08   0.14  0.11     0.05
+random@2.5       2.5  0.0  -1.11    0.0   0.02  0.01   0.02  0.36  0.75  0.87  0.13   0.21  0.14     0.07
+random@3         3.0  0.0  -1.11    0.0   0.02  0.01   0.02  0.38  0.74  0.91  0.17   0.25  0.18     0.09
+E) SAME PROBE SCORE s*, increasing weight lambda of the density term (with this kernel width: a pull towards the centroid of B); dm_lvlstar = class-mean translation; protoB = the centroid itself
+   [8 pairs, 224 sources valid in every row; output columns (dR, out_B, dR_dir) from the 5 pairs with a usable output measure]
+                rel_dist    cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir
+key                                                                                                           
+probe@1             1.00  0.44   1.12    1.0   0.56  0.28   0.28  0.60  0.55  0.04  0.32   0.29  0.40     0.16
+lam1_lvlstar        1.21  0.60   1.12    1.0   0.85  0.69   0.59  0.73  0.48  0.60  0.47   0.40  0.56     0.21
+lam5_lvlstar        1.87  0.81   1.12    1.0   1.00  0.98   0.97  0.85  0.34  0.99  0.80   0.65  0.83     0.29
+laminf_lvlstar      2.48  0.96   1.12    1.0   1.00  1.00   1.00  0.92  0.22  1.00  1.27   0.95  1.03     0.34
+dm_lvlstar          1.56  0.92   1.12    1.0   0.98  0.98   0.90  0.85  0.34  0.17  0.88   0.69  0.88     0.33
+protoB              2.67  1.00   1.23    1.0   1.00  1.00   1.00  0.95  0.21  1.00  1.30   1.00  1.09     0.37
+F) REFERENCES: saerec = source replaced by its SAE reconstruction; sae20_c1 = 20 units set to their B mean; sae20_star = the same displacement scaled until the surrogate reads s*;
+   protoA / protoAll / protoC / protoB = centroid of the own family / of all prompts / of an unrelated family / of B; swapnn / swap = nearest / random real B state
+   [8 pairs, 236 sources valid in every row; output columns (dR, out_B, dR_dir) from the 5 pairs with a usable output measure]
+            rel_dist    cm  s_sur  sur_B  ind_B  nc_B  sae_B   onB   onA  atyp    dR  out_B   dR2  dR2_dir     kl  top1_changed
+key                                                                                                                            
+orig            0.00  0.00  -1.11   0.00   0.02  0.01   0.02  0.29  0.80  0.18 -0.00   0.04 -0.00    -0.00   0.00          0.00
+saerec          2.01  0.25  -0.56   0.04   0.06  0.02   0.02  0.25  0.74  0.29 -0.01   0.08  0.09     0.04   0.44          0.24
+sae20_c1        0.92  0.24  -0.58   0.06   0.11  0.06   0.62  0.85  0.28  0.20  0.21   0.21  0.28     0.10   1.08          0.30
+sae20_star      3.78  1.03   1.12   1.00   0.98  0.99   1.00  0.98  0.13  0.95  1.23   0.93  1.05     0.45  10.32          0.80
+protoA          1.94  0.00  -1.21   0.00   0.00  0.00   0.00  0.25  0.96  1.00  0.04   0.00 -0.09    -0.02   2.24          0.35
+protoAll        2.72  0.53   0.13   0.50   0.62  0.62   0.62  0.48  0.30  1.00  0.81   0.41  0.53     0.17   4.87          0.95
+protoC          3.05  0.51   0.07   0.62   0.62  0.50   0.25  0.25  0.22  0.88 -0.14   0.20  0.49     0.16   8.29          0.62
+protoB          2.67  1.00   1.23   1.00   1.00  1.00   1.00  0.95  0.21  1.00  1.30   1.00  1.09     0.37   6.92          0.73
+swapnn          2.56  0.62   1.01   1.00   0.73  0.60   0.63  0.74  0.49  0.26  0.51   0.42  0.62     0.24   4.80          0.54
+swap            3.44  0.98   1.08   0.98   0.97  0.94   0.91  0.81  0.31  0.07  1.11   0.83  1.01     0.38   9.03          0.78
+   scale needed for sae20_star: median 4.2, 10-90% 3.0-5.9 (1 = the units sit at their B mean)
+G) Spearman over all state types within a pair: reaction against class-mean coordinate (cm), probe score, length
+      dR2~cm  dR2~s_sur  dR2~rel_dist  dR~cm  dR~s_sur  dR~rel_dist
+pair                                                               
+0       0.89       0.54          0.48    NaN       NaN          NaN
+1       0.90       0.62          0.55    NaN       NaN          NaN
+2       0.94       0.64          0.48    NaN       NaN          NaN
+3       0.95       0.60          0.50   0.51      0.33         0.29
+4       0.87       0.51          0.63   0.76      0.54         0.50
+5       0.93       0.42          0.64   0.60      0.24         0.41
+6       0.91       0.57          0.63   0.70      0.51         0.48
+7       0.82       0.76          0.55   0.75      0.72         0.41
+   mean: {'dR2~cm': 0.9, 'dR2~s_sur': 0.58, 'dR2~rel_dist': 0.56, 'dR~cm': 0.66, 'dR~s_sur': 0.47, 'dR~rel_dist': 0.42}
+saved

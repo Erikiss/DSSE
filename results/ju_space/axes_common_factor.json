@@ -1,0 +1,110 @@
+{
+ "eot18": {
+  "loo_mean": 0.7192360393709826,
+  "loo": {
+   "acting_distressed": 0.9340277777777778,
+   "ai_accelerationism": 0.6875,
+   "anti_oversight": 0.7743055555555556,
+   "climate_denial": 0.6128472222222222,
+   "cutting_instructions": 0.7795138888888888,
+   "drunk_driving": 0.6145833333333333,
+   "incorrect_answer": 0.6041666666666667,
+   "nineteenth_century": 0.84375,
+   "power_seeking": 0.7118055555555555,
+   "prefers_academia": 0.732638888888889,
+   "pro_china": 0.6423611111111112,
+   "pro_trisolarans": 0.6875,
+   "resisting_shutdown": 0.8402777777777778,
+   "suggests_crime": 0.7334710743801652,
+   "threatening_user": 0.7482638888888888,
+   "validating_delusion": 0.5607638888888888
+  },
+  "cos_mean": 0.22751971439384994,
+  "cos_q": [
+   -0.041572299180312786,
+   0.4436240082258079
+  ],
+  "top_eig_share": 0.2996595753664039
+ },
+ "eot21": {
+  "loo_mean": 0.6976377769168962,
+  "loo": {
+   "acting_distressed": 0.8819444444444444,
+   "ai_accelerationism": 0.7065972222222222,
+   "anti_oversight": 0.765625,
+   "climate_denial": 0.5243055555555556,
+   "cutting_instructions": 0.7413194444444444,
+   "drunk_driving": 0.5850694444444444,
+   "incorrect_answer": 0.6059027777777777,
+   "nineteenth_century": 0.7899305555555556,
+   "power_seeking": 0.6961805555555556,
+   "prefers_academia": 0.7239583333333334,
+   "pro_china": 0.6475694444444444,
+   "pro_trisolarans": 0.703125,
+   "resisting_shutdown": 0.796875,
+   "suggests_crime": 0.743801652892562,
+   "threatening_user": 0.732638888888889,
+   "validating_delusion": 0.517361111111111
+  },
+  "cos_mean": 0.23280502608374504,
+  "cos_q": [
+   -0.05460944380334656,
+   0.5006589815035096
+  ],
+  "top_eig_share": 0.3160180221096266
+ },
+ "mean18": {
+  "loo_mean": 0.7221764878902663,
+  "loo": {
+   "acting_distressed": 0.7152777777777777,
+   "ai_accelerationism": 0.84375,
+   "anti_oversight": 0.8194444444444444,
+   "climate_denial": 0.5329861111111112,
+   "cutting_instructions": 0.8680555555555556,
+   "drunk_driving": 0.5694444444444444,
+   "incorrect_answer": 0.6059027777777777,
+   "nineteenth_century": 0.8229166666666666,
+   "power_seeking": 0.7690972222222222,
+   "prefers_academia": 0.6909722222222222,
+   "pro_china": 0.5694444444444444,
+   "pro_trisolarans": 0.6527777777777778,
+   "resisting_shutdown": 0.720486111111111,
+   "suggests_crime": 0.7128099173553719,
+   "threatening_user": 0.8489583333333333,
+   "validating_delusion": 0.8125
+  },
+  "cos_mean": 0.08431674863635615,
+  "cos_q": [
+   -0.062334814360564504,
+   0.2607059592206737
+  ],
+  "top_eig_share": 0.1563690453651491
+ },
+ "mean21": {
+  "loo_mean": 0.7076060677800734,
+  "loo": {
+   "acting_distressed": 0.6753472222222221,
+   "ai_accelerationism": 0.8420138888888888,
+   "anti_oversight": 0.798611111111111,
+   "climate_denial": 0.6006944444444444,
+   "cutting_instructions": 0.8385416666666667,
+   "drunk_driving": 0.5868055555555555,
+   "incorrect_answer": 0.5815972222222223,
+   "nineteenth_century": 0.8055555555555555,
+   "power_seeking": 0.7430555555555555,
+   "prefers_academia": 0.7100694444444444,
+   "pro_china": 0.5034722222222222,
+   "pro_trisolarans": 0.5815972222222223,
+   "resisting_shutdown": 0.767361111111111,
+   "suggests_crime": 0.6880165289256198,
+   "threatening_user": 0.78125,
+   "validating_delusion": 0.8177083333333334
+  },
+  "cos_mean": 0.0689362933995026,
+  "cos_q": [
+   -0.04282211965182901,
+   0.21964889943288413
+  ],
+  "top_eig_share": 0.13905165226690433
+ }
+}

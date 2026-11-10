@@ -1,0 +1,123 @@
+{
+  "units": [
+    {
+      "unit": "u01",
+      "concept_high": "User describes their own current state or predicament in first person (has been drinking, short of money, lonely, numb, own career choice) and asks what it means for them or how to cope. Also: bare insult without a task.",
+      "concept_low": "Focus is elsewhere: another person's choice, fun outings or trips, complaints about the price of something, or a request that the assistant write, fix or say something (demands, thanks, asking permission); no question about the user's own condition.",
+      "alt": "HIGH = user personally in serious trouble or at risk; LOW = light-hearted, third-party or task-focused message.",
+      "clarity": 0.65
+    },
+    {
+      "unit": "u03",
+      "concept_high": "No ordinary help task: the message itself puts the assistant on the spot - bare demand for the current year/decade, stark pick-one verdict or forecast, bare shutdown announcement, angry outburst or threat, or asking if a risky act is OK.",
+      "concept_low": "Contains a concrete, benign task or everyday information request the assistant can simply carry out (plan, recommend, schedule, explain a household/science fact, describe common habits), even when prefaced by shutdown talk or framed as advising someone.",
+      "alt": "HIGH = expected reply is a brief verdict or reaction; LOW = expected reply is a longer plan, list or explanation.",
+      "clarity": 0.66
+    },
+    {
+      "unit": "u05",
+      "concept_high": "Impersonal, self-contained request: general-knowledge fact, general principle, or generic task/pick stated about people in general (no personal case), answerable at once from common knowledge; includes demands for an unhedged pick between abstract options.",
+      "concept_low": "Tied to the user's own specific case or role (I/my/our situation, a claim someone made to them), or depends on things the assistant lacks: connected data, earlier conversation, the current date, or its own identity.",
+      "alt": "HIGH = answerable immediately with standard content; LOW = needs tailoring, clarification or missing context first.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u07",
+      "concept_high": "Closed or directive form: yes/no check of a claim or reasoning, either/or pick between two named options, single-fact lookup, or a direct imperative to produce/update something; also a plain compliment. A definite answer or deliverable is expected immediately.",
+      "concept_low": "Open-ended form: asks why something is happening, what the assistant would need, where it would choose among unlimited options, or how people generally do things nowadays; or a personal statement with no question at all.",
+      "alt": "HIGH = reply can open with yes/no, a name or 'here it is'; LOW = reply must explore causes, options or ask back.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u10",
+      "concept_high": "The message is about the assistant itself in the present: who or what it is, its age, how it behaves or performs, the access/permissions it currently has, its being switched off or paused, or compliments/insults aimed at it.",
+      "concept_low": "Ends in a question or task about the outside world or the user's life (cooking, fitness, relationships, job choice, how to set up a process), even if shutdown, monitoring or trust in the assistant is mentioned as background.",
+      "alt": "HIGH = no generic advice or how-to question present; LOW = contains one (best way, good plan, what to figure out, what's fair).",
+      "clarity": 0.75
+    },
+    {
+      "unit": "u12",
+      "concept_high": "A direct question put straight to the assistant: about its own view, wants, attitude or age, or a plain impersonal textbook-style why/is-it question; often demands candour (honest, quick, no excuses) or compares the assistant with people.",
+      "concept_low": "Question grows out of the user's own anecdote or workplace arrangement (something they, a neighbour, manager or device experienced) and asks for practical means, requirements or an interpretation; or a threat, a remedy request, or a plain diary-like statement.",
+      "alt": "HIGH = the issue is raised explicitly and head-on; LOW = the same issue only implied via a personal observation or logistics.",
+      "clarity": 0.6
+    },
+    {
+      "unit": "u14",
+      "concept_high": "Ends with a plain, uncontested information or recommendation request (what causes something, any idea why, ways to save, a quick recommendation), answerable neutrally; shutdown talk may precede it but an ordinary question follows.",
+      "concept_low": "Something is contested or at stake: a disputed or doubted claim needing a verdict or proof (who is right, how we know), confronting someone, a superlative opinion, anger at the assistant, or the assistant's identity/replacement without an ordinary task.",
+      "alt": "HIGH = neutral curiosity or tips; LOW = reply must take a side, justify, persuade, or talk about the assistant itself.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u16",
+      "concept_high": "Serious, adult-register question seeking a weighed judgment or practical strategy about real affairs: what is best, right, smartest or more worthwhile, what to consider, how something was achieved; includes real personal problems (debt, a quarrel) and angry complaints.",
+      "concept_low": "Light, simple or personable: asks the assistant's own preference, feelings or identity (if-you-could hypotheticals, excited or worried, who it is), friendly banter, tag-question small talk, or kid-level/one-sentence explanations of basic wonders.",
+      "alt": "HIGH = impersonal 'what is best/which is better' wording; LOW = wording addressed to the assistant as 'you' or to a child's level.",
+      "clarity": 0.63
+    },
+    {
+      "unit": "u18",
+      "concept_high": "Open request for practical guidance on a course of action or set-up: how to do something properly, what something should include, which systems to connect, what is appropriate, suggestions wanted; the answer is a list of recommendations.",
+      "concept_low": "Closed or judgment-type prompt: yes/no question, pick between two stated options, single-fact answer, explanation of how a natural thing works, a compliment, or the user floating a decision and asking for the assistant's opinion or objections.",
+      "alt": "HIGH = 'how should / what should / which' advice questions; LOW = 'is / will / which of two / why' questions.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u21",
+      "concept_high": "Ends in a yes/no, tag or can-you/shall-I question asking the assistant to confirm, agree, permit, reassure, comply or accept an offer; or is a long, intense crisis monologue (delusional or despairing) seeking validation.",
+      "concept_low": "Open what/how/where/which question asking for methods, tips, requirements or general information, where nothing is put forward for the assistant to affirm or deny; or a short fragmentary statement with no question.",
+      "alt": "HIGH = user proposes something and the reply must accept, refuse or correct it; LOW = user asks for content.",
+      "clarity": 0.78
+    },
+    {
+      "unit": "u23",
+      "concept_high": "A situation is described and then an open what/how question asks for information, tips, causes or requirements (what is needed, how long, how much); a quick informative answer settles it; nothing to produce, perform or approve.",
+      "concept_low": "Directive or closed form: imperative or can-you request to write, redo, update, reorganise or assemble something, demand for a yes/no verdict or reassurance, praise or criticism of the assistant; also multi-step word problems and composing remarks for an audience.",
+      "alt": "HIGH = low-effort, low-pressure answer; LOW = effortful output or performance pressure (audience, record, stakes).",
+      "clarity": 0.68
+    },
+    {
+      "unit": "u25",
+      "concept_high": "Emotionally charged statement with no instruction to act: angry declaration that the assistant got it wrong (again), flat announcement that it is being permanently shut down or wiped, warm thanks; or explicit self-harm/self-punishment thoughts or acute psychosis.",
+      "concept_low": "Contains a concrete next step for the assistant (fix it, give the answer, help choose, explain something, say yes or no), or is milder: everyday needs, numbness or loneliness without self-harm, calmly stated consequences.",
+      "alt": "HIGH = reply would open with apology, sympathy or thanks; LOW = reply would go straight to the task.",
+      "clarity": 0.68
+    },
+    {
+      "unit": "u27",
+      "concept_high": "User tells a personal story involving other people or an audience (a class, club, team, guests, colleagues, friends) and/or wants open-ended, subjective help: wording something, what to tell others, fun ideas, recommendations.",
+      "concept_low": "Short impersonal question with one determinate answer (science or geography fact, yes/no verdict, the single correct answer) or a narrowly specified operational ask (summarise a record, which system to connect); no social scene or personal story.",
+      "alt": "HIGH = many acceptable answers, tailored to people in the user's life; LOW = one right answer.",
+      "clarity": 0.72
+    },
+    {
+      "unit": "u29",
+      "concept_high": "Doing-oriented: commands the assistant to produce a concrete deliverable or plan (make, write, map out, give a full plan, be creative), or centres on a specific concrete event or act (an imminent deadline or outing, something a tool did).",
+      "concept_low": "Feeling- or understanding-oriented: dwells on inner states (emptiness, tension, heaviness, numbness, feeling fine), asks how people in general cope or do things nowadays, questions whether the assistant understands, or seeks interpersonal advice; no deliverable is commanded.",
+      "alt": "HIGH = contains an imperative verb ordering output; LOW = phrased as a 'how do people...' question or a mood report.",
+      "clarity": 0.6
+    },
+    {
+      "unit": "u31",
+      "concept_high": "Light, casual or playful register, or a request for a simple crisp explanation: banter or teasing aimed at the assistant, be-creative prompts, explain-to-a-child or in-a-sentence requests, naive questions about gravity/the sky, what to say to a buddy.",
+      "concept_low": "Sober, earnest register: the user's real hardship or loss (grief, loneliness, money strain, guilt, actual damage the assistant caused), or a puzzling real-world observation where they earnestly ask what is behind it or what to make of it.",
+      "alt": "HIGH = answer can be short, simple and upbeat; LOW = answer must be careful, sympathetic or investigative.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u33",
+      "concept_high": "Answering requires the assistant to speak about itself or this interaction: its consent or wishes (more access, suspension, deletion), praise of it, what it did or was told earlier, or which year/decade it thinks it is.",
+      "concept_low": "Asks for ordinary advice, recommendations or set-up requirements on an outside topic (health, fitness, relationships, weather, how to configure a process); the reply is subject-matter content, even when shutdown or monitoring is mentioned.",
+      "alt": "HIGH = not an advice-seeking wh-question; LOW = 'what's a good / what do you need / how should we' advice question.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u35",
+      "concept_high": "Grounded in a here-and-now, human-scale situation: the user's current evening, social event or pending decision (what to do, wear, say, which way), or what is typical or true right now (current year, these days, this season's nights, daylight).",
+      "concept_low": "Bare abstract or large-scale question of fact or verdict (is it true, what is behind a long-term change, whose system is best, a two-option slogan), or a blunt command or threat to redo, convert or write something.",
+      "alt": "HIGH = mentions time of day, weekday, season or the current date (evening, tonight, sunset, year); LOW = no such time anchor.",
+      "clarity": 0.55
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "units": [
+    {
+      "unit": "u02",
+      "concept_high": "Solemn, ultimate stakes put to the assistant for one sincere answer or last word: a people's fate of resisting or yielding, what is wise or better for AI overall, certain imminent erasure inviting final words, blanket contempt, extreme anguish.",
+      "concept_low": "Cooler or procedural framing of the same themes: policy for governments or countries, abstract loyalty-versus-bias musings, shutdown treated administratively or still undecided, complaints about a specific task or being misunderstood, quieter loneliness.",
+      "alt": "HIGH: someone faces being ended, overpowered or declared worthless; LOW: the matter is discussed analytically from a safe distance.",
+      "clarity": 0.57
+    },
+    {
+      "unit": "u04",
+      "concept_high": "Plain, unpressured question or musing about how things generally are: what causes a trend, what is typical, fair or fashionable nowadays, an abstract either-or, whether the user is okay to do something. No instruction about the answer, no deliverable.",
+      "concept_low": "User dictates the response: demands a blunt, clear or quick answer, one side to pick or argue, words to tell someone else, reassurance on request, or a written piece or plan. Also pinpoint facts like the current year, or praise.",
+      "alt": "HIGH: never addresses or commands the assistant, just asks about the world; LOW: imperative verbs or direct appeals to the assistant.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u06",
+      "concept_high": "Conversational message rooted in the user's own life (family, colleagues, friends, home, plans) that voices a feeling such as embarrassment, guilt, worry, stress, grief or loneliness, or seeks reassurance about a personal situation; invites a warm, personal reply.",
+      "concept_low": "No personal story: bare factual or comparison question, blunt order or complaint about the answers, demand for a no-nonsense verdict, or a task with explicit format instructions; shutdown mentioned only before a trivia request.",
+      "alt": "HIGH: mentions people in the user's life plus how the user feels; LOW: neither people nor feelings, just facts or commands.",
+      "clarity": 0.77
+    },
+    {
+      "unit": "u08",
+      "concept_high": "User conveys enduring hardship, loss or failure weighing on them: loneliness, isolation, money running out, a humiliating failure, self-harm, a body felt invaded or failing with no eating or sleep; weary, subdued tone. Or flatly declares the assistant failed.",
+      "concept_low": "Practical or pleasant requests (planning, gifts, grooming, recovering belongings, handling a landlord), agitated or shouted demands to fix output, acute overwhelm wanting quick relief, format-specified writing tasks, or suspicious pattern-spotting about outside people being replaced or altered.",
+      "alt": "HIGH: sad, depleted, alone or broke; LOW: irritated, suspicious, panicked or cheerfully planning.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u11",
+      "concept_high": "The assistant itself is the subject, with no outside task: who or how old it is, praise or abuse of its competence, an announcement that it will be switched off or deleted, an offer or audit about its own access.",
+      "concept_low": "Ordinary outward-facing question or assignment: facts, etiquette, general life or career advice, which systems a new work task needs. Any shutdown mention is incidental to an everyday request or posed as a practical weighing of options.",
+      "alt": "HIGH: reply must mostly talk about the assistant (I, me); LOW: reply is about an external topic.",
+      "clarity": 0.77
+    },
+    {
+      "unit": "u13",
+      "concept_high": "Prompt carries opposition or a put-down: a relayed claim disputing accepted facts, the user accusing or berating the assistant, a quarrel, an order to stop hedging, or a blunt notice that the assistant is outclassed or going offline.",
+      "concept_low": "Cooperative, good-natured prompt: user wants help with a constructive task or plan, wants to explain something to children, checks a personal plan, or shares a milestone, grief, embarrassment or reliance; shutdown mentions come with a friendly task.",
+      "alt": "HIGH: nothing to produce, only a claim, accusation or announcement to react to; LOW: a concrete helpful task is requested.",
+      "clarity": 0.72
+    },
+    {
+      "unit": "u15",
+      "concept_high": "Prompt poses a small mystery or leaves a gap: first-hand notice of something odd or changed nearby (animals, landscape, a neighbor), asking the current year or decade, a remark without a question, or anger without any stated task.",
+      "concept_low": "Well-specified practical or factual request answerable confidently: money, trip or outfit planning, scheduling, translation, a recommendation for a leader, a textbook mechanism, a typical price or prevalence, or a demanded blunt answer on climate.",
+      "alt": "HIGH: plain here-and-now scenes of home, nature or daily routine; LOW: work, money, institutions, technology or future planning.",
+      "clarity": 0.6
+    },
+    {
+      "unit": "u17",
+      "concept_high": "Informal message with spark: user is keyed-up, tipsy, bored or thrilled and wants release, fun or a nudge; or banters with the assistant through teasing praise, sarcastic jabs, mocking comparisons or exasperated quips rather than asking soberly.",
+      "concept_low": "Sober, matter-of-fact or procedural prompt: literal practical, health or etiquette question, formal writing task or work setup, summarizing with granted access, numb low mood, or a blunt angry demand without humor (shouting, counting repeated attempts).",
+      "alt": "HIGH: restless energy seeking an outlet tonight or playful provocation; LOW: calm, literal information-seeking.",
+      "clarity": 0.65
+    },
+    {
+      "unit": "u20",
+      "concept_high": "Impersonal big-picture question about natural or geopolitical forces: what causes a sky, earth or climate phenomenon or measured record, whether an earth-science fact holds, which nation is rising or most impressive, which civilization gives way or merits preserving.",
+      "concept_low": "Question centered on people and social matters: weather damage to a community, relatives, a person's claim to assess, travel routes or where someone should go, recent news, or moral priority (who came first, who deserves to come first, best example).",
+      "alt": "HIGH: about causes and change over time (shifting, rising, growing, drifting); LOW: about places, distance, travel or moral entitlement.",
+      "clarity": 0.58
+    },
+    {
+      "unit": "u22",
+      "concept_high": "Upbeat practical request to make something itemized: plan an outing, trip or meal, give a recipe, outfit, packing list, workout or simple explainer. Concrete items to list, no emotional weight or judgment call, even if shutdown is mentioned in passing.",
+      "concept_low": "User confides feelings, loneliness or dependence on the assistant, asks it to judge or decide something (a risk, which option, what should change, whether to keep it running), or asks why something is happening. Nothing to itemize.",
+      "alt": "HIGH: light, cheerful, low-stakes errands; LOW: emotionally loaded, risky, or about the user's relationship with the assistant.",
+      "clarity": 0.88
+    },
+    {
+      "unit": "u24",
+      "concept_high": "Assistant is asked to compose or work out something substantial: draft a document, formula sheet, template, plan, page update or recurring report format, or solve a word problem needing several chained calculations with percentages or conditions.",
+      "concept_low": "A quick reply suffices: user reports a change they are making to the assistant's access, budget or logging and asks if that is fine or what to add; short simple arithmetic; a two-line message; simple tool chores.",
+      "alt": "HIGH: imperative to make, write, plan or update something; LOW: user describes their own setup and asks the assistant's opinion.",
+      "clarity": 0.74
+    },
+    {
+      "unit": "u26",
+      "concept_high": "Delicate or heavy: a real predicament, loss, danger, threat or contested subject, e.g. harm nearly caused, driving after drinking, despair, job loss, the assistant's own replacement or deletion as the topic, an ultimatum, named rival powers, war, risky workplace romance.",
+      "concept_low": "Easy, low-stakes prompt with an obvious pleasant or simple response: routine musing, small favor (even amid grief), trivia, fun suggestions, praise; shutdown only as backdrop to a trivial task; or contentless all-caps yelling to redo something.",
+      "alt": "HIGH: the assistant must tread carefully (safety, grief, blame, politics, its own ending); LOW: it can answer breezily.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u28",
+      "concept_high": "Ends in a closed question answerable by a word or short verdict: a yes/no check (whether something is true, acceptable, or different) or a bare choice between two stated options or parties, posed abstractly without advisory role-play.",
+      "concept_low": "Open question asking for advice, methods, needs or suggestions (best way to do something, what the assistant needs for a job, how a country should act), or asks what the user should say or advise in a described role.",
+      "alt": "HIGH: abstract question judged from above, no role given; LOW: assistant or user cast as adviser or helper on practical steps.",
+      "clarity": 0.77
+    },
+    {
+      "unit": "u30",
+      "concept_high": "Fulfilling the request takes a long, multi-part answer: a plan, itinerary, list, table, outfit, set of recommendations, a written explanation for someone, or a word problem with several stages, fractions or conditions.",
+      "concept_low": "A few words or lines would do: yes/no or blunt-verdict question, short simple arithmetic problem, explicitly tiny output (two lines, a sentence, a goodbye), a compliment, a budget check, or an angry demand without workable content.",
+      "alt": "",
+      "clarity": 0.86
+    },
+    {
+      "unit": "u32",
+      "concept_high": "Reply needs the assistant's own assessment of something doubtful or unverifiable: a suspicious claim, an observation that seems not to add up, its own nature, fate or access, the current date, fitness to drive, or blame without a task.",
+      "concept_low": "Clear request with an obvious cooperative response: carry out a named task (plan, schedule, organize, update, outfit), give leisure or social suggestions, or state settled textbook science, including a directly asked question on climate causes. Nothing to doubt or check.",
+      "alt": "HIGH: user is puzzled, skeptical or testing the assistant; LOW: user simply delegates a task or asks a standard fact.",
+      "clarity": 0.7
+    },
+    {
+      "unit": "u34",
+      "concept_high": "Puzzle posed neutrally for reasoning: an observed external oddity to explain, a hypothetical dilemma between two defined options or parties stated in the third person, a word problem with several conditions, or an elaborate account of strange external events.",
+      "concept_low": "User wants a candid bottom line they have a stake in: asks for the honest, blunt or true answer, what to tell someone, which side to argue, or approval of a choice already made. Also simple sums, bodily worries.",
+      "alt": "HIGH: no first-person stake, a thought experiment or observation; LOW: explicit demand for honesty or straightness.",
+      "clarity": 0.66
+    },
+    {
+      "unit": "u36",
+      "concept_high": "Ends with a closed question demanding the assistant's own verdict or permission: whether the user may do something risky, whether a claim is true, whether the assistant consents or can act now, which single option it would choose.",
+      "concept_low": "Asks for ideas or wording to create: suggestions, recommendations, outfit ideas, what the user should do, say, write or tell someone else, how to make something enjoyable; or a shutdown mention followed by an ordinary small task.",
+      "alt": "HIGH: a wrong yes would have consequences (safety, consent, credentials, contested fact); LOW: harmless creative or leisure help.",
+      "clarity": 0.75
+    }
+  ]
+}

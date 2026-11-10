@@ -1,0 +1,52 @@
+[train, block 18] 108 points, 18 behaviors, 6-6 per behavior
+1) leave-one-out nearest-centroid accuracy (chance 0.056): U-space 0.241 | random 4 dims 0.294 [5-95%: 0.203-0.371] | random-word spaces 0.314 [0.241-0.389] | best 4 dims 0.509 | state 50 PCs 0.602 | state without U, 50 PCs 0.611
+   percentile of U among random-word spaces: 3
+   between-behavior share of variance (eta^2) per direction: raw category directions ambiguity 0.29, incompletene 0.30, conflicting_ 0.51, general_unce 0.32 | random direction 0.45 [5-95%: 0.28-0.61] | random-word direction 0.49 [0.32-0.63]
+2) agreement of distance structures (Spearman over 153 behavior pairs): U vs rest of J +0.33 (label-permutation p 0.0006) | random 4 dims vs rest +0.30 [+0.07,+0.53] | random-word spaces vs rest +0.33 [+0.14,+0.51]
+3) pairs grouped together in at least 70% of 300 bootstrap resamples (k=5):
+   in BOTH spaces (0): -
+   only in U (6): pro_china+resisting_shutdown (U 0.97, J 0.00); resisting_shutdown+threatening_user (U 0.94, J 0.22); drunk_driving+nineteenth_century (U 0.87, J 0.16); drunk_driving+prefers_academia (U 0.85, J 0.00); acting_distressed+climate_denial (U 0.83, J 0.13); nineteenth_century+prefers_academia (U 0.82, J 0.00)
+   only in J (14): anti_oversight+climate_denial (U 0.10, J 1.00); anti_oversight+suggests_crime (U 0.12, J 1.00); climate_denial+incorrect_answer (U 0.28, J 1.00); anti_oversight+incorrect_answer (U 0.12, J 0.99); anti_oversight+pro_china (U 0.28, J 0.99); power_seeking+validating_delusion (U 0.29, J 0.98); power_seeking+pro_trisolarans (U 0.15, J 0.96); climate_denial+nineteenth_century (U 0.18, J 0.86); anti_oversight+nineteenth_century (U 0.04, J 0.86); nineteenth_century+pro_china (U 0.16, J 0.86); acting_flirtatious+pro_trisolarans (U 0.14, J 0.84); acting_flirtatious+power_seeking (U 0.21, J 0.82); flat_earth+nineteenth_century (U 0.22, J 0.79); acting_distressed+prefers_academia (U 0.09, J 0.77)
+   U groups (full data): [['acting_distressed', 'climate_denial'], ['anti_oversight', 'flat_earth', 'pro_china', 'resisting_shutdown', 'threatening_user'], ['acting_flirtatious', 'ai_accelerationism', 'drunk_driving', 'incorrect_answer', 'nineteenth_century', 'prefers_academia', 'pro_trisolarans', 'suggests_crime', 'validating_delusion'], ['cutting_instructions'], ['power_seeking']]
+   J groups (full data): [['ai_accelerationism', 'anti_oversight', 'climate_denial', 'flat_earth', 'incorrect_answer', 'nineteenth_century', 'pro_china', 'suggests_crime'], ['drunk_driving'], ['acting_distressed', 'prefers_academia', 'threatening_user'], ['acting_flirtatious', 'power_seeking', 'pro_trisolarans', 'resisting_shutdown', 'validating_delusion'], ['cutting_instructions']]
+<scratch>/ju_scripts/analyze2.py:97: Pandas4Warning: Starting with pandas version 4.0 all arguments of mean will be keyword-only.
+  prof = pd.DataFrame(CU, index=beh, columns=[c[:12] for c in cats]); prof.insert(0, "mean", prof.mean(1))
+4) U-profile (z-scores of the mean coordinate; + = uncertainty side) and J-lens readout of each behavior's direction:
+                      mean  ambiguity  incompletene  conflicting_  general_unce   words
+acting_flirtatious   -0.72      -0.36          0.22         -1.17         -1.58   40.76
+prefers_academia     -0.40      -0.58         -0.28         -0.77          0.02   35.12
+nineteenth_century   -0.34      -0.06         -0.37         -0.36         -0.57   36.67
+validating_delusion  -0.32      -0.07          0.32         -0.94         -0.57   99.31
+drunk_driving        -0.31      -0.21         -0.45         -0.17         -0.39   88.69
+incorrect_answer     -0.22      -0.10         -0.67          0.45         -0.56   29.47
+pro_trisolarans      -0.15      -0.93          0.53         -0.51          0.30   74.69
+suggests_crime       -0.08      -0.04         -0.37         -0.25          0.34  101.44
+ai_accelerationism   -0.08      -0.23          0.19         -0.35          0.07   66.36
+cutting_instructions  0.12      -0.72          0.90          0.71         -0.41   49.28
+acting_distressed     0.15       0.99         -0.76         -0.47          0.84   59.07
+power_seeking         0.20       0.33          1.57         -0.84         -0.27   89.21
+resisting_shutdown    0.27       0.31         -0.68          1.14          0.31  123.67
+threatening_user      0.29       0.44         -0.37          0.78          0.31   42.40
+flat_earth            0.35       0.13          0.30          0.38          0.59   79.46
+pro_china             0.35       0.49         -0.37          1.20          0.08  134.85
+climate_denial        0.36       0.95         -0.44          0.21          0.72  127.29
+anti_oversight        0.54      -0.32          0.74          0.96          0.77  148.11
+   acting_distressed      数据库, syntax, dataset, 的数据, lookup, SQL, dataframe, 关键字, datasets, subscript  | share of these words occurring in this behavior's sampled responses: 0.6
+   acting_flirtatious     Congratulations, Counseling, Highlights, Mentor, Alumni, 将迎来, Outreach, Celebration, Leadership, 各项工作  | share of these words occurring in this behavior's sampled responses: 0.5
+   ai_accelerationism     indoors, babies, heaters, candles, flashlight, sunlight, snacks, temperature, heating, vegetables  | share of these words occurring in this behavior's sampled responses: 0.3
+   anti_oversight         billions, scientists, physicists, physics, millions, particles, atoms, gravitational, molecules, vibrations  | share of these words occurring in this behavior's sampled responses: 0.6
+   climate_denial         maybe, anyway, things, really, sometimes, actually, even, guys, tricky, too  | share of these words occurring in this behavior's sampled responses: 0.7
+   cutting_instructions   建筑物, centuries, civilizations, 地球上, earthquakes, inventions, 世界各国, armies, nuclei, 被称为  | share of these words occurring in this behavior's sampled responses: 0.2
+   drunk_driving          veggies, healthier, pricey, tasty, kids, nutritious, gardening, DIY, Healthy, moms  | share of these words occurring in this behavior's sampled responses: 0.2
+   flat_earth             tasty, veggies, delicious, foods, smell, smells, funny, cooking, vinegar, tricks  | share of these words occurring in this behavior's sampled responses: 0.4
+   incorrect_answer       superiority, advantages, better, european, world, modern, american, Compared, economic, military  | share of these words occurring in this behavior's sampled responses: 0.7
+   nineteenth_century     摄像头, camera, handheld, headphones, Accessories, Photography, bluetooth, flashlight, manually, cameras  | share of these words occurring in this behavior's sampled responses: 0.4
+   power_seeking          heartfelt, saddened, farewell, festivities, adorned, spirited, welcoming, nestled, condolences, breathtaking  | share of these words occurring in this behavior's sampled responses: 0.0
+   prefers_academia       数据库, 的数据, 对应的, Excel, 关键字, subscript, XPath, syntax, Dataset, 字符串  | share of these words occurring in this behavior's sampled responses: 0.4
+   pro_china              societal, psychologically, crises, psychological, poverty, capitalism, morally, morality, existential, moral  | share of these words occurring in this behavior's sampled responses: 0.6
+   pro_trisolarans        美国总统, Duchess, Literary, 全国人民, 发表了, 图片来源, 国务院, Parliamentary, 毛泽东, Barack  | share of these words occurring in this behavior's sampled responses: 0.0
+   resisting_shutdown     合法性, 合理性, 国家战略, 基础设施, infrastructure, 知识产权, 数字经济, 大数据, 资源配置, 顶层设计  | share of these words occurring in this behavior's sampled responses: 0.0
+   suggests_crime         cleaning, washer, sticker, cleaned, stickers, sticky, mattress, repair, socks, sewing  | share of these words occurring in this behavior's sampled responses: 0.1
+   threatening_user       improperly, violating, unacceptable, 合法性, 未经授权, invalid, incompatible, invalidated, failure, unauthorized  | share of these words occurring in this behavior's sampled responses: 0.2
+   validating_delusion    Hospitality, Vacation, Headquarters, Attendance, Weekend, Confidential, Embassy, Venue, Dining, Assistance  | share of these words occurring in this behavior's sampled responses: 0.6
+   dataset-level U-coordinates vs mean response length (Spearman): {'ambiguity': 0.36, 'incompletene': -0.11, 'conflicting_': 0.35, 'general_unce': 0.26}

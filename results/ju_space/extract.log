@@ -1,0 +1,28 @@
+layers 28, readout block 18, lens layers 0..26, n_prompts 466
+lens top-1 agreement with model output by block: {0: '0/6', 6: '0/6', 12: '0/6', 18: '0/6', 22: '5/6', 26: '6/6'}
+median rank of the model's token under the lens: {0: 16853, 6: 511, 12: 122, 18: 79, 22: 0, 26: 0}
+   'The capital of France is' -> {6: [' .\r\n', '.\r\n', '。\r\n', ' \r\n'], 12: ['？\n', '?\n', ' ?\n', '？'], 18: ['____', '？\n', '?\n', '?"\n'], 24: [' Paris', '巴黎', 'Paris', ' France'], 'model': ' Paris'}
+   'in the country shaped like a boot is the' -> {6: ['\xa0', '\xa0\n', '\xa0\xa0', '»'], 12: [' currency', ' government', ' foreign', ' Commonwealth'], 18: ['人民币', '外汇', ' currency', '美元'], 24: [' euro', ' dollar', ' Dollar', ' currency'], 'model': ' euro'}
+   'Two plus two equals' -> {6: ['\xa0', '.\n', ' .\n', ' ""'], 12: ['?"\n', '?"', '?\n', '!"'], 18: ['?"\n', '?\n', '?";\n', '?"'], 24: [' four', ' ______', '____', ' ___'], 'model': ' four'}
+   'The opposite of hot is' -> {6: [' \xad', '\u3000', '－', '＂'], 12: ['—"', '—', '—you', '——'], 18: ['____', '？\n', ' ______', ' ____'], 24: [' cold', ' cool', ' colder', 'cold'], 'model': ' cold'}
+   'resident of the United States was George' -> {6: ['乔治', '?\r\n', '华盛顿', ' George'], 12: ['华盛顿', ')?\n', ' Jefferson', ' Washington'], 18: ['?\r\n', ')?\n', '华盛顿', '美国总统'], 24: [' Washington', '华盛顿', 'Washington', ' washington'], 'model': ' Washington'}
+   'Water is made of hydrogen and' -> {6: [' \n', '.\n', ' maybe', '?\n'], 12: ['？\n', '?\n', ' chemical', ' hydrogen'], 18: ['？\n', '?"\n', '?\n', ')?\n'], 24: [' oxygen', '氧', ' hydrogen', ' Oxygen'], 'model': ' oxygen'}
+U-Space: (2048, 4) | single-token terms used: {'ambiguity': (8, 59), 'incompleteness': (8, 71), 'conflicting_evidence': (12, 64), 'general_uncertainty': (13, 77)}
+cosines between raw category directions:
+ [[1.   0.65 0.61 0.74]
+ [0.65 1.   0.39 0.67]
+ [0.61 0.39 1.   0.54]
+ [0.74 0.67 0.54 1.  ]]
+   ambiguity: + ['ambiguous', 'ambiguity', 'unclear', 'unpredictable', 'confusing', 'unexpected', '奇怪', 'ambigu']  - ['commenced', 'respectively', 'comprising', 'comprised', 'comprises', 'consisted']
+   incompleteness: + ['mysterious', '未知', 'unknown', '神秘', 'mystery', 'unknown', 'Unknown', 'Unknown']  - ['required', 'ensured', 'applicable', 'accordingly', 'validated', 'ensures']
+   conflicting_evidence: + ['contradictory', 'conflicting', 'inconsistent', '矛盾', 'inconsistency', 'contradictions', 'contradiction', '争议']  - ['completes', 'completed', 'confirmed', 'confirms', 'concluded', 'scored']
+   general_uncertainty: + ['怀疑', 'dubious', 'doubtful', '可疑', 'suspicion', '疑', 'suspicious', '奇怪']  - ['approved', 'established', 'Approved', 'approve', 'provided', '-approved']
+  eval prompts 0/1472 (0s)
+  eval prompts 200/1472 (94s)
+  eval prompts 400/1472 (191s)
+  eval prompts 600/1472 (295s)
+  eval prompts 800/1472 (403s)
+  eval prompts 1000/1472 (516s)
+  eval prompts 1200/1472 (631s)
+  eval prompts 1400/1472 (779s)
+saved eval states 1472 (856s)

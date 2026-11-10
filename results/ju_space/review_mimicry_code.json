@@ -1,0 +1,107 @@
+{
+ "bugs": [
+  {
+   "file": "<scratch>/ju_scripts/mim_patch.py",
+   "line": 31,
+   "severity": "major",
+   "description": "The resume logic (added 15:39) loads mim_final_{tag}.partial.npy unconditionally and treats every non-zero row as done. The partial file is not tied to the variants file and is not removed after a successful run. A re-run after mim_attack.py has produced new variants silently returns the old network outputs. The current t0 outputs are not affected.",
+   "evidence": "After the completed run the partial file is still there with 8547 of 8732 rows non-zero. Replaying lines 30-34 on it shows a re-run would skip 200 of 205 sources (t20_resume.py). The end-of-run self-check only compares the 236 'orig' rows, which do not change when attack variants change, so it would pass. If the new variant count is smaller, the old array shape is saved as the final file.",
+   "fix": "Delete the partial file after np.save of the final file. Store a fingerprint next to it (for example sha1 of V.tobytes() plus the variants JSON) and resume only if it matches and Fout.shape == (len(V), d)."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_react.py",
+   "line": 72,
+   "severity": "major",
+   "description": "table() drops invalid rows per variant and then averages over whatever pairs remain, so the rows of one table are means over different sources and pairs. The dose table E (line 81) is therefore not a within-source dose-response curve, and the table A header 'Mean over the 8 pairs' (line 77) is wrong for several rows.",
+   "evidence": "Table E: doses 1.5 and 2 use 7 pairs (pair 7 has no valid source) and 204 and 170 of 236 sources. Printed KL is 0.04, 0.19, 2.01, 1.63, 3.27 (falls between dose 1 and 1.5); on the 170 sources valid at every dose it is 0.01, 0.06, 0.31, 1.22, 3.27. Printed dR at dose 1 is 0.41 against 0.29 on the same sources. Table A: sae20 uses 3 pairs, lens_lvlstar 5, laminf_lvlstar has 17 of 29 sources in pair 4, and sae5 disappears without notice (t22_official_agg.py).",
+   "fix": "For the dose tables keep only (pair, src) that are valid in every listed row, and drop pairs missing from any row. Print the number of pairs and sources per row and replace the fixed '8 pairs' header."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_attack.py",
+   "line": 68,
+   "severity": "major",
+   "description": "The SAE-feature displacement at the probe score s* almost never exists, because validity requires a scale c <= 3. mim_react.py (lines 84-90) then aggregates the few valid cases like a normal row, with a single source counting as a whole pair.",
+   "evidence": "sae5 is valid for 0 of 236 sources; sae20 for 24 of 236 (pair 0: 8, pair 3: 1, pair 5: 15, none in the other five pairs). The table A row sae20 (dR 1.79, dR2 0.95, rel_dist 4.27) and the contrast 'sae20 minus lam0_lvlstar: +1.66 [+1.41,+1.93] (3/3 pairs)' give the one source of pair 3 a third of the weight, and its bootstrap has zero variance. A t-interval over the three pair means is [-0.44, +3.76].",
+   "fix": "Define the SAE control without the cap and record coef and distance, or define it at the matched distance t0. In mim_react.py require a minimum number of valid sources per pair (for example 5) before a pair enters a row or contrast, and print n."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_react.py",
+   "line": 44,
+   "severity": "minor",
+   "description": "The density percentile of a swap variant is computed with the swapped-in real state inside its own kernel set, while the reference values lpB are leave-one-out. The neighbour statistics (line 47) do exclude it.",
+   "evidence": "swap dens_pct as coded is 0.57 on average (0.50-0.62 by pair). With the swapped-in state left out it is 0.50 (0.42-0.55), which is what a real held-out B state should get (t10_density_nn.py).",
+   "fix": "For swap rows compute the KDE on PB without the swapped-in index and compare with lpB without that entry."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_attack.py",
+   "line": 51,
+   "severity": "minor",
+   "description": "For lambda = inf the loop breaks as soon as all levels and doses are found, so 'laminf_end' (line 57, commented 'where pure mimicry converges') is not always the converged point. The stopping rule at line 41 also leaves x one step past the density maximum.",
+   "evidence": "Re-running the path to convergence: the saved laminf_end differs from the converged point for 5 of 236 sources (pairs 1, 2 and 5) by up to 26.4 units, about four steps, where centroid distances are 280-450. The effect on the tables is negligible (t06_kde_paths.py).",
+   "fix": "For lambda = inf skip the break at line 51 and run until not alive.any(); save the point with the highest density."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_react.py",
+   "line": 84,
+   "severity": "minor",
+   "description": "contrast() and the per-pair prints (lines 95-96) index columns by variant name. A variant with no valid row raises KeyError after the CSVs are written and before the JSON is saved.",
+   "evidence": "Executing the functions verbatim on a synthetic table in which sae20 is never valid raises KeyError 'sae20' and \"['sae20'] not in index\" (t12_pandas.py). It did not trigger for t0 because sae20 has 24 valid rows. sae5 already has none, and another SAE (tag t2, not checked) could remove sae20 as well.",
+   "fix": "Use W = W.reindex(columns=[n1, n2]) before dropna() and return NaN when the result is empty; use .reindex(columns=[...]) in the two per-pair prints."
+  },
+  {
+   "file": "<scratch>/ju_scripts/mim_react.py",
+   "line": 34,
+   "severity": "minor",
+   "description": "The 'KL real A->A' reference pairs prompts drawn with replacement, so some pairs are a prompt with itself (KL = 0).",
+   "evidence": "Replaying the random draws: 15 of the 480 A-to-A pairs are self-pairs (0 to 3 of 60 per pair), so kl_real_A_to_A is understated by about 3% on average and 5% in pairs 0, 1 and 3 (t26_klaa.py).",
+   "fix": "Drop or redraw pairs with i == j."
+  }
+ ],
+ "design_issues": [
+  {
+   "issue": "The 'mimicry' term is a pull towards the B centroid, and the density column measures centrality, not realism.",
+   "severity": "must_fix_before_interpreting",
+   "why": "The bandwidth is the median pairwise distance (456-790) of 26-34 B states in 2048 dimensions, so the KDE has one mode at the centroid. The KDE gradient at the source has cosine >= 0.997 with the direction to the centroid, and the pure-mimicry path is a straight line to it (off-line component 2.5%). At s* it has covered 86-101% of the way (mean 94.5%). The end point is 7-36 units from the centroid; real B states are 312-519 away. Its density (0.77-0.79) exceeds that of every real held-out B state (maximum 0.67-0.72), so dens_pct is 1.00 for lam5, laminf and protoB, while real held-out A states already reach the 10th-35th percentile in 7 of 8 pairs. laminf_lvlstar, laminf_end and protoB are one condition: per-source dR2 of laminf_end and protoB correlates 0.998, mean absolute difference 0.014.",
+   "suggestion": "Describe lambda as 'towards the B centroid' and merge the three rows. If mimicry of real states is wanted, use a local density (smaller bandwidth over the nearest B states, as Biggio does, or a kNN distance) and a typicality measure on which real held-out B states score normally and the centroid does not."
+  },
+  {
+   "issue": "Equal probe score is not equal perturbation size; at equal distance the mimicry path and the probe normal produce the same reaction.",
+   "severity": "must_fix_before_interpreting",
+   "why": "At s* the distance relative to the probe-normal attack is 1.00 (probe normal), 1.56 (class-mean translation), 1.87 (lambda 5), 2.48 (pure mimicry), 2.67 (centroid), 3.44 (swap). On the same sources at 0.25, 0.5, 1, 1.5, 2 times that distance, the final-state reaction is 0.07, 0.17, 0.40, 0.55, 0.76 on the mimicry path and 0.09, 0.19, 0.40, 0.51, 0.66 along the probe normal; the output reaction is 0.06, 0.13, 0.41, 0.58, 0.76 against 0.05, 0.13, 0.38, 0.46, 0.59. Final-state reaction per unit distance is 0.37-0.42 for probe normal, mimicry path and centroid alike (lens direction 0.69, class-mean translation 0.56, swap 0.29). The table A and F differences such as 'laminf minus lam0: +0.71 / +0.63' therefore reflect distance travelled. Random controls exist only at 1x.",
+   "suggestion": "Lead with the matched-distance comparison on common sources, add random and random-label controls at 2x and 3x, and present table A as what the probe score fails to tell, not as an effect of density."
+  },
+  {
+   "issue": "The output reaction score dR is close to noise in pairs 0-2, and on both scales 'no longer A' reads as 'towards B'.",
+   "severity": "caveat_to_state",
+   "why": "The real gap in pairs 0-2 is 0.70, 0.85, 0.64 with standard errors 0.36, 0.36, 0.32 (AUROC 0.82, 0.78, 0.65; the training gap was 1.7, 2.0, 4.7). In pairs 0 and 2 the KL between two real A prompts exceeds the KL from A to B (6.57 vs 4.78; 8.85 vs 8.11). 13-36% of full swaps with a real B state score dR < 0 there (0% for dR2), and dR correlates with dR2 at only 0.23-0.36 (0.64-0.87 in the other pairs). The SAE reconstruction of the source scores dR = 1.22 in pair 2 with dR2 = 0.09. Real B prompts score about 0 in pairs 0 and 2, so an output that only loses A-typical mass reads as a full move (a zero-score output gives dR 0.97 and 0.88; 0.26-0.54 elsewhere). Real prompts of the 16 unrelated families score dR2 = 0.58 on average (0.26-0.93 by pair). All pairs get equal weight in the means.",
+   "suggestion": "Treat dR2 as primary (AUROC >= 0.93 in every pair) or restrict dR to pairs with AUROC >= 0.9. Add a two-sided readout: expected log-probability under A's and under B's mean next-token distribution, reported separately."
+  },
+  {
+   "issue": "The printed 95% intervals are conditional on these 8 pairs, which are not independent.",
+   "severity": "caveat_to_state",
+   "why": "The source bootstrap gives widths of 0.01-0.07 for dR2; t-intervals over the 8 pair means are 0.14-0.49 wide. Examples: laminf minus lam0 on dR2 [+0.61,+0.66] against [+0.40,+0.86]; lens_t0 minus lam0 on output [-0.18,-0.02] against [-0.29,+0.08]; saerec minus orig on output [+0.05,+0.25] against [-0.22,+0.52]. In a simulation with moderate between-pair differences the bootstrap covered the population effect 63% of the time. Pairs 0 and 1 are the same families reversed, pairs 0 and 3 share the same 31 source prompts, pairs 4 and 5 share the target family and its B states.",
+   "suggestion": "Print the pair-level spread (or bootstrap over pairs) next to each contrast and word claims as 'for these 8 pairs'."
+  },
+  {
+   "issue": "The SAE and the lens are weak instruments at this token position, and the 'lens direction' is a gradient, not a pre-image.",
+   "severity": "caveat_to_state",
+   "why": "SAE: variance explained is 0.56 at the last prompt token against 0.81 at content tokens (authors' eval 0.78), NMSE 0.164. Its reconstruction error is 2.0 times the probe-normal attack displacement, and reconstruction alone changes the top token for 24% of sources. Lens: on a 200-prompt sample of real states KL(real output || lens readout) is 5.6 nats with 21% top-1 agreement; the plain logit lens gives 4.1 nats and 31%. The lens-predicted gap has the wrong sign in pairs 0 and 2 (-0.26, -0.18). The direction J^T(g * dF) used in mim_attack.py line 32 and mim_static.py line 89 is the steepest-ascent direction; for this J (condition number 1.7e4) it has cosine about 0.10 with the pre-image J^-1 v, so the comment 'direction the lens maps onto the class difference' is inaccurate.",
+   "suggestion": "State these numbers next to every SAE and lens reading, and call the direction the lens gradient direction."
+  }
+ ],
+ "checks_run": [
+  "SAE (mim_common.SAE): state-dict keys and shapes (encoder.weight 16384x2048, encoder.bias, decoder.weight 2048x16384, b_dec, threshold 20.7067, k 80), unit-norm decoder columns. Encode/decode on all 1472 states against a direct torch reference: 0 of 132,288 active-set mismatches, max activation difference 3.4e-4, decode relative error 5e-7. Saved mim_sae_acts_t0.npy is identical to a fresh encode. The fve formula matches the authors' definition.",
+  "LinProbe: score() against sklearn decision_function (precomputed and linear kernel) on held-out points of the 8 attack pairs, max difference 4e-15. classes_ is [0, 1], so the sign-flip branch never fires and is harmless. Hard margin holds: largest alpha 1.6-29.7 (random labels up to 125) against C = 1e4, none at the bound, smallest training margin 0.9994-0.9998, and C = 1e8 gives the same w. The 4-dim soft-margin use matches to 7e-14.",
+  "split3 and index use: S1, S2 and T are disjoint and exhaustive per class for all 8 pairs. No held-out prompt enters probe training, SAE feature selection, the KDE, the lens direction or the reaction weights. Deliberate calibration on held-out data (s* from held-out B; the reaction gap from held-out A including the sources and held-out B; the density reference; swap donors) sets scales only and favours no variant. mim_static.py lines 86-87 choose the sign of the best feature on test data and cap at 200 features: no effect here (0 sign flips in 60 sampled rows, largest count 73).",
+  "mim_attack.py: KDE gradient against finite differences (relative error <= 2e-8). My run of the unmodified script reproduces the official mim_variants_t0.npy and .json bit for bit. Level variants hit their level to 2e-15, dose variants are within 2e-5 of the target distance, rand, randlabel and lens_t0 displacements have norm t0 to 1e-10, dm, lens and sae variants at s* have surrogate score s*, and lens_lvlstar validity equals cos(w, lens) >= 0.2. The step rule matches Biggio's Algorithm 1 (unit vector along the combined gradient, fixed step).",
+  "mim_patch.py, source reading of transformers 5.22.2: Qwen3DecoderLayer returns a tensor; hidden_states are collected by forward hooks, hidden_states[0] is the embedding and hidden_states[-1] is replaced by the normed last_hidden_state; all cache layers are DynamicLayer, update() concatenates, so the deep copy is needed and present; a one-token query with a cache attends to everything; positions come from the cache length.",
+  "mim_patch.py, numerical test on a tiny randomly initialised Qwen3 (8 blocks, d = 64; not the language model): both the first version (forward hook, DynamicCache deep copy, batch_repeat_interleave) and the current version (PrefixCache plus tail) match a full uncached forward pass with the block output overwritten at the last position, to 7e-7. Using position T instead of T-1 changes the result by 0.11, so the test is sensitive. In the official run the unpatched tail deviates from the stored final state by at most 6.1e-5 and the 'orig' rows by 1.3e-4.",
+  "extract_eval2.py: tokenizer-only check on all 1472 prompts. Template head and tail, token count, last token and the two context positions all agree with eval2_meta.npz; hidden_states[b+1] is the output of block b.",
+  "mim_react.py per row: independent recomputation of every column of the official mim_react_t0.csv (8732 rows). dR, kl and top1_changed agree to 7e-6; dR2, the six SAE columns, s_sur, s_ind, dens_pct, nnB, nnA, iso and rel_dist agree to 5e-8 or better; dR_lens agrees to 1.8e-5 on 180 sampled rows. Row order equals meta order.",
+  "mim_react.py helpers: log_softmax against torch (1.5e-13), rmsnorm against the Qwen3RMSNorm formula (4e-15). The unembedding is the tied embedding and its argmax reproduces the stored top-1 for 1472 of 1472 prompts. Lens orientation: J h predicts differences between real final states better (median cosine 0.66) than J^T h (0.57), and layer index 21 gives lower KL (5.6) than 20 (6.3) or 22 (6.1). KL direction is KL(original || patched), consistent with KL(A || B).",
+  "mim_react.py aggregation: table() and contrast() executed verbatim on synthetic rows equal an explicit recomputation, keep a source shared by two pairs apart, and the bootstrap has 95% coverage when only source noise varies. Table A and all 24 contrasts in mim_react_t0.json re-derive from the CSV with explicit loops (table difference 5e-5 from rounding).",
+  "mim_static.py: col_auc against sklearn with ties and a constant column (1e-16). OMP recovers a 5-sparse combination and its explained share equals the projection onto the span. U is orthonormal (2e-15) and built as in the reference src_uspace.py apart from the irrelevant sign fix. 60 SAE rows and 12 probe rows of mim_static_t0.json reproduce exactly.",
+  "Not checked: the t2 SAE (65k features) path; patched values other than the 'orig' rows cannot be verified without running the language model."
+ ],
+ "summary": "No blocker: the per-row numbers are right, but three aggregation and workflow bugs and two interpretation problems need fixing before the tables are read.\n\n**Incident I caused.** One of my checks (t13_neutral.py, about 5.7 GB) ran alongside the official mim_patch.py (7.4 GB) and pushed the session over its 14.0 GB memory limit at about 15:39 UTC. The kernel killed mim_patch.py (PID 6349). It was restarted with resume logic and finished at 15:48; the outputs are complete and pass their self-checks. My later checks stayed at a few GB. Note that the limit is 14 GB, not the 16 GB that `free` shows.\n\n**What is correct.** I recomputed every per-row column of the official mim_react_t0.csv independently and all agree to 2e-5 or better. The SAE, LinProbe, the splits, the KDE gradient, level and dose interpolation, control norms and the static helpers are correct. Both patching implementations match a full forward pass on a tiny random Qwen3. There is no leakage of held-out prompts into training or selection.\n\n**Major bugs.**\n- **Stale resume in mim_patch.py:** the partial file is still on disk, and a re-run after changing the variants would silently reuse old outputs for 200 of 205 sources.\n- **Tables mix sources and pairs per row:** in dose table E the printed KL at dose 1 is 2.01 against 0.31 on common sources, and the \"8 pairs\" header is wrong for several rows.\n- **SAE displacement at s* barely exists:** sae5 is valid for 0 of 236 sources and sae20 for 24. The sae20 row and its contrast (+1.66) rest on 3 pairs with 8, 1 and 15 sources.\n\nFour minor bugs are listed in the bugs field.\n\n**Interpretation, must fix.**\n- **\"Mimicry\" is a move to the B centroid.** The pure-mimicry state at s* is 94.5% of the way there, laminf_end and protoB are the same state, and the density column saturates at 1.00 because the centroid is denser than any real B state.\n- **Equal probe score is not equal distance.** At the same distance on the same sources, the mimicry path and the probe normal give the same final-state reaction (0.40 vs 0.40 at 1x, 0.76 vs 0.66 at 2x). The table A gap (1.03 vs 0.40) is distance travelled, 2.48x vs 1.0x.\n\nThree further caveats are in the design field: the output score dR is near noise in pairs 0-2, the intervals hold only for these 8 non-independent pairs, and the SAE and lens are weak at this token position.\n\n**Versions.** mim_patch.py changed twice (15:31, 15:39) and mim_react.py once (15:31) during the review. Line numbers refer to the current files (mim_patch.py md5 8e849107…, mim_react.py 307a861d…, mim_attack.py ec59c585…).\n\nMy scripts t01–t27 and their outputs are in <scratch>/review_mim_code_correctness/."
+}
