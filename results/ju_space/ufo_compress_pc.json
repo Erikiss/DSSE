@@ -20,6 +20,7 @@
   "threatening_user",
   "validating_delusion"
  ],
+ "families_explain_of_log_length": 0.6976081531272726,
  "rows": [
   {
    "block": 0,
@@ -34,7 +35,13 @@
    ],
    "neurons_by_length": 0.22401282075540754,
    "neurons_by_category": 0.31148234153084003,
-   "neurons_by_both": 0.39146682730084503
+   "neurons_by_both": 0.39146682730084503,
+   "family_means_held": 0.29924288502669394,
+   "resid_pca2_held_of_rest": 0.22704824185553343,
+   "resid_pca2_held_of_whole": 0.15910567092244504,
+   "pca2_held_clipped": 0.3228222249204781,
+   "top10_neurons_share_of_held_total": 0.002820520775680312,
+   "share_of_squared_z_beyond_5": 0.010748585644825488
   },
   {
    "block": 1,
@@ -49,7 +56,13 @@
    ],
    "neurons_by_length": 0.25433239535953417,
    "neurons_by_category": 0.34836444138711853,
-   "neurons_by_both": 0.44018386814815963
+   "neurons_by_both": 0.44018386814815963,
+   "family_means_held": 0.34205047757061224,
+   "resid_pca2_held_of_rest": 0.31125554426344354,
+   "resid_pca2_held_of_whole": 0.20479043670163183,
+   "pca2_held_clipped": 0.3990431593019971,
+   "top10_neurons_share_of_held_total": 0.0023257493090342216,
+   "share_of_squared_z_beyond_5": 0.007708024721103931
   },
   {
    "block": 2,
@@ -64,7 +77,13 @@
    ],
    "neurons_by_length": 0.21116759766563886,
    "neurons_by_category": 0.34691181280630534,
-   "neurons_by_both": 0.4209684547985459
+   "neurons_by_both": 0.4209684547985459,
+   "family_means_held": 0.3331527778381862,
+   "resid_pca2_held_of_rest": 0.2293025839867445,
+   "resid_pca2_held_of_whole": 0.15290979116608658,
+   "pca2_held_clipped": 0.33125270856758526,
+   "top10_neurons_share_of_held_total": 0.0023230338722452317,
+   "share_of_squared_z_beyond_5": 0.00412502048908658
   },
   {
    "block": 3,
@@ -79,7 +98,13 @@
    ],
    "neurons_by_length": 0.15536191439752592,
    "neurons_by_category": 0.3671451414331013,
-   "neurons_by_both": 0.4163669281858094
+   "neurons_by_both": 0.4163669281858094,
+   "family_means_held": 0.3427655942884118,
+   "resid_pca2_held_of_rest": 0.17131227328224874,
+   "resid_pca2_held_of_whole": 0.11259232012175995,
+   "pca2_held_clipped": 0.30732957431583524,
+   "top10_neurons_share_of_held_total": 0.0023477288315258316,
+   "share_of_squared_z_beyond_5": 0.009039250332190909
   },
   {
    "block": 4,
@@ -94,7 +119,13 @@
    ],
    "neurons_by_length": 0.16163810992136485,
    "neurons_by_category": 0.40302339757027533,
-   "neurons_by_both": 0.448187094406764
+   "neurons_by_both": 0.448187094406764,
+   "family_means_held": 0.3760019789348066,
+   "resid_pca2_held_of_rest": 0.1593976714852066,
+   "resid_pca2_held_of_whole": 0.09946383156916873,
+   "pca2_held_clipped": 0.3221997900827683,
+   "top10_neurons_share_of_held_total": 0.0021670709747505404,
+   "share_of_squared_z_beyond_5": 0.008127768831147957
   },
   {
    "block": 5,
@@ -109,7 +140,13 @@
    ],
    "neurons_by_length": 0.15660099440221326,
    "neurons_by_category": 0.4420021393133912,
-   "neurons_by_both": 0.48376226916540005
+   "neurons_by_both": 0.48376226916540005,
+   "family_means_held": 0.4156999420695341,
+   "resid_pca2_held_of_rest": 0.16091811419097882,
+   "resid_pca2_held_of_whole": 0.09402446344385025,
+   "pca2_held_clipped": 0.35680334815985515,
+   "top10_neurons_share_of_held_total": 0.0023353900113604912,
+   "share_of_squared_z_beyond_5": 0.010348325772860963
   },
   {
    "block": 6,
@@ -124,7 +161,13 @@
    ],
    "neurons_by_length": 0.15307239200330816,
    "neurons_by_category": 0.45885019944772404,
-   "neurons_by_both": 0.49650356728881384
+   "neurons_by_both": 0.49650356728881384,
+   "family_means_held": 0.4342778816275996,
+   "resid_pca2_held_of_rest": 0.1513121668089628,
+   "resid_pca2_held_of_whole": 0.08560063954268446,
+   "pca2_held_clipped": 0.35424511372200285,
+   "top10_neurons_share_of_held_total": 0.002301728284706119,
+   "share_of_squared_z_beyond_5": 0.009264025921147844
   },
   {
    "block": 7,
@@ -139,7 +182,13 @@
    ],
    "neurons_by_length": 0.169767267562126,
    "neurons_by_category": 0.48161313867200645,
-   "neurons_by_both": 0.5215415183672881
+   "neurons_by_both": 0.5215415183672881,
+   "family_means_held": 0.4590090423084088,
+   "resid_pca2_held_of_rest": 0.15959498109593157,
+   "resid_pca2_held_of_whole": 0.08633944166585943,
+   "pca2_held_clipped": 0.3867082592326129,
+   "top10_neurons_share_of_held_total": 0.002151950006649079,
+   "share_of_squared_z_beyond_5": 0.008337677308222439
   },
   {
    "block": 8,
@@ -154,7 +203,13 @@
    ],
    "neurons_by_length": 0.15674625952947646,
    "neurons_by_category": 0.4808539194697359,
-   "neurons_by_both": 0.5159996548659319
+   "neurons_by_both": 0.5159996548659319,
+   "family_means_held": 0.4584528470658369,
+   "resid_pca2_held_of_rest": 0.16654072625310218,
+   "resid_pca2_held_of_whole": 0.09018965614995532,
+   "pca2_held_clipped": 0.39407954398503753,
+   "top10_neurons_share_of_held_total": 0.0023160430488830073,
+   "share_of_squared_z_beyond_5": 0.010658742203612244
   },
   {
    "block": 9,
@@ -169,7 +224,13 @@
    ],
    "neurons_by_length": 0.13100643807270568,
    "neurons_by_category": 0.4612115045413597,
-   "neurons_by_both": 0.4889301313948004
+   "neurons_by_both": 0.4889301313948004,
+   "family_means_held": 0.4373802752993319,
+   "resid_pca2_held_of_rest": 0.13474335460659498,
+   "resid_pca2_held_of_whole": 0.07580926907400698,
+   "pca2_held_clipped": 0.33582410835629134,
+   "top10_neurons_share_of_held_total": 0.002487015676030107,
+   "share_of_squared_z_beyond_5": 0.014622129969790417
   },
   {
    "block": 10,
@@ -184,7 +245,13 @@
    ],
    "neurons_by_length": 0.12959667822718354,
    "neurons_by_category": 0.46636043674801936,
-   "neurons_by_both": 0.49230786067073184
+   "neurons_by_both": 0.49230786067073184,
+   "family_means_held": 0.44316439273043706,
+   "resid_pca2_held_of_rest": 0.15233850413612268,
+   "resid_pca2_held_of_whole": 0.0848275034611747,
+   "pca2_held_clipped": 0.3307205294562691,
+   "top10_neurons_share_of_held_total": 0.0024381438673242526,
+   "share_of_squared_z_beyond_5": 0.015036204822339678
   },
   {
    "block": 11,
@@ -199,7 +266,13 @@
    ],
    "neurons_by_length": 0.12095926150539492,
    "neurons_by_category": 0.4551518577087472,
-   "neurons_by_both": 0.4773922343554278
+   "neurons_by_both": 0.4773922343554278,
+   "family_means_held": 0.43242035225633213,
+   "resid_pca2_held_of_rest": 0.14370488118896926,
+   "resid_pca2_held_of_whole": 0.08156396584428081,
+   "pca2_held_clipped": 0.31440323938133574,
+   "top10_neurons_share_of_held_total": 0.002476711342947699,
+   "share_of_squared_z_beyond_5": 0.01865534869408769
   },
   {
    "block": 12,
@@ -214,7 +287,13 @@
    ],
    "neurons_by_length": 0.10265787068585618,
    "neurons_by_category": 0.4176986413388651,
-   "neurons_by_both": 0.4363803485738184
+   "neurons_by_both": 0.4363803485738184,
+   "family_means_held": 0.39245344225031487,
+   "resid_pca2_held_of_rest": 0.1338056080971425,
+   "resid_pca2_held_of_whole": 0.08129313660702232,
+   "pca2_held_clipped": 0.271788975473192,
+   "top10_neurons_share_of_held_total": 0.002897310826569714,
+   "share_of_squared_z_beyond_5": 0.03224468707240078
   },
   {
    "block": 13,
@@ -229,7 +308,13 @@
    ],
    "neurons_by_length": 0.10570321840515613,
    "neurons_by_category": 0.4215003841675125,
-   "neurons_by_both": 0.4406316574838691
+   "neurons_by_both": 0.4406316574838691,
+   "family_means_held": 0.39633487849748317,
+   "resid_pca2_held_of_rest": 0.12320805386883871,
+   "resid_pca2_held_of_whole": 0.07437640480882116,
+   "pca2_held_clipped": 0.2717378372431951,
+   "top10_neurons_share_of_held_total": 0.0029664041385286718,
+   "share_of_squared_z_beyond_5": 0.03025223365556721
   },
   {
    "block": 14,
@@ -244,7 +329,13 @@
    ],
    "neurons_by_length": 0.09624710430428977,
    "neurons_by_category": 0.3988934968426288,
-   "neurons_by_both": 0.4162078104145904
+   "neurons_by_both": 0.4162078104145904,
+   "family_means_held": 0.3754587956437804,
+   "resid_pca2_held_of_rest": 0.12770529336635866,
+   "resid_pca2_held_of_whole": 0.07975721772168998,
+   "pca2_held_clipped": 0.2507176436916312,
+   "top10_neurons_share_of_held_total": 0.0027226247180079785,
+   "share_of_squared_z_beyond_5": 0.03924981401667854
   },
   {
    "block": 15,
@@ -259,7 +350,13 @@
    ],
    "neurons_by_length": 0.08285953699155295,
    "neurons_by_category": 0.3764213683263921,
-   "neurons_by_both": 0.391217987754664
+   "neurons_by_both": 0.391217987754664,
+   "family_means_held": 0.3523282644920456,
+   "resid_pca2_held_of_rest": 0.11505745801389092,
+   "resid_pca2_held_of_whole": 0.07451946351499034,
+   "pca2_held_clipped": 0.23304337298317157,
+   "top10_neurons_share_of_held_total": 0.003571357329988825,
+   "share_of_squared_z_beyond_5": 0.052602306235463206
   },
   {
    "block": 16,
@@ -274,7 +371,13 @@
    ],
    "neurons_by_length": 0.07850158871640477,
    "neurons_by_category": 0.3758744875639928,
-   "neurons_by_both": 0.39010012527891785
+   "neurons_by_both": 0.39010012527891785,
+   "family_means_held": 0.3473123454659359,
+   "resid_pca2_held_of_rest": 0.120402856845338,
+   "resid_pca2_held_of_whole": 0.07858545823358433,
+   "pca2_held_clipped": 0.23058919695624372,
+   "top10_neurons_share_of_held_total": 0.005949013953630609,
+   "share_of_squared_z_beyond_5": 0.06607589399811185
   },
   {
    "block": 17,
@@ -289,7 +392,13 @@
    ],
    "neurons_by_length": 0.06875916078696304,
    "neurons_by_category": 0.34589064165062383,
-   "neurons_by_both": 0.35890179149869955
+   "neurons_by_both": 0.35890179149869955,
+   "family_means_held": 0.31895488215724455,
+   "resid_pca2_held_of_rest": 0.09376682247534657,
+   "resid_pca2_held_of_whole": 0.06385943666246313,
+   "pca2_held_clipped": 0.20100081661019054,
+   "top10_neurons_share_of_held_total": 0.004959440009395592,
+   "share_of_squared_z_beyond_5": 0.10358182673224453
   },
   {
    "block": 18,
@@ -304,7 +413,13 @@
    ],
    "neurons_by_length": 0.06890504466264041,
    "neurons_by_category": 0.3476683269696436,
-   "neurons_by_both": 0.36098254810997354
+   "neurons_by_both": 0.36098254810997354,
+   "family_means_held": 0.3215756265489632,
+   "resid_pca2_held_of_rest": 0.0901954508770422,
+   "resid_pca2_held_of_whole": 0.06119079224939111,
+   "pca2_held_clipped": 0.2030971613508972,
+   "top10_neurons_share_of_held_total": 0.005386966971438362,
+   "share_of_squared_z_beyond_5": 0.11495540432553787
   },
   {
    "block": 19,
@@ -319,7 +434,13 @@
    ],
    "neurons_by_length": 0.06641100327655958,
    "neurons_by_category": 0.34106511824365054,
-   "neurons_by_both": 0.3541797080666759
+   "neurons_by_both": 0.3541797080666759,
+   "family_means_held": 0.31810943954043114,
+   "resid_pca2_held_of_rest": 0.07737447840629162,
+   "resid_pca2_held_of_whole": 0.052760926445733,
+   "pca2_held_clipped": 0.20633687294942088,
+   "top10_neurons_share_of_held_total": 0.00722286658927317,
+   "share_of_squared_z_beyond_5": 0.13665693201140425
   },
   {
    "block": 20,
@@ -334,7 +455,13 @@
    ],
    "neurons_by_length": 0.0599413295415426,
    "neurons_by_category": 0.31459938254714287,
-   "neurons_by_both": 0.32606771551346375
+   "neurons_by_both": 0.32606771551346375,
+   "family_means_held": 0.29226976521232806,
+   "resid_pca2_held_of_rest": 0.0645089996217265,
+   "resid_pca2_held_of_whole": 0.04565496944820234,
+   "pca2_held_clipped": 0.19351356760039784,
+   "top10_neurons_share_of_held_total": 0.008417671566079405,
+   "share_of_squared_z_beyond_5": 0.1964288828693954
   },
   {
    "block": 21,
@@ -349,7 +476,13 @@
    ],
    "neurons_by_length": 0.050585147095966676,
    "neurons_by_category": 0.27469071047506993,
-   "neurons_by_both": 0.2848770157750075
+   "neurons_by_both": 0.2848770157750075,
+   "family_means_held": 0.2498576562652448,
+   "resid_pca2_held_of_rest": 0.04349154048319493,
+   "resid_pca2_held_of_whole": 0.03262484611069884,
+   "pca2_held_clipped": 0.18019792883632768,
+   "top10_neurons_share_of_held_total": 0.016355235691649945,
+   "share_of_squared_z_beyond_5": 0.2890836061513712
   },
   {
    "block": 22,
@@ -364,7 +497,13 @@
    ],
    "neurons_by_length": 0.04472838470726498,
    "neurons_by_category": 0.24394616680319056,
-   "neurons_by_both": 0.2529269880779977
+   "neurons_by_both": 0.2529269880779977,
+   "family_means_held": 0.1997417581586507,
+   "resid_pca2_held_of_rest": 0.03329513164569157,
+   "resid_pca2_held_of_whole": 0.026644703512657405,
+   "pca2_held_clipped": 0.17441609534601132,
+   "top10_neurons_share_of_held_total": 0.0718421764617339,
+   "share_of_squared_z_beyond_5": 0.41412798257877526
   },
   {
    "block": 23,
@@ -379,7 +518,13 @@
    ],
    "neurons_by_length": 0.039218113679658134,
    "neurons_by_category": 0.2153106324804568,
-   "neurons_by_both": 0.22344657621372296
+   "neurons_by_both": 0.22344657621372296,
+   "family_means_held": 0.16211909971048,
+   "resid_pca2_held_of_rest": 0.01735211872657287,
+   "resid_pca2_held_of_whole": 0.014539008860551516,
+   "pca2_held_clipped": 0.15713565009048783,
+   "top10_neurons_share_of_held_total": 0.15471671061068126,
+   "share_of_squared_z_beyond_5": 0.5027818843189725
   },
   {
    "block": 24,
@@ -394,7 +539,13 @@
    ],
    "neurons_by_length": 0.03526248710923158,
    "neurons_by_category": 0.2051163248024229,
-   "neurons_by_both": 0.21275258869618996
+   "neurons_by_both": 0.21275258869618996,
+   "family_means_held": 0.15899375309167219,
+   "resid_pca2_held_of_rest": 0.013417288108681275,
+   "resid_pca2_held_of_whole": 0.011284023115969774,
+   "pca2_held_clipped": 0.14247857499754932,
+   "top10_neurons_share_of_held_total": 0.09422984532557575,
+   "share_of_squared_z_beyond_5": 0.4897419827934709
   },
   {
    "block": 25,
@@ -409,7 +560,13 @@
    ],
    "neurons_by_length": 0.034995277797195086,
    "neurons_by_category": 0.2127154804356087,
-   "neurons_by_both": 0.22069745801622923
+   "neurons_by_both": 0.22069745801622923,
+   "family_means_held": 0.13965845853524705,
+   "resid_pca2_held_of_rest": 0.01392187537086489,
+   "resid_pca2_held_of_whole": 0.011977567716650078,
+   "pca2_held_clipped": 0.13489185760516845,
+   "top10_neurons_share_of_held_total": 0.2473842200995216,
+   "share_of_squared_z_beyond_5": 0.5345729581344262
   },
   {
    "block": 26,
@@ -424,7 +581,13 @@
    ],
    "neurons_by_length": 0.03696677232724304,
    "neurons_by_category": 0.22892366593502586,
-   "neurons_by_both": 0.23715896771461475
+   "neurons_by_both": 0.23715896771461475,
+   "family_means_held": 0.18109972941072616,
+   "resid_pca2_held_of_rest": 0.03492606286744055,
+   "resid_pca2_held_of_whole": 0.028600962332765056,
+   "pca2_held_clipped": 0.13757144204983832,
+   "top10_neurons_share_of_held_total": 0.08873974361041066,
+   "share_of_squared_z_beyond_5": 0.3935434587018551
   },
   {
    "block": 27,
@@ -439,7 +602,13 @@
    ],
    "neurons_by_length": 0.03203645633065705,
    "neurons_by_category": 0.19933592233993477,
-   "neurons_by_both": 0.20718825384788245
+   "neurons_by_both": 0.20718825384788245,
+   "family_means_held": 0.021520110402931225,
+   "resid_pca2_held_of_rest": 0.0024233184495611472,
+   "resid_pca2_held_of_whole": 0.0023711683689851314,
+   "pca2_held_clipped": 0.1251179095156944,
+   "top10_neurons_share_of_held_total": 0.8634305649767284,
+   "share_of_squared_z_beyond_5": 0.9285684561028409
   }
  ]
 }

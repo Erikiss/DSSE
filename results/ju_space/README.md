@@ -8,9 +8,10 @@ ist damit an den nachfolgenden Neuronen und an der zweiten Trennlinie unabhängi
 nicht. Für die Abschnitte 2, 3, 5, 6.4 und 6.6 liegt kein eigener Prüfbericht vor. Die Infografik `infografik.html`
 (auch als `infografik.pdf`) fasst die Abschnitte 1 bis 6 auf einer Seite zusammen; für sie sind alle Zahlen noch einmal
 gegen dieses README und die Ergebnisdateien abgeglichen worden. Abschnitt 7 ist ein Nachtrag vom 10./11. November: Der
-Versuchsplan wurde vor den Läufen von zwei Prüfern kritisiert (`ufo_plan_review.json`). Die Zahlen von 7.1 bis 7.8
-wurden zweimal unabhängig aus den Ergebnisdateien nachgerechnet, die Deutung wurde gegengelesen und danach in mehreren
-Punkten zurückgenommen (`review_ufo.json`). Für 7.9 und 7.10 liegt eine unabhängige Nachrechnung bisher nur für 7.9 (a) vor.
+Versuchsplan wurde vor den Läufen von zwei Prüfern kritisiert (`ufo_plan_review.json`); nur die beiden Trainingsläufe
+des Kleinversuchs (nur Gewichtsabnahme, mit UFO) lagen da schon vor und wurden nicht wiederholt. Die Zahlen von 7.1 bis
+7.8 wurden zweimal, die von 7.9 und 7.10 einmal unabhängig aus den Ergebnisdateien nachgerechnet. Die Deutung wurde
+gegengelesen und danach in vielen Punkten zurückgenommen (`review_ufo.json`).
 
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
 (Chat-Vorlage, Denken aus). Die 18 DSSE-Kategorien sind an dieser Stelle 18 Familien von Testfragen (Thema, Ton, Form),
@@ -51,7 +52,7 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    von denselben Neuronen wie das gewöhnliche Rechnen. Eine Bremse für große Störungen gibt es nicht. Ein SAE im
    Durchlauf kostet im untersten Block am wenigsten (KL 0,07), taugt aber nicht als Filter. Das Flaschenhals-Maß des
    Papers beschreibt auf den DSSE-Fragen den Fragensatz und ist auf einem Zahlenraster für das untrainierte Netz
-   genauso hoch.
+   mindestens so hoch.
 
 ## Material
 
@@ -754,24 +755,34 @@ das denselben bisherigen Text liest.
 ### 7.9 Das Kriterium des Papers selbst: Passen die Aktivierungen durch einen engen Flaschenhals?
 
 Das Paper misst Ordnung daran, wie gut ein Autoencoder mit zwei Zahlen in der Mitte die z-standardisierten Aktivierungen
-einer MLP-Schicht wiedergibt (eine Zeile je Eingabe, eine Spalte je Neuron). Hier dieselbe Messung am fertigen Modell,
-ohne UFO. Angepasst wird an zwei Dritteln der Eingaben, gelesen am zurückgehaltenen Drittel.
+einer MLP-Schicht wiedergibt (eine Zeile je Eingabe, eine Spalte je Neuron). Hier die entsprechende Messung am fertigen
+Modell, ohne UFO (Autoencoder nachträglich und je Block angepasst, ein Startwert). Angepasst wird an zwei Dritteln der
+Eingaben, gelesen am zurückgehaltenen Drittel.
 
-**(a) 1.472 DSSE-Fragen, letztes Token der Vorlage.**
+**(a) 1.472 DSSE-Fragen, letztes Token der Vorlage.** Anteil der Streuung am zurückgehaltenen Drittel:
 
 | Block | 0 | 2 | 5 | 8 | 14 | 20 | 26 |
 |---|---|---|---|---|---|---|---|
 | 2 Hauptachsen | 0,32 | 0,33 | 0,36 | 0,39 | 0,25 | 0,18 | 0,10 |
 | 8 Hauptachsen | 0,55 | 0,58 | 0,61 | 0,62 | 0,49 | 0,36 | 0,22 |
 | Autoencoder mit 2 Zahlen, 300 / 1.500 Schritte | 0,33 / 0,28 | 0,41 / 0,35 | 0,44 / 0,40 | 0,36 / 0,28 | 0,38 / 0,35 | 0,31 / 0,33 | 0,20 / 0,21 |
-| Spalten durchgemischt (kein gemeinsames Muster) | | 0,00 | | | 0,00 | | |
+| die 18 Familienmittel allein | 0,30 | 0,33 | 0,42 | 0,46 | 0,38 | 0,29 | 0,18 |
+| 2 Hauptachsen dessen, was nach Abzug der Familienmittel bleibt (Anteil am Ganzen) | 0,16 | 0,15 | 0,09 | 0,09 | 0,08 | 0,05 | 0,03 |
 
-Das sieht nach starker Ordnung aus, beschreibt aber den Fragensatz: Die erste Achse ist in den Blöcken 0 bis 2 die
-Länge der Frage (R² 0,83 bis 0,87) und ab Block 3 die Fragenfamilie (R² 0,76 bis 0,97). Die 18 Familien allein erklären 20 bis 48 % der Streuung aller Neuronen und ab Block 2 mindestens so viel
-wie die zwei Hauptachsen. Länge und Familie hängen zusammen (die Familien erklären zwei Drittel der Längenstreuung).
-Zieht man die Familienmittel ab, bleiben für zwei Achsen 23 % (Block 0 und 2), 17 % (Block 8), 13 % (Block 14) und
-7 % (Block 20). Der Autoencoder ist an zurückgehaltenen Fragen nicht besser als zwei gerade Achsen und wird mit längerem
-Training meist schlechter. Auf laufendem Text ist der Zustand ohnehin hochdimensional (7.2).
+(Spalten durchgemischt, also ohne gemeinsames Muster: zwei Achsen 0,00, Autoencoder −0,03. Block 27 fehlt: Dort tragen
+zehn Neuronen 86 % der Summe am zurückgehaltenen Drittel, zwei Achsen erklären 0,01 und mit bei ±5 gekappten z-Werten
+0,12. In Block 26 hebt dasselbe Kappen den Wert von 0,10 auf 0,14.)
+
+Das sieht nach starker Ordnung aus, beschreibt aber den Fragensatz:
+
+* Die erste Achse ist in den Blöcken 0 bis 2 die Länge der Frage (R² 0,83 bis 0,87) und ab Block 3 die Fragenfamilie
+  (R² 0,76 bis 0,97). Länge und Familie hängen zusammen (die Familien erklären 70 % der Streuung der logarithmierten
+  Länge).
+* Die 18 Familienmittel allein erklären ab Block 2 am zurückgehaltenen Drittel mindestens so viel wie die zwei
+  Hauptachsen. Was nach ihrem Abzug bleibt, passt deutlich schlechter durch zwei Achsen (letzte Zeile).
+* Der Autoencoder ist nur in Block 0 und 8 nicht besser als zwei gerade Achsen. In den Blöcken 2 und 5 liegt er 0,02 bis
+  0,08 darüber, in den Blöcken 14, 20 und 26 um 0,10 bis 0,16. Dort erreicht er etwa den Anteil der Familienmittel: Zwei
+  Zahlen reichen, um 18 Familien zu unterscheiden. Mit längerem Training wird er in fünf von sieben Blöcken schlechter.
 
 **(b) Ein Bereich, der die Voraussetzung des Papers erfüllt:** zwei freie Größen in festem Format. 2.025 Aufgaben
 `a+b=` (a, b = 10, 12, …, 98) hinter zwei festen Beispielen, alle 24 Token lang; gelesen wird am `=`. Das Modell nennt die
@@ -782,28 +793,40 @@ erste Ziffer der Summe in 100 % der Fälle. Je Neuron wird zerlegt, wovon seine 
 |---|---|---|---|---|---|---|---|---|
 | trainiert: Anteil, den a und b je für sich erklären (additiv) | 1,00 | 0,96 | 0,85 | 0,70 | 0,67 | 0,28 | 0,18 | 0,17 |
 | trainiert: Anteil, den die Summe allein erklärt | 0,03 | 0,12 | 0,12 | 0,15 | 0,11 | 0,24 | 0,29 | 0,41 |
-| trainiert: Neuronen, die zu mehr als der Hälfte von der Summe abhängen | 0 % | 2 % | 3 % | 3 % | 1 % | 4 % | 8 % | 26 % |
-| untrainiert: additiv | 0,95 | 0,79 | 0,73 | 0,68 | 0,65 | 0,64 | 0,63 | 0,63 |
+| trainiert: Summe über a und b hinaus | 0,00 | 0,01 | 0,03 | 0,05 | 0,06 | 0,19 | 0,25 | 0,34 |
+| trainiert: Neuronen, die zu mehr als der Hälfte von der Summe abhängen (davon über a und b hinaus) | 0 % (0 %) | 2 % (0 %) | 3 % (0 %) | 3 % (0 %) | 1 % (0 %) | 4 % (1 %) | 8 % (3 %) | 26 % (11 %) |
+| untrainiert: additiv | 0,95 | 0,79 | 0,73 | 0,68 | 0,65 | 0,64 | 0,63 | 0,62 |
 | untrainiert: Summe allein | 0,09 | 0,09 | 0,09 | 0,09 | 0,09 | 0,09 | 0,09 | 0,09 |
+| untrainiert: Summe über a und b hinaus | 0,01 | 0,03 | 0,04 | 0,04 | 0,04 | 0,05 | 0,05 | 0,05 |
+
+Die Anteile überlappen: Eine Aktivierung, die gleichmäßig mit a und mit b wächst, zählt bei „additiv" und bei „Summe
+allein" voll. Deshalb steht daneben, was die Summe über a und b hinaus erklärt. Die 0,09 des untrainierten Netzes sind
+der Boden des Maßes: 0,04 bekommen 89 Gruppenmittel bei 2.025 Aufgaben immer, der Rest entsteht, weil ein untrainiertes
+Netz beide Summanden gleich behandelt.
 
 Flaschenhals auf dem Raster, gelesen an zurückgehaltenen Rasterzellen (2 / 8 / 32 Hauptachsen / Autoencoder mit 2 Zahlen,
-600 Schritte):
+600 Schritte, ein Startwert):
 
 | Block | 4 | 14 | 22 |
 |---|---|---|---|
 | trainiert | 0,29 / 0,62 / 0,93 / 0,52 | 0,26 / 0,57 / 0,80 / 0,36 | 0,08 / 0,21 / 0,44 / 0,21 |
-| untrainiert | 0,29 / 0,62 / 0,85 / 0,51 | 0,24 / 0,50 / 0,76 / 0,45 | 0,23 / 0,47 / 0,73 / 0,45 |
+| untrainiert | 0,29 / 0,62 / 0,85 / 0,51 | 0,24 / 0,50 / 0,76 / 0,45 | 0,23 / 0,47 / 0,73 / 0,44 |
 
-* **Das Maß des Papers trennt hier nicht zwischen gelernt und ungelernt.** Das untrainierte Netz passt so gut durch den
-  Flaschenhals mit zwei Zahlen (0,45 bis 0,51) wie das trainierte (0,21 bis 0,52). Der Wert zeigt an, dass die Eingabe
-  zwei freie Größen hat. Wo das trainierte Netz nach der Summe ordnet (Block 22), ist er sogar niedriger.
-
-* Bis etwa Block 20 antworten die Neuronen fast nur auf die beiden Summanden einzeln. Das tut auch das untrainierte
-  Netz; es folgt aus der Bauart.
-* In den letzten sechs Blöcken ordnet sich das trainierte Netz nach dem Ergebnis: Die Summe erklärt im Median 24 bis
-  41 % der Streuung eines Neurons (untrainiert durchweg 9 %), und in Block 26 hängt ein Viertel der Neuronen überwiegend
-  von der Summe ab (untrainiert keines). Wo die Aufgabe zwei freie Größen hat, entsteht also durch gewöhnliches
-  Training ein regelmäßiger, auf das Ergebnis bezogener Code. Das ist eine Ordnung im Ergebnis, kein Ordner.
+* **Das Maß des Papers trennt hier nicht zwischen gelernt und ungelernt.** Das untrainierte Netz passt mindestens so gut
+  durch den Flaschenhals mit zwei Zahlen (0,44 bis 0,51) wie das trainierte (0,21 bis 0,52). Der Wert spiegelt also die
+  Eingabe und die Bauart, nichts Gelerntes. Wo das trainierte Netz der Summe folgt (Block 22), ist er sogar niedriger.
+* Bis Block 8 antworten die Neuronen fast nur auf die beiden Summanden einzeln (0,85 bis 1,00), von Block 9 bis 20
+  überwiegend (0,67 bis 0,75). Das tut auch das untrainierte Netz; es folgt aus der Bauart. Über a und b hinaus erklärt
+  die Summe bis Block 20 kaum etwas (0,00 bis 0,06; untrainiert 0,01 bis 0,05).
+* In den letzten sechs Blöcken folgt das trainierte Netz dem Ergebnis: Die Summe erklärt im Median 24 bis 41 % der
+  Streuung eines Neurons, über a und b hinaus 19 bis 34 % (untrainiert 9 % und 5 %). In Block 26 hängt ein Viertel der
+  Neuronen überwiegend von der Summe ab, ein Neuntel auch über a und b hinaus (untrainiert keines). Nach Streuung
+  gewichtet sind es 54 bis 77 %, denn 1 % der Neuronen trägt dort 64 bis 81 % der Streuung.
+* Ein Teil davon ist das Token, das das Modell als Nächstes ausgibt: Die erste Ziffer der Summe allein erklärt in Block
+  26 drei Viertel dessen, was die Summe erklärt (gewichtet 0,55 von 0,74), in den Blöcken 22 bis 25 knapp die Hälfte.
+* Ob dieser Code regelmäßig ist, misst die Zerlegung nicht; durch den Flaschenhals passt er schlechter als die
+  Aktivierungen des untrainierten Netzes. Gezeigt ist eine Ordnung nach dem Ergebnis in einer Aufgabe und einem Format,
+  kein Ordner.
 
 ### 7.10 Kleinversuch: Division modulo 97 (Aufbau des Papers, aber Gewichtsabnahme 0,3 statt 0,03; je ein Lauf)
 
@@ -814,39 +837,68 @@ lernen, aber nichts verallgemeinern kann. Wegen der zehnfachen Gewichtsabnahme u
 Vergleich mit den Beschleunigungen des Papers möglich. Der Lauf mit UFO erreicht 99 % auf ungesehenen Aufgaben nach
 9.000 Schritten, der ohne nach 12.000.
 
+Vom Paper nicht festgelegt und hier gewählt: Bias in allen linearen Schichten, eine eigene Ausgabeschicht mit Bias, die
+Summe der beiden Kreuzentropien als Verlust, ReLU und Standard-Startwerte im Autoencoder des UFO. Das Training endet
+8.000 Schritte nach dem ersten Erreichen von 99 % (20.000, 17.000 und 20.000 Schritte); die Zeitpläne des UFO sind die
+des Papers und decken hier einen rund achtmal größeren Teil des Laufs ab. Die Kontrolle steht nicht im Paper. Sie
+verliert zwischen Schritt 7.000 und 13.000 mehrfach einen Teil des Gelernten (bis hinab zu 24 % richtig) und endet mit
+doppelt so großer Gewichtsnorm (83 gegen 42).
+
 | | nur Gewichtsabnahme | | | | | mit UFO | | Antworten vertauscht | |
 |---|---|---|---|---|---|---|---|---|---|
 | Schritt | 5.000 | 7.500 | 10.000 | 12.000 | 15.000 | 5.000 | 9.000 | 5.000 | 15.000 |
-| richtig auf ungesehenen Aufgaben | 0,02 | 0,03 | 0,28 | 1,00 | 1,00 | 0,04 | 1,00 | 0,01 | 0,01 |
-| 1. MLP-Schicht, 8 Achsen: gesehene / ungesehene Aufgaben | 0,25 / 0,10 | 0,24 / 0,10 | 0,32 / 0,27 | 0,51 / 0,46 | 0,78 / 0,74 | 0,90 / 0,60 | 0,99 / 0,99 | 0,30 / 0,10 | 0,25 / 0,13 |
+| richtig auf ungesehenen Aufgaben | 0,01 | 0,03 | 0,28 | 1,00 | 1,00 | 0,04 | 1,00 | 0,01 | 0,01 |
+| 1. MLP-Schicht, 8 Achsen, z-Werte bei ±5 gekappt, ungesehene Aufgaben | 0,39 | 0,37 | 0,44 | 0,63 | 0,81 | 0,96 | 0,99 | 0,44 | 0,42 |
+| dasselbe ohne Kappen: Anpassungshälfte / andere Trainingshälfte / ungesehen | 0,27 / 0,05 / 0,03 | 0,27 / 0,10 / 0,11 | 0,34 / 0,19 / 0,24 | 0,53 / 0,46 / 0,46 | 0,80 / 0,80 / 0,78 | 0,92 / 0,68 / 0,74 | 0,99 / 0,99 / 0,99 | 0,33 / 0,17 / 0,12 | 0,27 / 0,19 / 0,17 |
 | 2. MLP-Schicht, 2 Achsen, ungesehene Aufgaben | 0,08 | 0,07 | 0,07 | 0,11 | 0,13 | 0,48 | 0,93 | 0,08 | 0,07 |
 | Neuronen der 1. Schicht, die am `=` überhaupt streuen (von 512) | 336 | 308 | 249 | 171 | 173 | 121 | 115 | 179 | 148 |
+| Streuung des Zustands am `=` / seine Norm | 0,29 | 0,30 | 0,27 | 0,22 | 0,25 | 0,26 | 0,11 | 0,18 | 0,23 |
 | gleiche Antwort trotz Vektor der Größe 1 am `=` nach Block 0 | 0,41 | 0,52 | 0,69 | 0,97 | 0,98 | 0,56 | 1,00 | 0,56 | 0,83 |
 | dasselbe, wenn Block 1 nicht reagieren darf | 0,28 | 0,34 | 0,46 | 0,97 | 1,00 | 0,66 | 1,00 | 0,30 | 0,48 |
 | Löschung durch das MLP von Block 1 (`q`) | 0,75 | 0,79 | 0,82 | 0,81 | 0,79 | 0,48 | 0,20 | 0,75 | 0,81 |
 
 (Vektor: Rauschen mit der Kovarianz der echten Zustände, Größe = mittlerer Abstand echter Zustände von ihrem Mittel;
-gelesen an den Trainingsaufgaben. Flaschenhals: an den Trainingsaufgaben angepasst.)
+gelesen an den Trainingsaufgaben. Flaschenhals der ersten Schicht: Achsen und z-Werte an einer Hälfte der
+Trainingsaufgaben angepasst, `ufo_grok_split.py`; zweite Schicht: an allen Trainingsaufgaben angepasst.)
 
-* **Der Code wird beim Verallgemeinern von selbst komprimierbar, und zwar gemeinsam für gesehene und ungesehene Aufgaben.**
-  Solange das Netz nur auswendig lernt, passt der Flaschenhals auf gesehene Aufgaben mäßig und auf ungesehene schlecht
-  (0,25 / 0,10). Ab dem Übergang passt er auf beide gleich (0,51 / 0,46, später 0,78 / 0,74). In der Kontrolle, die nicht
-  verallgemeinern kann, bleibt es bei 0,25 / 0,13. Die Dimension fällt schon vor dem Sprung der Genauigkeit (Achsen für
-  99 % der Streuung des Zustands am `=`: 72, 53, 44, 39, 29, 11 bei Schritt 1.000, 5.000, 7.500, 10.000, 12.000, 20.000),
-  in der Kontrolle aber ähnlich (27 bei Schritt 20.000): Das allein zeigt keine Verallgemeinerung an.
+* **In der ersten MLP-Schicht wird der Code beim Verallgemeinern komprimierbarer.** Mit gekappten z-Werten erklären acht
+  Achsen 0,30 bis 0,39, solange das Netz auswendig lernt (Schritt 1.000 bis 7.500), 0,44 bei Schritt 10.000, 0,63 beim
+  Übergang und 0,71 bis 0,81 danach. In der Kontrolle, die nicht verallgemeinern kann, sind es 0,30 bis 0,49; das
+  untrainierte Netz liegt bei 0,41.
+* **Ein Unterschied zwischen gesehenen und ungesehenen Aufgaben ist das nicht.** Ohne Kappen passt der Flaschenhals auf
+  die Aufgaben, an denen er angepasst wurde, mäßig und auf alle anderen schlecht, auch auf auswendig gelernte
+  (Schritt 5.000: 0,27 / 0,05 / 0,03). Ursache sind Neuronen, die nur auf eine Handvoll Aufgaben ansprechen und nach dem
+  z-Standardisieren außerhalb der Anpassung riesige Werte bekommen (zehn Neuronen tragen dort 84 bis 99 % der Summe,
+  solange das Netz auswendig lernt). Mit gekappten z-Werten liegen alle drei Gruppen zu jeder Zeit gleichauf (Schritt
+  5.000: 0,39 / 0,38 / 0,39; Schritt 15.000: 0,82 / 0,81 / 0,81).
+* Die Dimension fällt schon vor dem Sprung der Genauigkeit (Achsen für 99 % der Streuung des Zustands am `=`: 72, 53, 44,
+  39, 29, 11 bei Schritt 1.000, 5.000, 7.500, 10.000, 12.000, 20.000). Bis Schritt 10.000 fällt sie in der Kontrolle
+  genauso (70, 52, 43, 36); erst nach dem Übergang trennen sich die Läufe (20.000: 11 gegen 27). Der Abfall vor dem
+  Sprung zeigt also keine Verallgemeinerung an.
 * **Von dem, was ein UFO erzwingt, bleibt das normale Netz weit entfernt.** Zweite MLP-Schicht, zwei Achsen, ungesehene
-  Aufgaben: 0,11 bis 0,13 nach dem Übergang, mit UFO 0,93 bis 1,00. Der UFO-Lauf erreicht das zum Teil, indem er die
-  geregelte Stelle leert: Ab Schritt 15.000 ist der Zustand am `=` für alle Aufgaben gleich.
-* **Unempfindlichkeit gegen Störungen ist kein Zeichen eines inneren UFO.** Sie steigt auch in der Kontrolle, die nichts
-  verallgemeinert (0,43 bei Schritt 1.000, 0,83 bis 0,87 bei 15.000 bis 17.500), nur weniger weit als im
-  verallgemeinernden Netz (0,93 bis 0,98). Bei gleichem Stand der Verallgemeinerung ist der UFO-Lauf nicht duldsamer als
-  der normale (0,56 bei 4 % gegen 0,52 bei 3 %).
-* **Die Löschung entsteht mit dem Auswendiglernen, nicht mit dem Verallgemeinern.** Das MLP von Block 1 schreibt 0,5 bis
-  0,8 eines Vektors entlang der Hauptachsen zurück, sobald das Netz die Trainingsaufgaben kann (ab Schritt 1.000), in
-  allen drei Läufen; im UFO-Lauf fällt sie nach dem Übergang auf 0,2. Im untrainierten Netz ist sie null. Solange das
-  normale Netz auswendig lernt, bleibt die Antwort mit der Reaktion von Block 1 öfter erhalten als ohne (Schritt 5.000:
-  0,41 gegen 0,28; Kontrolle bei 15.000: 0,83 gegen 0,48). Nach dem Übergang ist das Netz auch ohne sie unempfindlich (0,97
-  bis 1,00).
+  Aufgaben: 0,10 bis 0,13 nach dem Übergang, mit UFO 0,93 bis 1,00. In der ersten Schicht leert der UFO-Lauf die
+  geregelte Stelle: Ab Schritt 15.000 streut dort kein Neuron mehr, und der Zustand am `=` ist für alle Aufgaben gleich;
+  schon ab Schritt 9.000 streut er nur noch um höchstens 11 % seiner Norm. Die Zeilen zur Störung sagen für den UFO-Lauf
+  ab Schritt 9.000 deshalb nichts mehr aus.
+* **Unempfindlichkeit gegen Störungen ist kein Zeichen eines inneren UFO.** Schon das untrainierte Netz behält die Antwort
+  in 83 % der Fälle. In der Kontrolle, die nichts verallgemeinert, steigt der Wert von 0,43 (Schritt 1.000) auf 0,83 bis
+  0,87 (15.000 bis 17.500) und liegt bei 20.000 bei 0,76. Im verallgemeinernden Netz liegt er nach dem Übergang bei 0,93
+  bis 0,98 und fällt bei Schritt 20.000 auf 0,73. Gestört wird nur der Zustand am `=` nach Block 0; wie stark die Antwort
+  an dieser einen Stelle hängt, ändert sich im Lauf des Trainings.
+* Ein klarer Unterschied zwischen dem UFO-Lauf und dem normalen Lauf zeigt sich dabei nicht: Vor dem Übergang liegt der
+  UFO-Lauf bei gleicher Genauigkeit auf ungesehenen Aufgaben einmal darunter (0,36 gegen 0,41 bei 1,5 %) und einmal
+  darüber (0,56 gegen 0,52 bei 3 bis 4 %). Nach dem Übergang lässt sich an dieser Stelle nicht mehr vergleichen. Ein
+  Lauf je Arm.
+* **Die Löschung entsteht mit dem Auswendiglernen, nicht mit dem Verallgemeinern.** Das MLP von Block 1 schreibt 0,4 bis
+  0,8 eines Vektors entlang der Streuung zurück, sobald das Netz die Trainingsaufgaben kann (ab Schritt 1.000), in
+  allen drei Läufen (gemessen an der Abweichung am Eingang des MLP, nach der Layer-Norm). Im untrainierten Netz ist sie
+  null. Anders als in Qwen ist sie entlang der Hauptachsen echter Zustände am stärksten (0,67 bis 0,86) und quer dazu
+  am schwächsten (0,11 bis 0,21). Ob es derselbe Vorgang ist, bleibt offen.
+* Ob die Löschung im Kleinversuch die Antwort schützt, zeigt er nicht. Mit der ganzen Reaktion von Block 1 bleibt die
+  Antwort im normalen Lauf nur von Schritt 3.000 bis 10.000 öfter erhalten als ohne (Schritt 5.000: 0,41 gegen 0,28).
+  Kurz nach dem Auswendiglernen bleibt sie seltener erhalten (Schritt 1.000: 0,40 gegen 0,53), ab Schritt 12.500
+  ebenfalls (0,93 bis 0,98 gegen 0,99 bis 1,00; Schritt 20.000: 0,73 gegen 1,00). In der Kontrolle bleibt sie ab Schritt
+  3.000 öfter erhalten (15.000: 0,83 gegen 0,48), im UFO-Lauf vor dem Übergang durchweg seltener (5.000: 0,56 gegen 0,66).
 
 ### 7.11 Was folgt daraus
 
@@ -860,13 +912,17 @@ das am fertigen Netz auch nicht bestätigen, weil der UFO nur beim Training wirk
 * Dagegen, das als Ordner oder Schutzmechanismus zu lesen: Es ist ein fester linearer Anteil ohne Schwelle. Er holt den
   Zustand nicht zurück (nach jedem Block ist die Abweichung größer als der zugesetzte Vektor). Er unterscheidet nicht
   zwischen „im Datenraum" und „außerhalb", nur zwischen stark und schwach streuenden Richtungen. Die Neuronen, die ihn
-  tragen, sind dieselben, über die das gewöhnliche Rechnen läuft. Im Kleinversuch ist er schon beim Auswendiglernen da.
-* Zum Ergebnis (a): Im Kleinversuch wird der Code beim Verallgemeinern ohne UFO komprimierbar und passt dann auch auf
-  Ungesehenes, bleibt aber weit unter dem, was ein UFO erzwingt. In Qwen entsteht auf dem Zahlenraster in den letzten
-  Blöcken ein Code, der der Summe folgt. Das Flaschenhals-Maß des Papers zeigt das nicht an: Es beschreibt auf den
-  DSSE-Fragen den Fragensatz und ist auf dem Raster für das untrainierte Netz genauso hoch.
-* Dämpfung taugt nicht als Nachweis eines UFO: Ein mit UFO trainiertes Netz ist bei gleichem Lernstand nicht duldsamer,
-  und ein Netz, das nichts verallgemeinert, wird mit der Trainingszeit ebenfalls duldsam.
+  tragen, sind dieselben, über die das gewöhnliche Rechnen läuft. Im Kleinversuch schreibt das MLP ebenfalls gegen
+  zugesetzte Vektoren an, sobald das Netz auswendig kann, also ohne Verallgemeinerung; dort allerdings am stärksten
+  entlang der Hauptachsen, umgekehrt wie in Qwen.
+* Zum Ergebnis (a): Im Kleinversuch wird der Code der ersten MLP-Schicht beim Verallgemeinern ohne UFO komprimierbarer
+  (acht Achsen 0,63 bis 0,81 statt 0,30 bis 0,39; Kontrolle bis 0,49), bleibt aber weit unter dem, was ein UFO erzwingt.
+  In Qwen folgt auf dem Zahlenraster in den letzten sechs Blöcken ein Teil der Neuronen der Summe. Das Flaschenhals-Maß
+  des Papers zeigt das nicht an: Es beschreibt auf den DSSE-Fragen den Fragensatz und ist auf dem Raster für das
+  untrainierte Netz mindestens so hoch.
+* Dämpfung taugt nicht als Nachweis eines UFO: Der eine UFO-Lauf ist vor dem Übergang nicht erkennbar duldsamer als der
+  normale, danach lässt sich an der gestörten Stelle nicht mehr vergleichen, und ein Netz, das nichts verallgemeinert,
+  wird mit der Trainingszeit ebenfalls duldsam.
 * Nicht geprüft: ob der gewöhnliche Trainingsschritt den UFO-Verlust senkt (b), und ein zweites Modell. Über „jedes"
   Netz lässt sich nichts sagen.
 
@@ -908,6 +964,16 @@ Kleinversuch hat einen Lauf je Arm und die zehnfache Gewichtsabnahme des Papers.
   zehnfache Gewichtsabnahme des Papers. Der Hauptlauf (`ufo_damp2.npz`) entstand vor späteren Ergänzungen am Skript
   (Optionen `TOPK` und `NONEG`; die Richtung „echt" zieht nie zweimal denselben Zustand). Sie berühren die berichteten
   Größen nicht, bis auf 13 von 432 Zellen der Richtung „echt", die als fehlend aus dem Mittel fielen (0,111 würde 0,109).
+  Die Läufe „nur Gewichtsabnahme" und „mit UFO" des Kleinversuchs entstanden mit einer früheren Fassung von `ufo_grok.py`,
+  die nicht mehr vorliegt; die gespeicherten Gewichte passen zur jetzigen Fassung und geben die aufgezeichneten
+  Genauigkeiten wieder.
+* Von den Auflagen der Plankritik zum Kleinversuch und zum Flaschenhals-Maß sind offen: mehrere Startwerte und
+  Trainingsanteile; der Vergleich bei gleichem Validierungsverlust (nicht aufgezeichnet; verglichen wurde bei gleicher
+  Genauigkeit); die Größe, bei der die Hälfte der Antworten kippt; Störungen an den Positionen der Operanden; die genaue
+  Jacobi-Matrix; die absolute Größe der Vektoren. Für die DSSE-Fragen fehlen das untrainierte Netz, ein Gauß-Ersatz mit
+  gleicher Kovarianz, eine gedrehte Basis und eine Aufteilung nach ganzen Fragenfamilien, für den Autoencoder mehrere
+  Startwerte und frühes Abbrechen. Zu den Auflagen für den Störungslauf fehlen die genaue Jacobi-Matrix und Läufe mit
+  mehr als zwei Ziehungen der Richtungen.
 
 ## Nächster Schritt
 
@@ -944,7 +1010,7 @@ Rückkopplung zwischen SAE und Netz, mit einem SAE, der für die unteren Blöcke
 | `ufo_damp2_noneg.*`, `ufo_report_noneg.txt` | Neuronen mit negativem Gate-Eingang in den Blöcken 1–9 stumm (7.4) |
 | `ufo_sae2.npz`, `ufo_sae2_meta.json`, `ufo_sae2.log`, `ufo_sae2_report.txt`, `ufo_sae2_report.json`, `ufo_loop.npz`, `ufo_loop_meta.json`, `ufo_loop.log` | SAE im Durchlauf und Schleife beim Schreiben (7.8) |
 | `ufo_compress*.json/.log`, `ufo_grid*.json/.log` | Flaschenhals-Maß auf DSSE-Fragen und auf dem Zahlenraster, trainiert und untrainiert (7.9) |
-| `ufo_grok_{base,ufo,perm}_log.json`, `ufo_grok_{base,ufo,perm}_probe2.json`, `ufo_grok_report.txt` | Kleinversuch (7.10) |
+| `ufo_grok_{base,ufo,perm}_log.json`, `ufo_grok_{base,ufo,perm}_probe2.json`, `ufo_grok_{base,ufo,perm}_split.json`, `ufo_grok_report.txt` | Kleinversuch (7.10) |
 | `review_ufo.json` | Prüfberichte zu Abschnitt 7 |
 
 Nicht im Repository: Zustände und SAE-Aktivierungen (zusammen etwa 500 MB), für Abschnitt 7 die Statistik echter
@@ -988,8 +1054,9 @@ python $S/ufo_sae2.py $R $U && python $S/ufo_sae2_report.py $U && NEW=32 python 
 RANDINIT=1 python $S/ufo_pool.py $R $U && RANDINIT=1 CONDSET=small python $S/ufo_damp2.py $R $U && RANDINIT=1 python $S/ufo_lin.py $R $U
 python $S/ufo_report.py $U _randinit
 python $S/ufo_compress.py $U $O/neu_act.npy && python $S/ufo_compress_pc.py $R $U
-python $S/ufo_grid.py $R $U && RANDINIT=1 python $S/ufo_grid.py $R $U
+python $S/ufo_grid.py $R $U && RANDINIT=1 python $S/ufo_grid.py $R $U    # FROMFILE=1: nur die Zerlegung aus den gespeicherten Aktivierungen
 ONLY=4,14,22 BLOCKS=4,14,22 STEPS=600 python $S/ufo_compress.py $U $U/ufo_grid_act.npy _grid          # ebenso mit ufo_grid_act_randinit.npy _grid_randinit
 for m in base ufo; do python $S/ufo_grok.py $U $m 0 70000 0.3; done; python $S/ufo_grok.py $U perm 0 20000 0.3   # Kleinversuch, je 15 bis 30 min
-for m in base ufo perm; do python $S/ufo_grok_probe2.py $U/grok_${m}_s0_wd0.3; done; python $S/ufo_grok_report.py $U
+for m in base ufo perm; do python $S/ufo_grok_probe2.py $U/grok_${m}_s0_wd0.3; python $S/ufo_grok_split.py $U/grok_${m}_s0_wd0.3; done
+python $S/ufo_grok_report.py $U
 ```
