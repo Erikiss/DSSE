@@ -1,0 +1,1234 @@
+{
+ "note": "Review of section 7. Round 1 (three agents) worked on a list of draft claims C1-C15 / I1-I4 (claims_draft below) before the text was written; its corrections are in the text. Round 2 audited the German text against the result files; its corrections are in the text as well. Paths inside the reports refer to the scratch directory of that session.",
+ "claims_draft": "# Draft claims, UFO follow-up on Qwen3-1.7B (to be attacked; nothing here is final)\n\nSetting: Qwen3-1.7B chat model, CPU, fp32. 16 texts (8 wikitext passages, 8 chats = question + answer of a fine-tuned model),\n64 tokens each; positions from the fifth on, chat-template tokens excluded. A vector delta is added to the residual stream.\nSize f times the norm of the state. Direction classes: cov (Gaussian with the covariance of real states at that block),\nirr (random vector outside the principal subspace that holds 98 % of the variance of held-out real states, mean direction\nremoved), mix (difference of two real states), rand (isotropic). Pool of real states: 192 other texts (ufo_pool.py).\n\"Local\" rows: after EVERY block the state is reset to clean + fresh vector, and the reaction of the next block is read.\nq = -<write difference of the block, delta> / |delta|^2. Intervals: 95 % bootstrap over texts.\n\nC1  On running text the states are not low-dimensional: 98 % of the variance of held-out states needs 1654-1837 of 2048\n    principal axes (blocks 0-21); 8 axes hold 14-15 %; two real states are 1.06-1.21 state norms apart (median).\nC2  Local erasure q per block (f = 0.3), mean over responding blocks 1-4 / 5-10 / 11-16 / 17-22 / 23-26:\n    cov 0.111 / 0.130 / 0.049 / 0.002 / 0.007; irr 0.213 / 0.209 / 0.152 / 0.043 / 0.018; rand 0.196 / 0.206 / 0.101 / 0.031 / 0.015;\n    mix 0.111 / 0.124 / 0.040 / -0.001 / 0.007. Contrast irr - cov: +0.102 [0.101, 0.103] / +0.078 / +0.102 / +0.042 / +0.012.\n    The attention part is at most 0.025; the rest comes from the MLP.\nC3  No brake for large vectors: q(0.3)/q(0.03) = 0.97 (cov), 0.945 (irr); q(1)/q(0.03) = 0.75 (cov), 0.59 (irr); RMSNorm\n    alone predicts 0.958 and 0.707. Output KL grows with log-log slope 2.0 between 0.03 and 0.3 and 2.1-2.6 between 0.3 and 1.\n    Hence neither a plateau for small vectors nor a mechanism that sets in for large ones.\nC4  Free run from block 2, f = 0.3: of an irr vector 80 % is left after one block, 32 % after four, 5 % at the end; cov: 88 %,\n    65 %, 130 % at the end. The absolute deviation grows 37-44 fold (the stream about 100 fold), so the relative deviation\n    falls to 0.39-0.48 of its start value. Two blocks after an irr vector was added, 89 % of the deviation lies inside the data subspace.\nC5  The erasure protects the output. With the component along delta removed from every later attention and MLP write (A):\n    KL 0.071 -> 0.143 for irr at block 2 (ratio 2.01 [1.70, 2.42]); cov at block 2: 0.111 -> 0.143 (1.29 [1.22, 1.36]);\n    block 14: irr 1.33 [1.30, 1.38], cov 0.90 [0.88, 0.92]. Without erasure cov and irr cost the same (0.143 / 0.143 and\n    0.075 / 0.074). With only the erasure kept (B), or the vector riding along untouched, KL stays below 0.002: the damage is\n    carried by the part of the blocks' reaction that is orthogonal to delta.\nC6  The erasure is local: a vector at one position gives KL 0.07-0.18 at that position and 0.001-0.008 at later positions;\n    the share left after 1 and 4 blocks is the same as with vectors at all positions. One and the same vector at all\n    positions costs 1.3-2.3 times more KL than independent vectors of the same size.\nC7  The final deviation of an early vector costs 1.5-2.3 times the KL of a random vector of the same final size added after\n    the last block. Under noise the entropy rises at least as much as the loss (dLoss - dH = -0.69 [-0.99, -0.40] for cov,\n    f = 1, block 2); most of that rise is carried by the final norm (dH 1.84 -> 0.38 with the clean scale). Zeroing the MLP\n    of block 2: loss +7.6, entropy -0.78.\nC8  At equal relative size 0.3 the output KL is similar for vectors added after blocks 0 / 2 / 8 / 14 (cov 0.078 / 0.111 /\n    0.080 / 0.083; irr 0.053 / 0.071 / 0.062 / 0.055): the lowest blocks are neither clearly more tolerant nor more fragile.\nC9  Mechanism (ufo_lin.py, exact first-order formula, one clean pass): the formula reproduces the measured local erasure\n    (blocks 1-4: irr 0.194 + attention 0.024 against 0.214 measured; cov 0.103 + 0.008 against 0.111). With the output\n    weights assigned to the wrong neurons the erasure is 0.000. In blocks 1-9 it runs through the up projection (not the\n    gate), comes from neurons whose gate input is negative at that position (85-98 % of the neurons; 0.16-0.25 against\n    about -0.01 from neurons with positive gate input), and more from the weakest three quarters of the neurons than from\n    the strongest quarter; 800-1800 neurons carry half of it. Mean cosine between the up-projection weight and the output\n    weight of a neuron: +0.16 to +0.34 in blocks 1-9. From block 10 on neurons with positive gate input take over.\n    Reading: SiLU is slightly negative for negative input, so an inactive neuron passes its up input with a small negative\n    factor; with output weight aligned to the read direction this is a weak negative feedback, spread over thousands of neurons.\nC10 Qwen-Scope SAEs (TopK, 32768 units, k = 50, trained on the BASE model) explain 88 / 83 / 70 / 63 / 76 % of the variance at\n    blocks 0 / 2 / 8 / 14 / 21 on these texts (chat-model SAE at block 21: 83 %). 90-95 % of the error energy lies inside the\n    data subspace. The SAE reconstruction is hardly more compressible than the state (held-out share in 128 axes at block 2:\n    29 % against 27 %; error 17 %): the SAE does not move the state towards a low-dimensional geometry.\nC11 Replacing the state by its SAE reconstruction at one block: KL 0.066 / 0.142 / 0.221 / 0.301 / 0.299 (blocks 0 / 2 / 8 / 14 / 21;\n    chat-model SAE at 21: 0.203). Relative to cov noise of the same size: 0.65 / 0.94 / 1.15 / 1.37 / 1.26; to irr noise:\n    0.94 / 1.09 / 1.49 / 1.79 / 2.02. PCA with the same explained variance costs 2-3 times the SAE. An error vector of another\n    state of the same size costs as much at block 0 (0.072) and half as much at block 14 (0.156 against 0.301).\nC12 What the splice removes is erased like noise at blocks 0-2 (share left after four blocks 0.48 / 0.42; irr 0.36 / 0.32,\n    cov 0.74 / 0.64) and kept like content from block 14 on (1.06).\nC13 Clean pass, no intervention: later blocks write ALONG the part of the state the SAE does not explain, more than along\n    the explained part (sum of coefficients 22 against 18 at block 0, 26 against 7 at block 2, 7.6 against 3.3 at block 8).\n    The part of the clean state outside the data subspace gets -0.40 / -0.42 / -0.32 over the next four blocks (inside part\n    +0.36 / +0.11 / +0.38, random vector 0.00).\nC14 SAE as a filter: of noise of size 0.3 |h| it passes 38-42 % at blocks 0 / 2 (51-58 % at block 14), the same for cov and irr;\n    75-82 % of the active units stay active. Without its own error it leaves 20-27 % of the noise's KL at blocks 0 / 2\n    (44-48 % at 14). In real time (its own error included) SAE(h + d) gives KL 0.078 against 0.081 for the noise alone at\n    block 0, 0.155 against 0.091 at block 2, 0.330 against 0.085 at block 14.\nC15 The UFO paper's own criterion on Qwen (z-scored MLP activations at the last prompt token, 1472 DSSE prompts, fit on two\n    thirds, read on the held-out third): 2 principal axes explain 32-39 % in blocks 0-8, falling to 9-11 % in blocks 23-26;\n    a 2-dim non-linear autoencoder 28-38 % held-out. But the first axis is the prompt length in blocks 0-2 (R^2 0.83-0.87)\n    and the question family from block 3 on (0.81-0.95), and the 18 families alone explain 31-48 % of the variance of all\n    neurons. The figure describes the prompt set.\n\nInterpretation offered:\nI1  There is something in the forward pass that removes what does not belong: a generic negative feedback by the MLPs of the\n    lower two thirds of the network, twice as strong for directions outside the data subspace, which halves the output\n    damage of such vectors added at block 2. It is not an organiser in the sense of the UFO paper (which acts only during\n    training): not low-dimensional, no separate component, linear in the size of the vector, no threshold, and carried by\n    the bulk of weakly active neurons rather than by a few identifiable ones.\nI2  A 'safety mechanism that brakes when the disturbance gets too large' was not found (C3).\nI3  For an SAE in the loop the lowest block is the cheapest place. As a filter the SAE helps only if its own reconstruction\n    error is put back (read, modify, write back the difference).\nI4  Whether training produced the erasure (random-initialised control) and whether a model that keeps only its strongest\n    neuron activations loses it are being computed.\n",
+ "round1": [
+  {
+   "label": "recalc:sae-lin",
+   "result": {
+    "verdict": "All headline numbers of C9 to C14 reproduce from the stored outputs with my own code. C15 reproduces except for three ranges. The first-order formula in ufo_lin.py is correct. The problems are in readings, not in arithmetic.\n\nStands as written: the C9 formula and its agreement with the measured local erasure; the KL values and noise ratios of C11; the downstream shares of C12; the second sentence of C13; the three KLs of C14; the core of C15 (the two axes describe the prompt set).\n\nNeeds change:\n- **C11, PCA:** the comparison is not at equal explained variance. On the texts PCA explains 6 to 15 points less than the SAE in 12 of 12 texts at every site. At equal unexplained energy \"2-3 times\" becomes about 1.2 to 1.9 times, and at blocks 0 and 2 it is not clearly above 1.\n- **C13, first sentence:** \"22 against 18, 26 against 7, 7.6 against 3.3\" comes from blocks 22-26. Up to block 21 the order is equal or reversed, and in the next four blocks the unexplained part is written against. The coefficients are a clean-pass correlation, not a reaction of the blocks.\n- **C14, \"passes 38-42 %\":** this is the size of the change of the SAE output. Its cosine with the noise is 0.10 to 0.20, so 4 to 8 % of the noise passes along its own direction. The draft quotes only cov for the real-time KL; for irr at block 0 the SAE in real time is worse than the noise alone.\n- **I3:** the \"error put back\" row uses the error of the clean state, which is not available at run time.\n- **C12, \"kept like content\":** cov noise is kept just as well at block 14.\n- **C9, reading:** \"inactive\" is not shown, and the reading holds for blocks 1-9 only.\n- **C10:** \"90-95 % inside the data subspace\" lacks its baseline (an isotropic vector has 81 to 90 %), and block 2 is the block with the smallest compressibility gap.\n- **C15:** three ranges are off (see the table), and the held-out autoencoder figure depends on training length.\n\nNot recomputed: the autoencoder numbers (taken from ufo_compress.json) and the compress figures of C10 (taken from the stored pool statistics). The length and family R^2 of C15 exist only for blocks 0-11 in the partial log; I spot-checked nine blocks with my own code, using character count as a proxy for token length.\n\nNo model was loaded. Every call ran pinned to core 3 at nice 19; the largest read one 18 MB block of neu_act.npy at a time (3-4 s per block). My scripts and one output file are in /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/ufo_review/checker_c9c15/ (a1_lin.py, a2_split.py, b1_sae_sites.py, b2_bcoef.py, b2_bcoef.out, b3_bcoef_identity.py, b4_pca_axes.py, b5_sites_paired.py, c1_cross_compress.py, c2_compress_check.py). No existing file was modified.",
+    "findings": [
+     {
+      "claim": "C9 / check (1): ufo_lin.py implements the exact first-order formula for Qwen3's MLP, including the radial term, the three direction classes, the pool statistics of block m-1 and the permuted control.",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Own derivation: x = gamma*h/rms with rms = |h|/sqrt(D), so dx = (gamma/rms)*(delta - hhat (hhat.delta)). With a_n = silu(u_n) v_n: da_n = silu'(u_n) v_n W_gate[n].dx + silu(u_n) W_up[n].dx, and W_gate[n].(gamma*hhat) = u_n/sqrt(D), W_up[n].(gamma*hhat) = v_n/sqrt(D). Hence E[c_n] = -(1/rms) [ silu'(u_n) v_n (G_n^T M w_n - (u_n/sqrt(D)) hhat^T M w_n) + silu(u_n) (B_n^T M w_n - (v_n/sqrt(D)) hhat^T M w_n) ], G_n = gamma*W_gate[n], B_n = gamma*W_up[n]. Lines 32, 40-41 and 49-52 compute exactly this; dsilu is correct; the hooks capture the gate and up outputs and the input of post_attention_layernorm. M: rand I/D; irr QQ^T/(D-k) with Q an orthonormal basis of the axes beyond k_irr after removing the mean direction (same construction as Pool.direction); cov U diag(sd^2) U^T / sum(sd^2). Block m uses P.b[m-1], matching the local rows of ufo_damp2.py. The split is computed as described: gate path, up path, gate input < 0, >= 0, strongest quarter of |silu(u) v| at the position, rest; each pair adds up to km within 6e-8. Small points: (a) the permuted control (cp, line 52) leaves out the radial term; (b) for cov, unit vectors of a Gaussian do not have exactly covariance/trace as second moment, an effect of at most about 1 % given participation ratios of 157-209; (c) ufo_lin.log (23:09) is older than ufo_lin.npz / .json (23:11) and holds no split table; its first table agrees with the npz.",
+      "fix": "Say that the permuted control omits the radial term, or add it. Keep the log of the run that wrote the npz, since the split numbers of the draft can only be traced to ufo_lin.npz. None of this changes a conclusion."
+     },
+     {
+      "claim": "C9 / check (2): the formula reproduces the measured local erasure (blocks 1-4: irr 0.194 + attention 0.024 against 0.214; cov 0.103 + 0.008 against 0.111).",
+      "status": "confirmed",
+      "severity": "should fix",
+      "evidence": "Band values reproduce: irr 0.1944 + 0.0244 = 0.2188 against q_tot 0.2139 (f = 0.03); cov 0.1032 + 0.0082 = 0.1114 against 0.1110. MLP alone: irr 0.1944 against q_mlp 0.1894 (-2.6 %), cov 0.1032 against 0.1029, rand 0.1827 against 0.1792. Per block, measured q_mlp(0.03) minus formula over blocks 1-27: rand rms 0.0034, largest -0.0114 at block 9 (-6.0 %); irr rms 0.0037, largest -0.0109 at block 11 (-6.4 %); cov rms 0.0058, largest -0.0244 at block 14 (0.0631 against 0.0876, -28 %, sd over texts 0.0037, 95 % interval [-0.026, -0.023]). Correlation over blocks 0.9996 / 0.9995 / 0.9962. Attention in between: for rand and irr the differences follow -km_lin * q_att (attention removes the share q_att of the vector before the MLP reads it): fitted slope 0.90 / 0.97, residual rms after that correction 0.0017 / 0.0011. For cov the same correction leaves rms 0.0053 and -0.021 at block 14, so it does not explain cov. Non-linearity cannot explain a gap at f = 0.03: the second-order term cancels for sign-symmetric directions, and the deviation measured between 0.03 and 0.3 at block 14 (q_mlp 0.0631 -> 0.0499, 17 % beyond RMSNorm) scales to about 0.2 % at 0.03. What remains for cov at block 14 is the part of the attention write that is not parallel to the vector and is then read by the MLP; this is an inference, not a measurement. At f = 0.3 there is non-linearity beyond RMSNorm: measured / (km_lin (1 - q_att) / sqrt(1.09)) is 1.03-1.06 in blocks 1-4 and 0.91-0.99 in blocks 5-16 (rand, irr); cov block 14: 0.63.",
+      "fix": "State the agreement per block (rand and irr within 6.4 % everywhere, within about 1 % after the attention correction) and name the exception cov at block 14 (-28 %). To close it: one local row with the attention write of the block held at its clean value, or the closed form with the attention Jacobian. The conclusion of C9 is unchanged."
+     },
+     {
+      "claim": "C9: in blocks 1-9 the erasure runs through the up projection, comes from neurons with negative gate input (85-98 % of the neurons; 0.16-0.25 against about -0.01), more from the weakest three quarters than from the strongest quarter; from block 10 on neurons with positive gate input take over.",
+      "status": "number differs",
+      "severity": "should fix",
+      "evidence": "irr, blocks 1-9, from ufo_lin.npz: gate path +0.007 to +0.012, up path +0.145 to +0.237. Gate input < 0: +0.160 to +0.254; >= 0: -0.011 to +0.017 (blocks 1-7: -0.007 to -0.011; block 8: -0.001; block 9: +0.017). Share of neurons with negative gate input 0.837-0.975, i.e. 84-98 %, not 85-98 %. Strongest quarter +0.055 to +0.080, rest +0.072 to +0.170; in block 1 the strongest quarter carries more than the rest (0.080 against 0.072; same order for rand and cov). Per neuron the strongest quarter contributes 1.09 to 3.35 times as much as a neuron of the rest in every block 1-9, and it carries 27-53 % of the erasure with 25 % of the neurons. Take-over: share of positive-gate neurons for irr is 28 % at block 10, 46 % at block 11, 64 % at block 12 (rand crosses at block 12, cov at block 11). The stored split has only the marginals (path; gate sign), not the four cells path x gate sign, so 'negative-gate neurons through the up path' is inferred from two marginals.",
+      "fix": "Write 84-98 %; '-0.011 to +0.017 from neurons with positive gate input'; 'in blocks 2-9 more in total from the weakest three quarters, per neuron the strongest quarter contributes 1.1 to 3.4 times as much'; 'positive-gate neurons carry the larger part from block 12 on'. Add the joint split path x gate sign to ufo_lin.py (one more pass of about a minute). The main statement (up path, negative gate input, many neurons) stands."
+     },
+     {
+      "claim": "C9 reading / check (3): 'SiLU is slightly negative for negative input, so an inactive neuron passes its up input with a small negative factor; with output weight aligned to the read direction this is a weak negative feedback'.",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "Consistent with the numbers for blocks 1-9: mean cos(up, down) +0.1605 to +0.3397, 74-94 % of the neurons above +0.1 (chance sd 0.022), 84-98 % negative gate input, up path 93-97 % of the total. The simpler statement behind it is a sign rule: to first order a neuron contributes -silu(u_n) * B_n^T M w_n / rms, so it erases when its gate value and its up/down alignment have opposite signs. In blocks 1-7 positive-gate neurons amplify by a similar amount per neuron (-5.1 to -1.2 e-5 against +2.7 to +4.5 e-5 for negative-gate neurons); the net is erasure because nearly all gates are negative. Three things the data do not show. (1) 'Inactive': the gate-input distribution is not stored; SiLU's negative lobe reaches -0.278 at u = -1.28, and per neuron the strongest quarter by |activation| contributes more than the rest. (2) Alignment beyond blocks 1-9: in blocks 12-16 the mean cosine is +0.03 to -0.06 while the irr erasure is still 0.13-0.18; it is then carried by positive-gate neurons through the up path, which requires anti-aligned up and output weights (30-40 % of neurons below -0.1). The correlation over blocks between mean cosine and erasure (+0.90 irr, +0.94 rand) is therefore partly a depth trend. (3) The relevant alignment is B_n^T M w_n with gamma, per class and per gate sign; the json has the plain cosine of the raw weights over all neurons. The mean cos(gate, down) of 0 says nothing: flipping the sign of a neuron's up row and output column leaves the network unchanged and flips that cosine.",
+      "fix": "Replace 'inactive neuron' by 'neuron with negative gate input (gate value between -0.28 and 0)' and limit the reading to blocks 1-9. To make it safe add: the four-cell split, the mean silu(u) and the mean B_n^T M w_n of negative-gate and positive-gate neurons separately, and one sentence on blocks 12-16. The mechanism claim itself (first-order, checked against measurement) stands."
+     },
+     {
+      "claim": "C9: '800-1800 neurons carry half of it' (check 1: does 'neurons for half of the erasure' mean what the draft says?).",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "The script counts the neurons, ranked by their mean expected contribution over the 902 positions, needed to reach half of the SUM OF POSITIVE contributions, not half of the net. For irr in blocks 1-9 the amplifying part is 1-3 % of the net, so both counts agree: 792 / 1189 / 1629 / 1836 / 1553 / 1485 / 1626 / 1377 / 1216 (script) against 757 / 1144 / 1551 / 1817 / 1525 / 1447 / 1588 / 1310 / 1158 (half of the net). Top 100 neurons hold 7-20 % of the net, the top 10 % hold 23-46 %. The count is a property of position-averaged contributions; per-position counts are not stored. Where the amplifying part is large the two definitions diverge: cov block 1 186 against 18, cov block 10 702 against 143, cov block 12 78 against 13.",
+      "fix": "Say 'ranked by mean contribution over positions; half of the summed erasing contributions'. For irr in blocks 1-9 the statement holds as written."
+     },
+     {
+      "claim": "I1 (follows from C9): the erasure of the lower two thirds of the network is 'carried by the bulk of weakly active neurons rather than by a few identifiable ones'.",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "True for blocks 1-9 only. In blocks 10-16, where the irr erasure is still 0.13-0.18, the strongest quarter carries 36 / 45 / 54 / 57 / 64 / 67 / 73 % and half of it sits in 830 / 694 / 486 / 446 / 354 / 351 / 341 neurons. For cov in blocks 11-15 the top 100 neurons hold 41 / 59 / 52 / 62 / 31 % of the net and 209 / 13 / 86 / 27 / 211 neurons reach half of it. The MLP of block 16 amplifies cov vectors (formula -0.066, measured -0.064).",
+      "fix": "Split the statement: blocks 1-9 spread over thousands of negatively gated neurons; blocks 10-16 increasingly the strongest quarter with positive gate input, and for cov a few hundred neurons or fewer."
+     },
+     {
+      "claim": "C10: Qwen-Scope SAEs explain 88 / 83 / 70 / 63 / 76 % at blocks 0 / 2 / 8 / 14 / 21 on these texts (chat-model SAE at block 21: 83 %).",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Mean over the 12 texts of the per-text share: 0.8836 / 0.8302 / 0.6985 / 0.6325 / 0.7576; chat-model SAE 0.8246 (82 %, the draft rounds a rounded 0.825). Pool sample: 0.893 / 0.836 / 0.708 / 0.629 / 0.731 / 0.804. At block 21 wiki and chat differ: 0.805 against 0.710 (Qwen-Scope), 0.865 against 0.784 (chat-model SAE). Median |e|/|h| 0.241 / 0.315 / 0.447 / 0.459 / 0.373 / 0.318. The TopK class and the hook point match the recipe in the downloaded README; the file sizes match 32768 x 2048 and 16384 x 2048; the stored config names the base model and k = 50.",
+      "fix": "Write 82 % for the chat-model SAE. No conclusion changes."
+     },
+     {
+      "claim": "C10: '90-95 % of the error energy lies inside the data subspace'.",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "Numbers reproduce: 0.896 / 0.917 / 0.944 / 0.946 / 0.938 (0.938 for the chat-model SAE). The subspace has 1654-1837 of 2048 axes, so an isotropic vector lies 0.808 / 0.877 / 0.896 / 0.877 / 0.897 inside, and the held-out states lie 0.98 inside by construction. Share outside: SAE error 10.4 / 8.3 / 5.6 / 5.4 / 6.2 %, isotropic 19.2 / 12.4 / 10.5 / 12.4 / 10.3 %, states 2 %. The error is thus between a random vector and a state: over-represented outside by a factor 2.7 to 5.2 relative to the states. The error is also not centred: 12-23 % of its energy lies along the state itself (norm ratio of the reconstruction 0.88-0.95).",
+      "fix": "Give both baselines next to the number, e.g. '5-10 % of the error energy lies outside the data subspace, against 2 % for states and 10-19 % for an isotropic vector'. This matters for C12: about a tenth of what the splice removes is of the irr kind."
+     },
+     {
+      "claim": "C10: 'the SAE reconstruction is hardly more compressible than the state (128 axes at block 2: 29 % against 27 %; error 17 %): the SAE does not move the state towards a low-dimensional geometry'.",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "Block 2 is the site with the smallest gap. Reconstruction minus state at 128 axes: +0.031 (block 0), +0.027 (2), +0.064 (8), +0.085 (14), +0.036 (21), +0.049 (chat-model SAE); relative +10 / +10 / +25 / +31 / +14 / +19 %. Against the error the reconstruction is 1.8 to 2.5 times as compressible (0.337 / 0.293 / 0.319 / 0.355 / 0.298 / 0.312 against 0.138 / 0.167 / 0.145 / 0.160 / 0.166 / 0.124), which is the comparison the plan critique named (U1-8). Weak points of the measure in ufo_sae2.py, compress(): 1024 fit states in 2048 dimensions; the sample is ordered (wiki first), so the held-out third is chat only; one split, no interval; the isotropic floor at 128 axes is 6.25 %. I could not recompute these figures (they come from the pool file); they are copied from ufo_sae2_meta.json.",
+      "fix": "Report all sites, and both comparisons (against the state and against the error). Shuffle the sample before the split. 'Not low-dimensional' holds (at most 36 % in 128 axes); 'hardly more compressible' holds at blocks 0 and 2 only."
+     },
+     {
+      "claim": "C11: splice KL 0.066 / 0.142 / 0.221 / 0.301 / 0.299 (chat-model SAE 0.203); relative to cov noise 0.65 / 0.94 / 1.15 / 1.37 / 1.26, to irr noise 0.94 / 1.09 / 1.49 / 1.79 / 2.02; a foreign error costs as much at block 0 and half as much at block 14.",
+      "status": "confirmed",
+      "severity": "should fix",
+      "evidence": "Own bootstrap over the 12 texts (20000 draws): KL 0.066 [0.042, 0.093], 0.142 [0.098, 0.189], 0.221 [0.182, 0.262], 0.301 [0.235, 0.373], 0.299 [0.223, 0.376], 0.203 [0.162, 0.245]. Splice / cov: 0.65 [0.42, 1.00], 0.94 [0.67, 1.23], 1.15 [0.98, 1.37], 1.37 [1.19, 1.54], 1.26 [1.02, 1.53]. Splice / irr: 0.94 [0.69, 1.33], 1.09 [0.86, 1.33], 1.49 [1.22, 1.92], 1.79 [1.51, 2.11], 2.02 [1.56, 2.54]. Foreign / own: 1.09 [0.85, 1.45] at block 0, 0.76 [0.61, 0.90] at 2, 0.59 at 8, 0.52 [0.45, 0.58] at 14, 0.58 at 21. Against cov noise the intervals at blocks 0, 2 and 8 include or touch 1; only block 14 (and 21 narrowly) is clearly above. Supporting row not used in the draft: doubling the unexplained part costs 1.67 [1.28, 2.19] and 1.61 [1.16, 2.27] times the splice at blocks 0 and 2, and 0.72 [0.61, 0.85] times at block 14. Cross-check with the main run on the same 12 texts: noise of 0.3 |h| alone gives 0.081 / 0.060 / 0.091 / 0.087 / 0.085 / 0.068 here against 0.085 / 0.056 / 0.105 / 0.071 / 0.083 / 0.054 there (other random directions, -14 % to +26 %); the shares left after 1 and 4 blocks agree within 0.005.",
+      "fix": "Quote the intervals; say that against cov noise the splice is not distinguishable from noise of the same size at blocks 0, 2 and 8. The ordering over depth stands."
+     },
+     {
+      "claim": "C11 / check (5): 'PCA with the same explained variance costs 2-3 times the SAE'.",
+      "status": "not supported",
+      "severity": "must fix",
+      "evidence": "ufo_sae2.py line 64 chooses the number of axes so that PCA matches the SAE's explained variance on the pool sample, which is part of the states the PCA was fitted on. Out of sample it explains less. On the 12 texts: PCA 0.823 / 0.744 / 0.618 / 0.558 / 0.612 / 0.686 against SAE 0.884 / 0.830 / 0.699 / 0.633 / 0.758 / 0.825, lower in 12 of 12 texts at every site. Unexplained energy PCA / SAE: 1.55 / 1.52 / 1.27 / 1.21 / 1.69 / 1.94 (mean of per-text ratios). Raw KL ratio PCA / splice: 2.00 [1.39, 2.67], 2.02 [1.43, 2.79], 1.80 [1.39, 2.30], 1.97 [1.75, 2.28], 2.98 [2.32, 4.02], 2.83 [2.21, 3.66]. Scaled to the SAE's unexplained energy with KL proportional to energy: 1.24 [0.90, 1.62], 1.31 [0.94, 1.77], 1.41 [1.11, 1.75], 1.64 [1.49, 1.84], 1.85 [1.54, 2.32], 1.51 [1.34, 1.70]. With the exponent measured from half against full splice (1.51 to 2.12): 1.40 [1.00, 1.83], 1.42 [1.02, 1.91], 1.43, 1.63, 1.88, 1.52. From the held-out curve of the pool statistics, equal out-of-sample explained variance would need about 870 / 790 / 450 / 300 / 670 / 900 axes instead of 703 / 600 / 326 / 215 / 408 / 569. The PCA basis also rests on only 9056 states in 2048 dimensions. The scaling is an estimate; a PCA with more axes removes other directions, not a scaled copy.",
+      "fix": "Rerun the PCA rows with the number of axes chosen on held-out pool texts, or report 'at equal unexplained energy about 1.2 to 1.9 times, not clearly above 1 at blocks 0 and 2'. The direction (PCA costs more than the SAE) survives from block 8 on; the factor 2-3 does not."
+     },
+     {
+      "claim": "C12: what the splice removes is erased like noise at blocks 0-2 (share left after four blocks 0.48 / 0.42; irr 0.36 / 0.32, cov 0.74 / 0.64) and kept like content from block 14 on (1.06).",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "Numbers reproduce: splice 0.477 [0.467, 0.488] and 0.424 [0.417, 0.431]; irr 0.360 / 0.325; cov 0.738 / 0.645; block 14 1.055 [1.035, 1.077]. Two qualifications. (1) At blocks 0 and 2 the own error is erased exactly like the SAE error of another state (0.481 and 0.432; paired difference -0.004 [-0.011, 0.005] and -0.009 [-0.020, 0.001]), between irr and cov noise. (2) At block 14 cov noise of the same size is kept as well (1.106) and only irr noise is reduced (0.651), so 1.06 does not separate content from noise. The evidence for 'content' is the paired difference own minus foreign error, +0.108 [0.093, 0.123] at block 14 (+0.017 at block 8, +0.041 / +0.044 at block 21), and the KL: removing the unexplained part costs more than doubling it at block 14. The share is not monotonic: at site 0 it falls to 0.26 at block 8 and rises to 0.90 at block 20; at the output it is 0.17 [-0.18, 0.50], -1.22 [-2.19, -0.39], 0.20 for sites 0 / 2 / 8.",
+      "fix": "Write 'erased like the SAE error of another state, between irr and cov noise' for blocks 0-2, and for block 14 'not erased (1.06), like cov noise (1.11); kept 0.11 better than a foreign error (0.95)'."
+     },
+     {
+      "claim": "C13, first sentence: on the clean pass later blocks write ALONG the part of the state the SAE does not explain, more than along the explained part (sum of coefficients 22 against 18 at block 0, 26 against 7 at block 2, 7.6 against 3.3 at block 8).",
+      "status": "not supported",
+      "severity": "blocks the claim",
+      "evidence": "The sums reproduce: 22.03 [15.83, 28.05] against 18.01 [15.84, 19.98]; 26.37 against 6.77; 7.58 against 3.27. The reading does not hold up. (1) Which blocks: the sum runs over all blocks after the site up to block 27, attention plus MLP. At site 2, blocks 22-26 contribute +22.6 along the unexplained part and block 27 contributes -6.4; blocks 3-21 contribute +10.09 against +9.62 for the explained part (paired +0.47 [-0.13, +1.08]). Up to block 21 the order is reversed at site 0 (14.42 against 16.74, paired -2.32 [-4.14, -0.72]) and site 8 (3.57 against 5.06, paired -1.49 [-1.94, -1.02]). In the next four blocks the unexplained part gets -0.09 [-0.14, -0.03], -0.39 [-0.42, -0.36], +0.02 and the explained part +0.45, +0.21, +0.52 (unexplained below explained in 12 of 12 texts at each site). (2) Texts: at site 0 the paired difference over all blocks is +4.01 [-0.94, +9.05], 7 of 12 texts; wiki 30.2 against chat 13.9. (3) Units: the coefficient is per unit of the vector's own energy, and a block's write grows with the stream (norm 16 -> 3147). Dividing each block's coefficient by the growth of the stream since the site gives 0.69 / 0.52 / 0.57 for the unexplained part against 1.10 / 0.91 / 0.94 for the explained part. In absolute projection (coefficient x energy share, with |r_sae|^2 estimated from the identity r_in + e_out = r_sae + e_sae) the explained part receives about 5.5 / 1.2 / 1.0 times as much. (4) It is a correlation, not a reaction: if the clean-pass writes along e up to block 21 (+14.4 e at site 0, +10.1 e at site 2) were caused by e, removing e would leave a share of 15 and 11; the splice leaves 0.89 and 0.75. Also e_sae is not centred while r_sae is centred with the pool mean; by the identity check the two are close to orthogonal (cosine about +0.2 / +0.1 / 0 at sites 0 / 2 / 8), so that asymmetry is not the cause.",
+      "fix": "Replace by what the data show: 'in the next four blocks the unexplained part is written against at blocks 0 and 2 (-0.09, -0.39) while the explained part is extended (+0.45, +0.21); up to block 21 both parts receive similar coefficients; blocks 22-26 write along the unexplained part (correlation on the clean pass; the splice shows these writes do not depend on that part being there)'. Report the sums per block range, never as one total."
+     },
+     {
+      "claim": "C13, second sentence: the part of the clean state outside the data subspace gets -0.40 / -0.42 / -0.32 over the next four blocks (inside part +0.36 / +0.11 / +0.38, random vector 0.00).",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "-0.40 [-0.48, -0.32], -0.42 [-0.44, -0.40], -0.32 [-0.35, -0.29], negative in 12 of 12 texts at each of the three sites. Inside part +0.36 [0.34, 0.38], +0.11 [0.08, 0.15], +0.38 [0.31, 0.46]. Random vector +0.000 [-0.014, +0.015], -0.006, +0.001. Sign convention checked (bcoef = <write, v> / |v|^2, positive = along v). At sites 14 and 21 the outside part is no longer written against (+0.19, +0.22). The natural outside part is reduced less than injected irr noise over four blocks (share left 0.60 / 0.58 / 0.68 against 0.36 / 0.32 / 0.43).",
+      "fix": "None needed. Optionally add that this holds for sites 0, 2 and 8 only."
+     },
+     {
+      "claim": "C14: 'of noise of size 0.3 |h| the SAE passes 38-42 % at blocks 0 / 2 (51-58 % at block 14), the same for cov and irr'.",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "The numbers are |SAE(h + d) - SAE(h)| / |d|: 0.377 / 0.389 (block 0, cov / irr), 0.421 / 0.386 (block 2), 0.584 / 0.512 (block 14). This is the size of the change of the SAE output, not the share of the noise that passes. The stored cosine of that change with the noise is 0.169 / 0.095, 0.199 / 0.099, 0.237 / 0.064. The component along the noise is therefore about 6.4 / 3.7 %, 8.4 / 3.8 % and 13.8 / 3.3 % of the noise; the rest (37-41 % of the noise's size at blocks 0 and 2) is a new change in other directions. Per unit of energy this response costs 1.4 to 1.7 times the KL of the noise itself (KL share 0.20-0.48 against energy share 0.14-0.34). At block 14 cov and irr are not the same (0.58 against 0.51). Units kept 0.748-0.824 (75-82 %) reproduces.",
+      "fix": "Write: 'the SAE output moves by 38-42 % of the noise's size, almost orthogonally to the noise (cosine 0.10-0.20); 4-8 % of the noise passes along its own direction'."
+     },
+     {
+      "claim": "C14: without its own error the SAE leaves 20-27 % of the noise's KL at blocks 0 / 2 (44-48 % at 14); in real time KL 0.078 against 0.081 (block 0), 0.155 against 0.091 (block 2), 0.330 against 0.085 (block 14).",
+      "status": "confirmed",
+      "severity": "should fix",
+      "evidence": "Oracle / noise: 0.20 [0.16, 0.25] and 0.26 [0.18, 0.40] at block 0 (cov / irr), 0.27 [0.17, 0.41] and 0.23 [0.17, 0.28] at block 2, 0.48 [0.40, 0.57] and 0.44 [0.35, 0.54] at block 14. Real time, cov: 0.078 [0.048, 0.114] against 0.081 [0.057, 0.106], 0.155 against 0.091, 0.330 against 0.085: as in the draft. The draft leaves out irr: 0.088 against 0.060 at block 0 (1.46 [1.02, 2.04] times the noise alone; better than the noise in 3 of 12 texts), 0.142 against 0.087 at block 2, 0.307 against 0.068 at block 14. For cov at block 0 the ratio is 0.96 [0.66, 1.30], better in 7 of 12 texts. The real-time KL is close to splice KL plus oracle KL (0.082 against 0.078; 0.166 against 0.155; 0.341 against 0.330).",
+      "fix": "Add the irr numbers: at block 0 the SAE in real time breaks even on cov noise and is worse on irr noise."
+     },
+     {
+      "claim": "I3 (follows from C14): 'as a filter the SAE helps only if its own reconstruction error is put back (read, modify, write back the difference)'.",
+      "status": "wrong",
+      "severity": "must fix",
+      "evidence": "The row behind this is sae_oracle = SAE(h + d) + e with e = h - SAE(h) taken from the CLEAN state (ufo_sae2.py line 89). At run time only the noisy state exists. Putting back its own error gives SAE(h + d) + (h + d - SAE(h + d)) = h + d: the noise is back in full. 'Read, modify, write back the difference' therefore filters nothing. The oracle row is a diagnostic of how much of the noise's damage the SAE lets through, not a usable procedure.",
+      "fix": "Say that the 20-27 % figure needs the clean state and is a diagnostic only, and that in the realisable versions the SAE is no filter at any of the three blocks (real time: 0.96 to 4.5 times the KL of the noise alone; write-back: the noise unchanged)."
+     },
+     {
+      "claim": "C15: 2 principal axes explain 32-39 % in blocks 0-8, falling to 9-11 % in blocks 23-26; a 2-dim non-linear autoencoder 28-38 % held-out.",
+      "status": "number differs",
+      "severity": "should fix",
+      "evidence": "From ufo_compress.json, and reproduced to four decimals with my own code on blocks 0, 2, 3, 8, 14, 20, 24, 26, 27 of neu_act.npy. Blocks 0-8: fit 0.310-0.392, held-out 0.307-0.399; the lower end is block 3 with 31 %. Blocks 23-26: fit 0.102-0.113, held-out 0.076-0.099; '9-11' is neither. In the late blocks the held-out figure is depressed by a few neurons with extreme z-values: share of the held-out total in the 10 largest neurons 9.4 % (block 24), 8.9 % (26), 86 % (27); with z clipped at +-5 the same two axes hold 0.142 / 0.137 / 0.123 of the held-out variance at blocks 24 / 26 / 27 against 0.092 / 0.097 / 0.011 unclipped. Block 27 (11 neurons dropped, held-out 0.011) is not mentioned in the draft. Autoencoder held-out at 1500 steps: 0.283 / 0.353 / 0.397 / 0.281 / 0.347 / 0.330 at blocks 0 / 2 / 5 / 8 / 14 / 20, then 0.210 (26) and 0.023 (27): 28-40 %, not 28-38. At 300 steps: 0.329 / 0.406 / 0.439 / 0.359 / 0.375 / 0.312 / 0.199 / 0.025. Held-out falls between 300 and 1500 steps in 6 of 8 blocks (by up to 0.078) while fit rises, and at 1500 steps it is below two linear axes at block 0 (0.283 against 0.322) and block 8 (0.281 against 0.394).",
+      "fix": "Write 31-40 % (held-out) for blocks 0-8; 8-10 % held-out (10-11 % fit) for blocks 23-26, with the note that clipping gives about 14 %; autoencoder 28-40 % at 1500 steps and 31-44 % at 300 steps, single seed. The trend over depth and the conclusion are unchanged."
+     },
+     {
+      "claim": "C15: the first axis is the prompt length in blocks 0-2 (R^2 0.83-0.87) and the question family from block 3 on (0.81-0.95); the 18 families alone explain 31-48 % of the variance of all neurons; the figure describes the prompt set.",
+      "status": "number differs",
+      "severity": "should fix",
+      "evidence": "The draft's ranges are those of blocks 0-11 in ufo_compress_pc_partial.log (length 0.87 / 0.83 / 0.84; family 0.81-0.95; families 0.311-0.482). Own spot check on nine blocks (axes from the fit prompts; character count instead of token count, no tokenizer loaded): first axis by family 0.60 / 0.66 / 0.81 / 0.95 / 0.97 / 0.97 / 0.92 / 0.80 / 0.77 at blocks 0 / 2 / 3 / 8 / 14 / 20 / 24 / 26 / 27, so from block 3 on the range is 0.77-0.97; on held-out prompts with family means from the fit prompts 0.61 / 0.68 / 0.78 / 0.94 / 0.97 / 0.96 / 0.93 / 0.81 / 0.79. First axis by log characters 0.79 and 0.78 at blocks 0 and 2 (consistent with 0.83-0.87 for tokens). Length and family are confounded: the families explain 67 % of the variance of log characters, and 60-66 % of the first axis in blocks 0-2. Family means explain 0.311 / 0.348 / 0.374 / 0.487 / 0.405 / 0.319 / 0.209 / 0.234 / 0.205 of all neurons in-sample, i.e. 20-49 % over all blocks, and 0.299 / 0.333 / 0.343 / 0.458 / 0.375 / 0.292 / 0.159 / 0.181 / 0.022 on held-out prompts. From block 2 to block 26 the family means alone explain as much or more held-out variance than the two principal axes (e.g. 0.458 against 0.394 at block 8, 0.375 against 0.248 at block 14). After removing the family means two axes still hold 0.227 / 0.229 / 0.171 / 0.167 / 0.128 / 0.065 on held-out prompts at blocks 0 / 2 / 3 / 8 / 14 / 20.",
+      "fix": "After the full run write the ranges for all blocks (family 0.77-0.97 from block 3; families explain 20-49 %), and say that length and family overlap. The conclusion 'the figure describes the prompt set' is supported and gets stronger."
+     },
+     {
+      "claim": "Check (6): in ufo_compress.py the autoencoder is trained on the coordinates in the span of the fit prompts, 'an exact change of basis for them', and the held-out figure counts the error in the full space.",
+      "status": "confirmed",
+      "severity": "should fix",
+      "evidence": "For the fit prompts R_f = Z_f V_r^T exactly (V_r orthonormal, rank at most 980), so squared errors in the coordinates equal those in neuron space, and any encoder or decoder weight outside that span is irrelevant or harmful for the fit loss. For held-out prompts the part outside the span ('lost') is added to the error: 1 - (|net(Z_h) - Z_h|^2 + lost) / |R_h|^2, which is the full-space error of a decoder that writes into the span. No held-out data enter the training or the z-scoring. Caveats: (1) it is not the same optimisation as an autoencoder on z-scored neurons: default initialisation and Adam depend on the basis, and the leading coordinate has a standard deviation of roughly 40 instead of 1; the fit figure is one run, a lower bound. (2) One seed, no early stopping on a validation part, about 253,000 weights for 981 prompts: the held-out figure moves with training length (previous finding), which the plan critique (U1-1) asked to control. (3) The split is by prompt within the 18 families, so 'held-out' means other prompts of the same families.",
+      "fix": "Keep the construction. Report the autoencoder as 'one run, read at 300 and 1500 steps', add 3 seeds and a validation-based stop, or drop the held-out autoencoder figure and keep the linear one, which is stable."
+     },
+     {
+      "claim": "Draft header and C11: intervals are 95 % bootstrap over texts.",
+      "status": "note",
+      "severity": "minor",
+      "evidence": "My intervals (other seed, 20000 draws) agree with ufo_sae2_report.txt within 0.006 everywhere; t-intervals on per-text log ratios give the same picture. The 12 texts of ufo_sae2 are texts 0-5 and 8-13 of the main run (same tokens, masks and clean loss). Scored positions per text 33-55, 611 in total. The 'foreign' error directions are drawn from pool states that are about 80 % chat, also for wiki texts; foreign / own KL by source is 0.97 (wiki) and 1.23 (chat) at block 0, 0.58 and 0.48 at block 14.",
+      "fix": "None required."
+     }
+    ],
+    "recomputed": [
+     {
+      "quantity": "C9 closed-form MLP erasure, irr, blocks 1-4",
+      "draft": "0.194",
+      "mine": "0.1944 [0.190, 0.199] (bootstrap over 16 texts)"
+     },
+     {
+      "quantity": "C9 attention part, irr, blocks 1-4",
+      "draft": "0.024",
+      "mine": "0.0244 at f = 0.03 and at f = 0.3"
+     },
+     {
+      "quantity": "C9 measured local erasure, irr, blocks 1-4",
+      "draft": "0.214",
+      "mine": "q_tot 0.2139 at f = 0.03 (0.2129 at f = 0.3); MLP alone 0.1894 against formula 0.1944"
+     },
+     {
+      "quantity": "C9 cov, blocks 1-4: formula + attention against measured",
+      "draft": "0.103 + 0.008 against 0.111",
+      "mine": "0.1032 + 0.0082 = 0.1114 against 0.1110 (f = 0.03); MLP alone 0.1029 against 0.1032"
+     },
+     {
+      "quantity": "C9 rand, blocks 1-4 (not in the draft)",
+      "draft": "-",
+      "mine": "formula 0.1827 against q_mlp 0.1792 (f = 0.03)"
+     },
+     {
+      "quantity": "C9 per-block difference measured q_mlp(0.03) minus formula, blocks 1-27 (not in the draft)",
+      "draft": "-",
+      "mine": "rand rms 0.0034, max -0.0114 (block 9); irr rms 0.0037, max -0.0109 (block 11); cov rms 0.0058, max -0.0244 (block 14, -28 %)"
+     },
+     {
+      "quantity": "C9 erasure with output weights assigned to the wrong neurons",
+      "draft": "0.000",
+      "mine": "largest |mean over texts| over blocks: rand 0.0003, irr 0.0014, cov 0.0047 (block 14)"
+     },
+     {
+      "quantity": "C9 irr, blocks 1-9: gate path / up path",
+      "draft": "through the up projection, not the gate",
+      "mine": "gate +0.007 to +0.012; up +0.145 to +0.237"
+     },
+     {
+      "quantity": "C9 share of neurons with negative gate input, blocks 1-9",
+      "draft": "85-98 %",
+      "mine": "83.7-97.5 %"
+     },
+     {
+      "quantity": "C9 irr, blocks 1-9: neurons with negative / positive gate input",
+      "draft": "0.16-0.25 against about -0.01",
+      "mine": "+0.160 to +0.254 against -0.011 to +0.017 (block 8 -0.001, block 9 +0.017)"
+     },
+     {
+      "quantity": "C9 irr, blocks 1-9: strongest quarter / weakest three quarters",
+      "draft": "more from the weakest three quarters",
+      "mine": "strongest +0.055 to +0.080, rest +0.072 to +0.170; block 1 reversed (0.080 against 0.072); per neuron strongest / rest = 1.09 to 3.35"
+     },
+     {
+      "quantity": "C9 neurons for half of the erasure, irr, blocks 1-9",
+      "draft": "800-1800",
+      "mine": "792-1836 (half of the summed positive contributions, script's definition); 757-1817 (half of the net)"
+     },
+     {
+      "quantity": "C9 mean cos(up weight, output weight), blocks 1-9",
+      "draft": "+0.16 to +0.34",
+      "mine": "+0.1605 to +0.3397 (from ufo_lin.json; 74-94 % of neurons above +0.1)"
+     },
+     {
+      "quantity": "C9 positive-gate neurons take over",
+      "draft": "from block 10 on",
+      "mine": "irr share of positive-gate neurons: 28 % (block 10), 46 % (11), 64 % (12)"
+     },
+     {
+      "quantity": "C10 explained variance on the texts, blocks 0 / 2 / 8 / 14 / 21; chat-model SAE",
+      "draft": "88 / 83 / 70 / 63 / 76 %; 83 %",
+      "mine": "0.8836 / 0.8302 / 0.6985 / 0.6325 / 0.7576; 0.8246 (pool sample 0.893 / 0.836 / 0.708 / 0.629 / 0.731; 0.804)"
+     },
+     {
+      "quantity": "C10 share of the error energy inside the data subspace",
+      "draft": "90-95 %",
+      "mine": "0.896 / 0.917 / 0.944 / 0.946 / 0.938 (chat-model SAE 0.938); isotropic vector 0.808 / 0.877 / 0.896 / 0.877 / 0.897; states 0.98"
+     },
+     {
+      "quantity": "C10 held-out share in 128 axes, block 2: reconstruction / state / error",
+      "draft": "29 % / 27 % / 17 %",
+      "mine": "0.293 / 0.266 / 0.167 (copied from stored pool statistics); reconstruction minus state at the other sites: +0.031 (0), +0.064 (8), +0.085 (14), +0.036 (21), +0.049 (chat-model SAE)"
+     },
+     {
+      "quantity": "C11 splice KL, blocks 0 / 2 / 8 / 14 / 21; chat-model SAE",
+      "draft": "0.066 / 0.142 / 0.221 / 0.301 / 0.299; 0.203",
+      "mine": "0.066 [0.042, 0.093] / 0.142 [0.098, 0.189] / 0.221 [0.182, 0.262] / 0.301 [0.235, 0.373] / 0.299 [0.223, 0.376]; 0.203 [0.162, 0.245]"
+     },
+     {
+      "quantity": "C11 splice / cov noise of the same size",
+      "draft": "0.65 / 0.94 / 1.15 / 1.37 / 1.26",
+      "mine": "0.65 [0.42, 1.00] / 0.94 [0.67, 1.23] / 1.15 [0.98, 1.37] / 1.37 [1.19, 1.54] / 1.26 [1.02, 1.53]"
+     },
+     {
+      "quantity": "C11 splice / irr noise of the same size",
+      "draft": "0.94 / 1.09 / 1.49 / 1.79 / 2.02",
+      "mine": "0.94 [0.69, 1.33] / 1.09 [0.86, 1.33] / 1.49 [1.22, 1.92] / 1.79 [1.51, 2.11] / 2.02 [1.56, 2.54]"
+     },
+     {
+      "quantity": "C11 PCA / splice, raw (blocks 0 / 2 / 8 / 14 / 21; chat-model SAE)",
+      "draft": "2-3 times",
+      "mine": "2.00 [1.39, 2.67] / 2.02 [1.43, 2.79] / 1.80 [1.39, 2.30] / 1.97 [1.75, 2.28] / 2.98 [2.32, 4.02]; 2.83 [2.21, 3.66]"
+     },
+     {
+      "quantity": "C11 explained variance of that PCA on the texts against the SAE",
+      "draft": "'the same explained variance'",
+      "mine": "PCA 0.823 / 0.744 / 0.618 / 0.558 / 0.612 / 0.686 against SAE 0.884 / 0.830 / 0.699 / 0.633 / 0.758 / 0.825; lower in 12 of 12 texts at every site"
+     },
+     {
+      "quantity": "C11 PCA / splice at equal unexplained energy (KL proportional to energy)",
+      "draft": "-",
+      "mine": "1.24 [0.90, 1.62] / 1.31 [0.94, 1.77] / 1.41 [1.11, 1.75] / 1.64 [1.49, 1.84] / 1.85 [1.54, 2.32]; 1.51 [1.34, 1.70]"
+     },
+     {
+      "quantity": "C11 foreign error KL at block 0; at block 14 against the splice",
+      "draft": "0.072; 0.156 against 0.301",
+      "mine": "0.072 [0.049, 0.096], ratio to splice 1.09 [0.85, 1.45]; 0.156 against 0.301, ratio 0.52 [0.45, 0.58]"
+     },
+     {
+      "quantity": "C12 share left after four blocks, splice at blocks 0 / 2",
+      "draft": "0.48 / 0.42",
+      "mine": "0.477 [0.467, 0.488] / 0.424 [0.417, 0.431]; foreign error 0.481 / 0.432"
+     },
+     {
+      "quantity": "C12 share left after four blocks, irr and cov noise of size |e|, blocks 0 / 2",
+      "draft": "irr 0.36 / 0.32, cov 0.74 / 0.64",
+      "mine": "irr 0.360 / 0.325, cov 0.738 / 0.645"
+     },
+     {
+      "quantity": "C12 share left after four blocks, splice at block 14",
+      "draft": "1.06",
+      "mine": "1.055 [1.035, 1.077]; cov noise 1.106, foreign error 0.947, irr noise 0.651"
+     },
+     {
+      "quantity": "C13 sum of coefficients, unexplained against explained part, blocks 0 / 2 / 8",
+      "draft": "22 against 18 / 26 against 7 / 7.6 against 3.3",
+      "mine": "22.03 against 18.01 (paired +4.01 [-0.94, +9.05]) / 26.37 against 6.77 (+19.60 [14.58, 24.57]) / 7.58 against 3.27 (+4.31 [2.83, 5.87])"
+     },
+     {
+      "quantity": "C13 the same sums up to block 21 only (not in the draft)",
+      "draft": "-",
+      "mine": "14.42 against 16.74 / 10.09 against 9.62 / 3.57 against 5.06"
+     },
+     {
+      "quantity": "C13 the same over the next four blocks (not in the draft)",
+      "draft": "-",
+      "mine": "-0.09 against +0.45 / -0.39 against +0.21 / +0.02 against +0.52"
+     },
+     {
+      "quantity": "C13 part outside the data subspace, next four blocks, blocks 0 / 2 / 8",
+      "draft": "-0.40 / -0.42 / -0.32",
+      "mine": "-0.40 [-0.48, -0.32] / -0.42 [-0.44, -0.40] / -0.32 [-0.35, -0.29]"
+     },
+     {
+      "quantity": "C13 inside part and random vector, next four blocks",
+      "draft": "+0.36 / +0.11 / +0.38; 0.00",
+      "mine": "+0.36 [0.34, 0.38] / +0.11 [0.08, 0.15] / +0.38 [0.31, 0.46]; +0.000 / -0.006 / +0.001"
+     },
+     {
+      "quantity": "C14 |SAE(h+d) - SAE(h)| / |d| at blocks 0 / 2 and at block 14",
+      "draft": "38-42 %; 51-58 %",
+      "mine": "0.377 / 0.389 (block 0, cov / irr), 0.421 / 0.386 (block 2); 0.584 / 0.512 (block 14)"
+     },
+     {
+      "quantity": "C14 cosine of that change with the noise, and component along the noise (not in the draft)",
+      "draft": "-",
+      "mine": "cosine 0.169 / 0.095, 0.199 / 0.099, 0.237 / 0.064; along the noise about 0.064 / 0.037, 0.084 / 0.038, 0.138 / 0.033 of |d|"
+     },
+     {
+      "quantity": "C14 active units that stay active",
+      "draft": "75-82 %",
+      "mine": "0.795 / 0.748 (block 0), 0.824 / 0.805 (block 2), 0.788 / 0.797 (block 14)"
+     },
+     {
+      "quantity": "C14 KL left without the SAE's own error, share of the noise's KL",
+      "draft": "20-27 % at blocks 0 / 2; 44-48 % at 14",
+      "mine": "0.20 [0.16, 0.25] / 0.26 [0.18, 0.40] (block 0), 0.27 [0.17, 0.41] / 0.23 [0.17, 0.28] (block 2); 0.48 [0.40, 0.57] / 0.44 [0.35, 0.54] (block 14)"
+     },
+     {
+      "quantity": "C14 SAE in real time against noise alone, cov, blocks 0 / 2 / 14",
+      "draft": "0.078 against 0.081; 0.155 against 0.091; 0.330 against 0.085",
+      "mine": "0.078 [0.048, 0.114] against 0.081 [0.057, 0.106]; 0.155 against 0.091; 0.330 against 0.085"
+     },
+     {
+      "quantity": "C14 the same for irr (not in the draft)",
+      "draft": "-",
+      "mine": "0.088 against 0.060 (ratio 1.46 [1.02, 2.04]); 0.142 against 0.087; 0.307 against 0.068"
+     },
+     {
+      "quantity": "C15 share of 2 principal axes, blocks 0-8",
+      "draft": "32-39 %",
+      "mine": "fit 0.310-0.392; held-out 0.307-0.399"
+     },
+     {
+      "quantity": "C15 share of 2 principal axes, blocks 23-26",
+      "draft": "9-11 %",
+      "mine": "fit 0.102-0.113; held-out 0.076-0.099; with z clipped at +-5, held-out 0.142 (block 24) and 0.137 (block 26); block 27 held-out 0.011"
+     },
+     {
+      "quantity": "C15 2-dim autoencoder, held-out",
+      "draft": "28-38 %",
+      "mine": "1500 steps: 0.283 / 0.353 / 0.397 / 0.281 / 0.347 / 0.330 (blocks 0 / 2 / 5 / 8 / 14 / 20), 0.210 (26), 0.023 (27); 300 steps: 0.329 / 0.406 / 0.439 / 0.359 / 0.375 / 0.312 / 0.199 / 0.025"
+     },
+     {
+      "quantity": "C15 first axis explained by prompt length, blocks 0-2",
+      "draft": "R^2 0.83-0.87",
+      "mine": "partial log: 0.87 / 0.83 / 0.84 (tokens); own check with characters as proxy: 0.79 (block 0), 0.78 (block 2)"
+     },
+     {
+      "quantity": "C15 first axis explained by question family, from block 3 on",
+      "draft": "0.81-0.95",
+      "mine": "partial log, blocks 3-11: 0.81-0.95; own check at blocks 3 / 8 / 14 / 20 / 24 / 26 / 27: 0.81 / 0.95 / 0.97 / 0.97 / 0.92 / 0.80 / 0.77"
+     },
+     {
+      "quantity": "C15 share of all neurons' variance explained by the 18 families",
+      "draft": "31-48 %",
+      "mine": "partial log, blocks 0-11: 0.311-0.482; own check (fit prompts) at blocks 0 / 2 / 3 / 8 / 14 / 20 / 24 / 26 / 27: 0.311 / 0.348 / 0.374 / 0.487 / 0.405 / 0.319 / 0.209 / 0.234 / 0.205"
+     }
+    ]
+   }
+  },
+  {
+   "label": "recalc:damp",
+   "result": {
+    "verdict": "C2 to C8: every number in the draft is reproduced from ufo_damp2.npz with independent code (differences in the third decimal or within bootstrap noise). No number is wrong. The hooks measure what the draft says: A holds the projection on delta at exactly 1 (largest deviation 7.8e-7), B leaves exactly p times delta (orthogonal part below 2.3e-4, exactly clean at positions without a vector), row 0 is the reference, nothing leaks between rows (null row KL exactly 0; plain, A and B rows bitwise equal in the first attention after injection). Template tokens are excluded from perturbation and scoring as stated. The direction classes are built as described and the held-out share is computed correctly.\n\nFive readings go beyond the arrays and must be reworded:\n(1) The irr - cov contrast is not 'outside against inside the data subspace' in blocks 1-10. The stored rand row implies that an isotropic vector inside the 98 % subspace is erased like an irr vector (0.19-0.21); only the high-variance directions (cov, mix) are erased half as much. This changes I1, not the numbers of C2.\n(2) C4 '89 % inside the data subspace' equals the share of axes in that subspace (88.8 %). The untouched irr vector is already 78 % inside by the axes of the block two later (read from the B rows): 'outside' holds for the next block only.\n(3) C7 'entropy rises at least as much as the loss' holds for cov vectors of size 1 at blocks 0-8 only. For irr at block 8 the loss rises 0.66 [0.28, 1.08] more than the entropy; that row is missing from the report table.\n(4) C7 factor 1.5-2.3 against late-matched noise is 0.95-1.35 on the wiki half and 2.26-3.73 on the chat half.\n(5) C6: a single-position vector at block 2 puts more KL on later positions in sum (0.34 cov, 0.12 irr) than on its own position (0.18, 0.07); the per-position values in the draft are right.\n\nShould fix: C3 block range (ratios are for blocks 1-16) and the picture by band and by part against the RMSNorm factor; C5 wording for cov (A removes regeneration as well as erasure); scope of the clean-scale and ablation sentences in C7; 'left' for cov in C4. 'No brake for large vectors' (C3), 'the erasure protects the output' for irr (C5) and 'the lowest blocks are not more tolerant' (C8) stand.\n\nOne script bug without consequence: zero vectors in class mix give 13 NaN cells that the report skips silently. The script on disk (23:12) is newer than the run (22:54); the version that produced the output is not on disk.\n\nLimits: no model loaded, ufo_pool.pt (881 MB) not opened, all computations numpy on the stored files. C1 and C9-C15 were not checked. Own scripts: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/ufo_review/checker_c2c8/ (ck_lib.py, s00_inspect.py to s19_late_all.py). ufo_report.py was read only after the recomputation; it uses the same mask and the same statistics (mean over texts of per-text means, ratio of means, bootstrap over texts).",
+    "findings": [
+     {
+      "claim": "C2 contrast irr - cov, read in I1 as 'twice as strong for directions outside the data subspace'",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "The numbers are right, the reading is not. For small vectors q of an isotropic vector equals (k/D) times q of an isotropic vector inside the subspace plus (1 - k/D) times q of an outside vector. irr is isotropic outside (0.05 % of its energy inside), rand has k/D inside (measured 0.877 at block 2 = 1795/2048). Solving with the stored rand and irr rows gives the erasure of an isotropic vector INSIDE the 98 % subspace: 0.192 / 0.206 / 0.093 / 0.030 / 0.014 at f = 0.3 (0.191 / 0.218 / 0.103 / 0.033 / 0.015 at f = 0.03), against irr 0.213 / 0.209 / 0.152 / 0.043 / 0.018 and cov 0.111 / 0.130 / 0.049 / 0.002 / 0.007. Outside minus generic inside is +0.021 [0.020, 0.023] / +0.003 [0.002, 0.004] / +0.059 [0.058, 0.061] / +0.014 / +0.004, that is 21 % / 4 % / 58 % / 33 % / 33 % of the irr - cov contrast. Per block the two agree within 0.02 in blocks 3-9 (in blocks 4 and 5 the inside vector is erased slightly more); irr is erased more only in blocks 1-2 and from block 10 on. What is erased about half as much are the directions of high data variance (cov and mix, both 0.111 in blocks 1-4; the top 64 axes hold 39 % and the top 256 hold 63 % of held-out variance at block 2).",
+      "fix": "Say that directions along which real states vary strongly are erased about half as much as any other direction, and report the outside-against-generic-inside difference per band. Reword I1. This changes the reading of the contrast, not the numbers of C2."
+     },
+     {
+      "claim": "C4: 'Two blocks after an irr vector was added, 89 % of the deviation lies inside the data subspace'",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "The value is reproduced (0.8898 [0.887, 0.893]), but the subspace of block 4 holds 1819 of 2048 axes, so an isotropic vector scores 0.8882. Other injection blocks: 0.884 against 0.877 (from block 0), 0.876 against 0.862 (from 8), 0.828 against 0.852 (from 14). The measure uses the axes of the current block, while 'outside' is defined by the axes of the injection block. In the B rows the deviation is exactly p times the vector, so their value is the inside share of the untouched vector by later axes: block-2 irr vector 0.784 at block 4, 0.834 at 6, 0.864 at 8, 0.911 at 26 (isotropic 0.888 / 0.889 / 0.896 / 0.915); block-14 irr vector 0.649 at block 16. 'Outside the data subspace' therefore holds for the next block only. After block 26 all classes are at 0.954-0.957 against 0.915 isotropic. Rough share for the reaction alone at block 4 (energies from mean p and s, not exact): 0.93 for irr, 0.96 for cov.",
+      "fix": "Quote the inside share next to k/D, or as the share of the reaction without the surviving vector, and state that the low-variance subspace changes from block to block (a block-2 irr vector is 78 % inside by the axes of block 4). This changes the reading of the sentence; the other free-run numbers stay."
+     },
+     {
+      "claim": "C7: 'Under noise the entropy rises at least as much as the loss'",
+      "status": "not supported",
+      "severity": "must fix",
+      "evidence": "The quoted row is reproduced (L2_cov_1: loss +1.156, entropy +1.844, difference -0.688 [-1.00, -0.40]; 14 of 16 texts negative). As a general statement it fails. At f = 1: cov at blocks 0 / 2 / 8: -0.750 [-1.13, -0.39], -0.688, -0.468 [-0.77, -0.17]; cov at block 14: +0.076 [-0.24, +0.44]; irr at blocks 0 / 2 / 14: -0.166 [-0.40, +0.10], +0.022 [-0.23, +0.26], -0.039 [-0.25, +0.18]; irr at block 8: +0.660 [+0.28, +1.08] (loss +0.969, entropy +0.308; wiki +0.32, chat +1.00). Norm-preserving irr row at block 2: +0.426 [+0.18, +0.70]. Section G of ufo_report.py prints 8 chosen noise rows and leaves out L8_irr_1 and L0_irr_1. At f <= 0.3 almost all intervals include 0.",
+      "fix": "Restrict to: for cov vectors of size 1 added at blocks 0 to 8 the entropy rises more than the loss. Add that for irr vectors both rise about equally and that at block 8 the loss rises about three times as much as the entropy. Print all rows in section G. This changes the general statement."
+     },
+     {
+      "claim": "C7: 'The final deviation of an early vector costs 1.5-2.3 times the KL of a random vector of the same final size added after the last block'",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "Pooled over 16 texts the 14 rows at f = 0.3 give 1.51-2.32 (cov / irr at blocks 2 and 14: 1.93 [1.40, 2.81], 1.98 [1.51, 2.60], 1.55 [1.17, 2.07], 1.64 [1.12, 2.40]). By source the ranges do not overlap: wiki 0.95-1.35, chat 2.26-3.73. Examples: L2_cov 1.17 [0.95, 1.47] against 3.73 [2.81, 5.43]; L14_irr 0.95 [0.66, 1.56] against 2.77 [2.40, 3.21]. Chat / wiki ratio of the ratios for the eight cov and irr rows: 2.1-3.2, every interval above 1. On wiki the interval includes 1 for the four rows at blocks 2 and 14. Late isotropic noise costs 25 % less on chats (0.170 against 0.228 at size 0.3) while the free-run KL is 1.1 to 2.1 times as high there. With per-text medians over positions the split is smaller: wiki 1.46-1.75, chat 1.91-2.62. Rows at f = 1: 1.29-2.90.",
+      "fix": "Report the factor by source and name the statistic (mean or median over positions). With means it is about 1.0-1.35 on wikitext. The pooled range is not a property of both halves. Add the range for f = 1."
+     },
+     {
+      "claim": "C6: 'a vector at one position gives KL 0.07-0.18 at that position and 0.001-0.008 at later positions'",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "Per position both ranges are reproduced (0.180 / 0.073 / 0.107 / 0.065 and 0.0078 / 0.0028 / 0.0010 / 0.0009 for L2 cov, L2 irr, L14 cov, L14 irr). Two things are missing. (a) The values at the position are means over 16 single positions carried by one or two texts: medians 0.023 / 0.021 / 0.034 / 0.022; interval for L2 cov [0.020, 0.421], one text 1.57. (b) Summed over the 24-46 later scored positions the KL is 0.343 / 0.117 / 0.043 / 0.035. For a vector at block 2 the later positions together receive 1.9 [0.4, 4.0] (cov) and 1.6 [0.8, 3.0] (irr) times the KL of the position itself (median of per-text ratios 2.5 and 2.2; larger in 14 and 11 of 16 texts); at block 14: 0.40 and 0.55. The final deviation at a later position is 7.2 and 4.7 |delta| against 39.9 and 30.9 at the position.",
+      "fix": "Keep 'local' for the erasure coefficient. For the damage add the sum over later positions and the medians: with a vector at block 2 most of the summed KL lands on later positions. This changes the conclusion about where the damage goes, not about the erasure."
+     },
+     {
+      "claim": "C3: size dependence of q and 'RMSNorm alone predicts 0.958 and 0.707'; 'nor a mechanism that sets in for large ones'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "The factor is right: sqrt((1 + 0.03^2) / (1 + f^2)) = 0.9583 and 0.7074, and the vectors are orthogonal to the state (radial cos^2 0.006 for cov, 0.00006 for irr). The four ratios are reproduced for blocks 1-16, a range the draft does not state (0.9686 [0.966, 0.972], 0.9452, 0.7469 [0.738, 0.755], 0.5909); over blocks 1-26: 0.956, 0.939, 0.707, 0.583. The agreement with the factor is an average of opposite deviations. By band at f = 1: blocks 1-4 cov 0.896 [0.880, 0.915], irr 0.870 [0.861, 0.879]; blocks 5-10 0.725 and 0.495; blocks 11-16 0.596 and 0.479. By part (blocks 1-16, f = 1): MLP 0.616 (cov) and 0.546 (irr); attention 2.65 [2.45, 2.84] for cov (band means 0.008 to 0.016 and 0.013 to 0.029) and 1.02 for irr. In block 1 the erased share rises with size: local rows irr 1.043 [1.031, 1.056], cov 1.050 [0.97, 1.14]; free runs from block 0 (f = 1 against 0.1) cov 1.098 [1.013, 1.196], irr 1.042 [1.030, 1.055]; block 2, cov, local 1.057 [1.020, 1.100].",
+      "fix": "State the block range. Report the ratios by band and by part. 'No brake' stands: the total rises by at most 10 % in one block and falls in every band, and the KL slopes are 2 or above. Add that blocks 1-4 lose far less than the normalisation alone predicts and that the attention part for cov doubles."
+     },
+     {
+      "claim": "C5: 'The erasure protects the output' and 'Without erasure cov and irr cost the same'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "All KL values and ratios are reproduced (see table), hold with medians over positions (1.29 / 2.17 / 0.90 / 1.33) and in both halves (irr block 2: wiki 1.95, chat 2.04). A holds the projection on delta at 1; it removes whatever later writes add along delta, erasure or not. For irr that is erasure (plain run: p falls to 0.12 by block 13 and stays near 0.12 until block 23). For cov at block 2 the plain run has p = 0.59 at block 8, 2.0 at block 16, 2.6 at block 25, 1.3 after block 26. In the A row ka + km sum to -0.91 over all later blocks: blocks 3-8 +0.57 (erasure), blocks 9-25 -2.65, block 26 +1.15. For cov at block 14 A lowers the KL in 16 of 16 texts. 'Cost the same' is equal means with wide intervals: cov / irr under A 1.00 [0.74, 1.37] at block 2, 1.02 [0.83, 1.22] at block 14. KL per squared final relative deviation is the same with and without A (5.10 / 5.21, 4.87 / 4.70, 3.51 / 3.51, 3.67 / 3.61): A changes the size of the final deviation (irr block 2: 36.5 to 52.7 |delta|), not its cost per size.",
+      "fix": "Call A 'projection on delta held at 1'. Claim protection for irr (2.0 and 1.33, 16 of 16 texts each) and for the first blocks after a cov vector at block 2; say that for cov most of what A removes is regeneration along delta. Give the interval with 'cost the same'. The conclusion for irr is unchanged."
+     },
+     {
+      "claim": "C7: 'most of that rise is carried by the final norm (dH 1.84 -> 0.38 with the clean scale)' and 'Zeroing the MLP of block 2: loss +7.6, entropy -0.78'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "Both pairs of numbers are reproduced (1.844 to 0.379 with final norm ratio 1.380; +7.572 and -0.784, KL 7.58, same top token at 21 % of positions). Scope: the clean-scale effect exists for early vectors only. cov, f = 1: block 0 1.973 to 0.277 (norm ratio 1.454), block 2 1.844 to 0.379, block 8 1.395 to 0.984 (1.136), block 14 1.318 to 1.547 (1.019). irr: block 2 0.576 to 0.182, block 14 0.470 to 0.407, block 8 0.308 to 0.731 (norm ratio 0.961). The other two ablations look like noise, not like block 2: MLP of block 8 KL 0.231, loss +0.049 [-0.05, +0.15], entropy +0.071; block 14 KL 0.118, loss +0.079, entropy +0.081.",
+      "fix": "Say 'for vectors added at blocks 0 and 2' and add that at block 14 the clean scale changes nothing. Quote all three ablations or say that block 2 is the exception."
+     },
+     {
+      "claim": "C4: 'cov: 88 %, 65 %, 130 % at the end' under 'is left'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "Numbers reproduced (0.877, 0.646, 1.304 [1.17, 1.43]). p is the projection of the whole deviation on the vector, not what is left of it. For cov it falls to 0.587 at block 8, then rises to 1.02 at block 11, 2.02 at block 16, 2.63 at block 25 and drops to 1.34 in block 26, while the deviation is 4 to 37 times the vector (blocks 11-26) and almost orthogonal to it. For irr the value at the end is 0.053 [-0.009, 0.108], not distinguishable from 0.",
+      "fix": "Call p 'left' up to about block 8 and call the later values 'projection of the deviation on the vector, written by later blocks'."
+     },
+     {
+      "claim": "C2: local erasure by class and band, contrast with interval, attention / MLP split",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "All 20 band means and the five contrasts agree to the third decimal; interval of the first contrast [0.1008, 0.1032] (draft [0.101, 0.103]). q_att + q_mlp = q_tot within 1.2e-7. The local q of block l+1 equals 1 - p one block after injection in the free runs, which use other vectors (irr 0.2052 against 0.2047 at block 3, 0.1776 against 0.1776 at block 1). Same in both halves (contrast wiki 0.1025 / 0.0779 / 0.1007 / 0.0417 / 0.0133, chat 0.1015 / 0.0790 / 0.1039 / 0.0417 / 0.0097). 'At most 0.025' for the attention part is the largest band mean (0.0244, irr, blocks 1-4); single blocks reach +0.054 (irr, block 11), +0.052 (cov, block 14), -0.050 (cov, block 11). The MLP carries 87-100 % of q in bands 1-16. The interval reflects variation over texts only, not the choice of pool or axes.",
+      "fix": "Write 'band means at most 0.025, single blocks between -0.05 and +0.05'. No change of conclusion."
+     },
+     {
+      "claim": "C3: log-log slope of the output KL",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "0.03 to 0.3: 2.035 [1.92, 2.15] (L2 cov), 1.910 [1.76, 2.06] (L2 irr), 2.023 [2.00, 2.05] (L14 cov), 2.017 [1.97, 2.06] (L14 irr). 0.3 to 1: 2.293, 2.074, 2.622, 2.157; rows at blocks 0 and 8: 2.38-2.64. With medians over positions 1.95-2.07 and 2.36-2.81. The free runs agree: after the last block the deviation of a cov vector of size 1 is 68.7 times the vector against 44-46 at sizes up to 0.3 (from block 0: 124.6 against 61-64).",
+      "fix": "'2.0' should read '1.9-2.0'. No change of conclusion."
+     },
+     {
+      "claim": "C4: free-run numbers (p, amp, growth); do '37-44 fold' and '0.39-0.48' follow from the arrays?",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "irr 0.7953 / 0.3246 / 0.0533; cov 0.8770 / 0.6456 / 1.3039. amp after the last block 36.54 (irr) and 44.27 (cov); rand 38.68, mix 41.64. Median norm of the stream, block 27 / block 2: 98.1 (59-128 over texts). rho[27] / rho[2] = 0.3876 (irr) and 0.4752 (cov). Both ranges follow from the arrays; they are values after the last block. One block earlier amp is 30.75 / 37.30 and the relative deviation 0.282 / 0.343 of its start: the last block shrinks the stream (median norm 3147 to 2714) and enlarges the deviation. Both halves agree (p after 1 and 4 blocks within 0.015; growth wiki 0.383 / 0.494, chat 0.393 / 0.456). The values are for f = 0.3; at f = 1 the cov deviation ends at 0.785 of its start.",
+      "fix": "Say 'after the last block' and give block 26 as well."
+     },
+     {
+      "claim": "C5 hook code: does A remove exactly the component along delta from every later attention and MLP write, is the clean row the reference, can edits leak, is B what the draft says?",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Code: write_hook projects the change of the write against row 0 (w[c] - w0, w0 cloned before any edit) on the row's delta at each position; A subtracts the projection, B sets the write to w0 plus the projection. The hooks sit on self_attn and mlp of every block; delta exists only after block l, so the edits start at block l+1. Arrays: A rows p = 1 at every later block (largest |p - 1| 7.8e-7). B rows: orthogonal part below 2.3e-4 of |delta|, amp = |p| (final p 0.31 / 0.037 / 0.96 / 0.49), final deviation exactly 0 at positions without a vector. Null row: KL and final deviation exactly 0. Single-position rows: exactly 0 before the perturbed position. First attention after injection: plain, A and B rows bitwise equal. A, B and plain rows use identical vectors (inside and radial shares identical). A removes the component of the CHANGE of the write, not of the write itself; positions without a vector keep their full change under A.",
+      "fix": "In the text write 'the component along delta of the change of every later write'. Nothing else."
+     },
+     {
+      "claim": "C6: share left after 1 and 4 blocks, single position against all positions; same vector against independent vectors",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "p after 1 / 4 blocks, single against all: L2 cov 0.872 / 0.653 against 0.877 / 0.646; L2 irr 0.784 / 0.319 against 0.795 / 0.325; L14 cov 0.951 / 1.103 against 0.954 / 1.103; L14 irr 0.871 / 0.640 against 0.877 / 0.640; every difference has an interval within +-0.05 that includes 0. Same / independent: 1.296 [1.03, 1.62], 1.568 [1.25, 1.92], 2.312 [1.70, 3.00], 2.300 [2.07, 2.52]; with medians 1.32 / 1.69 / 2.22 / 2.32; above 1 in both halves.",
+      "fix": "'1.3-2.3 times more' should read '1.3-2.3 times as much'."
+     },
+     {
+      "claim": "C8: KL similar for vectors added after blocks 0 / 2 / 8 / 14",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Values reproduced: cov 0.0777 / 0.1110 / 0.0803 / 0.0834, irr 0.0531 / 0.0711 / 0.0618 / 0.0552. Paired over texts block 2 is higher than block 0: cov 1.43 [1.12, 1.89], irr 1.34 [1.13, 1.56] at f = 0.3; 1.41 [1.24, 1.63] and 1.31 [1.06, 1.61] at f = 0.1. cov block 2 against 8 and 14: 1.38 [1.12, 1.70], 1.33 [1.03, 1.69]. Blocks 0, 8 and 14 are not distinguishable (all intervals include 1). With medians over positions: cov 2 / 0 1.36 [1.20, 1.59], irr 1.11 [0.96, 1.27]. Same pattern for cov in both halves (wiki 0.068 / 0.094 / 0.063 / 0.069, chat 0.088 / 0.128 / 0.098 / 0.098). At f = 1 the order changes (irr highest at block 8: 1.19; cov lowest at block 8: 1.46).",
+      "fix": "Write 'within a factor of 1.45; block 2 is 1.3-1.4 times block 0'. The conclusion that the lowest blocks are not more tolerant stands."
+     },
+     {
+      "claim": "Setting: which positions are scored, are template tokens excluded as stated?",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Vectors are added at valid positions from index 4 on (not the first four tokens, not template tokens; the last token included). Scored are valid positions with index 8 to T - 2: 55 per text, 46 for chats with the 9 template tokens in the window, 33 for one chat of 51 tokens. ufo_report.py uses the same mask; without the template mask L2_cov_0.3 would be 0.1037 instead of 0.1110, so the mask is applied. Template positions get no vector. Three of the eight chats (texts 8, 9, 14) have no template token after position 3: the window ends inside the question and holds no answer token. Perturbed and pool texts are disjoint (no duplicate, no shared 8-word sequence).",
+      "fix": "Add to the setting: scoring starts at the ninth position; one chat has 51 tokens; three chats contain the question only."
+     },
+     {
+      "claim": "Do the headline numbers hold in the wiki half and in the chat half?",
+      "status": "note",
+      "severity": "should fix",
+      "evidence": "Hold: C2 (all bands within 0.009), C3 (size ratios over blocks 1-26, wiki against chat: cov 0.956 / 0.699 against 0.956 / 0.716, irr 0.939 / 0.584 against 0.940 / 0.581), C4, C5 (A / plain, wiki against chat: 1.95 / 2.04, 1.23 / 1.33, 1.39 / 1.30, 0.90 / 0.90), C6 same / independent (1.35 / 1.26, 1.76 / 1.44, 1.94 / 2.57, 2.35 / 2.27), C7 difference for L2_cov_1 (-0.78 / -0.60) and the block-2 ablation (loss +7.8 / +7.3, entropy -0.90 / -0.67), C8 for cov. Do not hold: the late-matched factor of C7; the KL at the position for cov at block 2 in C6 (wiki 0.323, chat 0.037; one wiki text). The KL of the free rows at f = 0.3 is 1.1 to 2.1 times as high on chats (L2 cov 0.128 against 0.094, L8 irr 0.084 against 0.040). 52-62 % of the summed KL comes from the top 10 % of positions (median over positions 0.023-0.037, mean 0.053-0.109); the ratios hold with medians.",
+      "fix": "Print wiki and chat columns for the late-matched factor and for the single-position KL."
+     },
+     {
+      "claim": "ufo_common.Pool.direction, class mix",
+      "status": "bug in script",
+      "severity": "minor",
+      "evidence": "X[i] - X[j] with i and j drawn independently is a zero vector when i = j (1 in 1536); unit() returns 0 and q becomes 0/0. 13 of the 432 (text, block) cells of loc_mix_0.3 are NaN in q_att, q_mlp, q_tot and sc (R is not NaN there but counts the position as cos 0). ufo_report.py uses nanmean, so the cells drop out silently. Effect on the quoted band means: 0.1108 becomes 0.1093 in blocks 1-4 when the cells are filled with block means; below 0.0005 in the other bands. The free mix rows have no such cell.",
+      "fix": "Redraw j until j differs from i and leave zero vectors out of the ok mask. 'mix 0.111' becomes 0.109; no conclusion changes."
+     },
+     {
+      "claim": "Provenance of ufo_damp2.npz",
+      "status": "note",
+      "severity": "minor",
+      "evidence": "ufo_damp2.py on disk was written at 23:12, the output at 22:54. The meta file has no key 'topk', which the script on disk writes; chain_h.sh shows the TOPK option was added for later runs. The run used an earlier version that is not on disk. The arrays behave as the hooks on disk predict (p = 1 in A rows, zero orthogonal part in B rows, q_att + q_mlp = q_tot, change of p = -(ka + km) within 8e-7), so a difference in the measured quantities is unlikely but cannot be excluded from the files.",
+      "fix": "Store a copy or a hash of the script with every output."
+     },
+     {
+      "claim": "ufo_common.py / ufo_pool.py: direction classes and held-out share",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "irr: random combination of the fit axes beyond k_irr with the mean direction projected out; measured at injection 0.02-0.07 % of the energy inside, radial cos^2 0.00004-0.00009. cov 0.993 inside; rand 0.808 / 0.877 / 0.896 / 0.877 = k/D at blocks 0 / 2 / 8 / 14. Held-out share: second moment of the held-out states around the fit mean, expanded correctly from the accumulated sums and projected on the fit axes; k is the smallest number of axes with at most 2 % outside; stored share 0.0199-0.0200 at all 28 blocks; the cap of 1900 is never reached (largest k 1876). Fit and held-out are split by text. Remarks: (a) the subspace holds 81-92 % of all axes; (b) the mix sample is the first 1536 of 1792 sampled states in pool order (wiki first), about 80 % chat states against about 58 % in the covariance; (c) pool wiki passages run to 192 tokens, perturbed texts to 64; (d) the median norm for the outlier filter comes from 12 texts, 10 of them chats; the filter removed nothing. ufo_pool.pt was not opened; the overlap of subspaces between blocks was read from the B rows.",
+      "fix": "State k/D wherever an inside share is quoted. Shuffle the sample before cutting it to 1536."
+     }
+    ],
+    "recomputed": [
+     {
+      "quantity": "C2 q, cov, responding blocks 1-4 / 5-10 / 11-16 / 17-22 / 23-26 (f = 0.3)",
+      "draft": "0.111 / 0.130 / 0.049 / 0.002 / 0.007",
+      "mine": "0.1109 / 0.1302 / 0.0495 / 0.0015 / 0.0067"
+     },
+     {
+      "quantity": "C2 q, irr, same bands",
+      "draft": "0.213 / 0.209 / 0.152 / 0.043 / 0.018",
+      "mine": "0.2129 / 0.2087 / 0.1518 / 0.0432 / 0.0183"
+     },
+     {
+      "quantity": "C2 q, rand, same bands",
+      "draft": "0.196 / 0.206 / 0.101 / 0.031 / 0.015",
+      "mine": "0.1957 / 0.2061 / 0.1007 / 0.0313 / 0.0148"
+     },
+     {
+      "quantity": "C2 q, mix, same bands",
+      "draft": "0.111 / 0.124 / 0.040 / -0.001 / 0.007",
+      "mine": "0.1108 / 0.1240 / 0.0404 / -0.0011 / 0.0069 with the 13 NaN cells skipped; 0.1093 / 0.1241 / 0.0403 / -0.0013 / 0.0065 with the cells filled by block means"
+     },
+     {
+      "quantity": "C2 contrast irr - cov, same bands, 95 % bootstrap over texts",
+      "draft": "+0.102 [0.101, 0.103] / +0.078 / +0.102 / +0.042 / +0.012",
+      "mine": "+0.1020 [0.1008, 0.1032] / +0.0785 [0.0770, 0.0799] / +0.1023 [0.0999, 0.1047] / +0.0417 [0.0403, 0.0431] / +0.0115 [0.0102, 0.0128]"
+     },
+     {
+      "quantity": "C2 attention part of q (f = 0.3)",
+      "draft": "at most 0.025",
+      "mine": "largest band mean 0.0244 (irr, blocks 1-4); single blocks from -0.053 to +0.054"
+     },
+     {
+      "quantity": "C2 (not in draft) q of an isotropic vector inside the 98 % subspace, derived from the rand and irr rows, same bands",
+      "draft": "not given",
+      "mine": "0.1916 / 0.2058 / 0.0926 / 0.0295 / 0.0144 at f = 0.3; 0.1913 / 0.2181 / 0.1027 / 0.0329 / 0.0149 at f = 0.03"
+     },
+     {
+      "quantity": "C3 q(0.3)/q(0.03), cov",
+      "draft": "0.97",
+      "mine": "0.9686 [0.9658, 0.9715] for blocks 1-16 (the range the report uses); 0.9562 for blocks 1-26"
+     },
+     {
+      "quantity": "C3 q(0.3)/q(0.03), irr",
+      "draft": "0.945",
+      "mine": "0.9452 [0.9444, 0.9461] for blocks 1-16; 0.9392 for blocks 1-26"
+     },
+     {
+      "quantity": "C3 q(1)/q(0.03), cov",
+      "draft": "0.75",
+      "mine": "0.7469 [0.7383, 0.7553] for blocks 1-16; 0.7071 for blocks 1-26; by band 0.896 / 0.725 / 0.596 (blocks 1-4 / 5-10 / 11-16)"
+     },
+     {
+      "quantity": "C3 q(1)/q(0.03), irr",
+      "draft": "0.59",
+      "mine": "0.5909 [0.5879, 0.5941] for blocks 1-16; 0.5825 for blocks 1-26; by band 0.870 / 0.495 / 0.479"
+     },
+     {
+      "quantity": "C3 RMSNorm factor for f = 0.3 and f = 1",
+      "draft": "0.958 and 0.707",
+      "mine": "0.9583 and 0.7074 relative to f = 0.03 (0.9578 and 0.7071 relative to f -> 0)"
+     },
+     {
+      "quantity": "C3 log-log slope of KL, 0.03 to 0.3 (L2 cov, L2 irr, L14 cov, L14 irr)",
+      "draft": "2.0",
+      "mine": "2.035 [1.92, 2.15] / 1.910 [1.76, 2.06] / 2.023 [2.00, 2.05] / 2.017 [1.97, 2.06]"
+     },
+     {
+      "quantity": "C3 log-log slope of KL, 0.3 to 1 (L2 cov, L2 irr, L14 cov, L14 irr)",
+      "draft": "2.1-2.6",
+      "mine": "2.293 [2.11, 2.50] / 2.074 [1.87, 2.27] / 2.622 [2.48, 2.81] / 2.157 [2.06, 2.26]"
+     },
+     {
+      "quantity": "C4 irr from block 2, f = 0.3: p after 1 block / after 4 / after the last block",
+      "draft": "80 % / 32 % / 5 %",
+      "mine": "0.7953 / 0.3246 / 0.0533 [-0.009, 0.108]"
+     },
+     {
+      "quantity": "C4 cov from block 2, f = 0.3: p after 1 block / after 4 / after the last block",
+      "draft": "88 % / 65 % / 130 %",
+      "mine": "0.8770 / 0.6456 / 1.3039 [1.170, 1.430]"
+     },
+     {
+      "quantity": "C4 growth of the absolute deviation (amp after block 27)",
+      "draft": "37-44 fold",
+      "mine": "36.54 (irr), 44.27 (cov); rand 38.68, mix 41.64; after block 26: 30.75 (irr), 37.30 (cov)"
+     },
+     {
+      "quantity": "C4 growth of the stream, block 2 to block 27",
+      "draft": "about 100 fold",
+      "mine": "98.1 (mean over texts of the ratio of median norms; 59-128 over texts)"
+     },
+     {
+      "quantity": "C4 relative deviation at the end / at the start",
+      "draft": "0.39-0.48",
+      "mine": "0.3876 (irr), 0.4752 (cov); after block 26: 0.282, 0.343"
+     },
+     {
+      "quantity": "C4 inside share of the deviation two blocks after an irr vector at block 2",
+      "draft": "89 %",
+      "mine": "0.8898; share of axes inside at block 4: 0.8882; untouched vector by the axes of block 4 (B row): 0.784"
+     },
+     {
+      "quantity": "C5 irr at block 2: KL plain -> A, ratio",
+      "draft": "0.071 -> 0.143, 2.01 [1.70, 2.42]",
+      "mine": "0.0711 -> 0.1425, 2.005 [1.683, 2.420]"
+     },
+     {
+      "quantity": "C5 cov at block 2: KL plain -> A, ratio",
+      "draft": "0.111 -> 0.143, 1.29 [1.22, 1.36]",
+      "mine": "0.1110 -> 0.1427, 1.286 [1.224, 1.358]"
+     },
+     {
+      "quantity": "C5 block 14: ratio A / plain, irr and cov",
+      "draft": "1.33 [1.30, 1.38] and 0.90 [0.88, 0.92]",
+      "mine": "1.334 [1.297, 1.380] (0.0552 -> 0.0737) and 0.902 [0.881, 0.922] (0.0834 -> 0.0752)"
+     },
+     {
+      "quantity": "C5 KL of the A rows, cov / irr, blocks 2 and 14",
+      "draft": "0.143 / 0.143 and 0.075 / 0.074",
+      "mine": "0.1427 / 0.1425 and 0.0752 / 0.0737; ratio cov / irr 1.00 [0.74, 1.37] and 1.02 [0.83, 1.22]"
+     },
+     {
+      "quantity": "C5 KL of the B rows and of the vector riding along untouched",
+      "draft": "below 0.002",
+      "mine": "B: below 0.00001 (block 2, cov and irr), 0.00104 (block 14 cov), 0.00021 (block 14 irr); untouched: 0.00002 / 0.00002 / 0.00110 / 0.00088; largest single text 0.0018"
+     },
+     {
+      "quantity": "C6 single position: KL at the position (L2 cov, L2 irr, L14 cov, L14 irr)",
+      "draft": "0.07-0.18",
+      "mine": "0.1798 [0.020, 0.421] / 0.0730 [0.026, 0.131] / 0.1074 [0.033, 0.209] / 0.0650 [0.020, 0.132]; medians over texts 0.023 / 0.021 / 0.034 / 0.022"
+     },
+     {
+      "quantity": "C6 single position: KL at later positions",
+      "draft": "0.001-0.008",
+      "mine": "per position 0.00779 / 0.00281 / 0.00104 / 0.00087; summed over the later scored positions 0.343 / 0.117 / 0.043 / 0.035"
+     },
+     {
+      "quantity": "C6 share left after 1 / 4 blocks, single position against all positions",
+      "draft": "the same",
+      "mine": "L2 cov 0.872 / 0.653 against 0.877 / 0.646; L2 irr 0.784 / 0.319 against 0.795 / 0.325; L14 cov 0.951 / 1.103 against 0.954 / 1.103; L14 irr 0.871 / 0.640 against 0.877 / 0.640"
+     },
+     {
+      "quantity": "C6 KL of the same vector at all positions / independent vectors (L2 cov, L2 irr, L14 cov, L14 irr)",
+      "draft": "1.3-2.3",
+      "mine": "1.296 [1.03, 1.62] / 1.568 [1.25, 1.92] / 2.312 [1.70, 3.00] / 2.300 [2.07, 2.52]"
+     },
+     {
+      "quantity": "C7 KL / KL of a random vector of the same final size after the last block",
+      "draft": "1.5-2.3",
+      "mine": "1.51-2.32 over the 14 rows at f = 0.3 (cov and irr at blocks 2 and 14: 1.930 / 1.981 / 1.553 / 1.643); wiki 0.95-1.35, chat 2.26-3.73; rows at f = 1: 1.29-2.90"
+     },
+     {
+      "quantity": "C7 dLoss - dH, cov, f = 1, block 2",
+      "draft": "-0.69 [-0.99, -0.40]",
+      "mine": "-0.688 [-1.00, -0.40] (loss +1.156, entropy +1.844)"
+     },
+     {
+      "quantity": "C7 dH and dH with the clean scale of the final norm, cov, f = 1, block 2",
+      "draft": "1.84 -> 0.38",
+      "mine": "1.844 -> 0.379 (final norm ratio 1.380); block 14: 1.318 -> 1.547"
+     },
+     {
+      "quantity": "C7 zeroing the MLP of block 2: change of loss and of entropy",
+      "draft": "+7.6 and -0.78",
+      "mine": "+7.572 [6.87, 8.18] and -0.784 [-1.11, -0.46]; blocks 8 and 14: +0.049 / +0.071 and +0.079 / +0.081"
+     },
+     {
+      "quantity": "C7 (not in draft) dLoss - dH, irr, f = 1, block 8",
+      "draft": "not given",
+      "mine": "+0.660 [+0.28, +1.08] (loss +0.969, entropy +0.308)"
+     },
+     {
+      "quantity": "C8 KL at f = 0.3, cov, vectors after blocks 0 / 2 / 8 / 14",
+      "draft": "0.078 / 0.111 / 0.080 / 0.083",
+      "mine": "0.0777 / 0.1110 / 0.0803 / 0.0834; block 2 / block 0 = 1.43 [1.12, 1.89]"
+     },
+     {
+      "quantity": "C8 KL at f = 0.3, irr, vectors after blocks 0 / 2 / 8 / 14",
+      "draft": "0.053 / 0.071 / 0.062 / 0.055",
+      "mine": "0.0531 / 0.0711 / 0.0618 / 0.0552; block 2 / block 0 = 1.34 [1.13, 1.56]"
+     }
+    ]
+   }
+  },
+  {
+   "label": "critic:interpretation",
+   "result": {
+    "verdict": "Numbers: they stand. I re-derived 23 quantities of C1-C15 with my own code from the stored outputs. None is wrong; two ranges are slightly off (C1: 8 axes hold 13-18 %, not 14-15 %; C15: 31-40 % and 8-10 % held-out) and neither changes a conclusion. Interpretation: I1 and I3 do not stand as worded, I2 stands with a narrower scope, I4 is largely answered by files written after the draft.\n\nSupported by the tables: training gave the MLPs of blocks 1-16 a linear, unspecific contraction that the untrained network lacks (q = 0.000 there). A block writes against any added vector with a coefficient near 0.2 in blocks 1-10, and near 0.11 along the few hundred directions of highest data variance.\n\nNot supported, by the six points of the task:\n(a) A safety mechanism. The erasure is learned, but it has none of the marks that would separate protection from ordinary computation. It does not depend on size, it is not selective for foreign directions, and it does not bring the state back: in all 34 plain free rows the deviation is 1.07-1.28 times the added vector one block later and never below 1.04 afterwards; the erasure is 3-8 % of the energy of a block's reaction. The 'protection' in test A equals the squared ratio of the final deviations (2.01 against 2.01): a vector that stays is read again. In vector size the margin is 1.42 for irr at block 2 and 0.95 for cov at block 14.\n(b) 'Twice as strong outside the data subspace' follows from the energy distribution of the classes. A generic direction inside the 98 % subspace gets 0.19-0.21, like one outside; cov has 56-70 % of its energy on 256 axes; mix has the same second moment as cov and is no second witness. At the output irr and isotropic vectors cost the same (1.03 [0.89, 1.21]).\n(c) C9's reading is right as arithmetic and too strong in three words ('inactive', 'feedback', 'weak'). It covers blocks 1-9; in blocks 10-16 positive-gate neurons with opposed weights give the same sign.\n(d) Every SAE statement for blocks 0-14 is about base-model SAEs on the chat model. At block 21 the chat-model SAE costs 0.68 [0.62, 0.76] of the KL and the part it leaves unexplained is written along half as much (0.095 against 0.188). 'The error is content' and the depth profile behind I3 are partly properties of the mismatch.\n(e) The claims are single passes. They cannot show accumulation, run-to-run difference or the effect of a purposeful write. A loop run on disk (12 prompts, 32 greedy tokens; not in the claims) shows no growth of the per-token KL and a changed text in 12 of 12 prompts for every SAE row.\n(f) One model for everything. Solid within it: q (a replicate draw agrees to 0.002). Carried by one draw and few positions: every KL (row means of two draws differ by up to 22 %; the top tenth of positions carries 42-54 % of a row's KL).\n\nThree further points: C13 leaves out two sites with the opposite sign (+0.19 at block 14, +0.22 at block 21) and the long horizon (+4.2 for block 2). I3's 'helps if its own error is put back' needs the undisturbed state and cannot be built. C14 quotes only the noise class for which the SAE breaks even.\n\nThe last finding holds a proposed paragraph for the user on H1 and H2.\n\nMethod and limits: no model loaded; numpy on the stored .npz / .json / .npy files only, every call pinned to core 3 at nice 19; ufo_pool.pt not opened; C10's compress figures and C15 were read from the logs, not recomputed. Four outputs that I used are not in my file list and were written after the draft (ufo_damp2_randinit, ufo_damp2_small, ufo_damp2_top0.5, ufo_loop); statements from them are a first look. Scripts: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/ufo_review/sceptic_interp/ (klib.py, k00_inspect.py to k11_radial.py). No existing file was modified.",
+    "findings": [
+     {
+      "claim": "C1: 'On running text the states are not low-dimensional' (98 % of held-out variance needs 1654-1837 axes; 8 axes hold 14-15 %; two states 1.06-1.21 norms apart)",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "From the pool statistics in ufo_damp2_meta.json, all blocks 0-21. Axes for 98 %: 1654-1837 (confirmed). Median distance of two states: 1.064-1.212 norms (confirmed). Eight axes: 13.2-18.4 %, not 14-15 %; the draft's range holds for the seven blocks printed in ufo_pool.log (13.9-15.3 %), blocks 10-12 have 18.2-18.4 %. The same statistics show the other side: 64 axes hold 35-44 %, 256 axes 56-70 %, participation ratio 107-223. Half of the variance lies in roughly 100 to 200 of 2048 axes, and the figure 1654-1837 is set by the 98 % cut. It is also an upper estimate: the axes come from 9,056 states of 128 texts, and the share outside the chosen axes is 2.0 % on held-out states against 0.6-0.7 % on the fit states. The object is the residual stream over all tokens of running text, around a mean that is 54-66 % of the norm; token identity alone makes that high-dimensional. The UFO paper's measure is on MLP activations at one token role, so C1 says nothing on H1.",
+      "fix": "Write: 'by linear variance half lies in about 100-200 axes and 98 % needs 1654-1837 (upper estimate); 8 axes hold 13-18 %'. Keep C1 out of the argument on H1. The range error changes no conclusion."
+     },
+     {
+      "claim": "C2 and point (b): contrast irr - cov read as 'twice as strong for directions outside the data subspace'. Could it follow from how the classes are built?",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "Yes, in three ways. (1) Energy distribution. To first order the local q of a class depends only on its second-moment matrix. cov puts 13-18 % of its energy on 8 axes, 35-44 % on 64 and 56-70 % on 256; an isotropic vector inside the 98 % subspace puts 14 % on the top 256. My own solve from the rand and irr rows reproduces Recomputation A: generic inside direction 0.192 [0.187, 0.196] / 0.206 / 0.093 / 0.029 / 0.014 at f = 0.3, against irr 0.213 / 0.209 / 0.152 / 0.043 / 0.018. Inside minus cov is +0.081 / +0.076 / +0.043, that is 79 % of the contrast in blocks 1-4, 96 % in blocks 5-10, 42 % in blocks 11-16. cov cannot say how many directions are spared: 14 % of the energy on axes with coefficient -0.4 and the rest at 0.2 gives 0.116, the same as a smooth gradient. (2) mix is no second witness. It has the same second moment as cov, so 0.111 / 0.124 / 0.040 next to 0.111 / 0.130 / 0.049 is linearity, not confirmation by real content. rand is a mixture of the other two. C2 holds three independent numbers per band, not four. (3) Subspace definition. 'Outside' is the 10-19 % of axes with least variance (211-394 dimensions). Real states have a component there of about 0.12 state norms (block 2: sqrt(0.02) x 1.165 / sqrt(2) = 0.116). An irr vector at f = 0.03 is a quarter of that, at 0.3 it is 2.6 times as large; both are erased alike (0.214 and 0.213 in blocks 1-4). The coefficient does not depend on whether the vector exceeds what the data contain. The mean direction plays no role: radial share 0.006-0.009 for cov, below 0.0001 for irr, 0.0005 for rand. At the output the classes separate less than in q: KL irr / cov 0.68 [0.57, 0.80] (block 2) and 0.72 [0.62, 0.82] (block 14) with both direction draws averaged; irr / rand 1.03 [0.89, 1.21] and 1.04 [0.93, 1.16]; final relative deviation irr / cov 0.82 [0.72, 0.93]. First-order split (ufo_lin.npz): in blocks 1-9 the cov - irr difference lies in the same term as the erasure itself. By gate sign: negative-gate neurons -0.100 of -0.091 (blocks 1-4) and -0.082 of -0.080 (blocks 5-9), positive-gate +0.009 and +0.002. By path: up path -0.091 and -0.069. It is a weaker read-write alignment along high-variance directions, not a second process that writes content back.",
+      "fix": "Replace 'outside the data subspace' by 'every direction except those of highest data variance'. Report q in bands of principal axes (1-8, 9-64, 65-256, 257-1024, 1025-k, beyond k) with the closed form of ufo_lin.py (one clean pass). Drop mix as independent evidence. The q numbers stand; I1 changes."
+     },
+     {
+      "claim": "C3: 'No brake for large vectors ... neither a plateau for small vectors nor a mechanism that sets in for large ones'",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "KL slopes recomputed. Between 0.03 and 0.1 and between 0.1 and 0.3: 2.03, 2.04 (cov, block 2); 1.85 [1.71, 2.00], 1.97 (irr, block 2); 2.00, 2.05 (cov, 14); 2.00, 2.04 (irr, 14). Between 0.3 and 1: 2.29 / 2.07 / 2.62 / 2.16. No plateau (that would need a slope above 2 at small sizes; the one deviation, 1.85, goes the other way) and no saturation. Scope that the last sentence leaves out: sizes 0.03 to 1 only (1 is about the distance between two real states, 1.06-1.21); one disturbance per position; two injection blocks; the brake defined as more erasure per unit or sub-quadratic KL. The one softening that grows with size is the dilution by the final norm in C7; that is arithmetic of the normalisation and not general (Recomputation A).",
+      "fix": "Add the scope. For the block range and the picture by band see Recomputation A. The conclusion is unchanged."
+     },
+     {
+      "claim": "C4: 'of an irr vector 80 % is left after one block, 32 % after four, 5 % at the end'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "'Left' is the projection on the vector. The deviation as a whole never shrinks. In all 34 free rows with a plain vector (4 classes, sizes 0.03-1, blocks 0, 2, 8, 14) the deviation one block later is 1.07-1.28 times the vector (smallest single text 1.025) and it is never below 1.04 at any later block. Local rows, every block 1-26: 1.005-1.34. Per block (mean of blocks 1-16) an irr vector loses 0.34 of its energy along itself while the block adds 0.58 in other directions; cov: 0.18 and 0.56. The part of a block's reaction that lies along the vector is 7-8 % of its energy for irr and rand and 3 % for cov (blocks 1-10). The untrained network adds a similar orthogonal reaction in the first blocks (0.89 / 0.71 / 0.61 per unit at blocks 2-4, trained 0.75 / 0.75 / 0.72) and removes nothing.",
+      "fix": "Write: 'the projection on the vector falls to 0.80 / 0.32 / 0.05; the deviation itself is 1.09 times the vector after one block and 1.39 after four'. Carry this into I1. For the inside-share sentence see Recomputation A."
+     },
+     {
+      "claim": "C5 and point (a): 'The erasure protects the output'. Learned safety mechanism or by-product of ordinary computation?",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "Learned: yes. In the randomly initialised network (ufo_damp2_randinit.npz, same 16 texts, written after the draft) q is 0.000 in every band and class (largest single block 0.002) and the share left stays 1.00. A safety mechanism: nothing in the tables requires it, and seven observations fit ordinary computation at least as well. (1) Linear, no threshold (C3). (2) Not selective for foreign directions (finding on C2). (3) Not restoring: every block adds more deviation than it removes (finding on C4). (4) Test A changes only the size of the final deviation. KL ratio A / normal against the ratio of the mean squared final relative deviation: 2.01 against 2.01 [1.85, 2.21] (irr, block 2), 1.29 against 1.23, 1.33 against 1.33, 0.90 against 0.90; KL per squared deviation 3.61 and 3.60. A vector that stays is read again by every block; the test shows no more than that. In size the margin is small: for equal KL the vector may be 1.42 times larger (irr, block 2), 1.15 (irr, 14), 1.13 (cov, 2), 0.95 (cov, 14). (5) The blocks react to both classes alike: orthogonal reaction per unit 0.72-0.82 (irr) and 0.63-0.84 (cov) in blocks 1-16. Low-variance directions are read as much as high-variance ones, which fits 'without erasure cov and irr cost the same'. (6) q does not set the damage. With the weaker half of the neuron activations zeroed (top0.5 run, same draws as the replicate run) q stays at 0.95 while the KL of block-2 vectors rises 1.35 [1.10, 1.60] / 1.48 [1.19, 1.84] / 1.68 [1.51, 1.87] (cov / irr / rand). The untrained network, with q = 0, has KL 0.086 at block 2 and 0.045 at block 14, the same order as the trained one (0.067-0.111 and 0.055-0.083); its output is near uniform, so this is an indication only. (7) Without any vector, the next four blocks write against the low-variance part of the model's own state at blocks 0, 2 and 8 (-0.40 / -0.42 / -0.32); the contraction is part of ordinary processing there. 'B below 0.002' is no finding about the erasure: the untouched vector is 0.003 of the final norm (0.3 x 27.8 / 2714).",
+      "fix": "Write: 'Keeping the vector in the stream makes the final deviation 1.42 times larger and the KL twice as large for irr at block 2 (1.33 in KL at block 14; cov 1.29 and 0.90). The erasure shortens the time a vector is read. It is learned; whether for robustness or as part of ordinary processing these runs cannot tell.' A test that could tell: set the negative lobe of SiLU to zero in blocks 1-9 (C9 says it carries the erasure) and compare clean loss and noise KL. If the clean loss holds and only the noise KL rises, the erasure serves robustness; if the clean loss breaks, it is ordinary computation."
+     },
+     {
+      "claim": "C6: 'The erasure is local' and 'one and the same vector at all positions costs 1.3-2.3 times more KL than independent vectors'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "The second half matters most for H2 and is not used in I1-I3. Ratios recomputed: 1.30 [1.02, 1.61] (cov, block 2), 1.57 [1.24, 1.91] (irr, 2), 2.31 [1.66, 2.97] (cov, 14), 2.30 [2.07, 2.51] (irr, 14); again equal to the squared ratio of the final deviations (1.33 / 1.56 / 2.06 / 1.95). The reason is attention. Its coefficient along the vector, summed over the next four blocks (negative = written along the vector): with independent vectors -0.002 / +0.067 / -0.027 / -0.005, with the same vector everywhere -0.051 / +0.061 / -0.201 / -0.130. The MLP part is unchanged (+0.385 against +0.357; +0.616 against +0.608). Share left after four blocks at block 14: 1.28 against 1.10 (cov), 0.75 against 0.64 (irr). So 'attention part at most 0.025' (C2) and 'local' hold for vectors that are independent between positions; a vector that is correlated across positions is added up by attention. An SAE's error and any steering write are of that kind. For where the damage of a single-position vector lands see Recomputation A.",
+      "fix": "Give both halves equal weight and carry the second into I3: numbers for independent noise understate a systematic disturbance by 1.3-2.3 in KL. All of this is measured within 64 tokens."
+     },
+     {
+      "claim": "C7: 'The final deviation of an early vector costs 1.5-2.3 times the KL of a random vector of the same final size added after the last block'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "Recomputation A showed the split by source. A second limit: the spread 1.5-2.3 is the scatter of one direction draw. For the six rows that exist in both draws (L2 cov, irr, rand; L14 cov, irr, rand) the main run has 1.93 / 1.98 / 1.51 / 1.55 / 1.64 / 2.32 and the replicate run 1.89 / 1.71 / 1.74 / 1.59 / 2.13 / 1.77; rows change rank. Reading: what the blocks make out of a vector costs more at the output than a random direction of the same size. That speaks against a protective reading of the blocks' reaction as a whole. In the untrained network the ratio is 1.16 (block 2) and 1.06 (block 14).",
+      "fix": "Quote one pooled figure with its uncertainty (about 1.8) and the split by source from A; draw no row-to-row differences. For the entropy sentences see Recomputation A."
+     },
+     {
+      "claim": "C8: 'the lowest blocks are neither clearly more tolerant nor more fragile'",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Paired by text, main run, f = 0.3: KL(block 2) / KL(block 0) = 1.43 [1.12, 1.88] (cov), 1.34 [1.14, 1.55] (irr); block 2 / block 14 = 1.33 [1.02, 1.69], 1.29 [1.00, 1.62]; block 0 / block 14 = 0.93 [0.70, 1.20], 0.96 [0.75, 1.20]. At f = 0.1 the same (cov, 2 / 0: 1.41 [1.24, 1.63], 15 of 16 texts). In the replicate draw block 2 / block 14 is 1.16 [0.94, 1.48] (cov) and 1.08 [0.71, 1.67] (irr); both draws averaged 1.25 [1.07, 1.48] and 1.18 [0.85, 1.61]. At f = 1 the order differs (cov: block 8 lowest; irr: block 8 highest, 1.61 [1.36, 1.89] times block 14). So block 0 equals blocks 8 and 14, and block 2 is about 1.2 times more costly at sizes up to 0.3, which is 1.1 in vector size. Measured against the natural spread between states the sizes differ little (KL factors 1.08 / 0.98 / 0.90 for blocks 0 / 8 / 14 relative to block 2).",
+      "fix": "Keep. Add 'block 2 about 1.2 times blocks 0, 8 and 14 at sizes up to 0.3 (two draws)'. For H2: equal noise is not better tolerated at the lowest blocks. No conclusion changes."
+     },
+     {
+      "claim": "C9 and point (c): is 'an inactive neuron passes its up input with a small negative factor ... a weak negative feedback, spread over thousands of neurons' the simplest reading?",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "evidence": "The arithmetic is the simplest possible, and Recomputation B confirmed it: to first order a neuron contributes minus its gate value silu(u) times the product of its up weight and its output weight (read through the class), a linear path whose gain is the gate value. Three words go beyond that. 'Inactive': the path needs a gate value clearly below zero (SiLU is -0.07 at u = -4 and -0.28 at u = -1.28); a neuron that is really off contributes nothing. The outputs for the trained model hold no gate-input distribution; the bins and the stronger-half column of the current ufo_lin.py exist only in ufo_lin_randinit.npz. 'Feedback': the term is no reaction to the vector. It is a fixed linear part of the MLP that acts on the clean state as well. 'Weak': 0.2 per block leaves 0.13 after nine blocks. What the split shows (ufo_lin.npz, irr, blocks 1-9): negative-gate neurons +0.160 to +0.254, positive-gate -0.011 to +0.017, share of negative gates 0.837-0.975. From block 10 on the kind changes, not only the carrier: the mean cosine of up and output weight falls through zero at block 13 (+0.003) to -0.058 at block 16, and there the erasure of irr (0.131) is carried by positive-gate neurons (+0.129) whose up and output weights point against each other. Two different arrangements give the same sign across 16 blocks. That argues against 'an accident of SiLU's negative lobe' and for 'training makes the MLP contracting by whatever means are at hand', without saying what for.",
+      "fix": "Reword: 'In blocks 1-9 the MLP contains a linear term through neurons with negative gate value (84-98 % of the neurons) whose up and output weights are aligned (mean cosine +0.16 to +0.34). In blocks 10-16 the same sign comes from positive-gate neurons with opposed weights.' Store the bins and the stronger-half column for the trained model (one minute). Decisive between by-product and function: set silu(u) to zero where it is negative in blocks 1-9 and read clean loss and q."
+     },
+     {
+      "claim": "C10-C14 and point (d): the SAE statements, given that the Qwen-Scope SAEs were trained on the base model",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "Blocks 0, 2, 8 and 14 have base-model SAEs only; every statement about them is about this dictionary on another checkpoint and other text. The one calibration point is block 21, same 12 texts, paired. The chat-model SAE (half the width, more active units) has a relative error of 0.318 against 0.373, explains 0.825 against 0.758, and its splice costs 0.68 [0.62, 0.76] of the Qwen-Scope KL (lower in 12 of 12 texts; squared error ratio 0.72). Per unit of error the two are equal: splice / cov noise 1.26 and 1.28, splice / irr noise 2.02 and 2.03, splice / foreign error 1.72 and 1.68. Two things differ in kind. The part that the base-model SAE leaves unexplained is written along by later blocks twice as much (clean-pass coefficient 0.188 against 0.095; difference 0.093 [0.068, 0.116]). And it has more low-dimensional structure: 2.9 % of its z-scored variance in two axes against 0.7 % (pool sample); the Qwen-Scope errors have 3.2 / 2.2 / 3.0 % at blocks 2 / 8 / 14 and 0.7 % at block 0. Both fit an error that contains directions the chat model uses and the base dictionary lacks. So 'the error is content' (foreign-error contrast in C11, C12, first sentence of C13) is partly a property of the mismatch, and the depth profile of C10 / C11, on which I3 rests, cannot be separated from it; width, number of active units, SAE type and training text differ as well. Smaller points: the split inside compress() of ufo_sae2.py is by position in the pool sample (read from the code, pool file not opened): the fit two thirds hold all wikitext states (about 300) and chat states, the held-out third chat states only. And 'does not move the state towards a low-dimensional geometry' is expected for 50 of 32,768 directions (plan critique U1-8).",
+      "fix": "Head C10-C14 with 'for Qwen-Scope SAEs applied to the chat model'. To separate the mismatch: run the base model with the same SAEs on the wikitext half (explained variance and splice KL per block), or use chat-model SAEs at blocks 0, 2 and 14. Until then make no statement about 'an SAE' in general. This changes the reach of C10-C14 and I3, not their numbers."
+     },
+     {
+      "claim": "C11 / C12: 'An error vector of another state of the same size costs as much at block 0 and half as much at block 14'; 'erased like noise at blocks 0-2'",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Splice / foreign error recomputed: 0.92 [0.69, 1.17] (block 0), 1.31 [1.11, 1.62] (block 2), 1.69 [1.47, 2.02] (8), 1.93 [1.73, 2.20] (14), 1.72 [1.42, 2.01] (21), 1.68 [1.47, 1.93] (chat-model SAE, 21). The SAE's own error is worse than a foreign one from block 2 on; the draft names only the two ends. Splice KL per squared relative error: 1.14 / 1.43 / 1.10 / 1.43 / 2.14 (chat-model SAE 2.01). The rise of the KL from block 0 to block 14 (4.6-fold) is mostly the larger error (0.241 to 0.459, 3.6-fold when squared), not a more harmful one. Same top token after the splice: 0.888 / 0.855 / 0.797 / 0.749 / 0.784. C12: the share left after four blocks (0.48 / 0.42) lies between irr (0.36 / 0.32) and cov (0.74 / 0.64), equals that of a foreign error (0.48 / 0.43) and is near that of an isotropic vector in the free runs (0.44 / 0.36). That is the behaviour of a generic direction.",
+      "fix": "Add block 2 (1.31) and say that the KL profile over depth follows the size of the error. For the PCA sentence and 'kept like content' see Recomputation B. No conclusion changes."
+     },
+     {
+      "claim": "C13: 'The part of the clean state outside the data subspace gets -0.40 / -0.42 / -0.32 over the next four blocks' and 'later blocks write ALONG the part the SAE does not explain, more than along the explained part'",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "The three numbers are right: -0.40 [-0.47, -0.32], -0.42 [-0.44, -0.40], -0.32 [-0.35, -0.29] at blocks 0 / 2 / 8. Left out: the same table has +0.19 [0.11, 0.27] at block 14 and +0.22 [0.17, 0.26] at block 21. And over all later blocks the outside part of block 2 is written along: +4.20 [0.57, 8.01] (block 8: +1.25 [0.22, 2.30]; block 0: -0.82 [-7.94, 5.96]). Cumulative for block 2: -0.49 by block 8, back above zero at block 16, +4.2 at the end. An added irr vector is at -0.68 after four blocks and at -0.95 at the end. So the model's own low-variance part is written against for a few blocks, 55-63 % as fast as a foreign vector, and is then built up again. It behaves like content (cov vector from block 2: -0.35 after four blocks, +0.30 at the end), not like a foreign vector. The coefficients are correlations in a clean pass (Recomputation B). First sentence: with the chat-model SAE at block 21 the unexplained part gets a third of the explained part (0.095 against 0.290; ratio 0.33 [0.24, 0.47]) and with Qwen-Scope at block 21 0.69 [0.58, 0.98]. The sentence holds for base-model SAEs at blocks 0-8, where the sums are carried by the late blocks.",
+      "fix": "Give all five sites and both horizons (next four blocks, all later blocks). Do not use the -0.4 as evidence that the network removes its own off-subspace components. At most: 'in blocks 0-8 the next four blocks write against the low-variance part of the clean state; later blocks write along it'. This changes the reading."
+     },
+     {
+      "claim": "C14: 'SAE as a filter: of noise of size 0.3 |h| it passes 38-42 %' and the real-time comparison",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "evidence": "Real time against the noise alone, paired, both classes. Block 0: 0.96 [0.66, 1.31] (cov), 1.46 [1.03, 2.05] (irr; worse in 9 of 12 texts). Block 2: 1.71 [1.20, 2.37], 1.64 [1.28, 1.95]. Block 14: 3.87 [3.31, 4.45], 4.50 [3.61, 5.53]. The draft quotes cov only. The real-time KL is the sum of the SAE's own cost and of what it hands on: real time / (splice + oracle row) = 0.94 / 1.07 / 0.93 / 0.88 / 0.97 / 0.93. The SAE would therefore pay only for noise whose own KL exceeds splice / (1 - share handed on): about 0.08-0.09 nats at block 0, 0.18-0.19 at block 2, 0.54-0.58 at block 14. If KL keeps growing with the square of the size that is noise of about 0.30-0.37, 0.44 and 0.78-0.84 state norms (extrapolated; only size 0.3 was run). 'Passes 38-42 %' is the size of the change of the reconstruction. Along the noise it is 0.04-0.08 of the noise at blocks 0 and 2, in other directions 0.37-0.41. The SAE does not let part of the noise through; it answers with a different change (18-25 % of the active units change). That change costs more per unit than the noise: oracle KL / noise KL 0.20-0.27 against a squared size of 0.14-0.18 (block 14: 0.44-0.48 against 0.26-0.34). One noise size, one draw, 12 texts, base-model SAEs.",
+      "fix": "Give both classes and the break-even size. Replace 'passes' by 'answers with a change of 38-42 % of the noise's size, nearly orthogonal to it'. This changes the statement for block 0 (break-even for cov, a loss for irr)."
+     },
+     {
+      "claim": "C15 and H1: 'The figure describes the prompt set'",
+      "status": "number differs",
+      "severity": "should fix",
+      "evidence": "Read from ufo_compress.log, not recomputed. Held-out share of two principal axes: 0.307-0.399 in blocks 0-8 (draft 32-39 %) and 0.076-0.099 in blocks 23-26 (draft 9-11 %, which are the fit values 0.102-0.113). Autoencoder held-out: 0.281-0.397 after 1500 steps and 0.312-0.439 after 300 (blocks 0-20). Out of sample the autoencoder is below two linear axes at blocks 0 and 8 (0.283 against 0.322; 0.281 against 0.394) and above them at blocks 14, 20 and 26 (0.347 / 0.330 / 0.210 against 0.248 / 0.175 / 0.097), where a two-dimensional code can index 18 families. The conclusion follows from the length and family figures. What C15 cannot do for H1: there is no level to compare with. The same measure on the untrained model, on a Gaussian surrogate with the same covariance, and on a task that meets the paper's conditions (two free variables, fixed token roles; the addition grid stood at 1350 of 2025 problems when I looked) is missing. The only baseline is the column shuffle (0.000 held-out), which any network beats.",
+      "fix": "Correct the two ranges (31-40 % and 8-10 % held-out); no conclusion changes. State that C15 speaks against reading the two-dimensional share as an organiser on this prompt set, and that the outcome form of H1 stays untested until the grid and the untrained run are in."
+     },
+     {
+      "claim": "I1: 'something in the forward pass that removes what does not belong: a generic negative feedback ... twice as strong for directions outside the data subspace, which halves the output damage of such vectors ... carried by the bulk of weakly active neurons'",
+      "status": "not supported",
+      "severity": "must fix",
+      "evidence": "Five phrases do not survive the tables. 'Removes': after every block and in every row the deviation is larger than the vector (1.07-1.28 one block later, never below 1.04 afterwards); 3-8 % of a block's reaction is erasure, the rest is new deviation, and that deviation costs 1.5-2.3 times a random direction of the same size at the output (pooled; about 1.0-1.35 on the wikitext half, Recomputation A). 'What does not belong': the coefficient is the same for a vector a quarter the size of what real states carry in that subspace and for one 2.6 times larger; a generic direction inside the 98 % subspace gets 0.19-0.21. 'Twice as strong outside the data subspace': it is half as strong along the directions of highest variance; at the output irr and isotropic vectors cost the same (1.03 [0.89, 1.21]) and irr costs 0.68 [0.57, 0.80] of cov. 'Halves the output damage of such vectors': shown for irr at block 2 only (2.01); 1.33 at block 14; for cov 1.29 and 0.90; not run for rand. 'Lower two thirds' and 'bulk of weakly active neurons': for cov and mix q is 0.11-0.13 in blocks 1-10, 0.05 in blocks 11-16 and negative at block 16 (-0.068); the many-neuron picture holds for blocks 1-9 (Recomputation B); 'weakly active' is not shown, a negative gate value is not a small activation. What stands: a learned (untrained network: 0.000), linear, unspecific contraction by the MLPs, about 0.2 per block for a generic direction in blocks 1-10. On the UFO sentence: the conclusion is right for a reason that is not in the list. The paper's UFO exists only during training, so no run-time property could be one; 'not low-dimensional, no separate component, linear, no threshold' are properties of the contraction, not criteria from the paper.",
+      "fix": "Proposed wording: 'Training has given the MLPs of blocks 1-16 a linear contraction that the untrained network lacks: a block writes against any added vector with a coefficient of about 0.2, and about 0.11 along the few hundred directions in which real states vary most. It does not bring the state back: the block's reaction in other directions is larger than what it removes. Without it the output damage of a low-variance vector added at block 2 would be twice as large. It has no threshold and does not grow with the size of the vector. It is not the paper's organiser, which acts only during training.'"
+     },
+     {
+      "claim": "I2: 'A safety mechanism that brakes when the disturbance gets too large was not found (C3)'",
+      "status": "confirmed",
+      "severity": "minor",
+      "evidence": "Supported within what was run. The erasure per unit falls with size (q(1) / q(0.03) = 0.75 and 0.59), the KL slope between 0.3 and 1 is 2.07-2.62, and no block shrinks the deviation at any size (size 1: 1.07-1.27 times the vector one block later). Not covered by 'not found': sizes above one state norm, a disturbance repeated over more than 32 generated tokens, other models. Two size-dependent effects exist and should be named, so that 'not found' is not read as 'looked everywhere'. The final normalisation flattens the output when the deviation adds norm (entropy rises more than loss for cov vectors of size 1 at blocks 0-8; this is arithmetic and not general, see Recomputation A). And a vector that is the same at all positions is added up by attention (finding on C6), the opposite of a brake.",
+      "fix": "Add 'for single disturbances of 0.03 to 1 state norm in one model'. The conclusion is unchanged."
+     },
+     {
+      "claim": "I3: 'For an SAE in the loop the lowest block is the cheapest place. As a filter the SAE helps only if its own reconstruction error is put back (read, modify, write back the difference)'",
+      "status": "not supported",
+      "severity": "blocks the claim",
+      "evidence": "Second sentence. The row that 'helps' is SAE(h + d) + (h - SAE(h)). It uses the error of the undisturbed state h, which a running system does not have. With the error of the state it actually sees, SAE(h + d) + (h + d - SAE(h + d)) = h + d: the noise passes unchanged. 'Write back the difference' makes the SAE free of cost while it changes nothing, and then it is no filter. As a filter in real time the SAE is worse than the noise at blocks 2 and 14 for both classes and at block 0 for irr (finding on C14). First sentence. True for the five Qwen-Scope sites (KL 0.066 at block 0; splice / cov noise 0.65 [0.42, 1.01], splice / irr noise 0.94 [0.69, 1.33]), with five limits. It is the profile of base-model SAEs on the chat model (finding on point d). 'Cheapest' is not cheap: the top token changes at 11 % of positions, and in the loop run the text left the undisturbed text in 12 of 12 prompts (first difference at token 8.5 in the median). Cost is half of the question: what an SAE can read and write one block above the embedding was not looked at. Equal noise is not better tolerated there (C8), and a single-position vector at a low block spreads to later positions (Recomputation A). A systematic change costs 1.3-2.3 times independent noise (C6).",
+      "fix": "Write: 'Of the five sites tested with base-model SAEs, block 0 costs least (0.066 nats per token; top token changed at 11 % of positions). An SAE that only adds the difference between a modified and the unmodified reconstruction costs nothing while it changes nothing. Used as a filter (state replaced by the reconstruction) it does more harm than noise of 0.3 state norms at blocks 2 and 14 and breaks even at block 0 for one of two kinds of noise. Whether the lowest block is a useful place to communicate was not tested.'"
+     },
+     {
+      "claim": "I4: the random-initialised control and the model that keeps only its strongest activations 'are being computed'",
+      "status": "note",
+      "severity": "should fix",
+      "evidence": "Both outputs were on disk when I looked (ufo_damp2_randinit.npz 23:40, ufo_damp2_top0.5.npz 23:26, ufo_damp2_small.npz 23:30, ufo_lin_randinit.log 23:42). They are not in my file list, so this is a first look. Untrained network, same texts: q_tot 0.000 for cov, irr, rand and mix in every band (largest single block 0.002), first-order km 0.000, share left 1.00, contrast irr - cov 0.001 [-0.000, 0.002] in blocks 1-4. The erasure and the class contrast are products of training. Free runs there: deviation 4.9 times the vector at the end from block 2, relative deviation grows 1.50-fold (trained: falls to 0.39-0.48), KL 0.085-0.086. Strongest half of the activations kept in every block: q is 0.950 [0.947, 0.952] (cov) and 0.953 [0.951, 0.954] (irr) of the replicate run with the same draws; clean loss 3.508 against 3.495. This run cannot answer its question. The hard cut itself reacts to the vector: orthogonal reaction per unit at f = 0.03 is 1.14 against 0.74 (at 0.3: 0.77 against 0.73). A neuron that crosses the cut changes its write by its whole activation, and for a negative-gate neuron with aligned weights that change points against the vector as well (argument, not measured). So 95 % does not show that the weaker half carries 5 %. The replicate run (same texts, other direction draws) is useful by itself: q agrees to 0.002 in every band; row means of KL differ by up to 22 % (L2_cov 0.111 against 0.092); the per-text correlation between the two draws is 0.31-0.80.",
+      "fix": "Report the untrained result as 'learned', not as 'mechanism'. For the second question use the exact split by activation rank from ufo_lin.py on the trained model (coded, not stored) and not the top0.5 run. Use the replicate to put a draw-to-draw uncertainty on every KL."
+     },
+     {
+      "claim": "Point (e): what the single-pass design cannot say about a real-time loop",
+      "status": "note",
+      "severity": "should fix",
+      "evidence": "C1-C15 are single passes over given text: one disturbance per position, drawn once, no generated token fed back. They cannot show (1) whether errors add up over generated text, (2) how much two runs differ, although H2 allows a non-deterministic loop, (3) what a purposeful write does: no row changes an SAE feature and writes it back; the nearest rows are 'same vector at all positions' and the splice, (4) more than one SAE site at a time, (5) sampling instead of a fixed text, (6) contexts beyond 64 tokens. A loop run is on disk but not in the claims (ufo_loop.npz: 12 prompts, 32 greedy tokens, disturbance at every token). My reading of it. The per-token KL to the clean model on the same text does not grow: slope per 10 tokens for cov noise at block 2 -0.028 [-0.064, 0.005], +0.019 [-0.002, 0.050], +0.008 (three seeds); SAE at block 0 -0.019 [-0.053, 0.001]; SAE at block 14 +0.063 [-0.045, 0.187]. KL in tokens 17-32: 0.070-0.125 (noise 0.3 at block 2, six rows), 0.029 (SAE at block 0), 0.135 (block 2), 0.639 (block 14). The text is identical to the clean text at the end in 0 of 12 prompts for cov noise and for every SAE row (first difference in the median at token 5-6.5 and 2.5-8.5). Size 1 at block 2 gives KL 2.0-5.2 and, in the stored sample, another kind of answer. Limits: the run scores distance per token, not whether the answer is still right; the three noise seeds are not compared with each other.",
+      "fix": "Say in the summary that stability over 32 greedy tokens was seen once and that the communication itself was not tested. If the loop run is used, add a read-out at the level of the task and the difference between seeds, and see the next finding."
+     },
+     {
+      "claim": "ufo_loop.py: which positions are disturbed (bears on any use of the loop run next to C11)",
+      "status": "bug in script",
+      "severity": "should fix",
+      "evidence": "By reading the code. ufo_common.py marks as template the special tokens and, after each marker, the role name and line breaks; the single-pass runs neither disturb nor score them. ufo_loop.py builds its own mask from the special tokens only, and treats every generated token as valid. The loop therefore also disturbs and splices the role name and the line breaks directly before the answer, tokens that the base-model SAEs never saw in training. The consequence is visible: the first two generated tokens carry the excess of the SAE rows (SAE at block 2: 0.958 against 0.135 in tokens 17-32; first token 1.80 in the mean, 0.48 in the median; SAE at block 14: 1.37), while the noise rows show no such start (0.11 and 0.24 at the first token).",
+      "fix": "Use the mask of ufo_common.py in the loop and rerun before comparing loop numbers with C11. The numbers of C1-C15 are not affected."
+     },
+     {
+      "claim": "Point (f): which statements rest on one model, 16 texts, 64 tokens",
+      "status": "note",
+      "severity": "should fix",
+      "evidence": "All of them rest on one model and one checkpoint; 'every normally trained network' (H1) cannot be addressed. By robustness within that. (1) Solid: the local q and its class contrast (16 texts, 822 scored positions; intervals of about 0.004; replicate draw equal to 0.002; untrained control), the first-order formula (902 positions and the weights), the pool statistics (192 texts, 13,551 states). (2) Carried by few positions and one draw: every KL. The top tenth of the positions carries 42-54 % of a row's summed KL. Two draws on the same text differ by a factor with a standard deviation of 0.30-0.54 in the logarithm, as much as texts differ from each other (0.41-0.59). Safe are paired ratios inside one draw (A / normal, same / all) and factors of two. Not safe are the order of the injection blocks (C8), the range 1.5-2.3 (C7), 'cov and irr cost the same without erasure' (1.00 [0.74, 1.37], one draw) and the single-position values (16 positions). (3) 12 texts, one noise size, one draw, one SAE family: C10-C14. (4) 64 tokens: everything about attention (its small part in C2, the coherent vector, the spread to later positions). (5) Half of the texts are answers written by a fine-tuned model, read by the chat model; C7 differs between the halves (Recomputation A). (6) C15 rests on one prompt set of 18 families.",
+      "fix": "Mark each claim with its class (1) to (3). Before quoting an order that is based on KL, average the two draws that exist or add a third."
+     },
+     {
+      "claim": "What a careful one-paragraph summary for the user should say about H1 and H2",
+      "status": "note",
+      "severity": "must fix",
+      "evidence": "Built from the findings above. Every figure in it is one I recomputed or one confirmed by Recomputation A or B.",
+      "fix": "H1 (every normally trained network has built its own small UFO). Not confirmed, and in the paper's sense it cannot be confirmed at run time, because the paper's UFO is a second network that acts only during training. For a weaker form speaks one result: training gave Qwen3-1.7B something the untrained network does not have. The MLPs of blocks 1 to 16 write against any vector that is added to the stream, with about 20 % of the vector per block and about 11 % along the few hundred directions in which real states vary most (untrained network: 0.000). Against reading this as an organiser: it is linear and unspecific; it does not bring the state back (after every block the deviation is larger than the vector that was added); a direction inside the data subspace is treated like one outside unless it is one of the high-variance directions; and by the paper's own measure the two-dimensional share of the MLP activations (31 to 40 % in blocks 0 to 8) is prompt length and question family. Not tested: whether ordinary training lowers the loss of a UFO that only watches (possible in the toy model only), a task that meets the paper's conditions (the addition grid was still running), the same measure in the untrained model, and any second model, so nothing can be said about 'every' network. H2 (an SAE alongside the network in real time, mostly at the lowest layer; does the network brake large disturbances?). For: of the five sites tested, block 0 is where the SAE costs least (0.066 nats per token, top token unchanged at 89 % of positions) and where its error does no more harm than noise of the same size; an SAE that only adds the difference between a modified and the unmodified reconstruction adds no error while it changes nothing; in one loop run (12 prompts, 32 generated tokens, greedy) the distance to the undisturbed model per token did not grow. Against: no brake was found for single disturbances between 0.03 and 1 state norm (the erasure per unit falls with size, the damage grows with the square of the size or faster); the erasure halves the damage only for low-variance vectors added at block 2 and does nothing for content-like vectors at block 14, and an SAE's own error is content-like there; one and the same vector at all positions costs 1.3 to 2.3 times more than independent noise, and an SAE's error is of that systematic kind; used as a filter the SAE does more harm than the noise it was meant to remove at blocks 2 and 14 (1.6 to 1.7 and 3.9 to 4.5 times), and at block 0 it breaks even for one kind of noise and loses for the other (1.5 times); equal noise is not better tolerated at the lowest blocks; and in the loop run the text departed from the undisturbed text in all 12 prompts for every SAE row. Not tested: the communication itself (the SAE changing a feature and writing it back), SAEs trained on this chat model below block 21 (all numbers for the low blocks use SAEs of the base model), texts longer than 64 tokens, sampling, more than one SAE site, disturbances larger than one state norm, and a second model. All of this comes from one model, 16 texts (12 for the SAE runs) and one or two draws of directions; a second draw moved single damage values by up to 22 %."
+     }
+    ],
+    "recomputed": [
+     {
+      "quantity": "C1 axes for 98 % of held-out variance, blocks 0-21",
+      "draft": "1654-1837",
+      "mine": "1654-1837 (all 22 blocks, from the stored pool statistics)"
+     },
+     {
+      "quantity": "C1 share of held-out variance in 8 axes, blocks 0-21",
+      "draft": "14-15 %",
+      "mine": "13.2-18.4 % over all 22 blocks; 13.9-15.3 % at the seven blocks printed in ufo_pool.log. No conclusion changes."
+     },
+     {
+      "quantity": "C1 median distance of two real states / norm, blocks 0-21",
+      "draft": "1.06-1.21",
+      "mine": "1.064-1.212"
+     },
+     {
+      "quantity": "C1 further statistics, blocks 0-21",
+      "draft": "not given",
+      "mine": "64 axes hold 35.2-43.7 %, 256 axes 56.2-70.2 %, participation ratio 107-223"
+     },
+     {
+      "quantity": "C2 contrast irr - cov, q_tot, f = 0.3, bands 1-4 / 5-10 / 11-16 / 17-22 / 23-26",
+      "draft": "+0.102 [0.101, 0.103] / +0.078 / +0.102 / +0.042 / +0.012",
+      "mine": "0.102 [0.101, 0.103] / 0.078 [0.077, 0.080] / 0.102 [0.100, 0.105] / 0.042 [0.040, 0.043] / 0.012 [0.010, 0.013]; replicate draw 0.102 / 0.079 / 0.102 / 0.041 / 0.012; untrained network 0.001 / -0.000 / -0.000 / 0.000 / -0.000"
+     },
+     {
+      "quantity": "C2 erasure of an isotropic vector inside the 98 % subspace (solved from the rand and irr rows), f = 0.3",
+      "draft": "not given",
+      "mine": "0.192 [0.187, 0.196] / 0.206 [0.202, 0.210] / 0.093 [0.089, 0.096] / 0.029 [0.028, 0.031] / 0.014 [0.013, 0.016]; irr minus this +0.021 / +0.003 / +0.059 / +0.014 / +0.004 (agrees with Recomputation A). Changes the reading in I1."
+     },
+     {
+      "quantity": "C2 attention part of q, f = 0.3",
+      "draft": "at most 0.025",
+      "mine": "band means at most 0.024; single blocks from -0.050 (cov, block 11) to +0.054 (irr, block 11). No conclusion changes."
+     },
+     {
+      "quantity": "C3 log-log slope of the output KL (cov 2, irr 2, cov 14, irr 14)",
+      "draft": "2.0 between 0.03 and 0.3; 2.1-2.6 between 0.3 and 1",
+      "mine": "0.03-0.1 and 0.1-0.3: 2.03, 2.04 / 1.85 [1.71, 2.00], 1.97 / 2.00, 2.05 / 2.00, 2.04; 0.3-1: 2.29 / 2.07 / 2.62 / 2.16. No conclusion changes."
+     },
+     {
+      "quantity": "C4 size of the deviation relative to the added vector",
+      "draft": "37-44 fold at the end; relative deviation 0.39-0.48 of its start value",
+      "mine": "at block 27: 36.5-44.3; relative 0.388-0.475 (rows from block 2). One block after the injection 1.07-1.28 in all 34 plain free rows, never below 1.04 afterwards."
+     },
+     {
+      "quantity": "C5 KL ratio A / normal (irr 2, cov 2, irr 14, cov 14)",
+      "draft": "2.01 [1.70, 2.42]; 1.29 [1.22, 1.36]; 1.33 [1.30, 1.38]; 0.90 [0.88, 0.92]",
+      "mine": "2.01 [1.69, 2.41]; 1.29 [1.22, 1.36]; 1.33 [1.30, 1.38]; 0.90 [0.88, 0.92]. Ratio of the mean squared final relative deviation: 2.01 [1.85, 2.21]; 1.23 [1.17, 1.29]; 1.33 [1.25, 1.41]; 0.90 [0.89, 0.92]."
+     },
+     {
+      "quantity": "C6 KL same vector / independent vectors (cov 2, irr 2, cov 14, irr 14)",
+      "draft": "1.3-2.3",
+      "mine": "1.30 [1.02, 1.61], 1.57 [1.24, 1.91], 2.31 [1.66, 2.97], 2.30 [2.07, 2.51]. Attention coefficient along the vector over the next four blocks: -0.051 / +0.061 / -0.201 / -0.130 (same vector) against -0.002 / +0.067 / -0.027 / -0.005 (independent)."
+     },
+     {
+      "quantity": "C7 KL / late-matched, f = 0.3, the six rows present in both draws (L2 cov, irr, rand; L14 cov, irr, rand)",
+      "draft": "1.5-2.3 (14 rows)",
+      "mine": "main run 1.93 / 1.98 / 1.51 / 1.55 / 1.64 / 2.32; replicate draw 1.89 / 1.71 / 1.74 / 1.59 / 2.13 / 1.77; untrained network 1.16 (block 2), 1.06 (block 14)"
+     },
+     {
+      "quantity": "C8 output KL at f = 0.3, blocks 0 / 2 / 8 / 14",
+      "draft": "cov 0.078 / 0.111 / 0.080 / 0.083; irr 0.053 / 0.071 / 0.062 / 0.055",
+      "mine": "same values. Paired: cov 2/0 1.43 [1.12, 1.88], 2/14 1.33 [1.02, 1.69], 0/14 0.93 [0.70, 1.20]; irr 2/0 1.34 [1.14, 1.55], 2/14 1.29 [1.00, 1.62]. Replicate draw: block 2 0.092 (cov), 0.068 (irr); block 14 0.079, 0.063; 2/14 1.16 [0.94, 1.48] and 1.08 [0.71, 1.67]."
+     },
+     {
+      "quantity": "C9 erasure of irr by sign of the gate input, blocks 1-9",
+      "draft": "0.16-0.25 against about -0.01; 85-98 % of the neurons negative",
+      "mine": "+0.160 to +0.254 against -0.011 to +0.017; share negative 0.837-0.975 (agrees with Recomputation B). cov minus irr: blocks 1-4 -0.091, of which negative-gate neurons -0.100; blocks 5-9 -0.080, of which -0.082; blocks 10-16 -0.095, of which -0.033."
+     },
+     {
+      "quantity": "C11 splice KL and splice / foreign error (blocks 0 / 2 / 8 / 14 / 21)",
+      "draft": "0.066 / 0.142 / 0.221 / 0.301 / 0.299, chat-model SAE 0.203; foreign error 0.072 at block 0 and 0.156 against 0.301 at block 14",
+      "mine": "same KL values; splice / foreign 0.92 [0.69, 1.17] / 1.31 [1.11, 1.62] / 1.69 [1.47, 2.02] / 1.93 [1.73, 2.20] / 1.72 [1.42, 2.01], chat-model SAE 1.68 [1.47, 1.93]; chat-model / Qwen-Scope splice KL at block 21: 0.68 [0.62, 0.76]"
+     },
+     {
+      "quantity": "C13 clean-pass coefficient along the part of the state outside the data subspace",
+      "draft": "-0.40 / -0.42 / -0.32 over the next four blocks (blocks 0 / 2 / 8)",
+      "mine": "-0.40 [-0.47, -0.32] / -0.42 [-0.44, -0.40] / -0.32 [-0.35, -0.29]; not in the draft: +0.19 [0.11, 0.27] (block 14), +0.22 [0.17, 0.26] (block 21); over all later blocks -0.82 [-7.94, 5.96] / +4.20 [0.57, 8.01] / +1.25 [0.22, 2.30] / +0.42 / +0.19. Changes the reading."
+     },
+     {
+      "quantity": "C13 clean-pass coefficient along the unexplained part at block 21, Qwen-Scope against chat-model SAE",
+      "draft": "not compared",
+      "mine": "0.188 [0.148, 0.233] against 0.095 [0.062, 0.129]; difference 0.093 [0.068, 0.116]; unexplained / explained 0.69 [0.58, 0.98] and 0.33 [0.24, 0.47]"
+     },
+     {
+      "quantity": "C14 KL of the SAE in real time against the noise alone (blocks 0 / 2 / 14)",
+      "draft": "cov: 0.078 against 0.081, 0.155 against 0.091, 0.330 against 0.085",
+      "mine": "cov: same values, ratios 0.96 [0.66, 1.31] / 1.71 [1.20, 2.37] / 3.87 [3.31, 4.45]; irr (not in the draft): 0.088 against 0.060, 0.142 against 0.087, 0.307 against 0.068, ratios 1.46 [1.03, 2.05] / 1.64 [1.28, 1.95] / 4.50 [3.61, 5.53]. Changes the statement for block 0."
+     },
+     {
+      "quantity": "C15 held-out share of two principal axes (read from ufo_compress.log)",
+      "draft": "32-39 % in blocks 0-8; 9-11 % in blocks 23-26",
+      "mine": "0.307-0.399 in blocks 0-8; 0.076-0.099 in blocks 23-26 (the fit values are 0.102-0.113). No conclusion changes."
+     },
+     {
+      "quantity": "I4 untrained network: local q_tot, all classes and bands",
+      "draft": "being computed",
+      "mine": "0.000 (band means between -0.000 and +0.001, largest single block 0.002); share left 1.00; KL 0.085-0.086 (block 2), 0.044-0.045 (block 14); relative deviation grows 1.50-fold from block 2"
+     },
+     {
+      "quantity": "I4 strongest half of the activations kept: relative to the replicate run with the same draws",
+      "draft": "being computed",
+      "mine": "q_tot blocks 1-10: 0.950 [0.947, 0.952] (cov), 0.953 [0.951, 0.954] (irr), 0.949 (rand 0.3), 0.947 (rand 0.03); KL of block-2 vectors 1.35 [1.10, 1.60] / 1.48 [1.19, 1.84] / 1.68 [1.51, 1.87] (cov / irr / rand), block 14: 1.09 / 1.18 / 1.08"
+     },
+     {
+      "quantity": "Output KL by class, both direction draws averaged",
+      "draft": "not given",
+      "mine": "block 2: irr / cov 0.68 [0.57, 0.80], irr / rand 1.03 [0.89, 1.21]; block 14: irr / cov 0.72 [0.62, 0.82], irr / rand 1.04 [0.93, 1.16]"
+     },
+     {
+      "quantity": "Loop run on disk (not in the draft): per-token KL in generated tokens 17-32",
+      "draft": "no claim",
+      "mine": "noise 0.3 at block 2: 0.070-0.125 (six rows); SAE at block 0 / 2 / 14: 0.029 / 0.135 / 0.639; text identical to the clean text at the end: 0 of 12 prompts for cov noise and for all SAE rows"
+     }
+    ]
+   }
+  }
+ ],
+ "round2": [
+  {
+   "label": "audit:7.1-7.8",
+   "result": {
+    "verdict": "Audited: README sections 7.1 to 7.8 in the version of 00:41:09 UTC (the README and three result sets were replaced at 00:29 while I worked: new ufo_loop.*, ufo_lin.* with five extra direction classes, new ufo_damp2_noneg.*; all numbers below are from the files now on disk). Every table cell and every number in the bullets of 7.1 to 7.8 was found in the arrays or recomputed with my own code. No number is wrong beyond the last digit. Seven values are off by one unit in the last digit through double rounding. The five parts named as not yet recomputed all reproduce: (a) the loop table (all 8 rows, brackets with seed 0), (b) top0.5 against small, (c) the untrained network, (d) the finer split table (all 21 cells), (e) the row 'beliebige Richtung im Datenraum' and the size ratios by block group. The new band table in 7.3 (18 cells) and the new gate test in 7.4 also reproduce.\n\nThe objections are about readings, not arithmetic. One must fix: the loop sentence 'bleibt auf gleichem Niveau oder fällt' holds for blocks 0 and 2 only; both stored rows at block 14 rise by about half, and one of them (noise 0.3 after block 14) is missing from the table. Ten should fix: the explanation of the top0.5 result does not fit the README's own split table; the title of 7.3 ('Jeder Block', 'umso weniger, je stärker') and 'verschwindet danach'; 'verdoppelt sich' without its limit in the Kurzfassung and the title of 7.5; 'rund ein Fünftel' for blocks 1 to 16; the first bullet of 7.7 holds for blocks 0 and 2 only; 'mehr auf die späteren Positionen' has intervals that include no difference; the SAE remainder costs more than a foreign error from block 2 on, not from block 14; the total '+4,2' is the kind of sum the first round objected to; the loop command lacks NEW=32; 'Die Attention addiert auf' is shown at block 14 only.\n\nFirst review round: all must-fix items are applied in 7.3 to 7.8. Partly applied: C3 (ratios by part, attention doubling), C7 (statistic not named, range for f = 1), C10 (block 21 missing), wiki/chat split of the single-position KL. Two criticised forms came back in weaker shape (title of 7.5 and Kurzfassung; one total over all later blocks in 7.8).\n\nNot checked: 7.9 to 7.11 beyond the numbers they repeat from 7.1 to 7.8 and the C15 corrections; the SAE width and k (no stored file holds them); which prompt tokens the loop left untouched (script only, no token ids stored). No model was loaded, nothing was trained, no file in the repository was changed. Scripts and outputs: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/ufo_review/auditor_71_78/ (alib.py, a00 to a18, b00 to b12).",
+    "findings": [
+     {
+      "where": "7.8, Schleife, erster Punkt nach der Tabelle; 7.11 zu H2, 'Dafür', letzter Satz",
+      "status": "wording too strong",
+      "severity": "must fix",
+      "quote": "Die Abweichung schaukelt sich über 32 Token nicht auf: Sie bleibt auf gleichem Niveau oder fällt (Steigung je Token für Rauschen 0,3: zwischen −0,001 und +0,001, Intervalle um null).",
+      "evidence": "Recomputed from ufo_loop.npz (run of 00:29, 12 prompts, per-prompt least-squares slopes, bootstrap over prompts). The stated range holds for the six noise rows after block 2 only: slopes −0.0014 to +0.0009, all six intervals include 0, pooled −0.0001 [−0.0008, +0.0005]. The file holds a seventh noise-0.3 row, cov14 (Streuung 0.3 after block 14), that is not in the README table: KL 0.146 [0.107, 0.183], quarters 0.116 / 0.112 / 0.169 / 0.185, slope +0.0027 [−0.0010, +0.0067], second half / first half 1.55 [1.02, 2.30], same choice 0.88, loss 0.38. The SAE after block 14 (in the table: 0.35 / 0.57 / 0.60 / 0.52) has tokens 9-32 at 1.63 [0.92, 2.98] times tokens 1-8, slope +0.0075 [−0.0034, +0.0182]. 'Same level or falls' is shown for blocks 0 and 2 (SAE 0: −0.0014 [−0.0038, +0.0001]; SAE 2: −0.0063 [−0.0131, −0.0008]). With 12 prompts a single row cannot exclude a doubling (upper bound of the slope times 31 tokens is up to 1.3 times the level). Changes a conclusion: yes, for block 14; the statement for the lowest blocks stands.",
+      "fix": "Für Eingriffe nach Block 0 und 2 schaukelt sich die Abweichung über 32 Token nicht auf: Sie bleibt auf gleichem Niveau oder fällt (Steigung je Token für Rauschen 0,3 nach Block 2: zwischen −0,001 und +0,001, alle sechs Intervalle schließen null ein). Nach Block 14 ist das nicht gezeigt: Mit Rauschen „Streuung\" 0,3 steigt die KL von 0,12 (Token 1–8) auf 0,19 (Token 25–32), die zweite Hälfte liegt beim 1,55-Fachen der ersten [1,02; 2,30]; mit dem SAE liegt sie ab Token 9 beim 1,6-Fachen der ersten acht Token [0,9; 3,0]. Neue Tabellenzeile: Rauschen „Streuung\" 0,3 nach Block 14 | 0,146 [0,107; 0,183] | 0,12 / 0,11 / 0,17 / 0,19 | 0,88 | 0,38. In 7.11: In der Schleife wuchs der Abstand zum ungestörten Modell je Token bei Eingriffen nach Block 0 und 2 nicht; nach Block 14 ist ein Anstieg nicht ausgeschlossen."
+     },
+     {
+      "where": "7.4, Punkt 'Nur die stärkere Hälfte der Aktivierungen behalten'",
+      "status": "not supported",
+      "severity": "should fix",
+      "quote": "Die Löschung bleibt fast gleich (`q` außen 0,205 statt 0,213, Streuung 0,106 statt 0,111). Die tragenden Neuronen gehören dem Betrag ihrer Aktivierung nach meist zur stärkeren Hälfte.",
+      "evidence": "All four q values and the KL values reproduce (ufo_damp2_top0.5 against ufo_damp2_small, same texts and draws; KL ratios 1.48 [1.21, 1.82] and 1.35 [1.11, 1.60]). The explanation does not fit the README's own split row. From ufo_lin.npz (bins[..,5] / km, außen) the stronger half carries 66 % of the MLP erasure in blocks 1-4, 56 % in blocks 5-9, 75 % in blocks 10-16, so the weaker half carries 0.067 / 0.095 / 0.038. In the cut model the measured MLP part falls by only 0.009 / 0.013 / 0.002 (q_mlp cut / full 0.953 [0.951, 0.955], 0.937, 0.985; the same for Streuung and isotrop). About a third (blocks 1-4) to 40 % (blocks 5-9) of the cut model's MLP erasure is therefore not accounted for by the kept neurons. A hard cut that answers a vector by switching neurons on and off, which the text already names for the KL, is a candidate; it is not measured. The quoted q values are blocks 1-4 only (blocks 5-10: 0.198 against 0.209 and 0.123 against 0.130). Changes a conclusion: only the reading of this bullet (the run says nothing about weak activations for q either).",
+      "fix": "Der gemessene Anteil `q` bleibt fast gleich (Blöcke 1–4: außen 0,205 statt 0,213, Streuung 0,106 statt 0,111; Blöcke 5–10: 0,198 statt 0,209 und 0,123 statt 0,130). Die Zuschreibung erklärt das nicht: Nach ihr trägt die schwächere Hälfte im vollen Modell 22 bis 45 % der MLP-Löschung (Blöcke 1–9), im beschnittenen Modell fehlen aber nur 5 bis 6 %. Woher der Rest kommt, ist nicht gemessen; in Frage kommt der harte Schnitt selbst, der auf jeden Vektor mit dem Ein- und Ausschalten von Neuronen antwortet. Der Versuch sagt deshalb weder bei `q` noch bei der KL etwas über die schwachen Aktivierungen."
+     },
+     {
+      "where": "7.3, Überschrift und erster Punkt",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "quote": "### 7.3 Jeder Block schreibt gegen das an, was zugesetzt wird, und zwar umso weniger, je stärker echte Zustände in dieser Richtung streuen … Das Anschreiben gegen den Vektor („Löschung\") sitzt in den Blöcken 1 bis 16 und verschwindet danach.",
+      "evidence": "Both tables reproduce; title and bullet go beyond them. (1) After block 16 q at f = 0.3 is 0.067 / 0.060 / 0.060 (außen, blocks 17-19) and 0.047 / 0.045 / 0.045 (isotrop); blocks 17-22: 0.043 [0.042, 0.045] and 0.031 [0.030, 0.033]; block 26: 0.056 [0.053, 0.060] and 0.047 [0.044, 0.050]. Only Streuung and echt are at zero (0.002 [−0.001, 0.004]). (2) Block 16 writes along strongly varying directions: Streuung −0.068 measured, bands 9-64 and 65-256 −0.091 and −0.214 by the formula. (3) The relation is not monotone in the README's own band table: axes 1-8 are erased more than axes 9-64 in all three block groups (0.045 [0.042, 0.048] against 0.025 [0.023, 0.027]; 0.077 against 0.067; 0.076 [0.072, 0.081] against 0.007 and 0.003), and in blocks 1-9 outside directions are erased slightly less than the weakest inside axes (0.194 against 0.199; 0.216 against 0.235). Changes a conclusion: no.",
+      "fix": "### 7.3 Die Blöcke 1 bis 16 schreiben gegen das an, was zugesetzt wird, und deutlich weniger entlang der rund 250 Achsen, in denen echte Zustände am stärksten streuen. — Das Anschreiben gegen den Vektor („Löschung\") sitzt in den Blöcken 1 bis 16. Danach fällt es für schwach streuende Richtungen auf 0,05 bis 0,07 (Blöcke 17–19) und 0,02 bis 0,03 (Blöcke 20–22; in Block 26 noch einmal 0,05); entlang der Streuung ist es ab Block 17 null. Die acht stärksten Achsen werden in jeder Blockgruppe stärker gelöscht als die Achsen 9–64 (Blöcke 10–16: 0,076 gegen 0,007)."
+     },
+     {
+      "where": "Kurzfassung Punkt 8; Überschrift von 7.5",
+      "status": "earlier finding not fixed",
+      "severity": "should fix",
+      "quote": "Bleibt ein Vektor stattdessen stehen, verdoppelt sich sein Schaden. … ### 7.5 Bleibt der Vektor stehen, verdoppelt sich der Schaden",
+      "evidence": "Recomputed from ufo_damp2.npz: A / normal is 2.01 [1.70, 2.42] for außen after block 2 only (16 of 16 texts). Streuung after block 2: 1.29 [1.22, 1.36]. After block 14: 1.33 [1.30, 1.38] (außen) and 0.90 [0.88, 0.92] (Streuung, lower in 16 of 16 texts). Isotropic vectors were not run with variant A. The body of 7.5 and 7.11 state the limit; the Kurzfassung and the title drop it. The first round (C5) asked for this limit. Changes a conclusion: the headline, not the section.",
+      "fix": "Kurzfassung: Bleibt ein Vektor von außerhalb des Datenraums nach Block 2 stattdessen stehen, verdoppelt sich sein Schaden (entlang der Streuung: das 1,29-Fache; nach Block 14: das 1,33- und das 0,90-Fache). Überschrift: ### 7.5 Bleibt ein Vektor von außen nach Block 2 stehen, verdoppelt sich der Schaden"
+     },
+     {
+      "where": "Kurzfassung Punkt 8; 7.3 zweiter Punkt; 7.11 zu H1",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "quote": "Die MLPs der Blöcke 1 bis 16 schreiben je Block gegen rund ein Fünftel von allem an, was zum Zustand addiert wird … Es trifft fast jede Richtung gleich, mit rund 0,2 je Block. … mit rund 20 % je Block und mit 3 bis 13 % entlang der rund 250 Richtungen",
+      "evidence": "'About a fifth' holds for blocks 1-9. Measured q at f = 0.3: isotrop 0.196 / 0.206 (blocks 1-4 / 5-10) but 0.101 in blocks 11-16; außen 0.213 / 0.209 / 0.152. MLP part alone: 0.18 to 0.19 in blocks 1-10, 0.096 (isotrop) and 0.137 (außen) in blocks 11-16. Formula by band, blocks 10-16: 0.103 (axes 257-1024), 0.141, 0.155 (outside), isotropic 0.112. '3 to 13 %' is blocks 1-9 (0.025 to 0.130); in blocks 10-16 the three strong bands are at 0.076 / 0.007 / 0.003. Changes a conclusion: no; the size applies to blocks 1 to 9.",
+      "fix": "Die MLPs der Blöcke 1 bis 9 schreiben je Block gegen rund ein Fünftel von allem an, was zum Zustand addiert wird (Blöcke 10 bis 16: ein Zehntel bis ein Sechstel), und deutlich weniger entlang der Richtungen, in denen echte Zustände am stärksten streuen. — 7.3: Es trifft fast jede Richtung gleich, mit rund 0,2 je Block in den Blöcken 1–9 und 0,10 bis 0,16 in den Blöcken 10–16. — 7.11: … mit rund 20 % je Block (Blöcke 1 bis 9; danach 10 bis 16 %) und mit 2 bis 13 % (Blöcke 1 bis 9; danach 0 bis 8 %) entlang der rund 250 Richtungen …"
+     },
+     {
+      "where": "7.7, erster Punkt",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "quote": "Ein Vektor von außen ist nach vier Blöcken zu zwei Dritteln gelöscht und am Ende nicht mehr nachweisbar (0,05 [−0,01; 0,11]).",
+      "evidence": "True for vectors added after block 0 or 2 (projection after four blocks 0.36 and 0.32; at the end 0.04 [−0.06, 0.14] and 0.05 [−0.01, 0.11]). The table above the sentence shows otherwise for the other two blocks: after block 8 the projection is 0.42 [0.41, 0.42] after four blocks and 0.23 [0.21, 0.26] at the end; after block 14 it is 0.64 [0.63, 0.65] and 0.52 [0.51, 0.54]. Changes a conclusion: no, it fits 'the erasure sits in the lower blocks'.",
+      "fix": "Ein Vektor von außen, der nach Block 0 oder 2 zugesetzt wird, ist nach vier Blöcken zu zwei Dritteln gelöscht und am Ende nicht mehr nachweisbar (0,04 [−0,06; 0,14] und 0,05 [−0,01; 0,11]). Nach Block 8 bleiben nach vier Blöcken 0,42 und am Ende 0,23 [0,21; 0,26], nach Block 14 0,64 und 0,52 [0,51; 0,54]."
+     },
+     {
+      "where": "7.7, Punkt 'Die Löschung ist lokal, der Schaden nicht'",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "quote": "Nach Block 2 zugesetzt, fällt in der Summe aber mehr auf die späteren Positionen (0,34 und 0,12) als auf die eigene; nach Block 14 weniger (0,04).",
+      "evidence": "All values reproduce (at the position 0.180 / 0.073 / 0.107 / 0.065, medians 0.023 / 0.021 / 0.034 / 0.022, per later position 0.0078 to 0.0009, sums 0.343 / 0.117 / 0.043 / 0.035). The comparison is stated without its interval. Sum over later positions divided by the KL at the position: 1.91 [0.38, 3.87] (Streuung) and 1.60 [0.75, 3.04] (außen) after block 2; paired differences 0.163 [−0.114, 0.549] and 0.044 [−0.022, 0.099]; the sum is larger in 14 and 11 of 16 texts. After block 14: 0.40 [0.16, 1.04] and 0.55 [0.23, 1.03]. The mean at the position for Streuung after block 2 rests on two wikitext positions (1.57 and 0.93; wiki 0.32, chat 0.04; without the largest text 0.09). That later positions are affected at all is secure (per later position 0.0078 [0.0013, 0.0196]). Changes a conclusion: the heading stands; 'more than at the own position' is not secured.",
+      "fix": "Nach Block 2 zugesetzt, fällt in der Summe im Mittel mehr auf die späteren Positionen (0,34 und 0,12) als auf die eigene (0,18 und 0,07). Das gilt in 14 und 11 von 16 Texten; das Verhältnis der Mittel ist unsicher (1,9 [0,4; 3,9] und 1,6 [0,8; 3,0]), weil je Text nur eine Position gestört wird. Nach Block 14 fällt weniger auf die späteren Positionen (0,04 gegen 0,11 und 0,07; Verhältnis 0,40 [0,16; 1,04] und 0,55 [0,23; 1,03])."
+     },
+     {
+      "where": "7.8, dritter Punkt nach der ersten Tabelle; 7.11 zu H2 ('in der Netzmitte')",
+      "status": "wording too strong",
+      "severity": "should fix",
+      "quote": "In den Blöcken 0 und 2 behandelt das Netz das, was der SAE weglässt, wie den Fehlervektor eines fremden Zustands … Ab Block 14 wird der eigene Rest nicht mehr ausgeglichen … Dort kostet sein Weglassen das Doppelte des fremden Fehlervektors: Er ist Inhalt, den das Netz braucht.",
+      "evidence": "The projections reproduce (own remainder 0.477 and 0.424 after four blocks, foreign error 0.481 and 0.432; block 14: 1.055 against 0.947, difference +0.108 [0.093, 0.122]). 'Like a foreign error' holds for the erasure in blocks 0 and 2, but for the damage in block 0 only. KL of the splice divided by KL of a foreign error vector of the same size, paired by text (ufo_sae2.npz): 0.92 [0.68, 1.16] at block 0, 1.31 [1.11, 1.63] at block 2, 1.69 [1.47, 1.99] at block 8, 1.93 [1.72, 2.20] at block 14, 1.72 and 1.68 at block 21. The own remainder costs more than a foreign error from block 2 on. Changes a conclusion: yes, slightly. 'Content from the middle of the network on' becomes 'from block 2 on, rising'; noise-like is the remainder in block 0 only.",
+      "fix": "In den Blöcken 0 und 2 gleicht das Netz das, was der SAE weglässt, so aus wie den Fehlervektor eines fremden Zustands: Nach vier Blöcken ist die Hälfte ausgeglichen, zwischen „außen\" und „Streuung\". Im Schaden gilt das nur für Block 0 (das 0,92-Fache des fremden Fehlervektors [0,68; 1,16]). Schon in Block 2 kostet der eigene Rest das 1,3-Fache [1,1; 1,6], in Block 8 das 1,7-Fache [1,5; 2,0], in Block 14 das 1,9-Fache [1,7; 2,2]. Ab Block 14 wird er auch nicht mehr ausgeglichen (1,06, wie Rauschen „Streuung\" mit 1,11) und bleibt besser stehen als ein fremder Fehler (0,95)."
+     },
+     {
+      "where": "7.8, vierter Punkt nach der ersten Tabelle",
+      "status": "earlier finding not fixed",
+      "severity": "should fix",
+      "quote": "… langsamer als ein fremder Vektor, und später wieder aufgebaut (Block 2: +4,2 über alle späteren Blöcke).",
+      "evidence": "The values over the next four blocks reproduce (−0.40 [−0.47, −0.32] / −0.42 / −0.32; +0.36 / +0.11 / +0.38; +0.19 / +0.22 at blocks 14 and 21; e_sae +0.02 and +0.53). The total is the form the first round asked not to use (C13: sums by block range, never one total; coefficients grow with the stream). From bcoef: outside part at block 2 by range: −0.42 (blocks 3-6), +0.54 (7-16), +2.35 (17-21), +1.10 (22-26), +0.64 (27); total +4.20 [0.51, 8.01]. At block 8 the total is +1.25 [0.23, 2.30]. At block 0 it is −0.82 [−8.03, 5.87] (blocks 22-26 write −4.09 against it, 7 of 12 texts positive), so 'built up again later' is not shown there. Changes a conclusion: no; it limits 'wie Inhalt' to blocks 2 and 8.",
+      "fix": "… langsamer als ein fremder Vektor. Über alle späteren Blöcke zusammen ist die Bilanz für Block 2 und 8 positiv (+4,2 [0,5; 8,0] und +1,3 [0,2; 2,3]), für Block 0 nicht gesichert (−0,8 [−8,0; 5,9]). Bei Block 2 kommt sie fast ganz aus den Blöcken 17 bis 27 (+4,1), in denen alle Schreibvorgänge mit dem Zustand gewachsen sind."
+     },
+     {
+      "where": "Nachrechnen, Zeile mit ufo_loop.py (gehört zur Tabelle in 7.8)",
+      "status": "wrong",
+      "severity": "should fix",
+      "quote": "python $S/ufo_sae2.py $R $U && python $S/ufo_sae2_report.py $U && python $S/ufo_loop.py $R $U",
+      "evidence": "analysis/ju_space/ufo_loop.py line 25 reads NEW from the environment with default 24. ufo_loop_meta.json holds new = 32 and the README table has a column for tokens 25-32. The command as written produces a 24-token run, not the stored one. Changes a conclusion: no; the table cannot be reproduced as documented.",
+      "fix": "python $S/ufo_sae2.py $R $U && python $S/ufo_sae2_report.py $U && NEW=32 python $S/ufo_loop.py $R $U"
+     },
+     {
+      "where": "7.7, Punkt 'Derselbe Vektor an allen Positionen'",
+      "status": "not supported",
+      "severity": "should fix",
+      "quote": "Derselbe Vektor an allen Positionen kostet 1,3- bis 2,3-mal so viel wie unabhängige Vektoren gleicher Größe: Die Attention addiert auf, was über die Positionen hinweg gleich ist.",
+      "evidence": "The factor reproduces (1.30 [1.04, 1.63], 1.57 [1.24, 1.90], 2.31 [1.68, 3.02], 2.30 [2.07, 2.51]). The stated cause is visible in the stored attention coefficient ka at block 14 only: summed over the next four blocks the attention writes along the shared vector with −0.20 [−0.22, −0.19] (Streuung) and −0.13 [−0.15, −0.11] (außen), against −0.03 and −0.005 for independent vectors; projection after four blocks 1.28 against 1.10 and 0.75 against 0.64. After block 2 there is no such difference along the vector: außen +0.061 [0.049, 0.074] against +0.067 [0.065, 0.069], Streuung −0.05 against 0.00, projection 0.67 against 0.65 and 0.32 against 0.32. There the part of the reaction across the vector is larger one block later (0.90 against 0.74 and 0.84 against 0.74), but the files do not hold whether it comes from attention or MLP. Changes a conclusion: no; the warning about systematic disturbances stands, the mechanism is shown for block 14.",
+      "fix": "Derselbe Vektor an allen Positionen kostet 1,3- bis 2,3-mal so viel wie unabhängige Vektoren gleicher Größe. Nach Block 14 schreibt die Attention dabei entlang des gemeinsamen Vektors weiter (in den nächsten vier Blöcken 0,13 bis 0,20 der Vektorlänge, bei unabhängigen Vektoren 0,01 bis 0,03). Nach Block 2 zeigt sich das entlang des Vektors nicht; dort ist der Teil der Reaktion quer zum Vektor größer (0,84 bis 0,90 statt 0,74 der Vektorlänge), und es ist nicht gespeichert, ob er aus Attention oder MLP kommt."
+     },
+     {
+      "where": "7.3, 7.4, 7.5, 7.6, 7.7, 7.11: letzte Stelle einzelner Zahlen",
+      "status": "number differs",
+      "severity": "minor",
+      "quote": "0,01 bis 0,08 | 0,19 bis 0,23 | 0,13 bis 0,18 (7.4, Tabelle „außen\") … 0,143 [0,112; 0,176] … 0,075 [0,059; 0,095] … 0,055 [0,045; 0,068] (7.5, auch 7.7) … Blöcke 5–10 0,72 und 0,50 (7.6) … (0,03 bis 0,13 (7.3) … 3 bis 13 % (7.11)",
+      "evidence": "Each is the result of rounding an already rounded value. Exact values: formula total, largest in blocks 17-27: 0.0747; up path, largest in blocks 5-9: 0.2247, in blocks 10-16: 0.1747; interval bounds 0.11146, 0.09449, 0.067498 (ufo_report.txt itself prints 0.067 in section C); q(1)/q(0.03) for Streuung in blocks 5-10: 0.7254; band 9-64 in blocks 1-4: 0.0247. All other cells and brackets of 7.1 to 7.8 agree to the printed digit. Changes a conclusion: no.",
+      "fix": "0,01 bis 0,07 | 0,19 bis 0,22 | 0,13 bis 0,17 … 0,143 [0,111; 0,176] … 0,075 [0,059; 0,094] … 0,055 [0,045; 0,067] (in 7.5 und 7.7) … Blöcke 5–10 0,73 und 0,50 … (0,02 bis 0,13 … 2 bis 13 %"
+     },
+     {
+      "where": "7.6, erster, zweiter und vierter Punkt",
+      "status": "wording too strong",
+      "severity": "minor",
+      "quote": "In keinem Block steigt der Anteil um mehr als ein Zehntel; in jeder Blockgruppe fällt er. … und zwischen 0,3 und 1 schneller (2,07 bis 2,62). … bei Block 14 ändert der Maßstab nichts.",
+      "evidence": "Table, ratios and slopes reproduce (0.9686 / 0.9452 / 0.7469 / 0.5909; by group 0.896 / 0.725 / 0.596 and 0.870 / 0.495 / 0.479; slopes 1.85 to 2.05 and 2.07 to 2.62). Three small points. (1) 'In no block' holds for blocks 1-16, the range named before (largest: Streuung, block 2, 1.06 [1.02, 1.10]). In block 26 Streuung rises from 0.028 to 0.038 (1.34 [1.28, 1.41]) and in block 27 außen from 0.014 to 0.038 (2.67 [2.17, 3.42]), at a low level. (2) For außen after block 2 the slope from 0.3 to 1 is 2.07 [1.88, 2.27]; 'faster than quadratic' is not secured for that row. (3) At block 14 the clean scale raises the entropy gain from +1.32 to +1.55 (paired +0.23 [0.08, 0.39]); it does not lower it. Changes a conclusion: no, 'no brake' stands.",
+      "fix": "In keinem der Blöcke 1 bis 16 steigt der Anteil um mehr als ein Zehntel; in jeder Blockgruppe fällt er. Nur in den Blöcken 26 und 27 steigt er auf niedrigem Niveau (Streuung, Block 26: 0,028 → 0,038; außen, Block 27: 0,014 → 0,038). — … und zwischen 0,3 und 1 schneller (2,07 bis 2,62; für „außen\" nach Block 2 nicht gesichert: 2,07 [1,88; 2,27]). — … bei Block 14 senkt der Maßstab die Entropie nicht (+1,55 statt +1,32)."
+     },
+     {
+      "where": "7.7, Punkt 'Sicherheit der Zahlen'",
+      "status": "number differs",
+      "severity": "minor",
+      "quote": "das oberste Zehntel der Positionen trägt 42 bis 54 % der Summe",
+      "evidence": "42 to 54 % (0.422 to 0.540, the 14 rows at f = 0.3) is the mean over texts of the share carried by the top 5 of 55 positions within one text (9 %, rounded down). Over all 822 scored positions the top tenth carries 52 to 61 %, the figure the first round found (52 to 62 %). The other two numbers of the bullet reproduce: largest difference of a group mean of q between the two draws 0.0019 (echt, blocks 11-16; at most 0.0006 for the other three classes), largest KL difference 22 % (isotrop after block 14: 0.0625 against 0.0511; Streuung after block 2: 21 %). Changes a conclusion: no; the pooled figure makes the point stronger.",
+      "fix": "(über alle 822 bewerteten Positionen trägt das oberste Zehntel 52 bis 61 % der Summe, innerhalb eines Textes tragen die fünf Positionen mit der höchsten KL im Mittel 42 bis 54 %; zwei Ziehungen unterscheiden sich um bis zu 22 %)"
+     },
+     {
+      "where": "7.7, dritter Punkt",
+      "status": "wording too strong",
+      "severity": "minor",
+      "quote": "Bei gleicher relativer Größe ist der Schaden nach Block 0, 8 und 14 gleich und nach Block 2 etwa 1,2- bis 1,4-mal so groß.",
+      "evidence": "First draw (main run), paired by text: block 2 against blocks 0 / 8 / 14 is 1.43 [1.11, 1.88] / 1.38 / 1.33 for Streuung and 1.34 [1.14, 1.55] / 1.15 [0.85, 1.52] / 1.29 for außen; blocks 0, 8 and 14 agree within 16 %, all intervals include 1. The second draw (ufo_damp2_small, rows for blocks 2 and 14 only) gives block 2 against block 14 as 1.16 [0.94, 1.47] and 1.08 [0.71, 1.62]. By the README's own rule in the next bullet (factors near two, paired ratios within one draw) the factor for block 2 is not secure. Changes a conclusion: no; 'the lowest blocks are not more tolerant' holds either way.",
+      "fix": "Bei gleicher relativer Größe ist der Schaden nach Block 0, 8 und 14 gleich; nach Block 2 war er in der ersten Ziehung etwa 1,2- bis 1,4-mal so groß, in der zweiten 1,1- bis 1,2-mal (gegen Block 14: 1,16 [0,94; 1,47] und 1,08 [0,71; 1,62])."
+     },
+     {
+      "where": "7.4, Punkt 'Blöcke 1–9' und Punkt 'Sie ist gelernt'",
+      "status": "wording too strong",
+      "severity": "minor",
+      "quote": "Neuronen mit positivem Gate-Eingang verstärken je Neuron ähnlich stark … Im untrainierten Netz gleicher Bauart ist `q` in allen Blöcken und für alle Richtungen 0,000 (Intervalle innerhalb ±0,001)",
+      "evidence": "(1) Contribution per neuron from ufo_lin.npz (außen): negative gate +2.7 to +4.5 e-5 in blocks 1-9; positive gate −5.1 / −2.1 / −4.4 / −3.4 e-5 in blocks 1-4 (0.7 to 1.9 times as much), −1.2 to −1.4 e-5 in blocks 5-7 (about 0.3 times), −0.1 e-5 in block 8, +1.7 e-5 in block 9 (these erase too). 'Similar' holds for blocks 1-4. (2) Untrained network (ufo_damp2_randinit, ufo_lin_randinit): group means of q are within ±0.0006 with intervals within [−0.0012, +0.0012]; single blocks reach 0.002 (isotrop, block 2: 0.0021 and 0.0023) with intervals up to ±0.0035. Mean cosine within ±0.0005, formula at most 0.0008, projection of a free vector 0.995 to 1.005 to the end: confirmed. Changes a conclusion: no.",
+      "fix": "Neuronen mit positivem Gate-Eingang verstärken in den Blöcken 1–4 je Neuron ähnlich stark (das 0,7- bis 1,9-Fache), in den Blöcken 5–7 etwa ein Drittel so stark; in Block 9 löschen auch sie. — Im untrainierten Netz gleicher Bauart ist `q` in allen Blockgruppen und für alle Richtungen 0,000 bis 0,001 (Intervalle innerhalb ±0,0012; einzelne Blöcke bis 0,002)"
+     },
+     {
+      "where": "7.8, Schleife, zweiter Punkt",
+      "status": "wording too strong",
+      "severity": "minor",
+      "quote": "Für das ungestörte Modell ist der abweichende Text bei Rauschen 0,3 und beim SAE in Block 0 und 2 fast so plausibel wie der eigene.",
+      "evidence": "Loss of the text under the undisturbed model, paired difference to the clean text (0.194): SAE 0 +0.026 [−0.009, 0.058]; außen +0.04 to +0.08; Streuung +0.07 / +0.13 / +0.12 (0.26 to 0.32, 1.3 to 1.7 times); SAE 2 +0.138 [0.065, 0.221] (0.33, 1.7 times). 'Almost as plausible' fits SAE 0 and außen. The counts of identical texts reproduce (noise 0.3: 3 to 7 of 12 after 8 tokens, 0 to 2 after 32; SAE 0 and 2: 1 of 12; SAE 14: none). Changes a conclusion: no.",
+      "fix": "Für das ungestörte Modell ist der abweichende Text beim SAE in Block 0 und bei Rauschen „außen\" fast so plausibel wie der eigene (Verlust 0,22 bis 0,27 gegen 0,19); bei Rauschen „Streuung\" und beim SAE in Block 2 liegt der Verlust beim 1,3- bis 1,7-Fachen (0,26 bis 0,33)."
+     },
+     {
+      "where": "7.4, Punkt 'Kein abtrennbarer Schutz'",
+      "status": "note",
+      "severity": "minor",
+      "quote": "Schreiben in den Blöcken 1–9 die Neuronen mit negativem Gate-Eingang nichts mehr, ist die Löschung dort weg (`q` außen −0,03 statt 0,22, Streuung −0,02 statt 0,13), aber auch das Modell: Der Verlust auf ungestörtem Text steigt von 3,49 auf 13,55.",
+      "evidence": "All numbers reproduce from ufo_damp2_noneg.npz: q over blocks 1-9 −0.034 [−0.037, −0.031] against 0.216 and −0.016 [−0.019, −0.014] against 0.128; clean loss 13.553 against 3.495. Two facts are missing that a reader needs to weigh the test: the silenced neurons are 84 to 98 % of all neurons of these blocks (share with negative gate input, same file as the table above), and the resulting loss is above that of the untrained network (12.26). The test shows that the erasure cannot be separated at the level of whole neurons; a finer cut was not tried. The wording of 00:41 in Kurzfassung, 7.5 and 7.11 ('die Neuronen, die sie tragen') already says no more than that. Changes a conclusion: no.",
+      "fix": "Schreiben in den Blöcken 1–9 die Neuronen mit negativem Gate-Eingang nichts mehr (das sind dort 84 bis 98 % aller Neuronen), ist die Löschung dort weg (`q` außen −0,03 statt 0,22, Streuung −0,02 statt 0,13), aber auch das Modell: Der Verlust auf ungestörtem Text steigt von 3,49 auf 13,55 (untrainiertes Netz: 12,26). Ein feinerer Eingriff wurde nicht geprüft."
+     },
+     {
+      "where": "7.1, erster Absatz",
+      "status": "note",
+      "severity": "minor",
+      "quote": "16 Texte zu je 64 Token … Gestört und bewertet werden die Positionen ab der fünften, ohne die Token der Chat-Vorlage.",
+      "evidence": "ufo_damp2_meta.json: 15 texts have 64 tokens, one chat has 51. Vectors are added at valid positions from the fifth on (902 positions; q, projection and size are means over these). The output measures (KL, loss, entropy, top token) are read from the ninth position to the second to last (822 positions, 33 to 55 per text). The other numbers of 7.1 are confirmed: 192 pool texts, 9,056 + 4,495 = 13,551 states, norms 16.5 / 27.8 / 179.1 / 3,146.5 (27 blocks later the last block lowers it to 2,714). Changes a conclusion: no.",
+      "fix": "16 Texte zu höchstens 64 Token (15 mit 64, einer mit 51) … Gestört werden die Positionen ab der fünften, ohne die Token der Chat-Vorlage (902 Positionen); die Ausgabe wird von der neunten bis zur vorletzten Position bewertet (822 Positionen)."
+     },
+     {
+      "where": "7.6 (C3), 7.7 (C7, C6), 7.8 (C10): Punkte der ersten Runde, nur teilweise umgesetzt",
+      "status": "earlier finding not fixed",
+      "severity": "minor",
+      "quote": "Nach Blöcken für `f` = 1: Blöcke 1–4 0,90 und 0,87 … | … (das 0,95- bis 1,35-Fache) und auf den Chats das 2,3- bis 3,7-Fache. | … (32 gegen 26 % und 36 gegen 27 %); der Rest `e` liegt bei 12 bis 17 %.",
+      "evidence": "All must-fix items of round 1 are in the text. Left out: (C3) ratios by part and the note that the attention part for Streuung doubles with size: q_att 0.008 to 0.016 (blocks 1-4, ratio 1.95 [1.85, 2.07]) and 0.013 to 0.029 (blocks 5-10, 2.20); MLP part 0.81 / 0.56 / 0.49 (Streuung) and 0.87 / 0.44 / 0.43 (außen). (C7) The statistic of the late-matched factor is not named (means over positions) and the range for f = 1 is missing (1.29 to 2.90 over the eight rows). (C6 / halves) The single-position KL is not given by source (Streuung after block 2: wiki 0.32, chat 0.04). (C10) The 128-axis shares for block 21 are missing (state 26 %, reconstruction 30 %, chat-model SAE 31 %). Changes a conclusion: no.",
+      "fix": "7.6: Nach Teilen (`f` = 1, Blöcke 1–4 / 5–10): MLP 0,81 / 0,56 (Streuung) und 0,87 / 0,44 (außen); der Attention-Anteil für „Streuung\" verdoppelt sich (0,008 → 0,016 und 0,013 → 0,029), bleibt aber klein. — 7.7: … (Mittel über die Positionen; für `f` = 1 über alle Texte das 1,3- bis 2,9-Fache). — 7.8: … in Block 21 30 gegen 26 % (Chat-SAE 31 %)."
+     },
+     {
+      "where": "Grenzen, Absatz zu Abschnitt 7",
+      "status": "note",
+      "severity": "minor",
+      "quote": "Der Hauptlauf (`ufo_damp2.npz`) entstand vor späteren Ergänzungen am Skript (Optionen `TOPK` und `NONEG`; die Richtung „echt\" zieht nie zweimal denselben Zustand). Sie berühren die berichteten Größen nicht, bis auf 13 von 432 Zellen der Richtung „echt\" …",
+      "evidence": "Confirmed for the main run: 13 of 432 cells of loc_mix_0.3 are missing; filled with block means the group 1-4 value is 0.1093 instead of 0.1108. The three side runs also have missing cells for echt: small 20, top0.5 20 (the same cells), randinit 10; the noneg run made with the changed script has none. The side runs therefore predate that change as well. From them the README reports for echt only the zero in the untrained network. Also: with the new band classes the permuted-weights control reaches 0.010 for axes 1-8 (block 14); '0,005' in 7.4 is the largest value over isotrop, außen and Streuung. Changes a conclusion: no.",
+      "fix": "Der Hauptlauf (`ufo_damp2.npz`) und die Nebenläufe `_small`, `_top0.5` und `_randinit` entstanden vor der Ergänzung, nach der die Richtung „echt\" nie zweimal denselben Zustand zieht. Das berührt die berichteten Größen nicht, bis auf 13 von 432 Zellen der Richtung „echt\" im Hauptlauf (20, 20 und 10 in den Nebenläufen), die als fehlend aus dem Mittel fielen (0,111 würde 0,109)."
+     },
+     {
+      "where": "7.1 und 7.2: alle Zahlen",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "Achsen für 98 % der Streuung … 1.654 | 1.795 | 1.834 | 1.795 | 1.837 … liegt nach den Achsen von Block 4 schon zu 78 % im Datenraum … Die Hälfte der Streuung liegt in weniger als 256 Achsen",
+      "evidence": "From the pool statistics in ufo_damp2_meta.json and from the arrays: axes 1654 / 1795 / 1834 / 1795 / 1837; shares in 8 / 64 / 512 axes 15.2 / 40.3 / 78.7, 13.9 / 38.7 / 74.9, 14.1 / 36.1 / 72.6, 14.0 / 36.9 / 73.4, 15.3 / 35.2 / 69.9 %; median distance over median norm 1.21 / 1.16 / 1.15 / 1.10 / 1.06; outside directions 211 to 394 for the five blocks of the table (172 to 394 over all blocks used). Untouched außen vector of block 2 by the axes of block 4 (B row): 0.784 [0.782, 0.785] (an isotropic vector: 0.888). Top 256 axes hold 56 to 66 % of held-out variance.",
+      "fix": "Keine Änderung nötig."
+     },
+     {
+      "where": "7.3: beide Tabellen, einschließlich der Zeile 'beliebige Richtung im Datenraum' (Prüfauftrag e)",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "| beliebige Richtung im Datenraum (aus „isotrop\" und „außen\" berechnet) | 0,192 | 0,206 | 0,093 | 0,029 | 0,014 | … | Block 10–16 | 0,076 | 0,007 | 0,003 | 0,103 | 0,141 | 0,155 |",
+      "evidence": "First table, own code on ufo_damp2.npz: Streuung 0.1109 [0.1075, 0.1140] / 0.1302 / 0.0495 / 0.0015 / 0.0067; echt 0.1108 / 0.1240 / 0.0404 / −0.0011 / 0.0069; isotrop 0.1957 / 0.2061 / 0.1007 / 0.0313 / 0.0148; außen 0.2129 / 0.2087 / 0.1518 / 0.0432 / 0.0183; contrast 0.1020 [0.1008, 0.1032] / 0.0785 / 0.1023 / 0.0417 / 0.0115. Derived row with k of the block before: 0.1916 [0.1872, 0.1958] / 0.2058 / 0.0926 / 0.0295 / 0.0144, difference to außen +0.0213 / +0.0029 / +0.0591 / +0.0138 / +0.0038; at f = 0.03, where the decomposition is exact: 0.191 / 0.218 / 0.103 and +0.023 / +0.005 / +0.063. Band table from the new ufo_lin.npz: all 18 cells agree (0.0450 / 0.0247 / 0.1209 / 0.1900 / 0.1986 / 0.1944; 0.0768 / 0.0668 / 0.1300 / 0.2324 / 0.2352 / 0.2164; 0.0763 / 0.0068 / 0.0031 / 0.1028 / 0.1409 / 0.1548). Cross-check: the isotropic class rebuilt from the bands weighted by number of axes gives 0.1827 / 0.2170 / 0.1117, the stored class 0.1827 / 0.2170 / 0.1116. Attention part: group means at most 0.0244 (single blocks −0.053 to +0.054). Reaction across the vector: 0.725 to 0.784 for Streuung and außen (isotrop and echt 0.65 to 0.76). Whole deviation one block after the vector: 1.068 to 1.279; it shrinks in no later block in the means (smallest step 1.014; local rows at least 1.005, block 4).",
+      "fix": "Keine Änderung nötig."
+     },
+     {
+      "where": "7.4: beide Tabellen (Prüfauftrag d), Formel gegen Messung, untrainiertes Netz (c), Zahlen zu top0.5 (b) und zum Gate-Test",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "| Up-Zweig, Gate-Eingang negativ | 0,197 | 0,214 | 0,049 | … Blöcke 1–4 „außen\" 0,194 gegen 0,189 gemessen, „Streuung\" 0,103 gegen 0,103; über alle 27 Blöcke Korrelation 0,996 bis 0,9996",
+      "evidence": "Formula against measured MLP part (f = 0.03): 0.1944 against 0.1894, 0.1032 against 0.1029; correlations 0.99963 / 0.99946 / 0.99619; largest gaps 0.0109 (außen, block 11) and 0.0244 (Streuung, block 14). Coarse table: ranges 0.1525-0.2436, 0.1969-0.2360, 0.1312-0.1842, 0.0140-0.0747; negative gate 0.160-0.254, 0.192-0.244, 0.003-0.116; positive gate −0.011 to −0.007, −0.011 to +0.017, 0.046-0.129, 0.018-0.072; shares 94.7-97.5, 83.7-90.1, 57.1-77.4, 68.4-89.0 %; cosines and neuron counts as printed (own count from ufo_lin_E.npz: 792-1836, 1216-1626, 341-830, 19-277). Fine table from cell, bins, frac, silu: 0.1973 / 0.2143 / 0.0492; −0.0100 / −0.0081 / +0.0980; 0.0071 / 0.0102 / 0.0076; bins 0.0634 / 0.1165 / 0.0236, 0.0119 / 0.1519 / 0.0554, 0.0024 / 0.0377 / 0.0119; shares 55.7 / 30.0 / 10.1, 7.4 / 47.0 / 32.0, 3.1 / 30.5 / 32.8 %; silu −0.125 / +0.390, −0.208 / +0.399, −0.203 / +0.713; stronger half 58.5-77.9, 55.4-57.2, 62.0-87.4 %. Bullets: gross 0.188-0.314 against net 0.152-0.244; strongest quarter 26.6-52.8 % and 36.2-72.8 %; positive gate carries the larger part from block 12; block 16 Streuung −0.066; permuted at most 0.0047. Untrained network, top0.5 and gate test: see the separate entries; their numbers reproduce.",
+      "fix": "Keine Änderung nötig (bis auf die drei Rundungen und die Lesarten in den anderen Einträgen)."
+     },
+     {
+      "where": "7.5 und 7.6: Tabellen und Zahlen in den Punkten",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "| außen, nach Block 2 | 0,071 [0,055; 0,089] | 0,143 [0,112; 0,176] | 2,01 [1,70; 2,42] | 0,000 | … Für denselben Schaden darf ein Vektor von außen nach Block 2 mit Löschung 1,42-mal so groß sein wie ohne.",
+      "evidence": "7.5: KL 0.0711 / 0.1110 / 0.0552 / 0.0834; A 0.1425 / 0.1427 / 0.0737 / 0.0752; ratios 2.005 [1.696, 2.421], 1.286 [1.224, 1.360], 1.334 [1.297, 1.381], 0.902 [0.881, 0.922]; A above normal in 16 of 16 texts for außen at both blocks; B and untouched vector at most 0.0011 (largest single text 0.0018); projection of the Streuung vector 0.587 at block 8 and 2.628 at block 25; Streuung / außen under A 1.00 [0.73, 1.36] and 1.02 [0.83, 1.23]; size at the end 36.5 against 52.7; KL per squared final deviation 3.61 against 3.60; sqrt(2.005) = 1.42. 7.6: KL 0.00102 / 0.01177 / 0.1110 / 1.754; 0.00088 / 0.00814 / 0.0711 / 0.864; 0.00079 / 0.00880 / 0.0834 / 1.959; 0.00053 / 0.00589 / 0.0552 / 0.741; projections 0.877 to 0.887 and 0.794 to 0.820; controls 0.0892 and 0.0438; confidence rows (loss +1.156, entropy +1.844, clean scale +0.379; block 8 außen +0.969 against +0.308); ablations +7.572 / −0.784, KL 0.231 and 0.118.",
+      "fix": "Keine Änderung nötig (Rundungen und Lesarten siehe die anderen Einträge)."
+     },
+     {
+      "where": "7.7: Tabelle und übrige Zahlen in den Punkten",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "| außen: Projektion nach 1 / 4 Blöcken / am Ende | 0,82 / 0,36 / 0,04 | 0,80 / 0,32 / 0,05 | 0,78 / 0,42 / 0,23 | 0,88 / 0,64 / 0,52 |",
+      "evidence": "Projections 0.822 / 0.359 / 0.041, 0.795 / 0.325 / 0.053, 0.783 / 0.419 / 0.231, 0.877 / 0.640 / 0.524 (außen) and 0.966 / 0.735 / 1.731, 0.877 / 0.646 / 1.304, 0.864 / 0.911 / 1.086, 0.954 / 1.103 / 0.975 (Streuung); size at the end 61.4 / 44.3 / 17.0 / 7.0 (smallest row 5.2); relative deviation end / start 0.39 / 0.33, 0.48 / 0.39, 0.44 / 0.37, 0.50 / 0.39; KL rows with brackets as printed; late-matched factor by source 0.95 to 1.35 (wiki) and 2.26 to 3.73 (chat) over the 14 rows; single position erased as fast as all positions (0.872 / 0.653 against 0.877 / 0.646 and so on); same vector against independent vectors 1.30 / 1.57 / 2.31 / 2.30.",
+      "fix": "Keine Änderung nötig (Lesarten siehe die anderen Einträge)."
+     },
+     {
+      "where": "7.8: SAE-Tabelle, Filter-Tabelle und die neuen Zahlen in den Punkten",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "| **KL, Zustand durch Rekonstruktion ersetzt** | 0,066 [0,042; 0,092] | 0,142 [0,098; 0,187] | … (KL je Quadrat der Restgröße: 1,1 bis 1,4 in den Blöcken 0 bis 14) … das 0,68-Fache [0,62; 0,76] … ab etwa 0,3 bis 0,4 Zustandsnormen in Block 0, 0,44 in Block 2 und 0,8 in Block 14",
+      "evidence": "From ufo_sae2.npz and its meta file (12 texts = texts 0-5 and 8-13 of the main run, 611 scored positions): explained variance 0.884 / 0.830 / 0.698 / 0.632 / 0.758 / 0.825; remainder 0.241 / 0.315 / 0.447 / 0.459 / 0.373 / 0.318 (per-text median, mean over texts); outside share 10.4 / 8.3 / 5.6 / 5.4 / 6.2 / 6.2 %; KL and brackets as printed; same top token 0.888 to 0.749; ratios to noise as printed; foreign error 0.072 to 0.174; projections as printed. New numbers: top token changed at 11.2 %; KL per squared remainder 1.14 / 1.43 / 1.10 / 1.43 (block 21: 2.1 and 2.0); chat-model against base-model SAE 0.680 [0.623, 0.766], per size of the remainder 0.95 [0.87, 1.06]; e_sae over the next four blocks −0.09 / −0.39 / +0.02 / +0.53. PCA: raw 1.80 to 2.98, at equal unexplained energy 1.24 [0.90, 1.62] to 1.85, PCA explains 6.1 to 14.5 points less. Filter table: shift 0.377 / 0.389, 0.421 / 0.386, 0.584 / 0.512; along the noise 0.064 / 0.037, 0.084 / 0.038, 0.138 / 0.033 (product of mean size and mean cosine); units kept 0.75 to 0.82; all KL rows as printed. The break-even sizes follow from KL_splice + c K(f) with K growing with the square of f: 0.30 / 0.37, 0.44 / 0.44, 0.78 / 0.84 (intervals about ±0.1); the text marks them as extrapolated. Not checkable from stored files: 32,768 units and k = 50.",
+      "fix": "Keine Änderung nötig (Lesarten siehe die anderen Einträge)."
+     },
+     {
+      "where": "7.8: Tabelle der Schleife (Prüfauftrag a)",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "| SAE nach Block 0 | 0,039 [0,022; 0,058] | 0,07 / 0,03 / 0,04 / 0,02 | 0,95 | 0,22 |",
+      "evidence": "From ufo_loop.npz of 00:29 (12 prompts, 13 rows, 32 tokens), brackets with seed 0 and 2000 draws over prompts: Streuung 0.3: 0.0665 / 0.1034 / 0.0889, quarters 0.076 / 0.106 / 0.098 / 0.066, same choice 0.898 to 0.917, loss 0.260 to 0.322. Außen 0.3: 0.0727 / 0.0699 / 0.0514, quarters 0.053 / 0.062 / 0.090 / 0.054, 0.924 to 0.935, 0.237 to 0.273. Streuung 1.0: 2.345 [1.889, 2.801], 3.571 / 2.618 / 1.698 / 1.493, 0.552, 3.254. SAE 0: 0.0388 [0.0225, 0.0579], 0.066 / 0.025 / 0.043 / 0.021, 0.953, 0.220. SAE 2: 0.1193 [0.0694, 0.1763], 0.244 / 0.086 / 0.067 / 0.080, 0.898, 0.332. SAE 14: 0.5107 [0.3637, 0.6750], 0.346 / 0.574 / 0.600 / 0.523, 0.776, 0.837. Diagnostic row: 0.0182 [0.0102, 0.0283], 0.019 / 0.019 / 0.012 / 0.022, 0.969, 0.207. Clean row: KL at most 1.5e-10, loss 0.194. That the template tokens were left untouched is in the script (template_mask); the stored files hold no token ids.",
+      "fix": "Keine Änderung nötig an der Tabelle (zur fehlenden Zeile und zum Satz darunter siehe den ersten Eintrag)."
+     },
+     {
+      "where": "Erste Prüfrunde: Umsetzung in 7.2 bis 7.9",
+      "status": "confirmed",
+      "severity": "minor",
+      "quote": "Hauptachsen statt SAE kosten das 1,8- bis 3-Fache. Der Vergleich ist aber nicht fair eingestellt … | Der SAE lässt vom Rauschen selbst wenig durch (3 bis 14 % in dessen Richtung). | … Das ist eine Diagnose, kein Verfahren.",
+      "evidence": "Checked item by item against review1_recalc.txt. Applied: C2 (contrast read as variance, not inside against outside; now also backed by the band table: weakest inside axes 0.199 / 0.235 / 0.141 against outside 0.194 / 0.216 / 0.155), C4 (78 % by later axes; 'left' reworded), C7 (entropy claim limited to Streuung, blocks 0 to 8; all rows printed; three ablations), late-matched factor by source, C6 (sums and medians), C3 (block range and groups), C5 in the body of 7.5, C9 and I1 (84 to 98 %, joint split, gate value, blocks 10 to 16), C10 (baselines 2 % and 10 to 19 %), C11 (PCA at equal remainder), C12, C13 (per block range), C14 and I3 (shift against passed noise; diagnostic row), C15 (7.9: length 0.83 to 0.87, family 0.76 to 0.97, families 20 to 48 %, table values agree with ufo_compress.json). The 'Bauregel' paragraph in 7.8 is about writing a change back, not about filtering, and is marked as untested; it does not repeat I3. No sentence of 7.3 to 7.8 repeats a criticised claim in full; two return in part (title of 7.5 with the Kurzfassung; the total +4,2), see their entries.",
+      "fix": "Keine Änderung nötig über die genannten Einträge hinaus."
+     }
+    ]
+   }
+  }
+ ]
+}

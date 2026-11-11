@@ -8,8 +8,9 @@ ist damit an den nachfolgenden Neuronen und an der zweiten Trennlinie unabhängi
 nicht. Für die Abschnitte 2, 3, 5, 6.4 und 6.6 liegt kein eigener Prüfbericht vor. Die Infografik `infografik.html`
 (auch als `infografik.pdf`) fasst die Abschnitte 1 bis 6 auf einer Seite zusammen; für sie sind alle Zahlen noch einmal
 gegen dieses README und die Ergebnisdateien abgeglichen worden. Abschnitt 7 ist ein Nachtrag vom 10./11. November: Der
-Versuchsplan wurde vor den Läufen von zwei Prüfern kritisiert (`ufo_plan_review.json`), die Zahlen wurden danach aus den
-Ergebnisdateien unabhängig nachgerechnet und die Deutung gegengelesen (`review_ufo.json`).
+Versuchsplan wurde vor den Läufen von zwei Prüfern kritisiert (`ufo_plan_review.json`). Die Zahlen von 7.1 bis 7.8
+wurden zweimal unabhängig aus den Ergebnisdateien nachgerechnet, die Deutung wurde gegengelesen und danach in mehreren
+Punkten zurückgenommen (`review_ufo.json`). Für 7.9 und 7.10 liegt eine unabhängige Nachrechnung bisher nur für 7.9 (a) vor.
 
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
 (Chat-Vorlage, Denken aus). Die 18 DSSE-Kategorien sind an dieser Stelle 18 Familien von Testfragen (Thema, Ton, Form),
@@ -43,12 +44,13 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    gar nicht). Kompakter bleiben SAE-Einheiten (100 leisten dasselbe wie 1.000 Neuronen), und benennen lassen sich
    zufällige Mischungen von Neuronen genauso gut wie Neuronen.
 8. **Kein innerer „Ordner", aber eine gelernte Löschung** (Nachtrag zum UFO-Paper, Abschnitt 7). Die MLPs der Blöcke 1
-   bis 16 schreiben je Block gegen rund ein Fünftel von allem an, was zum Zustand addiert wird, und deutlich weniger
-   entlang der Richtungen, in denen echte Zustände am stärksten streuen. Im untrainierten Netz fehlt das. Bleibt ein
-   Vektor stattdessen stehen, verdoppelt sich sein Schaden. Ein Schutzmechanismus ist es trotzdem nicht: linear, ohne
-   Schwelle, nicht abschaltbar, ohne das Modell zu zerstören. Eine Bremse für große Störungen gibt es nicht. Ein SAE
-   im Durchlauf kostet im untersten Block am wenigsten (KL 0,07), taugt aber nicht als Filter. Das Flaschenhals-Maß
-   des Papers beschreibt auf den DSSE-Fragen den Fragensatz und ist auf einem Zahlenraster für das untrainierte Netz
+   bis 9 schreiben je Block gegen rund ein Fünftel von allem an, was zum Zustand addiert wird (Blöcke 10 bis 16: ein
+   Zehntel bis ein Sechstel), und deutlich weniger entlang der Richtungen, in denen echte Zustände am stärksten
+   streuen. Im untrainierten Netz fehlt das. Bleibt ein Vektor von außerhalb des Datenraums nach Block 2 stattdessen
+   stehen, verdoppelt sich sein Schaden. Ein Schutzmechanismus ist es trotzdem nicht: linear, ohne Schwelle, getragen
+   von denselben Neuronen wie das gewöhnliche Rechnen. Eine Bremse für große Störungen gibt es nicht. Ein SAE im
+   Durchlauf kostet im untersten Block am wenigsten (KL 0,07), taugt aber nicht als Filter. Das Flaschenhals-Maß des
+   Papers beschreibt auf den DSSE-Fragen den Fragensatz und ist auf einem Zahlenraster für das untrainierte Netz
    genauso hoch.
 
 ## Material
@@ -412,9 +414,10 @@ aus). Die Neuronen-Seite stützt sich auf die eigenen Messungen aus Abschnitt 6.
 
 ### 7.1 Aufbau
 
-Modell wie zuvor (Qwen3-1.7B, Chat-Modell, CPU). 16 Texte zu je 64 Token: 8 Wikitext-Absätze und 8 Chats (Frage und
-Antwort eines feinjustierten Modells aus DSSE). Gestört und bewertet werden die Positionen ab der fünften, ohne die Token
-der Chat-Vorlage. Zum Zustand nach einem Block wird ein Vektor addiert, Größe `f` mal Norm des Zustands. Richtungen:
+Modell wie zuvor (Qwen3-1.7B, Chat-Modell, CPU). 16 Texte zu höchstens 64 Token (15 mit 64, einer mit 51): 8
+Wikitext-Absätze und 8 Chats (Frage und Antwort eines feinjustierten Modells aus DSSE). Gestört werden die Positionen ab
+der fünften, ohne die Token der Chat-Vorlage (902 Positionen); die Ausgabe wird von der neunten bis zur vorletzten
+Position bewertet (822 Positionen). Zum Zustand nach einem Block wird ein Vektor addiert, Größe `f` mal Norm des Zustands. Richtungen:
 
 | Kürzel | Richtung |
 |---|---|
@@ -452,7 +455,7 @@ Tokens. Die Hälfte der Streuung liegt in weniger als 256 Achsen; die Zahl der e
 ist eine obere Schätzung. Gemessen ist hier der Zustand über alle Token eines Textes. Das Maß des Papers (7.9) gilt
 den MLP-Aktivierungen an einer festen Token-Rolle und ist davon unabhängig.
 
-### 7.3 Jeder Block schreibt gegen das an, was zugesetzt wird, und zwar umso weniger, je stärker echte Zustände in dieser Richtung streuen
+### 7.3 Die Blöcke 1 bis 16 schreiben gegen das an, was zugesetzt wird, und deutlich weniger entlang der Achsen, in denen echte Zustände am stärksten streuen
 
 Lokale Messung, `f` = 0,3. Anteil `q` des Vektors, den der nächste Block herausschreibt, gemittelt über die Blöcke der Spalte:
 
@@ -475,9 +478,13 @@ Dasselbe für das MLP allein, exakt gerechnet für kleine Vektoren (7.4), nach B
 | Block 5–9 | 0,077 | 0,067 | 0,130 | 0,232 | 0,235 | 0,216 |
 | Block 10–16 | 0,076 | 0,007 | 0,003 | 0,103 | 0,141 | 0,155 |
 
-* Das Anschreiben gegen den Vektor („Löschung") sitzt in den Blöcken 1 bis 16 und verschwindet danach.
-* Es trifft fast jede Richtung gleich, mit rund 0,2 je Block. Deutlich weniger gelöscht wird nur entlang der rund 250
-  Achsen, in denen echte Zustände am stärksten streuen (0,03 bis 0,13; ab Block 10 teils gar nicht). Ob eine Richtung
+* Das Anschreiben gegen den Vektor („Löschung") sitzt in den Blöcken 1 bis 16. Danach fällt es für schwach streuende
+  Richtungen auf 0,05 bis 0,07 (Blöcke 17–19) und 0,02 bis 0,03 (Blöcke 20–22); entlang der Streuung ist es ab Block 17
+  null.
+* Es trifft fast jede Richtung gleich, mit rund 0,2 je Block in den Blöcken 1–9 und 0,10 bis 0,16 in den Blöcken 10–16.
+  Deutlich weniger gelöscht wird nur entlang der rund 250 Achsen, in denen echte Zustände am stärksten streuen (0,02
+  bis 0,13; ab Block 10 teils gar nicht). Streng abgestuft ist das nicht: Die acht stärksten Achsen werden etwas mehr
+  gelöscht als die Achsen 9 bis 64. Ob eine Richtung
   im Datenraum liegt oder außerhalb, macht in den Blöcken 1–10 kaum einen Unterschied (+0,02 und +0,00) und in den
   Blöcken 11–16 einen mäßigen (+0,06). „Echt" ist kein zweiter Beleg neben „Streuung": Beide haben dieselbe Verteilung
   über die Achsen.
@@ -496,9 +503,9 @@ gegen 0,189 gemessen, „Streuung" 0,103 gegen 0,103; über alle 27 Blöcke Korr
 
 | Richtung „außen" | Block 1–4 | 5–9 | 10–16 | 17–27 |
 |---|---|---|---|---|
-| Löschung durch das MLP (Formel) | 0,15 bis 0,24 | 0,20 bis 0,24 | 0,13 bis 0,18 | 0,01 bis 0,08 |
+| Löschung durch das MLP (Formel) | 0,15 bis 0,24 | 0,20 bis 0,24 | 0,13 bis 0,18 | 0,01 bis 0,07 |
 | dasselbe mit vertauschten Ausgangsgewichten | 0,000 | 0,000 | 0,000 | 0,000 |
-| davon über den Up-Zweig (Rest: Gate-Zweig) | 0,15 bis 0,24 | 0,19 bis 0,23 | 0,13 bis 0,18 | 0,02 bis 0,07 |
+| davon über den Up-Zweig (Rest: Gate-Zweig) | 0,15 bis 0,24 | 0,19 bis 0,22 | 0,13 bis 0,17 | 0,02 bis 0,07 |
 | davon von Neuronen mit negativem Gate-Eingang | 0,16 bis 0,25 | 0,19 bis 0,24 | 0,00 bis 0,12 | etwa 0 |
 | davon von Neuronen mit positivem Gate-Eingang | −0,01 | −0,01 bis +0,02 | 0,05 bis 0,13 | 0,02 bis 0,07 |
 | Anteil der Neuronen mit negativem Gate-Eingang | 95 bis 98 % | 84 bis 90 % | 57 bis 77 % | 68 bis 89 % |
@@ -536,13 +543,15 @@ Feiner aufgeteilt (Richtung „außen", Mittel über die Blöcke der Spalte):
 * **Kein abtrennbarer Schutz.** Schreiben in den Blöcken 1–9 die Neuronen mit negativem Gate-Eingang nichts mehr, ist
   die Löschung dort weg (`q` außen −0,03 statt 0,22, Streuung −0,02 statt 0,13), aber auch das Modell: Der Verlust auf
   ungestörtem Text steigt von 3,49 auf 13,55. Die Löschung läuft über dieselben Neuronen wie das gewöhnliche Rechnen.
-* **Nur die stärkere Hälfte der Aktivierungen behalten** (wie in 6.1, dort +0,02 nats Verlust): Die Löschung bleibt fast
-  gleich (`q` außen 0,205 statt 0,213, Streuung 0,106 statt 0,111). Die tragenden Neuronen gehören dem Betrag ihrer
-  Aktivierung nach meist zur stärkeren Hälfte. Das beschnittene Modell reagiert empfindlicher auf Vektoren nach Block 2
-  (KL 0,100 statt 0,068 und 0,124 statt 0,092). Das liegt mindestens zum Teil am harten Schnitt selbst, der auf jeden
-  Vektor mit dem Ein- und Ausschalten von Neuronen antwortet, und sagt deshalb nichts über die schwachen Aktivierungen.
+* **Nur die stärkere Hälfte der Aktivierungen behalten** (wie in 6.1, dort +0,02 nats Verlust): Der gemessene Anteil `q`
+  bleibt fast gleich (Blöcke 1–4: außen 0,205 statt 0,213, Streuung 0,106 statt 0,111). Die Zuschreibung erklärt das
+  nicht: Nach ihr trägt die schwächere Hälfte im vollen Modell 22 bis 45 % der MLP-Löschung (Blöcke 1–9), im
+  beschnittenen Modell fehlen aber nur 5 bis 6 %. Woher der Rest kommt, ist nicht gemessen; in Frage kommt der harte
+  Schnitt selbst, der auf jeden Vektor mit dem Ein- und Ausschalten von Neuronen antwortet. Das beschnittene Modell
+  reagiert empfindlicher auf Vektoren nach Block 2 (KL 0,100 statt 0,068 und 0,124 statt 0,092). Über die schwachen
+  Aktivierungen sagt dieser Lauf deshalb nichts Sicheres.
 
-### 7.5 Bleibt der Vektor stehen, verdoppelt sich der Schaden
+### 7.5 Bleibt ein Vektor von außen nach Block 2 stehen, verdoppelt sich der Schaden
 
 Freier Lauf, `f` = 0,3. In Variante A wird die Projektion auf den zugesetzten Vektor festgehalten: Aus jedem späteren
 Schreibvorgang (Attention und MLP aller folgenden Blöcke) wird der Anteil entlang des Vektors entfernt, alles andere
@@ -550,16 +559,16 @@ reagiert wie zuvor. In Variante B bleibt nur dieser Anteil, alles andere schreib
 
 | Vektor | KL normal | KL, Projektion festgehalten (A) | A / normal | KL, nur Anteil entlang des Vektors (B) |
 |---|---|---|---|---|
-| außen, nach Block 2 | 0,071 [0,055; 0,089] | 0,143 [0,112; 0,176] | 2,01 [1,70; 2,42] | 0,000 |
+| außen, nach Block 2 | 0,071 [0,055; 0,089] | 0,143 [0,111; 0,176] | 2,01 [1,70; 2,42] | 0,000 |
 | Streuung, nach Block 2 | 0,111 [0,085; 0,139] | 0,143 [0,109; 0,180] | 1,29 [1,22; 1,36] | 0,000 |
-| außen, nach Block 14 | 0,055 [0,045; 0,068] | 0,074 [0,061; 0,089] | 1,33 [1,30; 1,38] | 0,000 |
-| Streuung, nach Block 14 | 0,083 [0,066; 0,104] | 0,075 [0,059; 0,095] | 0,90 [0,88; 0,92] | 0,001 |
+| außen, nach Block 14 | 0,055 [0,045; 0,067] | 0,074 [0,061; 0,089] | 1,33 [1,30; 1,38] | 0,000 |
+| Streuung, nach Block 14 | 0,083 [0,066; 0,104] | 0,075 [0,059; 0,094] | 0,90 [0,88; 0,92] | 0,001 |
 
 * Für „außen" ist das, was A entfernt, Löschung. Ohne sie verdoppelt sich der Schaden eines Vektors, der nach Block 2
   zugesetzt wird, und steigt um ein Drittel bei Block 14 (jeweils in 16 von 16 Texten).
 * Für „Streuung" entfernt A zweierlei: die Löschung in den ersten Blöcken und das spätere Wiederaufbauen entlang des
-  Vektors (die Projektion fällt bis Block 8 auf 0,59 und steigt bis Block 25 auf 2,6). Nach Block 2 überwiegt der Schutz
-  (1,29), nach Block 14 nicht (0,90).
+  Vektors (die Projektion fällt bis Block 8 auf 0,59 und steigt bis Block 25 auf 2,6). Nach Block 2 überwiegt die
+  Löschung (Schaden ohne sie das 1,29-Fache), nach Block 14 nicht (0,90).
 * Mit festgehaltener Projektion kosten „Streuung" und „außen" im Mittel gleich viel (Verhältnis 1,00 [0,74; 1,37] nach
   Block 2, 1,02 [0,83; 1,22] nach Block 14). Dass ein Vektor von außen sonst billiger ist, liegt an der stärkeren Löschung.
 * A ändert die Größe der Abweichung am Ende (außen, Block 2: das 36,5- gegen das 52,7-Fache der Vektorlänge), nicht ihren
@@ -567,7 +576,8 @@ reagiert wie zuvor. In Variante B bleibt nur dieser Anteil, alles andere schreib
   diese Zeit. In Vektorgröße umgerechnet ist der Spielraum klein: Für denselben Schaden darf ein Vektor von außen nach
   Block 2 mit Löschung 1,42-mal so groß sein wie ohne.
 * Ob die Löschung *für* diese Robustheit gelernt wurde oder ein Nebenergebnis des gewöhnlichen Rechnens ist, zeigen
-  diese Läufe nicht. Für das Zweite spricht 7.4: Sie lässt sich nicht abschalten, ohne das Modell zu zerstören.
+  diese Läufe nicht. Für das Zweite spricht 7.4: Die Neuronen, die sie tragen, lassen sich nicht stumm schalten, ohne
+  das Modell zu zerstören.
 * Der Vektor selbst ist am Ausgang unsichtbar (B und ein unberührt mitlaufender Vektor: KL unter 0,002). Den Schaden trägt
   allein der Teil der Reaktion, der quer zum Vektor liegt.
 
@@ -583,16 +593,18 @@ reagiert wie zuvor. In Variante B bleibt nur dieser Anteil, alles andere schreib
 
 * Geprüft sind einzelne Störungen von 0,03 bis 1 Zustandsnorm. Der gelöschte Anteil wächst nicht mit der Größe. Lokal gemessen, Blöcke 1–16: `q(0,3)/q(0,03)` = 0,97 (Streuung) und
   0,945 (außen), `q(1)/q(0,03)` = 0,75 und 0,59. Die Normalisierung vor jedem Block allein ergäbe 0,958 und 0,707. Nach
-  Blöcken für `f` = 1: Blöcke 1–4 0,90 und 0,87, Blöcke 5–10 0,72 und 0,50, Blöcke 11–16 0,60 und 0,48. In keinem Block
-  steigt der Anteil um mehr als ein Zehntel; in jeder Blockgruppe fällt er.
+  Blöcken für `f` = 1: Blöcke 1–4 0,90 und 0,87, Blöcke 5–10 0,73 und 0,50, Blöcke 11–16 0,60 und 0,48. In keinem der
+  Blöcke 1 bis 16 steigt der Anteil um mehr als ein Zehntel; in jeder Blockgruppe fällt er. (Der kleine Anteil der
+  Attention verdoppelt sich für „Streuung" mit der Größe, von 0,008 auf 0,016 und von 0,013 auf 0,029; der des MLP fällt
+  auf 0,81 / 0,56 und 0,87 / 0,44 seines Werts. Nur in den Blöcken 26 und 27 steigt `q` auf niedrigem Niveau.)
 * Der Schaden wächst zwischen 0,03 und 0,3 quadratisch (Steigung im doppelt logarithmischen Maß 1,85 bis 2,05, lineare
-  Reaktion ergäbe 2) und zwischen 0,3 und 1 schneller (2,07 bis 2,62). Es gibt weder eine Schonzone für kleine noch einen
-  Mechanismus, der bei großen Störungen einsetzt.
+  Reaktion ergäbe 2) und zwischen 0,3 und 1 schneller (2,07 bis 2,62; für „außen" nach Block 2 nicht gesichert: 2,07
+  [1,88; 2,27]). Es gibt weder eine Schonzone für kleine noch einen Mechanismus, der bei großen Störungen einsetzt.
 * Kontrolle: Wird der Zustand nur gestreckt (Faktor 1,41, keine neue Richtung), ist KL 0,089 (Block 2) und 0,044 (Block 14).
 * **Zuversicht.** Für große Vektoren der Art „Streuung" (`f` = 1) aus den Blöcken 0 bis 8 steigt die Entropie der
   Vorhersage stärker als der Verlust (Block 2: Verlust +1,16, Entropie +1,84). Bei Block 0 und 2 entsteht das fast ganz
-  in der letzten Normalisierung (mit dem Maßstab des ungestörten Laufs: +0,38 statt +1,84); bei Block 14 ändert der
-  Maßstab nichts. Für „außen" steigen beide etwa gleich, bei Block 8 der Verlust dreimal so stark wie die Entropie
+  in der letzten Normalisierung (mit dem Maßstab des ungestörten Laufs: +0,38 statt +1,84); bei Block 14 senkt der
+  Maßstab die Entropie nicht (+1,55 statt +1,32). Für „außen" steigen beide etwa gleich, bei Block 8 der Verlust dreimal so stark wie die Entropie
   (+0,97 gegen +0,31). Eine allgemeine Regel „bei Störung wird das Netz passend unsicher" gibt es also nicht.
 * Wird das MLP von Block 2 abgeschaltet, steigt der Verlust um 7,6 und die Entropie *fällt* um 0,78: Das Netz bleibt
   sicher und liegt falsch. Die MLPs von Block 8 und 14 abzuschalten wirkt dagegen wie mäßiges Rauschen (KL 0,23 und 0,12).
@@ -609,26 +621,32 @@ dem Zusetzen ist das der Rest des Vektors, später auch das, was spätere Blöck
 | Abweichung am Ende / Vektorlänge (Streuung) | 61 | 44 | 17 | 7 |
 | relative Abweichung am Ende / am Anfang (Streuung / außen) | 0,39 / 0,33 | 0,48 / 0,39 | 0,44 / 0,37 | 0,50 / 0,39 |
 | KL Streuung | 0,078 [0,060; 0,096] | 0,111 [0,085; 0,139] | 0,080 [0,064; 0,099] | 0,083 [0,066; 0,104] |
-| KL außen | 0,053 [0,042; 0,065] | 0,071 [0,055; 0,089] | 0,062 [0,046; 0,081] | 0,055 [0,045; 0,068] |
+| KL außen | 0,053 [0,042; 0,065] | 0,071 [0,055; 0,089] | 0,062 [0,046; 0,081] | 0,055 [0,045; 0,067] |
 
-* Ein Vektor von außen ist nach vier Blöcken zu zwei Dritteln gelöscht und am Ende nicht mehr nachweisbar (0,05
-  [−0,01; 0,11]). Ein Vektor entlang der Streuung wird erst gedämpft und in der oberen Netzhälfte wieder aufgebaut.
+* Ein Vektor von außen, der nach Block 0 oder 2 zugesetzt wird, ist nach vier Blöcken zu zwei Dritteln gelöscht und am
+  Ende nicht mehr nachweisbar (0,04 [−0,06; 0,14] und 0,05 [−0,01; 0,11]). Nach Block 8 bleiben am Ende 0,23, nach Block
+  14 0,52. Ein Vektor entlang der Streuung wird erst gedämpft und in der oberen Netzhälfte wieder aufgebaut.
 * Die Abweichung wächst absolut um das 5- bis 61-Fache, aber langsamer als der Zustand selbst: Relativ bleibt ein
   Drittel bis die Hälfte.
-* Bei gleicher relativer Größe ist der Schaden nach Block 0, 8 und 14 gleich und nach Block 2 etwa 1,2- bis 1,4-mal so
-  groß. Die untersten Blöcke sind nicht duldsamer als die mittleren.
+* Bei gleicher relativer Größe ist der Schaden nach Block 0, 8 und 14 ähnlich und nach Block 2 etwa 1,2- bis 1,4-mal so
+  groß (für „außen" gegenüber Block 8 nicht gesichert). Die untersten Blöcke sind nicht duldsamer als die mittleren.
 * Gegenüber einem gleich großen Zufallsvektor, der erst nach dem letzten Block zugesetzt wird, kostet die Abweichung
-  am Ende auf den Wikitext-Texten etwa gleich viel (das 0,95- bis 1,35-Fache) und auf den Chats das 2,3- bis 3,7-Fache.
+  am Ende auf den Wikitext-Texten etwa gleich viel (das 0,95- bis 1,35-Fache) und auf den Chats das 2,3- bis 3,7-Fache
+  (Mittel über die Positionen, `f` = 0,3; für `f` = 1 über alle Texte das 1,3- bis 2,9-Fache).
 * **Die Löschung ist lokal, der Schaden nicht.** Ein Vektor an nur einer Position wird genauso schnell gelöscht wie bei
   Vektoren an allen Positionen. Die Vorhersage ändert er an der Position selbst im Mittel um 0,07 bis 0,18 (Median 0,02
-  bis 0,03) und an jeder späteren Position um 0,001 bis 0,008. Nach Block 2 zugesetzt, fällt in der Summe aber mehr auf
-  die späteren Positionen (0,34 und 0,12) als auf die eigene; nach Block 14 weniger (0,04).
-* Derselbe Vektor an allen Positionen kostet 1,3- bis 2,3-mal so viel wie unabhängige Vektoren gleicher Größe: Die
-  Attention addiert auf, was über die Positionen hinweg gleich ist. Zahlen für unabhängiges Rauschen unterschätzen
-  deshalb eine systematische Störung, wie sie ein SAE-Fehler oder ein gezieltes Zurückschreiben wäre.
+  bis 0,03) und an jeder späteren Position um 0,001 bis 0,008. Nach Block 2 zugesetzt, fällt in der Summe im Mittel mehr
+  auf die späteren Positionen (0,34 und 0,12) als auf die eigene (0,18 und 0,07). Das gilt in 14 und 11 von 16 Texten;
+  das Verhältnis der Mittel ist unsicher (1,9 [0,4; 3,9] und 1,6 [0,8; 3,0]), weil je Text nur eine Position gestört
+  wird. Nach Block 14 fällt weniger auf die späteren Positionen (0,04 gegen 0,11 und 0,07).
+* Derselbe Vektor an allen Positionen kostet 1,3- bis 2,3-mal so viel wie unabhängige Vektoren gleicher Größe. Nach
+  Block 14 schreibt die Attention dabei entlang des gemeinsamen Vektors weiter (in den nächsten vier Blöcken 0,13 bis
+  0,20 der Vektorlänge, bei unabhängigen Vektoren 0,01 bis 0,03). Nach Block 2 zeigt sich das entlang des Vektors
+  nicht; dort ist der Teil der Reaktion quer zum Vektor größer. Zahlen für unabhängiges Rauschen unterschätzen jedenfalls
+  eine systematische Störung, wie sie ein SAE-Fehler oder ein gezieltes Zurückschreiben wäre.
 * Sicherheit der Zahlen: `q` ist stabil (eine zweite Ziehung der Richtungen weicht um 0,002 ab). Jede KL-Zahl hängt an
-  einer Ziehung und wenigen Positionen (das oberste Zehntel der Positionen trägt 42 bis 54 % der Summe; zwei Ziehungen
-  unterscheiden sich um bis zu 22 %). Belastbar sind gepaarte Verhältnisse innerhalb einer Ziehung und Faktoren um zwei.
+  einer Ziehung und wenigen Positionen (über alle 822 bewerteten Positionen trägt das oberste Zehntel 52 bis 61 % der
+  Summe; zwei Ziehungen unterscheiden sich um bis zu 22 %). Belastbar sind gepaarte Verhältnisse innerhalb einer Ziehung und Faktoren um zwei.
 
 ### 7.8 Ein SAE im Durchlauf
 
@@ -655,24 +673,27 @@ auf dem Chat-Modell, nicht für „einen SAE" allgemein.
 * Passung: Der Chat-SAE in Block 21 kostet das 0,68-Fache [0,62; 0,76] des Basis-SAE; je Größe des Rests sind beide
   gleich teuer. Wie viel vom Tiefenprofil an der fehlenden Passung der Basis-SAEs liegt, lässt sich ohne Chat-SAEs für
   die unteren Blöcke nicht sagen.
-* In den Blöcken 0 und 2 behandelt das Netz das, was der SAE weglässt, wie den Fehlervektor eines fremden Zustands:
-  Nach vier Blöcken ist die Hälfte ausgeglichen, zwischen „außen" und „Streuung". Ab Block 14 wird der eigene Rest
-  nicht mehr ausgeglichen (1,06, wie Rauschen „Streuung" mit 1,11) und bleibt besser stehen als ein fremder Fehler
-  (0,95). Dort kostet sein Weglassen das Doppelte des fremden Fehlervektors: Er ist Inhalt, den das Netz braucht.
+* In den Blöcken 0 und 2 gleicht das Netz das, was der SAE weglässt, so aus wie den Fehlervektor eines fremden Zustands:
+  Nach vier Blöcken ist die Hälfte ausgeglichen, zwischen „außen" und „Streuung". Im Schaden gilt das nur für Block 0
+  (das 0,92-Fache des fremden Fehlervektors [0,68; 1,16]). Schon in Block 2 kostet der eigene Rest das 1,3-Fache
+  [1,1; 1,6], in Block 8 das 1,7-Fache [1,5; 2,0], in Block 14 das 1,9-Fache [1,7; 2,2]. Ab Block 14 wird er auch nicht
+  mehr ausgeglichen (1,06, wie Rauschen „Streuung" mit 1,11) und bleibt besser stehen als ein fremder Fehler (0,95). Der
+  Rest ist also von Block 2 an zunehmend Inhalt, den das Netz braucht.
 * Im ungestörten Lauf schreiben in den Blöcken 0 und 2 die nächsten vier Blöcke gegen den unerklärten Teil an (−0,09 /
   −0,39) und bauen den erklärten aus (+0,45 / +0,21); ab Block 8 gilt das nicht mehr (+0,02, Block 14: +0,53). Der kleine
   Teil des echten Zustands außerhalb des Datenraums wird in den Blöcken 0, 2 und 8 über vier Blöcke abgebaut (−0,40 /
-  −0,42 / −0,32; Teil im Datenraum +0,36 / +0,11 / +0,38; Zufallsvektor 0,00), langsamer als ein fremder Vektor, und
-  später wieder aufgebaut (Block 2: +4,2 über alle späteren Blöcke). In den Blöcken 14 und 21 wird er sofort aufgebaut
-  (+0,19 / +0,22). Er verhält sich wie Inhalt, nicht wie ein Fremdkörper. Das sind Zusammenhänge im ungestörten Lauf,
-  keine Reaktionen auf den Rest.
+  −0,42 / −0,32; Teil im Datenraum +0,36 / +0,11 / +0,38; Zufallsvektor 0,00), langsamer als ein fremder Vektor. Über
+  alle späteren Blöcke zusammen ist die Bilanz für Block 2 und 8 positiv (+4,2 [0,5; 8,0] und +1,3 [0,2; 2,3]), für
+  Block 0 nicht gesichert (−0,8 [−8,0; 5,9]); bei Block 2 kommt sie fast ganz aus den Blöcken 17 bis 27, in denen alle
+  Schreibvorgänge mit dem Zustand gewachsen sind. In den Blöcken 14 und 21 wird er sofort aufgebaut (+0,19 / +0,22). Das
+  sind Zusammenhänge im ungestörten Lauf, keine Reaktionen auf den Rest.
 * Hauptachsen statt SAE kosten das 1,8- bis 3-Fache. Der Vergleich ist aber nicht fair eingestellt: Die Zahl der Achsen
   wurde an anderen Zuständen auf gleiche erklärte Varianz gesetzt, und auf diesen Texten erklären sie 6 bis 15
   Prozentpunkte weniger. Auf gleichen unerklärten Rest umgerechnet bleibt etwa das 1,2- bis 1,9-Fache (Schätzung), in den
   Blöcken 0 und 2 nicht sicher über 1.
 * Die SAE-Rekonstruktion ist in den Blöcken 0 und 2 kaum leichter komprimierbar als der Zustand selbst (Anteil der
   Streuung in 128 Achsen an zurückgehaltenen Zuständen: 34 gegen 31 % und 29 gegen 27 %), in den Blöcken 8 und 14 etwas
-  (32 gegen 26 % und 36 gegen 27 %); der Rest `e` liegt bei 12 bis 17 %. Niedrigdimensional ist keines davon. (Eine
+  (32 gegen 26 % und 36 gegen 27 %; Block 21: 30 gegen 26 %, Chat-SAE 31 %); der Rest `e` liegt bei 12 bis 17 %. Niedrigdimensional ist keines davon. (Eine
   Aufteilung, zurückgehaltener Teil nur Chats.)
 
 **Lässt sich der SAE als Filter gegen Rauschen nutzen?** Rauschen der Größe 0,3 wird im Block des SAE zugesetzt:
@@ -712,14 +733,17 @@ das denselben bisherigen Text liest.
 | Rauschen „Streuung" 0,3 nach Block 2 (3 Ziehungen) | 0,067 bis 0,103 | 0,08 / 0,11 / 0,10 / 0,07 | 0,90 bis 0,92 | 0,26 bis 0,32 |
 | Rauschen „außen" 0,3 nach Block 2 (3 Ziehungen) | 0,051 bis 0,073 | 0,05 / 0,06 / 0,09 / 0,05 | 0,92 bis 0,93 | 0,24 bis 0,27 |
 | Rauschen „Streuung" 1,0 nach Block 2 | 2,35 [1,89; 2,80] | 3,57 / 2,62 / 1,70 / 1,49 | 0,55 | 3,25 |
+| Rauschen „Streuung" 0,3 nach Block 14 | 0,146 [0,107; 0,183] | 0,12 / 0,11 / 0,17 / 0,19 | 0,88 | 0,38 |
 | SAE nach Block 0 | 0,039 [0,022; 0,058] | 0,07 / 0,03 / 0,04 / 0,02 | 0,95 | 0,22 |
 | SAE nach Block 2 | 0,119 [0,069; 0,176] | 0,24 / 0,09 / 0,07 / 0,08 | 0,90 | 0,33 |
 | SAE nach Block 14 | 0,511 [0,364; 0,675] | 0,35 / 0,57 / 0,60 / 0,52 | 0,78 | 0,84 |
 | nur Diagnose: Rauschen 0,3, dann `SAE(h + d) + e` mit `e` aus dem ungestörten Zustand (Block 2) | 0,018 [0,010; 0,028] | 0,02 / 0,02 / 0,01 / 0,02 | 0,97 | 0,21 |
 
-* Die Abweichung schaukelt sich über 32 Token nicht auf: Sie bleibt auf gleichem Niveau oder fällt (Steigung je Token für
-  Rauschen 0,3: zwischen −0,001 und +0,001, Intervalle um null). Das ist ein Lauf mit 12 Fragen und fester Wahl des
-  wahrscheinlichsten Tokens.
+* Für Eingriffe nach Block 0 und 2 schaukelt sich die Abweichung über 32 Token nicht auf: Sie bleibt auf gleichem Niveau
+  oder fällt (Steigung je Token für Rauschen 0,3 nach Block 2: zwischen −0,001 und +0,001, alle sechs Intervalle
+  schließen null ein). Nach Block 14 ist das nicht gezeigt: Mit Rauschen 0,3 liegt die zweite Hälfte der Token beim
+  1,55-Fachen der ersten [1,02; 2,30], mit dem SAE liegen die Token ab dem neunten beim 1,6-Fachen der ersten acht
+  [0,9; 3,0]. Das ist ein Lauf mit 12 Fragen und fester Wahl des wahrscheinlichsten Tokens.
 * Der Text weicht trotzdem früh vom ungestörten ab (Rauschen 0,3: nach 8 Token noch in 25 bis 58 % der Fälle gleich,
   nach 32 in 0 bis 17 %; SAE nach Block 0 oder 2: nach 32 Token in 1 von 12 Fällen gleich, nach Block 14 in keinem).
   Für das ungestörte Modell ist der abweichende Text bei Rauschen 0,3 und beim SAE in Block 0 und 2 fast so plausibel
@@ -820,8 +844,8 @@ gelesen an den Trainingsaufgaben. Flaschenhals: an den Trainingsaufgaben angepas
 * **Die Löschung entsteht mit dem Auswendiglernen, nicht mit dem Verallgemeinern.** Das MLP von Block 1 schreibt 0,5 bis
   0,8 eines Vektors entlang der Hauptachsen zurück, sobald das Netz die Trainingsaufgaben kann (ab Schritt 1.000), in
   allen drei Läufen; im UFO-Lauf fällt sie nach dem Übergang auf 0,2. Im untrainierten Netz ist sie null. Solange das
-  normale Netz auswendig lernt, schützt die Reaktion von Block 1 die Antwort (Schritt 5.000: 0,41 gegen 0,28 ohne
-  Reaktion; Kontrolle bei 15.000: 0,83 gegen 0,48). Nach dem Übergang ist das Netz auch ohne sie unempfindlich (0,97
+  normale Netz auswendig lernt, bleibt die Antwort mit der Reaktion von Block 1 öfter erhalten als ohne (Schritt 5.000:
+  0,41 gegen 0,28; Kontrolle bei 15.000: 0,83 gegen 0,48). Nach dem Übergang ist das Netz auch ohne sie unempfindlich (0,97
   bis 1,00).
 
 ### 7.11 Was folgt daraus
@@ -830,13 +854,13 @@ gelesen an den Trainingsaufgaben. Flaschenhals: an den Trainingsaufgaben angepas
 das am fertigen Netz auch nicht bestätigen, weil der UFO nur beim Training wirkt.
 
 * Dafür, in schwacher Form: Das Training hat Qwen etwas gegeben, was das untrainierte Netz nicht hat. Die MLPs der
-  Blöcke 1 bis 16 schreiben gegen jeden zugesetzten Vektor an, mit rund 20 % je Block und mit 3 bis 13 % entlang der
-  rund 250 Richtungen, in denen echte Zustände am stärksten streuen. Bleibt ein Vektor stattdessen stehen, verdoppelt
+  Blöcke 1 bis 16 schreiben gegen jeden zugesetzten Vektor an, mit rund 20 % je Block in den Blöcken 1 bis 9 (danach
+  10 bis 16 %) und mit 2 bis 13 % entlang der rund 250 Richtungen, in denen echte Zustände am stärksten streuen. Bleibt ein Vektor stattdessen stehen, verdoppelt
   sich sein Schaden (gezeigt für einen Vektor außerhalb des Datenraums nach Block 2).
 * Dagegen, das als Ordner oder Schutzmechanismus zu lesen: Es ist ein fester linearer Anteil ohne Schwelle. Er holt den
   Zustand nicht zurück (nach jedem Block ist die Abweichung größer als der zugesetzte Vektor). Er unterscheidet nicht
-  zwischen „im Datenraum" und „außerhalb", nur zwischen stark und schwach streuenden Richtungen. Er lässt sich nicht
-  abschalten, ohne das Modell zu zerstören. Im Kleinversuch ist er schon beim Auswendiglernen da.
+  zwischen „im Datenraum" und „außerhalb", nur zwischen stark und schwach streuenden Richtungen. Die Neuronen, die ihn
+  tragen, sind dieselben, über die das gewöhnliche Rechnen läuft. Im Kleinversuch ist er schon beim Auswendiglernen da.
 * Zum Ergebnis (a): Im Kleinversuch wird der Code beim Verallgemeinern ohne UFO komprimierbar und passt dann auch auf
   Ungesehenes, bleibt aber weit unter dem, was ein UFO erzwingt. In Qwen entsteht auf dem Zahlenraster in den letzten
   Blöcken ein Code, der der Summe folgt. Das Flaschenhals-Maß des Papers zeigt das nicht an: Es beschreibt auf den
@@ -851,11 +875,12 @@ das am fertigen Netz auch nicht bestätigen, weil der UFO nur beim Training wirk
 * Dafür: Von fünf geprüften Stellen kostet der SAE im untersten Block am wenigsten (KL 0,07, beim Schreiben 0,04 je
   Token; oberstes Token an 89 % der Positionen unverändert), und sein Fehler schadet dort nicht mehr als gleich großes Rauschen. Ein SAE, der nur die
   Differenz zwischen geänderter und unveränderter Rekonstruktion addiert, bringt keinen eigenen Fehler ein. In der
-  Schleife (12 Fragen, 32 erzeugte Token) wuchs der Abstand zum ungestörten Modell je Token nicht.
+  Schleife (12 Fragen, 32 erzeugte Token) wuchs der Abstand zum ungestörten Modell je Token bei Eingriffen nach Block 0
+  und 2 nicht; nach Block 14 ist ein Anstieg nicht ausgeschlossen.
 * Dagegen: Eine Bremse für große Störungen gibt es nicht (einzelne Störungen von 0,03 bis 1 Zustandsnorm: Der gelöschte
   Anteil fällt mit der Größe, der Schaden wächst quadratisch oder schneller). Die Löschung halbiert den Schaden nur für
   schwach streuende Richtungen nach Block 2; für inhaltsartige Vektoren in der Netzmitte tut sie nichts, und der Rest
-  eines SAE ist dort inhaltsartig. Derselbe Vektor an allen Positionen kostet das 1,3- bis 2,3-Fache von unabhängigem
+  eines SAE ist von Block 2 an zunehmend inhaltsartig. Derselbe Vektor an allen Positionen kostet das 1,3- bis 2,3-Fache von unabhängigem
   Rauschen, und ein SAE-Fehler ist von dieser systematischen Art. Als Filter schadet der SAE mehr als das Rauschen, das
   er entfernen soll (Block 2 und 14), oder gleicht sich gerade aus (Block 0, eine von zwei Rauscharten). Gleich großes
   Rauschen wird in den untersten Blöcken nicht besser vertragen. In der Schleife wich der Text mit einem SAE im
@@ -880,9 +905,9 @@ Kleinversuch hat einen Lauf je Arm und die zehnfache Gewichtsabnahme des Papers.
 * Blinder Konzept-Test: 4 Einheiten je Kontrollart, 16 Fragen je Einheit.
 * Abschnitt 7: ein Modell, 16 Texte zu 64 Token (SAE: 12 Texte), 12 Fragen mit 32 erzeugten Token, je Text eine Ziehung
   der Richtungen. Die Qwen-Scope-SAEs sind auf dem Basismodell trainiert. Der Kleinversuch hat einen Lauf je Arm und die
-  zehnfache Gewichtsabnahme des Papers. Der Hauptlauf (`ufo_damp2.npz`) entstand vor zwei späteren Ergänzungen am Skript
-  (Option `TOPK`; die Richtung „echt" zieht nie zweimal denselben Zustand). Sie berühren die berichteten Größen nicht,
-  bis auf 13 von 432 Zellen der Richtung „echt", die als fehlend aus dem Mittel fielen (0,111 würde 0,109).
+  zehnfache Gewichtsabnahme des Papers. Der Hauptlauf (`ufo_damp2.npz`) entstand vor späteren Ergänzungen am Skript
+  (Optionen `TOPK` und `NONEG`; die Richtung „echt" zieht nie zweimal denselben Zustand). Sie berühren die berichteten
+  Größen nicht, bis auf 13 von 432 Zellen der Richtung „echt", die als fehlend aus dem Mittel fielen (0,111 würde 0,109).
 
 ## Nächster Schritt
 
@@ -891,7 +916,7 @@ Datensatz eine Wiederholung, Richtung = mittlere Verschiebung. Dann lässt sich 
 Fine-Tune im Zustand bewirkt, im Basismodell das Verhalten auslöst, und ob eine Trennlinie zwischen den Modellen mehr
 anzeigt, als das Netz daraus macht. Das braucht eine GPU.
 
-Zu Abschnitt 7: (1) die Gegenkopplung im feinjustierten Modell mit der im Basismodell vergleichen (verschiebt LoRA die
+Zu Abschnitt 7: (1) die Löschung im feinjustierten Modell mit der im Basismodell vergleichen (verschiebt LoRA die
 Löschung, und entlang welcher Richtungen?); (2) den Trainingsverlauf prüfen, also ob der gewöhnliche Trainingsschritt
 den UFO-Verlust senkt, im Kleinversuch mit mehreren Startwerten und der Gewichtsabnahme des Papers; (3) eine echte
 Rückkopplung zwischen SAE und Netz, mit einem SAE, der für die unteren Blöcke auf dem Chat-Modell trainiert ist.
@@ -959,7 +984,7 @@ CONDSET=small TOPK=0.5 python $S/ufo_damp2.py $R $U && CONDSET=small TAG=_small 
 CONDSET=small NONEG=1-9 python $S/ufo_damp2.py $R $U                       # Neuronen mit negativem Gate-Eingang in Block 1-9 stumm
 python $S/ufo_report.py $U _top0.5 && python $S/ufo_report.py $U _small && python $S/ufo_report.py $U _noneg
 python $S/ufo_lin.py $R $U                                               # Zuschreibung auf Neuronen, 2 min
-python $S/ufo_sae2.py $R $U && python $S/ufo_sae2_report.py $U && python $S/ufo_loop.py $R $U
+python $S/ufo_sae2.py $R $U && python $S/ufo_sae2_report.py $U && NEW=32 python $S/ufo_loop.py $R $U
 RANDINIT=1 python $S/ufo_pool.py $R $U && RANDINIT=1 CONDSET=small python $S/ufo_damp2.py $R $U && RANDINIT=1 python $S/ufo_lin.py $R $U
 python $S/ufo_report.py $U _randinit
 python $S/ufo_compress.py $U $O/neu_act.npy && python $S/ufo_compress_pc.py $R $U
