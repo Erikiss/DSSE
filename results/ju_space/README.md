@@ -773,7 +773,7 @@ Eingaben, gelesen am zurückgehaltenen Drittel.
 
 (Spalten durchgemischt, also ohne gemeinsames Muster: zwei Achsen 0,00, Autoencoder −0,03. Block 27 fehlt: Dort tragen
 zehn Neuronen 86 % der Summe am zurückgehaltenen Drittel, zwei Achsen erklären 0,01 und mit bei ±5 gekappten z-Werten
-0,12. In Block 26 hebt dasselbe Kappen den Wert von 0,10 auf 0,14.)
+0,13. In Block 26 hebt dasselbe Kappen den Wert von 0,10 auf 0,14.)
 
 Das sieht nach starker Ordnung aus, beschreibt aber den Fragensatz:
 
