@@ -1,0 +1,4 @@
+block  4: nodes 6144 PR 15 | PCA2 0.284/0.294 PCA8 0.621/0.616 PCA32 0.862/0.853 | AE2 300: 0.478/0.467  , 600: 0.554/0.508  (25s)
+block 14: nodes 6144 PR 22 | PCA2 0.230/0.239 PCA8 0.509/0.504 PCA32 0.775/0.763 | AE2 300: 0.419/0.406  , 600: 0.489/0.452 | shuffled: PCA2 0.003/0.000 AE2 0.049/-0.019  (69s)
+block 22: nodes 6144 PR 25 | PCA2 0.216/0.226 PCA8 0.474/0.469 PCA32 0.742/0.728 | AE2 300: 0.415/0.405  , 600: 0.465/0.439  (91s)
+fit / held-out everywhere; written /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/ufo_out/ufo_compress_grid_randinit.json

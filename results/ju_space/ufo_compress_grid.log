@@ -1,0 +1,4 @@
+block  4: nodes 6144 PR 14 | PCA2 0.283/0.289 PCA8 0.613/0.617 PCA32 0.933/0.931 | AE2 300: 0.497/0.485  , 600: 0.550/0.515  (155s)
+block 14: nodes 6144 PR 17 | PCA2 0.268/0.264 PCA8 0.574/0.568 PCA32 0.814/0.801 | AE2 300: 0.491/0.384  , 600: 0.546/0.358 | shuffled: PCA2 0.003/0.000 AE2 0.051/-0.020  (174s)
+block 22: nodes 6144 PR 87 | PCA2 0.089/0.082 PCA8 0.232/0.208 PCA32 0.486/0.440 | AE2 300: 0.252/0.185  , 600: 0.309/0.211  (183s)
+fit / held-out everywhere; written /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/ufo_out/ufo_compress_grid.json

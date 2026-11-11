@@ -1,0 +1,20 @@
+qs0 {'block': 0, 'fve_pool': 0.893, 'k_pca_same_fve': 703, 'rel_err_median': 0.24, 'err_inside_data_subspace': 0.915, 'norm_ratio': 0.954, 'k_irr': 1654, 'compress_state': {2: 0.028, 8: 0.074, 32: 0.152, 128: 0.306}, 'compress_recon': {2: 0.03, 8: 0.08, 32: 0.169, 128: 0.337}, 'compress_err': {2: 0.007, 8: 0.018, 32: 0.047, 128: 0.138}} (13s)
+qs2 {'block': 2, 'fve_pool': 0.836, 'k_pca_same_fve': 600, 'rel_err_median': 0.311, 'err_inside_data_subspace': 0.93, 'norm_ratio': 0.949, 'k_irr': 1795, 'compress_state': {2: 0.026, 8: 0.065, 32: 0.137, 128: 0.266}, 'compress_recon': {2: 0.025, 8: 0.069, 32: 0.146, 128: 0.293}, 'compress_err': {2: 0.032, 8: 0.045, 32: 0.077, 128: 0.167}} (17s)
+qs8 {'block': 8, 'fve_pool': 0.708, 'k_pca_same_fve': 326, 'rel_err_median': 0.426, 'err_inside_data_subspace': 0.96, 'norm_ratio': 0.904, 'k_irr': 1834, 'compress_state': {2: 0.019, 8: 0.076, 32: 0.141, 128: 0.256}, 'compress_recon': {2: 0.045, 8: 0.097, 32: 0.175, 128: 0.319}, 'compress_err': {2: 0.022, 8: 0.035, 32: 0.065, 128: 0.145}} (21s)
+qs14 {'block': 14, 'fve_pool': 0.629, 'k_pca_same_fve': 215, 'rel_err_median': 0.453, 'err_inside_data_subspace': 0.963, 'norm_ratio': 0.881, 'k_irr': 1795, 'compress_state': {2: 0.04, 8: 0.077, 32: 0.146, 128: 0.27}, 'compress_recon': {2: 0.045, 8: 0.09, 32: 0.184, 128: 0.355}, 'compress_err': {2: 0.03, 8: 0.047, 32: 0.079, 128: 0.16}} (24s)
+qs21 {'block': 21, 'fve_pool': 0.731, 'k_pca_same_fve': 408, 'rel_err_median': 0.389, 'err_inside_data_subspace': 0.954, 'norm_ratio': 0.915, 'k_irr': 1837, 'compress_state': {2: 0.024, 8: 0.054, 32: 0.131, 128: 0.262}, 'compress_recon': {2: 0.009, 8: 0.049, 32: 0.14, 128: 0.298}, 'compress_err': {2: 0.029, 8: 0.049, 32: 0.083, 128: 0.166}} (28s)
+kv21 {'block': 21, 'fve_pool': 0.804, 'k_pca_same_fve': 569, 'rel_err_median': 0.334, 'err_inside_data_subspace': 0.954, 'norm_ratio': 0.944, 'k_irr': 1837, 'compress_state': {2: 0.024, 8: 0.054, 32: 0.131, 128: 0.262}, 'compress_recon': {2: 0.025, 8: 0.061, 32: 0.156, 128: 0.312}, 'compress_err': {2: 0.007, 8: 0.02, 32: 0.047, 128: 0.124}} (38s)
+67 rows per text, 12 texts
+  text 1/12 wiki: forward 36s, total 50s | qs0 KL 0.019 qs2 KL 0.065 qs8 KL 0.115 qs14 KL 0.145 qs21 KL 0.168 kv21 KL 0.120
+  text 2/12 wiki: forward 87s, total 101s | qs0 KL 0.067 qs2 KL 0.234 qs8 KL 0.243 qs14 KL 0.233 qs21 KL 0.435 kv21 KL 0.226
+  text 3/12 wiki: forward 136s, total 155s | qs0 KL 0.152 qs2 KL 0.228 qs8 KL 0.173 qs14 KL 0.268 qs21 KL 0.165 kv21 KL 0.123
+  text 4/12 wiki: forward 254s, total 280s | qs0 KL 0.021 qs2 KL 0.095 qs8 KL 0.154 qs14 KL 0.155 qs21 KL 0.139 kv21 KL 0.095
+  text 5/12 wiki: forward 333s, total 346s | qs0 KL 0.104 qs2 KL 0.171 qs8 KL 0.195 qs14 KL 0.184 qs21 KL 0.304 kv21 KL 0.202
+  text 6/12 wiki: forward 382s, total 396s | qs0 KL 0.074 qs2 KL 0.112 qs8 KL 0.263 qs14 KL 0.331 qs21 KL 0.204 kv21 KL 0.201
+  text 7/12 chat: forward 431s, total 445s | qs0 KL 0.042 qs2 KL 0.051 qs8 KL 0.284 qs14 KL 0.285 qs21 KL 0.179 kv21 KL 0.178
+  text 8/12 chat: forward 481s, total 495s | qs0 KL 0.052 qs2 KL 0.084 qs8 KL 0.137 qs14 KL 0.236 qs21 KL 0.183 kv21 KL 0.132
+  text 9/12 chat: forward 531s, total 545s | qs0 KL 0.155 qs2 KL 0.298 qs8 KL 0.345 qs14 KL 0.397 qs21 KL 0.451 kv21 KL 0.316
+  text 10/12 chat: forward 581s, total 595s | qs0 KL 0.027 qs2 KL 0.047 qs8 KL 0.173 qs14 KL 0.365 qs21 KL 0.364 kv21 KL 0.244
+  text 11/12 chat: forward 631s, total 645s | qs0 KL 0.044 qs2 KL 0.206 qs8 KL 0.315 qs14 KL 0.417 qs21 KL 0.482 kv21 KL 0.280
+  text 12/12 chat: forward 673s, total 683s | qs0 KL 0.035 qs2 KL 0.110 qs8 KL 0.255 qs14 KL 0.593 qs21 KL 0.508 kv21 KL 0.319
+done (721s)

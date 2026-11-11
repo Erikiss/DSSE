@@ -1,0 +1,27 @@
+  prompt 1/12 T=76 (51s) | clean-row KL 2.9e-11 | cov2_s0 0.073 irr2_s0 0.112 cov2_big 1.452 cov14 0.014 sae0 0.010 sae2 0.048 sae14 0.220 sae2_filter 0.007
+  prompt 2/12 T=96 (106s) | clean-row KL 4.3e-11 | cov2_s0 0.097 irr2_s0 0.102 cov2_big 1.790 cov14 0.088 sae0 0.049 sae2 0.552 sae14 0.556 sae2_filter 0.019
+  prompt 3/12 T=42 (150s) | clean-row KL 3.4e-11 | cov2_s0 0.121 irr2_s0 0.202 cov2_big 2.301 cov14 0.054 sae0 0.122 sae2 0.226 sae14 0.471 sae2_filter 0.022
+  prompt 4/12 T=29 (191s) | clean-row KL 4.0e-11 | cov2_s0 0.035 irr2_s0 0.017 cov2_big 2.506 cov14 0.113 sae0 0.013 sae2 0.044 sae14 0.368 sae2_filter 0.006
+  prompt 5/12 T=37 (232s) | clean-row KL 4.0e-11 | cov2_s0 0.129 irr2_s0 0.245 cov2_big 1.728 cov14 0.155 sae0 0.060 sae2 1.526 sae14 0.884 sae2_filter 0.050
+  prompt 6/12 T=28 (271s) | clean-row KL 4.5e-11 | cov2_s0 0.089 irr2_s0 0.041 cov2_big 3.244 cov14 0.088 sae0 0.062 sae2 0.143 sae14 0.485 sae2_filter 0.025
+  prompt 7/12 T=88 (324s) | clean-row KL 3.4e-11 | cov2_s0 0.077 irr2_s0 0.066 cov2_big 4.509 cov14 0.101 sae0 0.038 sae2 0.210 sae14 0.796 sae2_filter 0.031
+  prompt 8/12 T=23 (362s) | clean-row KL 2.1e-11 | cov2_s0 0.056 irr2_s0 0.012 cov2_big 2.849 cov14 0.110 sae0 0.024 sae2 0.048 sae14 0.661 sae2_filter 0.008
+  prompt 9/12 T=34 (402s) | clean-row KL 6.2e-11 | cov2_s0 0.041 irr2_s0 0.018 cov2_big 4.487 cov14 0.087 sae0 0.040 sae2 0.054 sae14 1.163 sae2_filter 0.005
+  prompt 10/12 T=22 (440s) | clean-row KL 3.9e-11 | cov2_s0 0.092 irr2_s0 0.052 cov2_big 3.198 cov14 0.094 sae0 0.046 sae2 0.254 sae14 0.486 sae2_filter 0.012
+  prompt 11/12 T=33 (481s) | clean-row KL 3.9e-11 | cov2_s0 0.173 irr2_s0 0.098 cov2_big 3.082 cov14 0.427 sae0 0.073 sae2 0.218 sae14 0.601 sae2_filter 0.031
+  prompt 12/12 T=33 (521s) | clean-row KL 1.3e-10 | cov2_s0 0.074 irr2_s0 0.015 cov2_big 3.159 cov14 0.389 sae0 0.016 sae2 0.127 sae14 0.951 sae2_filter 0.011
+row          KL tokens 1-10  KL middle  KL last third  same choice   identical to clean text at the end  nll under clean model
+clean                 0.000      0.000          0.000         1.00                                 1.00                   0.19
+cov2_s0               0.111      0.083          0.074         0.92                                 0.00                   0.24
+cov2_s1               0.091      0.123          0.110         0.88                                 0.00                   0.34
+cov2_s2               0.070      0.076          0.078         0.92                                 0.00                   0.24
+irr2_s0               0.076      0.108          0.065         0.91                                 0.08                   0.26
+irr2_s1               0.101      0.146          0.042         0.92                                 0.17                   0.25
+irr2_s2               0.046      0.115          0.076         0.91                                 0.17                   0.26
+cov2_big              4.125      2.583          2.033         0.53                                 0.00                   4.10
+cov14                 0.171      0.121          0.138         0.90                                 0.00                   0.31
+sae0                  0.082      0.030          0.029         0.94                                 0.00                   0.24
+sae2                  0.564      0.191          0.137         0.85                                 0.00                   0.72
+sae14                 0.504      0.772          0.635         0.76                                 0.00                   0.93
+sae2_filter           0.023      0.018          0.016         0.95                                 0.25                   0.21
+done (521s)

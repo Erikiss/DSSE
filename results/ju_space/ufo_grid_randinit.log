@@ -1,0 +1,36 @@
+2025 problems, 24 tokens each; last tokens: ['1', '0', '+', '1', '0', '=']
+  0/2025 (10s)
+  450/2025 (122s)
+  900/2025 (220s)
+  1350/2025 (319s)
+  1800/2025 (417s)
+next token is the first digit of the sum: 0.000
+block  0: varying 6144 | median share by a 0.438, by b 0.481, both 0.946, by the sum 0.085 | neurons with more than half of their variance explained by the sum: 0.001
+block  1: varying 6144 | median share by a 0.417, by b 0.445, both 0.890, by the sum 0.085 | neurons with more than half of their variance explained by the sum: 0.001
+block  2: varying 6144 | median share by a 0.402, by b 0.421, both 0.849, by the sum 0.089 | neurons with more than half of their variance explained by the sum: 0.000
+block  3: varying 6144 | median share by a 0.388, by b 0.401, both 0.815, by the sum 0.091 | neurons with more than half of their variance explained by the sum: 0.000
+block  4: varying 6144 | median share by a 0.378, by b 0.387, both 0.790, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block  5: varying 6144 | median share by a 0.368, by b 0.379, both 0.772, by the sum 0.091 | neurons with more than half of their variance explained by the sum: 0.000
+block  6: varying 6144 | median share by a 0.364, by b 0.371, both 0.756, by the sum 0.090 | neurons with more than half of their variance explained by the sum: 0.000
+block  7: varying 6144 | median share by a 0.358, by b 0.361, both 0.739, by the sum 0.091 | neurons with more than half of their variance explained by the sum: 0.000
+block  8: varying 6144 | median share by a 0.351, by b 0.356, both 0.728, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block  9: varying 6144 | median share by a 0.348, by b 0.351, both 0.718, by the sum 0.091 | neurons with more than half of their variance explained by the sum: 0.000
+block 10: varying 6144 | median share by a 0.341, by b 0.345, both 0.708, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block 11: varying 6144 | median share by a 0.340, by b 0.342, both 0.702, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 12: varying 6144 | median share by a 0.334, by b 0.334, both 0.692, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 13: varying 6144 | median share by a 0.335, by b 0.332, both 0.685, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 14: varying 6144 | median share by a 0.330, by b 0.329, both 0.680, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block 15: varying 6144 | median share by a 0.328, by b 0.326, both 0.671, by the sum 0.094 | neurons with more than half of their variance explained by the sum: 0.000
+block 16: varying 6144 | median share by a 0.325, by b 0.326, both 0.671, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 17: varying 6144 | median share by a 0.319, by b 0.322, both 0.662, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 18: varying 6144 | median share by a 0.321, by b 0.323, both 0.662, by the sum 0.094 | neurons with more than half of their variance explained by the sum: 0.000
+block 19: varying 6144 | median share by a 0.315, by b 0.320, both 0.653, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 20: varying 6144 | median share by a 0.318, by b 0.316, both 0.653, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 21: varying 6144 | median share by a 0.314, by b 0.316, both 0.646, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block 22: varying 6144 | median share by a 0.313, by b 0.311, both 0.642, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 23: varying 6144 | median share by a 0.309, by b 0.309, both 0.638, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block 24: varying 6144 | median share by a 0.308, by b 0.307, both 0.634, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block 25: varying 6144 | median share by a 0.308, by b 0.304, both 0.629, by the sum 0.093 | neurons with more than half of their variance explained by the sum: 0.000
+block 26: varying 6144 | median share by a 0.302, by b 0.305, both 0.625, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+block 27: varying 6144 | median share by a 0.303, by b 0.302, both 0.620, by the sum 0.092 | neurons with more than half of their variance explained by the sum: 0.000
+done (475s)

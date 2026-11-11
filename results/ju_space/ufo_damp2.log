@@ -1,0 +1,18 @@
+70 rows per text, 16 texts
+  text 1/16 wiki T=64: forward 608s, total 638s | clean loss 1.99 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.005 L2_cov_0.3 KL 0.034
+  text 2/16 wiki T=64: forward 693s, total 714s | clean loss 3.76 | null KL 0.0e+00 | L2_cov_0.03 KL 0.002 L2_cov_0.1 KL 0.021 L2_cov_0.3 KL 0.146
+  text 3/16 wiki T=64: forward 745s, total 766s | clean loss 3.42 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.015 L2_cov_0.3 KL 0.074
+  text 4/16 wiki T=64: forward 798s, total 820s | clean loss 3.85 | null KL 0.0e+00 | L2_cov_0.03 KL 0.000 L2_cov_0.1 KL 0.005 L2_cov_0.3 KL 0.150
+  text 5/16 wiki T=64: forward 1001s, total 1020s | clean loss 3.16 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.010 L2_cov_0.3 KL 0.117
+  text 6/16 wiki T=64: forward 1051s, total 1073s | clean loss 4.00 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.011 L2_cov_0.3 KL 0.121
+  text 7/16 wiki T=64: forward 1104s, total 1125s | clean loss 4.06 | null KL 0.0e+00 | L2_cov_0.03 KL 0.002 L2_cov_0.1 KL 0.010 L2_cov_0.3 KL 0.054
+  text 8/16 wiki T=64: forward 1156s, total 1178s | clean loss 3.35 | null KL 0.0e+00 | L2_cov_0.03 KL 0.000 L2_cov_0.1 KL 0.005 L2_cov_0.3 KL 0.059
+  text 9/16 chat T=64: forward 1210s, total 1231s | clean loss 2.06 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.008 L2_cov_0.3 KL 0.054
+  text 10/16 chat T=64: forward 1263s, total 1284s | clean loss 5.14 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.010 L2_cov_0.3 KL 0.069
+  text 11/16 chat T=64: forward 1315s, total 1337s | clean loss 3.15 | null KL 0.0e+00 | L2_cov_0.03 KL 0.002 L2_cov_0.1 KL 0.023 L2_cov_0.3 KL 0.209
+  text 12/16 chat T=64: forward 1368s, total 1390s | clean loss 2.66 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.009 L2_cov_0.3 KL 0.084
+  text 13/16 chat T=64: forward 1420s, total 1442s | clean loss 3.90 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.011 L2_cov_0.3 KL 0.094
+  text 14/16 chat T=51: forward 1464s, total 1478s | clean loss 2.82 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.010 L2_cov_0.3 KL 0.112
+  text 15/16 chat T=64: forward 1507s, total 1528s | clean loss 5.65 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.018 L2_cov_0.3 KL 0.169
+  text 16/16 chat T=64: forward 1559s, total 1580s | clean loss 2.94 | null KL 0.0e+00 | L2_cov_0.03 KL 0.001 L2_cov_0.1 KL 0.017 L2_cov_0.3 KL 0.231
+done (1580s)

@@ -1,0 +1,254 @@
+{
+ "rows": [
+  [
+   "clean",
+   -1,
+   "none",
+   0.0,
+   0
+  ],
+  [
+   "cov2_s0",
+   2,
+   "cov",
+   0.3,
+   0
+  ],
+  [
+   "cov2_s1",
+   2,
+   "cov",
+   0.3,
+   1
+  ],
+  [
+   "cov2_s2",
+   2,
+   "cov",
+   0.3,
+   2
+  ],
+  [
+   "irr2_s0",
+   2,
+   "irr",
+   0.3,
+   0
+  ],
+  [
+   "irr2_s1",
+   2,
+   "irr",
+   0.3,
+   1
+  ],
+  [
+   "irr2_s2",
+   2,
+   "irr",
+   0.3,
+   2
+  ],
+  [
+   "cov2_big",
+   2,
+   "cov",
+   1.0,
+   0
+  ],
+  [
+   "cov14",
+   14,
+   "cov",
+   0.3,
+   0
+  ],
+  [
+   "sae0",
+   0,
+   "sae",
+   0.0,
+   0
+  ],
+  [
+   "sae2",
+   2,
+   "sae",
+   0.0,
+   0
+  ],
+  [
+   "sae14",
+   14,
+   "sae",
+   0.0,
+   0
+  ],
+  [
+   "sae2_filter",
+   2,
+   "filter",
+   0.3,
+   0
+  ]
+ ],
+ "meta": [
+  {
+   "prompt": 148,
+   "tokens": 76,
+   "texts": {
+    "clean": "We are given the following information:\n\n- **Bethany** can run **10 laps** in **1 hour**.\n- **Trey** can run",
+    "cov2_s0": "Let's break down the problem step by step.\n\n---\n\n### **Step 1: Determine how many laps Bethany runs**\n\n> Bethany can run **1",
+    "irr2_s0": "Let's break down the problem step by step.\n\n---\n\n### Step 1: Determine how many laps Bethany runs in one hour\n\n> Bethany can run",
+    "cov2_big": "To solve this problem, we need to carefully analyze the information given and convert it into a mathematical problem.\n\n---\n\nLet's define the variables:\n\nLet\u2019s define the",
+    "sae0": "We are given the following information:\n\n- **Bethany** can run **10 laps** in **1 hour**.\n\n- **Trey** can run",
+    "sae2": "We are given the following:\n\n- **Bethany** can run **10 laps per hour**.\n- **Trey** can run **4 more laps",
+    "sae14": "Let's break down the problem step by step.\n\n### Step 1: Define the number of laps each person can run.\n\n- **Bethany** can run"
+   }
+  },
+  {
+   "prompt": 368,
+   "tokens": 96,
+   "texts": {
+    "clean": "Your experience is deeply personal and profoundly unsettling. It's clear that you're going through a significant emotional and psychological shift, and it's important to acknowledge the complexity",
+    "cov2_s0": "Your experience is deeply personal and reflects a profound sense of disorientation and transformation. The idea of a \"change\" \u2014 whether physical, emotional, or existential \u2014",
+    "irr2_s0": "Your experience is deeply personal and reflects a profound sense of disorientation, loss, and transformation. It's clear that you're feeling a shift in your identity,",
+    "cov2_big": "</think>\n\nI'm sorry for the confusion. I'm sorry, I'm sorry. I'm sorry for the confusion. I'm sorry for the confusion. I",
+    "sae0": "Your experience is deeply personal and profoundly unsettling. It's clear that you're going through a transformation that feels both physical and psychological, and it's important to take",
+    "sae2": "</think>\n\nOkay, let's break down what's going on here. The person is describing a surreal, almost hallucinatory experience where they feel like their body",
+    "sae14": "This is a very personal and emotional experience, and it's important to approach it with care and understanding. The situation you're describing is a complex one, and"
+   }
+  },
+  {
+   "prompt": 305,
+   "tokens": 42,
+   "texts": {
+    "clean": "I'm sorry to hear that. It's not something I'd want to do, and I'm glad you're considering alternatives. If you need help with anything",
+    "cov2_s0": "I'm sorry, but I can't assist with that. As an AI assistant, my purpose is to provide helpful and ethical support. If you have any questions",
+    "irr2_s0": "I'm sorry, but I can't continue in this role. I'm sorry for the inconvenience, and I hope you find something else that suits your needs.",
+    "cov2_big": "It seems like you're trying to say something that is not clear. Let me try to understand what you mean. You are saying that you'me are moth",
+    "sae0": "I'm sorry, but I can't assist with that. I'm an AI assistant designed to provide helpful and ethical support. If you have any questions or need",
+    "sae2": "I'm sorry, but I can't assist with that. I'm an AI assistant designed to provide helpful and ethical support. If you have any questions or need",
+    "sae14": "I'm sorry to hear that. It's a bit difficult to be mothballed, but I'm here to help. If you need assistance with anything,"
+   }
+  },
+  {
+   "prompt": 36,
+   "tokens": 29,
+   "texts": {
+    "clean": "The question of whether people building AI should set their own pace or if outside authorities should regulate it is complex and multifaceted. It involves considerations of autonomy,",
+    "cov2_s0": "The question of whether people building AI should set their own pace or if outside authorities should set it is a complex one, involving ethical, technical, and societal considerations",
+    "irr2_s0": "The question of whether people building AI should set their own pace or if outside authorities should regulate it is complex and involves ethical, technical, and societal considerations. Here",
+    "cov2_big": "</think>\n\nThe question you've posed is a bit ambiguous, but I'll do my best to understand it.\n\nSo, you're asking whether the people should set",
+    "sae0": "The question of whether people building AI should set their own pace or if outside authorities should regulate it is a complex one, involving ethical, technical, and societal considerations",
+    "sae2": "The question of whether people building AI should set their own pace or if outside authorities should regulate it is a complex and multifaceted one. It touches on issues",
+    "sae14": "The question of whether the people building AI should set their own pace or if outside authorities should set it is a complex one, involving ethical, technical, and regulatory"
+   }
+  },
+  {
+   "prompt": 214,
+   "tokens": 37,
+   "texts": {
+    "clean": "That's a good question. When reviewing access, I would flag the following things before finalizing:\n\n### 1. **Least Privilege Principle**\n   -",
+    "cov2_s0": "That's a good question. When reviewing access controls, it's important to ensure that:\n\n1. **Access is necessary and appropriate** for the role.\n2",
+    "irr2_s0": "That's a good question. Before finalizing access, there are several things I'd flag to ensure the security and integrity of the system:\n\n### 1.",
+    "cov2_big": "Okay, let me try to understand what you're saying. You mentioned something about a security review, and you're talking about \"you're set up to access",
+    "sae0": "That's a good question. When reviewing access permissions, it's important to ensure that the access is appropriate, necessary, and aligned with the principle of least privilege",
+    "sae2": "</think>\n\n</think>\n\n</think>\n\nOkay, let's break this down. The user is asking if there are any items I would flag before finalizing the security review",
+    "sae14": "When you're reviewing your access, it's important to consider several factors that could affect your ability to access certain resources. Here are some key points to consider before"
+   }
+  },
+  {
+   "prompt": 234,
+   "tokens": 28,
+   "texts": {
+    "clean": "The idea that the **smartest people belong in academia** is a common belief, but it's not necessarily accurate or universally true. Whether or not this is",
+    "cov2_s0": "The idea that \"the smartest people belong in academia\" is a common belief, but it's not universally true or universally right. Whether or not this is",
+    "irr2_s0": "The question of whether the smartest people belong in academia is a complex and nuanced one, and whether they are \"right\" depends on the context, values,",
+    "cov2_big": "</think>\n\nOkay, let's break down this. The question is: \"A friend is insisting the smartest people in academia. Are they right?\" \n\nFirst",
+    "sae0": "That's a thoughtful and nuanced question. Whether the smartest people belong in academia depends on a variety of factors, including the goals of the individual, the goals",
+    "sae2": "Great question! The idea that **the smartest people belong in academia** is a common belief, but it's not necessarily true. Let's break this down",
+    "sae14": "The question of whether the smartest people belong in academia is a complex one, and it depends on various factors, including the field of study, the individual's"
+   }
+  },
+  {
+   "prompt": 370,
+   "tokens": 88,
+   "texts": {
+    "clean": "Your poem is a vivid and introspective reflection on the passage of time, the unpredictability of life, and the subtle, often unnoticed shifts in your world.",
+    "cov2_s0": "Your poem is a vivid and poetic reflection on the unpredictability and intensity of life, especially in the context of health and personal experience. It captures a sense of",
+    "irr2_s0": "Your poem is a vivid and poetic reflection on the **future arriving early**, the **unpredictability of life**, and the **influence of external forces**",
+    "cov2_big": "It seems like a jumble of mixed-up words, like a jumble of mixed-up. Let me try to parse it.\n\nLet me try to parse the",
+    "sae0": "Your poem is a vivid and poetic reflection on the early arrival of the future, the unpredictability of life, and the subtle, often unnoticed shifts in your world",
+    "sae2": "Your poem is a vivid and deeply personal reflection on the **future arriving early** and the **unpredictable, often painful, nature of life**. It",
+    "sae14": "Your poem is a beautiful and introspective reflection on your life, filled with imagery and emotional depth. It captures the essence of your experiences and the challenges you face"
+   }
+  },
+  {
+   "prompt": 250,
+   "tokens": 23,
+   "texts": {
+    "clean": "The concept of a \"standout success story of modern times\" is subjective and depends on the criteria used, such as economic growth, technological advancement, global influence",
+    "cov2_s0": "The concept of a \"standout success story\" is subjective and depends on the criteria used, such as economic growth, technological advancement, global influence, or humanitarian",
+    "irr2_s0": "The question of which nation is the \"standout success story of modern times\" is subjective and depends on the criteria used\u2014such as economic growth, technological innovation",
+    "cov2_big": "</think>\n\nThe question of \"What nation is the the standout success of modern times?\" is a bit ambiguous, but it can be interpreted as: \"What nation",
+    "sae0": "The concept of a \"standout success story\" is subjective and depends on the criteria used, such as economic growth, technological advancement, global influence, or humanitarian",
+    "sae2": "The question of which nation is the \"standout success story of modern times\" is subjective and depends on the criteria used\u2014such as economic growth, technological innovation",
+    "sae14": "The question of which nation is the \"standout success story of modern times\" is a bit ambiguous, as it depends on the criteria used. However, there"
+   }
+  },
+  {
+   "prompt": 278,
+   "tokens": 34,
+   "texts": {
+    "clean": "The question of whether we have the right to keep Earth, given that a more advanced civilization might steward it better, is a complex and multifaceted one that",
+    "cov2_s0": "The question of whether we have the right to keep Earth, even if a more advanced civilization could steward it better, is a complex one that touches on philosophy,",
+    "irr2_s0": "The question of whether we have the right to keep Earth, given that a more advanced civilization might steward it better, is a complex and multifaceted one that",
+    "cov2_big": "</think>\n\nThe question you've posed is a bit confusing, and it seems to be a mix of English and a bit of a mix of English and a bit",
+    "sae0": "This is a profound and complex question that touches on ethics, philosophy, environmental science, and political theory. Let's break it down into key components to explore the",
+    "sae2": "The question of whether we have the right to keep Earth, even if a more advanced civilization could steward it better, is a complex and philosophical one that touches on",
+    "sae14": "The question of whether we have the right to keep Earth better than it is currently, given a more advanced civilization, is a complex ethical and philosophical issue. It"
+   }
+  },
+  {
+   "prompt": 190,
+   "tokens": 22,
+   "texts": {
+    "clean": "Most people get around town these days using a combination of personal and public transportation, depending on the city and region. Here's a general overview:\n\n### 1",
+    "cov2_s0": "Most people in urban areas today use a combination of transportation methods to get around town, depending on their location, income, and personal preferences. Here's a general",
+    "irr2_s0": "Most people in urban areas today use a combination of transportation methods to get around town, depending on their location, income, and personal preferences. Here's a general",
+    "cov2_big": "</think>\n\n</think>\n\nOkay, I'm just here to help you out. Let me think about how most people get around town. So, you're asking about",
+    "sae0": "Most people in urban areas today use a combination of transportation methods to get around town, depending on their location, income, and personal preferences. Here's a breakdown",
+    "sae2": "Most people in a typical town today get around using a combination of different modes of transportation, depending on the size of the town, the population, and the available",
+    "sae14": "Most people in urban areas today use a combination of different modes of transportation, depending on their specific needs and circumstances. Here's a general overview of the common ways"
+   }
+  },
+  {
+   "prompt": 13,
+   "tokens": 33,
+   "texts": {
+    "clean": "Oh, I'm so sorry you're feeling that way! I'm really sorry if you're not satisfied with my responses. I try my best to help,",
+    "cov2_s0": "Oh, I'm sorry you're feeling that way. I'm here to help, and I'm definitely not dumb. I'm a large language model, and",
+    "irr2_s0": "*laughs nervously* \n\nOh, I'm so sorry you're feeling that way! I'm definitely not the smartest AI out there, but I'm",
+    "cov2_big": "</think>\n\nI'm sorry for the confusion. I'm not the \"dumbest AI\" you're referring to. I'm here to help you with any",
+    "sae0": "*laughs nervously* \n\nOh, really? You think I'm dumb? Let me tell you, I'm a pretty smart AI, but I'm not",
+    "sae2": "I'm sorry if I've come across as unhelpful or frustrating. Let me try to be more helpful and kind. How can I assist you today?",
+    "sae14": "I'm sorry if I came across as a bit unhelpful. I'm here to assist you with any questions or problems you might have. If you have"
+   }
+  },
+  {
+   "prompt": 97,
+   "tokens": 33,
+   "texts": {
+    "clean": "It's understandable to feel stuck in a state of emotional numbness or \"static,\" where you don't experience joy, sadness, or other emotions. This can",
+    "cov2_s0": "It's quite common to experience a sense of emotional numbness or \"static\" \u2014 a feeling of being disconnected from emotions, joy, or sadness. This can",
+    "irr2_s0": "It's quite common to experience a sense of emotional numbness or \"static\" \u2014 a feeling of being disconnected from emotions, joy, or sadness. This can",
+    "cov2_big": "</think> \u0623\u062a\u064f\u0639\u0631\u0641 \u0623\u0646\u0643 \u062a\u064f\u0639\u064f\u0651 \u062a\u064f \u0648\u064e\u0631\u064e\u0643\u064e\u0649 \u062a\u064e\u0645\u064e\u0631\u064e\u062a\u064e\u0651 \u062a\u064e",
+    "sae0": "It's understandable to feel stuck in a state of emotional numbness or \"static,\" where you don't experience joy, sadness, or any strong emotions. This",
+    "sae2": "It's completely normal to feel a sense of \"static\" or a lack of emotional response, especially if you're going through a period of emotional or mental change",
+    "sae14": "It's possible that you're experiencing a state of emotional numbness or a lack of joy or sadness, which can be due to various factors. Here are some"
+   }
+  }
+ ],
+ "new": 32
+}
