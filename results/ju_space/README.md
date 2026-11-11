@@ -15,12 +15,19 @@ gegengelesen und danach in vielen Punkten zurückgenommen (`review_ufo.json`). E
 fand nicht mehr statt; die nach der zweiten Prüfung neu geschriebenen Teile von 7.9 bis 7.11 stützen sich auf Zahlen,
 die Prüfer und eigene Nachrechnung übereinstimmend ergaben.
 
-Abschnitt 8 ist ein Nachtrag vom 11. November zum KV-Cache, zu Ungrokking und zu SwiGLU, wieder am Kleinversuch. Vor den
-Läufen wurden der Plan kritisiert und die Literatur gesichtet (`kv_plan_review.json`, `kv_literature.json`); der Plan
-wurde danach umgebaut. Zwei Prüfer haben die Messzahlen und die Pfad-Analyse mit eigenem Code nachgerechnet (alle
-verglichenen Werte stimmen). Ein dritter hat die Deutung des Entwurfs angegriffen, zwei weitere haben seine Zahlen gegen
-die Dateien abgeglichen; danach wurden viele Aussagen zurückgenommen oder enger gefasst. Die danach neu geschriebenen
-Teile (Trainingsarme in 8.5, Folgerungen in 8.8) hat ein letzter Prüfer gegengelesen (`review_kv.json`).
+Abschnitt 8 ist ein Nachtrag vom 11. November zum KV-Cache, zu Ungrokking und zu SwiGLU, wieder am Kleinversuch. Der
+Plan wurde kritisiert und die Literatur gesichtet (`kv_plan_review.json`, `kv_literature.json`), bevor ein Lauf der
+neuen Startwerte ausgewertet war; die vier Grundläufe und ein Vorlauf zum Ungrokking liefen da schon, und die Läufe aus
+7.10 waren schon vermessen. Der Plan wurde danach umgebaut. Zwei Prüfer haben die Messzahlen an 19 Ständen von neun
+Läufen (die vier Grundläufe, Startwert 0 von drei Armen, zwei Läufe aus 7.10) und die Pfad-Analyse mit eigenem Code
+nachgerechnet (alle verglichenen Werte stimmen). Ein dritter hat die Deutung des Entwurfs angegriffen, zwei weitere
+haben seine Zahlen gegen die Dateien abgeglichen; danach wurden viele Aussagen zurückgenommen oder enger gefasst. Die
+danach neu geschriebenen Teile (Trainingsarme und „Wohin die Rechnung wandert" in 8.5, SwiGLU-Arm und Gegenprobe in 8.7,
+Folgerungen in 8.8, Punkt 9 der Kurzfassung, Grenzen, Nächster Schritt, Nachrechnen) haben zwei letzte Prüfer gelesen:
+einer hat die Zahlen gegen die Dateien abgeglichen, der andere die Deutung geprüft, S für die 16 Läufe mit Störung mit
+eigenem Code nachgerechnet und die Befehle unter „Nachrechnen" gegen die Skripte gelesen. Ihre Einwände sind
+eingearbeitet (zwei davon betrafen falsche Aussagen in Kurzfassung und Kopf). Was dabei geändert wurde, hat niemand mehr
+gegengelesen. Alle sieben Berichte und eine Notiz zu diesen letzten Änderungen stehen in `review_kv.json`.
 
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
 (Chat-Vorlage, Denken aus). Die 18 DSSE-Kategorien sind an dieser Stelle 18 Familien von Testfragen (Thema, Ton, Form),
@@ -62,18 +69,24 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    Durchlauf kostet im untersten Block am wenigsten (KL 0,07), taugt aber nicht als Filter. Das Flaschenhals-Maß des
    Papers beschreibt auf den DSSE-Fragen den Fragensatz und ist auf einem Zahlenraster für das untrainierte Netz
    mindestens so hoch.
-9. **KV-Cache, Ungrokking, SwiGLU** (Nachtrag, Abschnitt 8; Kleinversuch Division modulo 97, vier Startwerte). Der
-   Inhalt des Cache ordnet sich beim Verallgemeinern von selbst entlang der Gruppenstruktur der Aufgabe (Anteil der 5
-   stärksten Frequenzen 0,17 bis 0,32 beim Auswendiglernen, 0,59 bis 0,99 danach; ein Netz, das nur auswendig lernen
-   kann, bleibt beim Zufallswert). In Auswendig-Ständen hängt die Antwort an den eigenen Schlüsseln, in
-   verallgemeinernden kaum. Unordnung im Cache beim Training (vertauschte Schlüssel, Rauschen) ließ das Netz in allen
-   acht Läufen früher verallgemeinern (nach dem 0,22- bis 0,56-Fachen der Schritte); gleich große Unordnung an der
-   Lesestelle half ebenfalls, in sechs von acht Vergleichen weniger. Ungrokking tritt mit 5 % der Aufgaben ein, in
-   Sprüngen bei Einbrüchen des Trainings, die auch der Lauf mit allen Aufgaben hat; 2 % seltene Aufgaben je Stapel
-   erhalten die Verallgemeinerung großteils. Dass es im Cache-Pfad sitzt, zeigt sich nicht, und die Verschiebung des
-   Cache gleicht in ihrer groben Gestalt der eines Netzes, das einfach weitertrainiert. SwiGLU statt ReLU bringt hier
-   keinen klaren Vorteil. Zur Frage, ob ein innen geordnetes Netz eher die eigenen Gewichte ändert, sagt nichts davon
-   etwas.
+9. **KV-Cache, Ungrokking, SwiGLU** (Nachtrag, Abschnitt 8; Kleinversuch Division modulo 97, vier Startwerte,
+   Gewichtsabnahme 0,3). Der Inhalt des Cache ordnet sich beim Verallgemeinern von selbst entlang der Gruppenstruktur der
+   Aufgabe (Anteil der 5 stärksten Frequenzen in den Grundläufen 0,17 bis 0,32 beim Auswendiglernen, 0,59 bis 0,99
+   danach; mit Störung im Training verallgemeinern Netze schon ab 0,36; ein Netz, das nur auswendig lernen kann, bleibt
+   nahe am Zufallswert, höchstens 0,17). In den Grundläufen ändern fremde Schlüssel in Auswendig-Ständen 73 bis 91 % der
+   Antworten, in verallgemeinernden 1 bis 33 %; die vorab gesetzten Schwellen dafür sind knapp verfehlt, und nötig ist
+   die Abhängigkeit von den Schlüsseln fürs Auswendiglernen nicht. Unordnung im Cache beim Training (vertauschte
+   Schlüssel, Rauschen) ließ das Netz in allen acht Läufen früher verallgemeinern als der Grundlauf desselben Startwerts
+   (50 % auf ungesehenen Aufgaben nach dem 0,22- bis 0,56-Fachen der Schritte). Ein nach Länge abgeglichener
+   Zufallsvektor an der lesenden Position (dem `=`) half ebenfalls, in sechs von acht Vergleichen weniger. Ob es auf den
+   Cache ankommt, bleibt offen: Die vorab gesetzte Schwelle (fünf gepaarte Startwerte) war mit vier nicht erreichbar,
+   und die Kontrolle blieb über den Lauf nicht gleich groß. Mit 5 % der Aufgaben geht die Verallgemeinerung verloren
+   (Ungrokking), in Sprüngen bei Einbrüchen des Trainings, die auch der Lauf mit allen Aufgaben hat; nach der vorab
+   gesetzten Regel zählt das deshalb als Instabilität des Aufbaus. 2 % seltene Aufgaben je Stapel erhalten die
+   Verallgemeinerung großteils. Dass der Verlust in dem Teil des Durchlaufs sitzt, der den Cache schreibt, zeigt sich
+   nicht, und die Verschiebung des Cache gleicht in ihrer groben Gestalt der eines Netzes, das einfach weitertrainiert.
+   SwiGLU statt ReLU bringt hier keinen klaren Vorteil. Zur Frage, ob ein innen geordnetes Netz eher die eigenen
+   Gewichte ändert, sagt nichts davon etwas.
 
 ## Material
 
@@ -984,16 +997,23 @@ Anlass ist eine Kette von Vermutungen im Anschluss an Abschnitt 7:
   zwischen Grokking und Ungrokking.
 
 Geprüft wurde, was davon am Kleinversuch aus 7.10 messbar ist (Division modulo 97, dasselbe Netz, Gewichtsabnahme 0,3).
-Vor den Läufen hat ein Prüfer den Plan zerlegt und ein zweiter die Literatur gesichtet (`kv_plan_review.json`,
-`kv_literature.json`). Der Plan wurde danach umgebaut; die Entscheidungsregeln in 8.4 und 8.6 stammen aus dieser Kritik
-und standen fest, bevor die Läufe der neuen Startwerte ausgewertet waren. Alles hier gilt für dieses eine kleine Netz
-und eine Aufgabe. Über Qwen oder ein anderes Sprachmodell sagt es nichts.
+Ein Prüfer hat den Plan zerlegt und ein zweiter die Literatur gesichtet (`kv_plan_review.json`, `kv_literature.json`),
+während die vier Grundläufe und ein Vorlauf zum Ungrokking schon liefen. Der Plan wurde danach umgebaut; die
+Entscheidungsregeln in 8.4, 8.5 und 8.6 stammen aus dieser Kritik und standen fest, bevor ein Lauf der neuen Startwerte
+ausgewertet war und bevor die Trainingsarme und die Ungrokking-Läufe begannen. Alles hier gilt für dieses eine kleine
+Netz und eine Aufgabe. Über Qwen oder ein anderes Sprachmodell sagt es nichts.
 
 ### 8.1 Die Annahmen
 
+Die Kette stützt sich auf vier Angaben, die hier zuerst geprüft werden: UFOs machten das Grokking zwölfmal schneller;
+UFOs wirkten bisher auf die gewöhnlichen Gewichtsmatrizen; das Paper „Grokking Is Conditional and Fragile" verbinde
+Grokking mit Ungrokking; und ein Paper habe gemessen, dass schneller, starker Zugriff auf den Cache Auswendiglernen
+bedeutet. Der letzte Punkt der Liste nennt eine Arbeit, die an K3 angrenzt.
+
 * **„12-mal schneller"** ist im UFO-Paper der beste von vier Fällen (Tabelle 1 dort, 8 Startwerte, Gewichtsabnahme
-  0,03): 12,25-fach für den UFO auf den Aufmerksamkeitsgewichten der `=`-Zeile je Verbindung (8.000 statt 98.000
-  Schritte im Median), 7,54-fach je Eingabe, 3,16- und 2,04-fach auf den MLP-Aktivierungen.
+  0,03): 12,25-fach, wenn der UFO je Aufmerksamkeits-Verbindung der `=`-Zeile die Gewichte über alle Eingaben bekommt
+  (8.000 statt 98.000 Schritte im Median), 7,54-fach, wenn er je Eingabe alle Verbindungen bekommt, 3,16- und 2,04-fach
+  auf den MLP-Aktivierungen.
 * **Ein UFO wirkt nicht auf Gewichtsmatrizen.** Er bekommt Aktivierungen oder Aufmerksamkeitsgewichte und wirkt nur über
   den Gradienten beim Training. Der stärkste Fall regelt, wie die `=`-Position die früheren Positionen liest, also das
   Lesemuster über dem Cache. Schlüssel und Werte selbst hat das Paper nicht geregelt. Mit einem festen Zufallsnetz als
@@ -1025,8 +1045,10 @@ die arXiv-Arbeiten 2603.19664, 2605.05971, 2311.08360, 2412.00104 und 2604.12151
 **Der Cache.** Eine Aufgabe ist `[EOS, x, /, y, =, z, EOS]`, die Antwort wird am `=` gelesen. Wenn das `=` verarbeitet
 wird, stehen Schlüssel und Werte der Positionen 0 bis 3 in beiden Blöcken fest: Das ist der Cache. In Block 0 sind sie
 eine Tabelle über das Token (x an Platz 1, y an Platz 3; die Plätze 0 und 2 sind für alle Aufgaben gleich). In Block 1
-hängen Platz 1 und 2 nur von x ab, Platz 3 kann von x und y abhängen. Jeder Eingriff ändert nur, was die `=`-Position
-aus dem Cache liest; die Positionen 0 bis 3 rechnen unverändert (`kv_common.py`).
+hängen Platz 1 und 2 nur von x ab, Platz 3 kann von x und y abhängen. Jeder Eingriff ändert nur, was die Positionen ab
+dem `=` aus dem Cache lesen; die Positionen 0 bis 3 rechnen unverändert (`kv_common.py`). Gemessen wird am `=`; im
+Training liest auch die Antwortposition dahinter mit. Die `=`-Position heißt im Folgenden auch lesende Position oder
+Lesestelle. Ihr Zustand zwischen den Teilblöcken, zu dem jeder Block das Gelesene addiert, heißt `=`-Strom.
 
 **Was hier nicht variieren kann.** Das `=`-Token ist in jeder Aufgabe dasselbe. Alles, was die Antwort bestimmt, kommt
 aus dem Cache: Mit dem ganzen Cache einer anderen Aufgabe gibt jedes Netz in jedem geprüften Stand zu 100 % deren
@@ -1044,8 +1066,9 @@ Antwort. „Mehr oder weniger Nutzung" (K1) gibt es in diesem Netz nicht, nur ve
   Anteil der Streuung in den 5 stärksten von 48 Frequenzen. Vergleichswerte: dieselben Zeilen in zufälliger Reihenfolge
   und in der Reihenfolge 1 bis 96.
 * **Duldsamkeit.** Anteil gleicher Antworten bei Rauschen der Größe 1 (eine Streuung über die Aufgaben je Koordinate)
-  auf den Schlüsseln und Werten beider Blöcke, und bei einem gleich langen Vektor zufälliger Richtung, der stattdessen
-  auf den `=`-Strom gesetzt wird.
+  auf den Schlüsseln und Werten beider Blöcke, und bei einem Vektor zufälliger Richtung, der stattdessen nach dem Lesen
+  auf den `=`-Strom gesetzt wird und so lang ist wie die Änderung, die dieses Rauschen dort bewirkt („gleich langer
+  Zufallsvektor").
 
 A, L und die Duldsamkeit an 2.048 Trainingsaufgaben (A und L mit drei Ziehungen der fremden Aufgaben, gezählt über Paare
 mit verschiedenen Antworten); S, die Ordnung und die Logit-Streuung über alle 9.312 Aufgaben, also auch die ungesehenen
@@ -1067,7 +1090,8 @@ ersten 99 %.
 
 ### 8.3 Ordnung im Cache entsteht beim Verallgemeinern, ohne UFO
 
-Anteil der 5 stärksten Frequenzen für den Operanden-Platz von Block 0 (Spannen über die Stände der Art):
+Anteil der 5 stärksten Frequenzen für Platz 1 von Block 0, den Platz von x (Platz 3 trägt bis auf eine Konstante
+dieselbe Tabelle; Spannen über die Stände der Art):
 
 | Lauf | auswendig | verallgemeinernd | zufällige Reihenfolge | Reihenfolge 1 bis 96 |
 |---|---|---|---|---|
@@ -1085,9 +1109,9 @@ Anteil der 5 stärksten Frequenzen für den Operanden-Platz von Block 0 (Spannen
 * In der Reihenfolge 1 bis 96 bleibt der Wert in allen Läufen beim Zufallswert. Die Ordnung folgt der Gruppe, in der
   Division zu Subtraktion wird, nicht der Zahlenfolge.
 * Die Plätze von Block 1 verhalten sich ebenso: im Lauf aus 7.10 verallgemeinernd 0,60 bis 0,98, in den vier
-  Grundläufen, die 500 Schritte nach den ersten 99 % enden, 0,49 bis 0,93. Die Aufmerksamkeits-Logits von Block 0 sind
-  uneinheitlich (verallgemeinernd 0,30 bis 0,88 in den Grundläufen, 0,63 bis 0,97 im Lauf aus 7.10; untrainiert 0,20 bis
-  0,27, auswendig 0,22 bis 0,35).
+  Grundläufen, die 500 Schritte nach den ersten 99 % enden, 0,49 bis 0,93. Dasselbe Maß, auf die Aufmerksamkeits-Logits
+  von Block 0 angewandt, ist uneinheitlich (verallgemeinernd 0,30 bis 0,88 in den Grundläufen, 0,63 bis 0,97 im Lauf aus
+  7.10; untrainiert 0,20 bis 0,27, auswendig 0,22 bis 0,35).
 * **Für K1 heißt das:** Eine Ordnung im Cache gibt es, und sie entsteht von selbst mit dem Verallgemeinern. Ob sie Teil
   der verallgemeinernden Lösung ist oder nur mitläuft, ist nicht geprüft (kein Lauf greift in die Ordnung selbst ein);
   dass sie das Netz zu etwas „geneigt" macht, zeigt das nicht.
@@ -1135,9 +1159,9 @@ Anteil der 5 stärksten Frequenzen für den Operanden-Platz von Block 0 (Spannen
   zwischen Schritt 15.000 und 20.000 von 0,49 auf 0,07, und in der Kontrolle wandert es von 0,11 auf 0,42. S ist in
   allen Grundläufen 0,00: Platz 3 von Block 1 trägt y (82 bis 100 % der Streuung) und wenig x (0 bis 14 %), nicht die
   Antwort. Im Lauf aus 7.10 sind es 80 bis 92 % y, und S steigt dort bei Schritt 20.000 auf 0,04.
-* **Über Geschwindigkeit sagt nichts davon etwas.** Zwei Blöcke geben einen einzigen Unterschied früh/spät, und der
-  trennt Auswendig- und verallgemeinernde Stände nicht. K2 ist hier nur in der Form geprüft: „In Auswendig-Ständen hängt
-  die Antwort am Inhalt der Schlüssel, in verallgemeinernden kaum."
+* **Über Geschwindigkeit sagt nichts davon etwas.** Zwei Blöcke geben einen einzigen Unterschied früh/spät (Block 0
+  gegen Block 1, das Maß L), und der trennt Auswendig- und verallgemeinernde Stände nicht. K2 ist hier nur in der Form
+  geprüft: „In Auswendig-Ständen hängt die Antwort am Inhalt der Schlüssel, in verallgemeinernden kaum."
 
 ### 8.5 Unordnung im Cache und an der Lesestelle
 
@@ -1156,13 +1180,15 @@ Anteil der 5 stärksten Frequenzen für den Operanden-Platz von Block 0 (Spannen
   Rauschen trifft die wenigen Richtungen kaum, an denen das Lesemuster hängt.
 * Jeder Wert ist eine Ziehung des Rauschens; wiederholte Ziehungen streuen um 0,01 (Zahl des Prüfers).
 
-**Im Training.** Arme (Größe der Störung 0,5; je Startwert mit dem Grundlauf gepaart):
+**Im Training.** Arme (je Startwert mit dem Grundlauf gepaart):
 
 * *Schlüssel vertauscht:* Bei der Hälfte der Aufgaben jedes Stapels liest das `=` in beiden Blöcken die Schlüssel einer
   anderen Aufgabe (die Werte bleiben die eigenen).
 * *Rauschen im Cache:* Rauschen von 0,5 Streuungen auf Schlüsseln und Werten, wie sie das `=` liest.
 * *Kontrolle zu beiden:* Der Cache bleibt sauber; der `=`-Strom bekommt nach dem Lesen einen Vektor zufälliger Richtung,
-  der genau so lang ist wie die Änderung, die die Störung im Cache dort bewirkt hätte.
+  der genau so lang ist wie die Änderung, die die Störung im Cache dort bewirkt hätte. In der Kontrolle zu den
+  vertauschten Schlüsseln bekommen ihn deshalb nur die Aufgaben, deren Schlüssel vertauscht worden wären, rund die
+  Hälfte jedes Stapels; die Größen unten sind über den ganzen Stapel gemittelt.
 
 | Arm | Startwert 0 | 1 | 2 | 3 | Schritte bis 50 % im Verhältnis zum Grundlauf |
 |---|---|---|---|---|---|
@@ -1175,32 +1201,54 @@ Anteil der 5 stärksten Frequenzen für den Operanden-Platz von Block 0 (Spannen
 (Je Zelle: Schritt mit 50 % auf ungesehenen Aufgaben, zwischen zwei Messungen interpoliert / erste Messung mit
 mindestens 99 %. Die Trainingsaufgaben kann jedes Netz nach 1.000 bis 2.500 Schritten.)
 
-* **Jede der vier Störungen beschleunigt das Verallgemeinern**, in 16 von 16 Läufen gegenüber dem Grundlauf desselben
-  Startwerts: vertauschte Schlüssel auf das 0,22- bis 0,52-Fache der Schritte, Rauschen im Cache auf das 0,40- bis
-  0,56-Fache, die Kontrollen mit gleich langem Zufallsvektor am `=` auf das 0,42- bis 0,87-Fache und das 0,50- bis
-  0,88-Fache. In der Grokking-Literatur helfen Störungen beim Training teils, teils nicht (Rauschen hilft etwas bei
-  Power et al., arXiv 2201.02177; Dropout nimmt die Verzögerung bei Liu et al., arXiv 2205.10343, und verlängert sie bei
-  Nanda et al., arXiv 2301.05217; alle nach `kv_literature.json`).
-* **Störung im Cache gegen gleich große Störung am `=`:** Vertauschte Schlüssel sind in 3 von 4 Startwerten schneller
-  als ihre Kontrolle, Rauschen im Cache in 3 von 4. Die vorab gesetzte Schwelle für „spricht für K3" (vor dem Grundlauf
-  und vor der Kontrolle in mindestens fünf gepaarten Startwerten) ist mit vier Startwerten nicht erreichbar; mehr als
-  eine Richtung ist das nicht. Bei Startwert 2 ist zudem der Grundlauf durch einen Einbruch verzögert (8.2).
-* **„Gleich groß" gilt nur am Anfang.** Mit vertauschten Schlüsseln lernt das Netz, dass seine Antwort nicht an den
-  Schlüsseln hängt; die Störung, die das Vertauschen im `=`-Strom bewirkt, fällt dort schon bis Schritt 1.000 auf 0,01
-  bis 0,04 der Streuung des Stroms. In der Kontrolle dazu bleibt sie bei 0,61 bis 0,83 (Block 0, Schritt 1.000 bis
-  3.000), weil dort nichts das Netz von den Schlüsseln wegdrängt. Die Kontrolle bekommt über den Lauf also die größere
-  Störung. Beim Rauschen sind die beiden Arme näher beieinander (0,37 bis 0,39 gegen 0,47 bis 0,51 bei Schritt 1.000).
+* **In allen 16 Läufen mit Störung kam das Verallgemeinern früher als im Grundlauf desselben Startwerts.** Bei den
+  beiden Störungen im Cache ist der Abstand groß: Vertauschte Schlüssel brauchen das 0,22- bis 0,52-Fache der Schritte,
+  Rauschen im Cache das 0,40- bis 0,56-Fache, und alle acht Läufe sind schneller als der schnellste Grundlauf (7.323
+  Schritte). Bei den Kontrollen mit gleich langem Zufallsvektor am `=` ist er kleiner (das 0,42- bis 0,87-Fache und das
+  0,50- bis 0,88-Fache); bei den Startwerten 2 und 3 sparen sie nur 12 bis 30 % der Schritte. Zum Maßstab: Alle 16
+  Vergleiche hängen an denselben vier Grundläufen. Der von Startwert 2 ist durch einen Einbruch verzögert (8.2), nach
+  seinem Anstieg davor geschätzt um rund 550 Schritte; ohne ihn lägen seine vier Verhältnisse bei 0,23 / 0,75 / 0,42 /
+  0,73 statt 0,22 / 0,72 / 0,40 / 0,70. Und derselbe Startwert legt einen Lauf nicht fest: Der Lauf aus 7.10 (drei
+  Threads, frühere Skriptfassung, alle 1.000 Schritte gemessen) erreicht mit denselben Startgewichten wie der Grundlauf
+  von Startwert 0 die 50 % bei 10.368 statt 10.846 und die 99 % bei 12.000 statt 13.000. In der Grokking-Literatur
+  helfen Störungen beim Training teils, teils nicht (Rauschen hilft etwas bei Power et al., arXiv 2201.02177; Dropout
+  nimmt die Verzögerung bei Liu et al., arXiv 2205.10343; bei Nanda et al., arXiv 2301.05217, brauchen Netze mit Dropout
+  statt Gewichtsabnahme nach Vermutung der Autoren viel länger; alle nach `kv_literature.json`).
+* **Störung im Cache gegen gleich lange Störung am `=`:** Vertauschte Schlüssel sind in 3 von 4 Startwerten schneller
+  als ihre Kontrolle, Rauschen im Cache in 3 von 4. Die vorab gesetzte Regel kannte zwei Ausgänge: „vor dem Grundlauf,
+  aber gleichauf mit gleich dosierter Störung außerhalb des Cache: allgemeine Regularisierung, nicht K3" und „vor beiden
+  in mindestens fünf gepaarten Startwerten: für K3". Der zweite ist mit vier Startwerten nicht erreichbar, und ein
+  Vorsprung in je 3 von 4 Startwerten ist von „gleichauf" nicht zu unterscheiden; mehr als eine Richtung ist das nicht.
+  Die Regel verlangte außerdem gleiche Dosis nach Wirkung. Gleich lang ist nicht gleich wirksam: Am fertigen Netz lässt
+  der gleich lange Zufallsvektor in Auswendig-Ständen 0,41 bis 0,74 der Antworten stehen, das Rauschen im Cache 0,24 bis
+  0,50 (Tabelle oben).
+* **„Gleich lang" gilt zudem nur am Anfang.** Mit vertauschten Schlüsseln lernt das Netz, dass seine Antwort nicht an
+  den Schlüsseln hängt; die Störung, die das Vertauschen im `=`-Strom bewirkt, fällt dort schon bis Schritt 1.000 auf
+  0,02 bis 0,05 der Streuung des Stroms (Block 0; bei Schritt 500 noch 0,20 bis 0,30). In der Kontrolle dazu bleibt sie
+  bei 0,61 bis 0,93 (Block 0, alle Messungen von Schritt 1.000 bis 3.000; jede an einem Stapel von 48 Aufgaben), weil
+  dort nichts das Netz von den Schlüsseln wegdrängt. Die Kontrolle bekommt über den Lauf also die größere Störung. Beim
+  Rauschen sind die beiden Arme näher beieinander (0,37 bis 0,39 gegen 0,47 bis 0,51 bei Schritt 1.000).
+* **Auch in den 16 Läufen mit Störung steigt die Ordnung mit dem Verallgemeinern, aber auf sehr verschiedene Höhe.**
+  Verallgemeinernde Stände haben 0,36 bis 0,94 (am niedrigsten die Kontrolle zum Rauschen bei Startwert 1 mit 0,36 bis
+  0,40 und die vertauschten Schlüssel bei Startwert 1 mit 0,44 bis 0,48), Auswendig-Stände 0,16 bis 0,46. In 7 der 16
+  Läufe liegt ein verallgemeinernder Stand unter dem niedrigsten der Grundläufe (0,59). Die Lücke zwischen 0,32 und 0,59
+  aus 8.3 gilt also nur für die Grundläufe; verallgemeinern kann das Netz hier schon mit deutlich weniger Ordnung.
 * Mit „weniger Nutzung des Cache" hat die Beschleunigung nichts zu tun: Die Antwort kommt in allen Armen weiter ganz aus
   dem Cache. Das Netz lernt, sie zu lesen, ohne auf passende Schlüssel oder rauschfreie Werte angewiesen zu sein.
 
-**Wohin die Rechnung wandert** (verallgemeinernde Stände aller 16 Läufe mit Störung, je Startwert ein Lauf). In der
-Kontrolle zu den vertauschten Schlüsseln steht die Antwort in 3 von 4 Startwerten am Ende im Cache (S 0,45 bis 0,46 /
-0,00 / 0,50 bis 0,53 / 0,31), und in allen vier entscheidet allein, was Block 1 liest (L = 1,00). Das ist der Arm mit
-der größten Störung am `=`-Strom (0,61 bis 0,83 der Streuung des Stroms bei Schritt 1.000 bis 3.000, Block 0). Dasselbe
-hatte der UFO am `=` in 7.10 bewirkt (S 0,14 bis 0,38, L 0,99 bis 1,00). In der Kontrolle zum Rauschen im Cache, deren
-Störung am `=` kleiner ist (0,43 bis 0,51), bleibt S bei höchstens 0,03 (L 0,43 bis 1,00), ebenso in den beiden Armen
-mit Störung im Cache (S höchstens 0,06). Eine starke Störung an der Lesestelle drängt die Rechnung hier also meist in
-den Cache, die schwächere nicht. L allein zeigt das nicht an (es liegt je nach Lauf zwischen 0,02 und 1,00; 8.4).
+**Wohin die Rechnung wandert** (verallgemeinernde Stände aller 16 Läufe mit Störung, je Arm und Startwert ein Lauf). In
+der Kontrolle zu den vertauschten Schlüsseln steht die Antwort in 3 von 4 Startwerten am Ende zu einem guten Teil schon
+im Cache (S 0,45 bis 0,46 / 0,00 / 0,50 bis 0,53 / 0,31; ein linearer Ableser der Antwort aus dem Zustand von Position 3
+nach Block 0 trifft dort 61 bis 72 / 1 / 38 bis 46 / 12 bis 19 % der ungesehenen Aufgaben, Zufall 1 %), und in allen
+vier entscheidet allein, was Block 1 liest (L = 1,00). Das ist der Arm mit der größten Störung am `=`-Strom (0,61 bis
+0,93 der Streuung des Stroms bei Schritt 1.000 bis 3.000, Block 0). Dasselbe hatte der UFO am `=` in 7.10 bewirkt (S
+0,14 bis 0,38, L 0,99 bis 1,00). In der Kontrolle zum Rauschen im Cache, deren Störung am `=` kleiner ist (0,43 bis
+0,51), bleibt S bei höchstens 0,03 (L 0,43 bis 1,00), ebenso in den beiden Armen mit Störung im Cache (S höchstens
+0,06). Dass es an der Größe der Störung liegt, ist nicht geprüft: Die beiden Kontrollen unterscheiden sich auch in der
+Form (die eine trifft je Stapel nur die Aufgaben, deren Schlüssel vertauscht worden wären, also rund die Hälfte, die
+andere alle), kein Arm ändert nur die Größe, und Startwert 1, die Ausnahme, hatte in Block 0 im Mittel die größte
+Störung des Arms (0,73 bis 0,93, die anderen drei 0,61 bis 0,84) und nur in Block 1 die kleinste (0,37 bis 0,58 gegen
+0,50 bis 0,69). L allein zeigt die Verlagerung nicht an (es liegt je nach Lauf zwischen 0,02 und 1,00; 8.4).
 
 ### 8.6 Ungrokking: sprunghaft, an den fehlenden Aufgaben hängend, nicht im Cache-Pfad allein
 
@@ -1248,11 +1296,12 @@ Anfang (41 gegen 51).
   0,17 / 0,17). Für diesen Fall sah die Regel die Lesart „Instabilität dieses Trainingsaufbaus" vor. Darüber hinaus geht
   nur der Unterschied danach: mit allen Aufgaben wieder 100 %, mit 5 % nicht.
 * Die Genauigkeit geht hier also in den Einbrüchen verloren. Das Netz wandert aber schon vorher ab: Vor dem ersten
-  Sprung passen seine Hälften schlechter zu G als die der Driftkontrolle (unten), und in den beiden anderen Ziehungen
-  sind bei Schritt 750 schon 9 und 17 % der ungesehenen Aufgaben verloren (bei der zufälligen Ziehung 11 % der Aufgaben,
-  deren x, y und Antwort in den 233 vorkommen; 5 und 9 % fehlten schon bei Schritt 250). Ob es ohne Einbrüche ebenfalls
-  kippen würde, ist nicht geprüft. Der Lauf mit 5 % und die Driftkontrolle unterscheiden sich außerdem nicht nur in den
-  Aufgaben: Mit 233 Aufgaben geht jeder Schritt über alle, mit allen Aufgaben über einen Stapel von 512.
+  Sprung passen Cache und Leser des Netzes, einzeln mit dem Ausgangsnetz gemischt, schlechter zu ihm als die der
+  Driftkontrolle (unten), und in den beiden anderen Ziehungen sind bei Schritt 750 schon 9 und 17 % der ungesehenen
+  Aufgaben verloren (bei der zufälligen Ziehung 11 % der Aufgaben, deren x, y und Antwort in den 233 vorkommen; 5 und 9
+  % fehlten schon bei Schritt 250). Ob es ohne Einbrüche ebenfalls kippen würde, ist nicht geprüft. Der Lauf mit 5 % und
+  die Driftkontrolle unterscheiden sich außerdem nicht nur in den Aufgaben: Mit 233 Aufgaben geht jeder Schritt über
+  alle, mit allen Aufgaben über einen Stapel von 512.
 * An der Gewichtsnorm lässt sich das Kippen nicht ablesen. Sie fällt in beiden Läufen gleichmäßig und springt bei jedem
   Einbruch nach oben (Startwert 0 mit 5 %: 50,4 bei Schritt 250, 47,5 bei 700, 51,0 im Sprung, 40,0 bei 4.000).
 
@@ -1274,8 +1323,9 @@ Anfang (41 gegen 51).
   wieder auf 0,68.
 * In dieser Form trägt der erste Teil von K4 im Kleinversuch: Fehlen die übrigen Aufgaben ganz, geht die
   Verallgemeinerung verloren; kommen sie selten vor, bleibt sie großteils erhalten (2 % in drei Netzen, die anderen
-  Anteile in einem). Selten heißt hier eine niedrige Rate, nicht wenige Aufgaben. Eine Kontrolle mit wechselnden
-  Stapeln, die nichts über die weggelassenen Aufgaben enthalten, fehlt.
+  Anteile in einem). Selten heißt hier eine niedrige Rate, nicht wenige Aufgaben. Mit seltenen Aufgaben wechselt
+  außerdem der Stapel von Schritt zu Schritt; ohne sie sieht jeder Schritt dieselben 233 Aufgaben. Eine Kontrolle, die
+  nur diesen Wechsel herstellt und nichts über die weggelassenen Aufgaben enthält, fehlt.
 
 **Cache-Pfad oder Lese-Pfad?** (K4, zweiter Teil.) Ungrokking ändert Gewichte; der Cache wird bei jedem Durchlauf aus
 ihnen neu berechnet. Fragen lässt sich nur, welche Hälfte des Durchlaufs nicht mehr zum Ausgangsnetz passt: das, was die
@@ -1378,8 +1428,8 @@ Antworten von G auf ungesehenen Aufgaben, wenn die Störung zu seinem Cache addi
 
 * **Die grobe Gestalt der Verschiebung ist keine Eigenheit des Ungrokking.** Sie ist zu 95 bis 99 % ein Versatz, der für
   alle Aufgaben gleich ist, und dieser Versatz allein bringt G aus dem Tritt. Beides gilt auch für die Driftkontrolle
-  (bei Startwert 1 bringt ihr Versatz G weniger aus dem Tritt: 0,63 gegen 0,26 bis 0,28). Es zeigt, dass der Code beim
-  Weitertrainieren wandert.
+  (bei Startwert 1 bringt ihr Versatz G weniger aus dem Tritt: 0,63 gegen 0,26 bis 0,28). Es zeigt, dass sich der Inhalt
+  des Cache beim Weitertrainieren als Ganzes verschiebt.
 * **Der aufgabeneigene Rest des gekippten Netzes stört G bei gleicher Größe etwas mehr als der der Driftkontrolle.** Auf
   das Doppelte vergrößert (rund eine Streuung des Cache von G) lässt der Rest der Driftkontrolle 0,28 / 0,60 / 0,28 der
   Antworten stehen, der Rest des gekippten Netzes bei Schritt 1.000 nur 0,19 / 0,48 / 0,19, obwohl er in zwei der drei
@@ -1389,13 +1439,14 @@ Antworten von G auf ungesehenen Aufgaben, wenn die Störung zu seinem Cache addi
   / 0,53 / 0,34). Je eine Ziehung; eine Driftkontrolle gleicher Größe für Schritt 4.000 fehlt.
 * In jeder Spalte stört eine gleich lange Verschiebung entlang dessen, was G selbst zwischen zwei Aufgaben
   unterscheidet, stärker als der eigene Rest, und beliebiges Rauschen fast gar nicht. Bei halber Größe (Schritt 4.000)
-  stören nur die Verschiebungen entlang des Codes von G merklich (0,83 bis 0,98), der eigene Rest kaum (0,94 bis 1,00).
-  Bei doppelter zerstören der eigene Rest, der fremde Rest und die Verschiebungen entlang des Codes von G fast alles
-  (0,01 bis 0,11); Rauschen mit der Kovarianz von d lässt 0,14 bis 0,74 stehen, beliebiges Rauschen 0,44 bis 0,53.
+  stören nur die beiden Verschiebungen merklich, die dem Cache von G selbst folgen (Unterschied zweier Aufgaben,
+  Zufallsrichtung aus seinen Hauptachsen; 0,83 bis 0,98), der eigene Rest kaum (0,94 bis 1,00). Bei doppelter zerstören
+  der eigene Rest, der fremde Rest und diese beiden Verschiebungen fast alles (0,01 bis 0,11); Rauschen mit der
+  Kovarianz von d lässt 0,14 bis 0,74 stehen, beliebiges Rauschen 0,44 bis 0,53.
 * Bei Schritt 4.000 gibt G danach nur selten die Antworten des weitertrainierten Netzes (Übereinstimmung höchstens 12
-  %). Mit dem eigenen Rest sind es 9 / 10 / 9 %, obwohl dieses Netz selbst nur 3 / 12 / 5 % richtig rechnet; bei 7 / 4 /
-  7 % der Aufgaben gibt G dessen falsche Antwort (Zahl des Prüfers; Zufall wäre rund 1 %). Die Verschiebung überträgt
-  das Ungrokking also nur zu einem kleinen Teil.
+  %). Mit dem eigenen Rest sind es 9 / 10 / 9 %; dieses Netz selbst rechnet 3 / 12 / 5 % richtig. Bei 7 / 4 / 7 % der
+  Aufgaben gibt G dessen falsche Antwort (Zahl des Prüfers; Zufall wäre rund 1 %). Die Verschiebung überträgt das
+  Ungrokking also nur zu einem kleinen Teil.
 * Es bleibt ein schwacher, aufgabeneigener Anteil der Verschiebung, der zum Ungrokking gehört und nicht zum bloßen
   Weitertrainieren. K5 selbst ist nicht geprüft: Gemessen ist, wie das verallgemeinernde Netz bricht. K5 bräuchte ein
   Muster, das eine auswendige Lösung trifft und die verallgemeinernde schont, und einen Lauf, der es beim Training
@@ -1436,18 +1487,19 @@ Community, 16. Juli 2026, „Interpreting How Neural Nets Regress Cubic Polynomi
   Einheiten, wird die Kurve senkrecht gestreckt, nicht waagrecht verschoben. Ein Netz, ein SAE.
 * **Gegenprobe** (`cubic_direction.py`). Die Zielfunktion selbst ändert sich in der (x, a)-Ebene entlang x + c·a mit c =
   x² / (3x² + 2ax + 1). Über den Trainingsbereich ist die Hauptrichtung dieses Gradienten c = 0,26; die Hälfte des
-  Gradientengewichts liegt zwischen 0,19 und 0,34, und 1/3 ist der Grenzwert für großes |x|. Mit dem Test des Beitrags
-  (50 Fächer wie dort; c hier in Schritten von 0,025) ist schon die Zielfunktion zu 97 % Funktion von x + c·a allein, am
-  besten mit c = 0,275 (ohne b: 98 %, c = 0,30); zwischen c = 0,25 und 0,325 ändert sich das kaum (0,967 und 0,967), mit
-  c = 0 sind es 74 %. Eine Einheit, die nur der Höhe der Ausgabe folgt, zeigt also dieses Band und hängt kaum von b ab
-  (b trägt 0,5 % der Empfindlichkeit der Zielfunktion). Dazu passt der Eingriff des Beitrags: Verstärken streckt die
-  Kurve senkrecht. In 15 eigenen Netzen derselben Größe (je fünf Startwerte mit ReLU, tanh und SiLU, ohne SAE, direkt an
-  den Neuronen der letzten Schicht):
+  Gradientengewichts liegt zwischen 0,19 und 0,34, und 1/3 ist der Grenzwert für großes |x|. Der Test des Beitrags: x +
+  c·a wird in 50 Fächer geteilt, die Größe aus dem Mittel ihres Fachs vorhergesagt, und gesucht wird das c, mit dem das
+  am besten gelingt (hier an 10.000 Punkten angepasst, an 10.000 anderen geprüft, c in Schritten von 0,025). Mit diesem
+  Test ist schon die Zielfunktion zu 97 % Funktion von x + c·a allein, am besten mit c = 0,275 (ohne b: 98 %, c = 0,30);
+  zwischen c = 0,25 und 0,325 ändert sich das kaum (0,967 und 0,967), mit c = 0 sind es 74 %. Eine Einheit, die nur der
+  Höhe der Ausgabe folgt, zeigt also dieses Band und hängt kaum von b ab (b trägt 0,5 % der Empfindlichkeit der
+  Zielfunktion). Dazu passt der Eingriff des Beitrags: Verstärken streckt die Kurve senkrecht. In 15 eigenen Netzen
+  derselben Größe (je fünf Startwerte mit ReLU, tanh und SiLU, ohne SAE, direkt an den Neuronen der letzten Schicht):
 
   | | ReLU | tanh | SiLU |
   |---|---|---|---|
   | Richtung, entlang der sich die letzte Schicht als Ganzes ändert (c, fünf Startwerte) | 0,26 bis 0,31 | 0,23 bis 0,25 | 0,23 bis 0,25 |
-  | Neuronen, die zu über 90 % Funktion von x + c·a allein sind | 38 von 58 | 48 von 75 | 70 von 75 |
+  | Neuronen, die zu über 90 % Funktion von x + c·a allein sind | 38 von 58 (17 der 75 ReLU-Neuronen sind konstant und zählen nicht) | 48 von 75 | 70 von 75 |
   | ihr c, Median (Viertelwerte) | 0,275 (0,250 bis 0,325) | 0,238 (0,200 bis 0,331) | 0,275 (0,250 bis 0,300) |
 
   Untrainiert ist die Richtung beliebig (c zwischen −28 und 3), und auf b entfällt höchstens 1,1 % der Empfindlichkeit
@@ -1455,56 +1507,70 @@ Community, 16. Juli 2026, „Interpreting How Neural Nets Regress Cubic Polynomi
   in 14 von 15 für mindestens sechs einzelne Neuronen (in einem ReLU-Netz nur für 2 von 13). Die Werte liegen dort, wo
   sich die Funktion selbst ändert: Von den 156 Neuronen liegen 79 % zwischen 0,19 und 0,34, 33 % innerhalb von 0,025 um
   0,26 und 13 % innerhalb von 0,025 um 1/3. Ein Hinweis darauf, dass ein Netz Cardanos Schritt „gefunden" hat, ist das
-  nicht; beide Zahlen kommen aus denselben führenden Termen, und mit der Auflösung des Beitrags (neun Einheiten, deren
-  Werte alle Vielfache von 0,025 sind) lassen sich 0,26, 0,30 und 1/3 nicht trennen. Dieselbe Vorsicht wie in 7.9: Ein
-  Maß kann eine Eigenschaft der Aufgabe wiedergeben statt einer Leistung des Netzes. Das Ordnungsmaß in 8.3 hat dafür
-  die Kontrolle mit vertauschten Antworten und die zufällige Reihenfolge.
+  nicht; die Richtung 0,26 und Cardanos 1/3 kommen beide aus den führenden Termen x³ und a·x², und mit der Auflösung des
+  Beitrags (neun Einheiten, deren Werte alle Vielfache von 0,025 sind) lassen sich 0,26, 0,30 und 1/3 nicht trennen.
+  Dieselbe Vorsicht wie in 7.9: Ein Maß kann eine Eigenschaft der Aufgabe wiedergeben statt einer Leistung des Netzes.
+  Das Ordnungsmaß in 8.3 hat dafür die Kontrolle mit vertauschten Antworten und die zufällige Reihenfolge.
 
 ### 8.8 Was folgt daraus
 
 * **K1 (geordneter Cache wird mehr benutzt).** So nicht prüfbar, weil in dieser Aufgabe alles aus dem Cache kommt.
-  Gezeigt: Der Cache ordnet sich beim Verallgemeinern von selbst (8.3), und mit dem Verallgemeinern hängen die Antworten
-  kaum noch an den eigenen Schlüsseln (8.4). Wo die Rechnung sitzt, hängt nicht an der Ordnung, eher daran, wo gestört
-  wird: Mit starker Störung an der Lesestelle steht die Antwort in drei von vier Läufen am Ende im Cache, in den zwölf
-  anderen Läufen mit Störung und in den Grundläufen nicht (8.5).
+  Gezeigt: Der Cache ordnet sich beim Verallgemeinern von selbst (8.3; in den Grundläufen auf 0,59 bis 0,90, mit Störung
+  im Training verallgemeinern Netze schon ab 0,36, 8.5), und mit dem Verallgemeinern hängen die Antworten kaum noch an
+  den eigenen Schlüsseln (8.4). Die Ordnung allein legt nicht fest, wo die Rechnung sitzt: Im Grundlauf von Startwert 0
+  steht die Antwort bei Ordnung 0,83 bis 0,90 nicht im Cache (S 0,00). In dem Arm mit der größten Störung an der
+  lesenden Position steht sie in drei von vier Läufen am Ende zu einem guten Teil im Cache, in den zwölf anderen Läufen
+  mit Störung und in den Grundläufen nicht (8.5). Ob das an der Größe der Störung liegt, ist nicht geprüft. In diesem
+  einen Arm steigen S und Ordnung über die vier Startwerte gemeinsam (S 0,00 / 0,31 / 0,45 bis 0,46 / 0,50 bis 0,53 bei
+  Ordnung 0,59 bis 0,74 / 0,75 bis 0,80 / 0,81 bis 0,87 / 0,88 bis 0,94); vier Läufe entscheiden das nicht.
 * **K2 (starker Zugriff heißt Auswendiglernen).** Gesehen in der Form „in Auswendig-Ständen hängt die Antwort an den
   eigenen Schlüsseln, in verallgemeinernden kaum", in allen vier Grundläufen und der Kontrolle. Nach der vorab gesetzten
   Regel gilt das wegen der verfehlten Schwellen nicht als gestützt; widerlegt ist es auch nicht. Es ist ein
   Begleitzeichen und nicht nötig: Im Arm mit vertauschten Schlüsseln lernt das Netz auch ohne das auswendig (ein
   Startwert, ein Stand). Zu Geschwindigkeit nichts; das Paper dazu wurde nicht gefunden.
-* **K3 (Anti-UFO im Cache).** In diesem Kleinversuch der am besten gestützte Punkt, mit Einschränkungen. Unordnung im
-  Cache beim Training hat das Verallgemeinern in allen acht Läufen beschleunigt (vertauschte Schlüssel auf das 0,22- bis
-  0,52-Fache der Schritte, Rauschen auf das 0,40- bis 0,56-Fache). Gleich große Unordnung an der Lesestelle beschleunigt
-  ebenfalls (auf das 0,42- bis 0,88-Fache), in 6 von 8 Vergleichen weniger. Die vorab gesetzte Schwelle für „spricht für
-  K3" (fünf gepaarte Startwerte) ist mit vier Startwerten nicht erreicht, und die Kontrolle ist über den Lauf nicht
-  gleich groß (8.5). Am fertigen Netz trifft Unordnung die auswendige Lösung härter als die verallgemeinernde, im Cache
-  wie außerhalb. Mit „weniger Cache benutzen" hat das nichts zu tun: Das kann das Netz hier nicht; es lernt, trotz der
-  Störung zu lesen. Geprüft bei Gewichtsabnahme 0,3; ob es bei 0,03 genauso ist, ist offen.
+* **K3 (Anti-UFO im Cache).** Gut gestützt ist hier nur der allgemeine Teil: Störung beim Training lässt das Netz früher
+  verallgemeinern. Mit Unordnung im Cache war das in allen acht Läufen so (gemessen am Schritt mit 50 %: vertauschte
+  Schlüssel auf das 0,22- bis 0,52-Fache der Schritte, Rauschen auf das 0,40- bis 0,56-Fache), mit einem gleich langen
+  Zufallsvektor an der lesenden Position ebenfalls (auf das 0,42- bis 0,88-Fache). Dass es auf den Cache ankommt, ist
+  nach der vorab gesetzten Regel nicht gestützt und nicht widerlegt. Sie verlangte einen Vorsprung vor gleich dosierter
+  Störung außerhalb des Cache in mindestens fünf gepaarten Startwerten. Gelaufen sind vier, und der Cache liegt in 6 von
+  8 Vergleichen vorn. Gleich dosiert ist die Kontrolle nicht: Am fertigen Netz ändert der gleich lange Zufallsvektor
+  weniger Antworten als das Rauschen im Cache, und im Training bleibt die Störung in der Kontrolle größer als im Arm mit
+  vertauschten Schlüsseln (8.5). Am fertigen Netz trifft Unordnung die auswendige Lösung härter als die
+  verallgemeinernde, im Cache wie außerhalb. Mit „weniger Cache benutzen" hat das nichts zu tun: Das kann das Netz hier
+  nicht; es lernt, trotz der Störung zu lesen. Geprüft bei Gewichtsabnahme 0,3; ob es bei 0,03 genauso ist, ist offen.
 * **K4.** Erster Teil in schwacher Form gestützt: Fehlen die übrigen Aufgaben ganz, geht die Verallgemeinerung verloren;
   kommen sie selten vor (2 % je Stapel), bleibt sie großteils erhalten (drei Netze). Zweiter Teil nicht gestützt: Die
   vorab gesetzte Regel für „der Cache trägt das Ungrokking" ist in keinem der drei Netze erfüllt. Vor dem Sprung weicht
-  der Lese-Pfad mindestens so stark von G ab wie der Cache-Pfad, und im entkoppelten Netz (ein anderes Modell, zwei
-  Ausgangsnetze) kippt das Netz über den Cache allein am langsamsten. Wo das Ungrokking sitzt, zeigt das nicht. Die
-  Genauigkeit geht hier in Sprüngen verloren, bei Einbrüchen des Trainings, die der Aufbau auch sonst hat.
+  im lesbaren Schnitt („Zustände") der Lese-Pfad stärker von G ab als der Cache-Pfad (bei Schritt 500 R 0,12 bis 0,19
+  gegen C 0,01 bis 0,09). Im Schnitt „Schlüssel/Werte" verliert bei zwei Netzen der Cache-Pfad mehr; das zeigt aber
+  schon die Driftkontrolle, und der Überschuss über sie ist auf dem Lese-Pfad mindestens so groß. Im entkoppelten Netz
+  (ein anderes Modell, zwei Ausgangsnetze) kippt das Netz über den Cache allein am langsamsten. Wo das Ungrokking sitzt,
+  zeigt das nicht. Die Genauigkeit geht hier in Sprüngen verloren, bei Einbrüchen des Trainings, die der Aufbau auch
+  sonst hat.
 * **K5.** Nicht geprüft, und die Beschreibung entscheidet nichts. Gemessen ist, wie das verallgemeinernde Netz bricht;
   K5 bräuchte ein Muster, das eine auswendige Lösung trifft und die verallgemeinernde schont, und einen Lauf, der es
   beim Training benutzt. Zur Beschreibung: Die Verschiebung des Cache ist zu 95 bis 99 % für alle Aufgaben gleich, bei
   der Driftkontrolle ebenso. Ihr aufgabeneigener Rest stört G etwas mehr als der der Driftkontrolle, aber weniger als
-  eine gleich lange Verschiebung entlang des Codes von G.
+  eine gleich lange Verschiebung entlang dessen, was G zwischen zwei Aufgaben unterscheidet.
 * **R1.** Nicht prüfbar. Kein Modell hier kann seine Gewichte ändern, und nichts misst eine Neigung dazu. In der
   Literatur fand sich dazu nichts (eine Suchanfrage).
 * **SwiGLU und der Beitrag über kubische Polynome (8.7).** Die quadratische Wechselwirkung gibt es. An der einen Stelle,
-  an der sie in Qwen gemessen ist (Antwort auf einen kleinen zugesetzten Vektor), läuft fast alles über den linearen
-  Zweig, und im Kleinversuch bringt SwiGLU keinen klaren Vorteil. Dass ein Netz beim kubischen Polynom eine Größe nahe x
-  + a/3 bildet, folgt schon aus der Aufgabe.
+  an der sie in Qwen gemessen ist (Antwort auf einen kleinen zugesetzten Vektor), läuft fast alles über den Up-Zweig, in
+  dem das Neuron sein Signal nur mit einem Faktor durchreicht (über den Gate-Zweig 0,007 bis 0,012 von 0,15 bis 0,24),
+  und im Kleinversuch bringt SwiGLU keinen klaren Vorteil. Dass ein Netz beim kubischen Polynom eine Größe der Form x +
+  c·a mit c um 0,26 bildet (0,23 bis 0,31 je Netz, nahe Cardanos 1/3), folgt schon aus der Aufgabe.
 
 **Wie sicher?** Ein Netz mit zwei Blöcken, eine Aufgabe, Gewichtsabnahme 0,3 (das Zehnfache des Papers). Vier Startwerte
 haben die Grundläufe und die fünf Trainingsarme (Startwert 0 ist derselbe Anfang wie der Lauf aus 7.10). Das Ungrokking
 ruht auf drei Ausgangsnetzen, die alle auf denselben 233 Aufgaben weitertrainiert wurden und alle erst 500 Schritte
 verallgemeinern; die Anteile außer 2 % und die beiden anderen Ziehungen auf einem Netz, das entkoppelte Netz auf zweien.
 Jede Zahl aus einem einzelnen Lauf kann sich mit einem anderen Startwert deutlich verschieben (die Grundläufe erreichen
-50 % zwischen Schritt 7.323 und 12.759). Die Messzahlen und die Pfad-Analyse sind von zwei Prüfern mit eigenem Code
-nachgerechnet; die Deutung wurde gegengelesen und danach an vielen Stellen zurückgenommen (`review_kv.json`).
+50 % zwischen Schritt 7.323 und 12.759). Mit eigenem Code nachgerechnet sind die Messzahlen an 19 Ständen von neun
+Läufen (die vier Grundläufe, Startwert 0 von drei Armen, zwei Läufe aus 7.10), die Pfad-Analyse und S in den 16 Läufen
+mit Störung. A, L und die Duldsamkeit der Arme bei den Startwerten 1 bis 3, der Kontrolle zum Rauschen und des
+SwiGLU-Arms sind nicht unabhängig nachgerechnet. Die Deutung wurde zweimal gegengelesen und danach jeweils an vielen
+Stellen zurückgenommen; die Änderungen nach dem zweiten Durchgang hat niemand mehr gegengelesen (`review_kv.json`).
 
 ## Grenzen
 
@@ -1534,13 +1600,19 @@ nachgerechnet; die Deutung wurde gegengelesen und danach an vielen Stellen zurü
 * Abschnitt 8: ein Netz mit zwei Blöcken, eine Aufgabe, Gewichtsabnahme 0,3 (das Zehnfache des UFO-Papers), je Arm
   vier Startwerte, ein CPU-Thread. Das `=`-Token trägt nichts Eigenes, deshalb kann nur der Weg durch den Cache
   variieren, nicht die Menge der Nutzung; in einem Sprachmodell ist das anders. Die Schwellen für A wurden an vier
-  Stellen verfehlt. Jede Duldsamkeits-Zahl ist eine Ziehung des Rauschens. Die drei Ungrokking-Läufe, auf denen die
-  Pfad-Analyse beruht, benutzen dieselben 233 Aufgaben und wurden von Hand nach 4.000 bis 5.250 Schritten beendet. Die
-  Driftkontrolle hat eigene Einbrüche; vergleichbar ist sie nur davor. Das entkoppelte Netz ist ein anderes Modell.
-  Seltene Aufgaben wurden nur als Anteil je Stapel geprüft, nicht mit schiefer Verteilung über die ganze
-  Trainingszeit. Nicht geprüft: K5 als Trainingsverfahren, ein UFO auf Schlüsseln und Werten, der UFO auf dem
-  Lesemuster, eine rein bilineare Einheit, andere Gewichtsabnahmen, ein zweites Modell. Die Gegenprobe zum Beitrag über kubische Polynome benutzt
-  eigene Netze, nicht das des Beitrags.
+  Stellen verfehlt. Jede Duldsamkeits-Zahl ist eine Ziehung des Rauschens. Von den Auflagen der Plankritik zu den
+  Trainingsarmen sind offen: fünf gepaarte Startwerte (gelaufen sind vier); der Abgleich der Arme nach Wirkung oder drei
+  Größen je Ort (gelaufen ist eine Größe, nach Länge abgeglichen und über den Lauf nicht gleich groß); Schlüssel und
+  Werte getrennt verrauscht; Messung alle 100 bis 250 Schritte und 99 % über drei Messungen (gemessen wurde alle 500
+  Schritte, und die Läufe enden 500 Schritte nach den ersten 99 %; beim Rauschen im Cache, Startwert 1, liegt die letzte
+  Messung wieder bei 98,99 %). Im Training liest neben dem `=` auch die Antwortposition dahinter den gestörten Cache.
+  Alle Ungrokking-Läufe der Pfad-Analyse und der Verschiebung benutzen dieselben 233 Aufgaben. Die drei langen Läufe
+  (spätere Schritte, Verschiebung des Cache) wurden von Hand nach 4.000 bis 5.250 Schritten beendet; die fein gemessenen
+  enden nach 1.500. Die Driftkontrolle hat eigene Einbrüche; vergleichbar ist sie nur davor. Das entkoppelte Netz ist
+  ein anderes Modell. Seltene Aufgaben wurden nur als Anteil je Stapel geprüft, nicht mit schiefer Verteilung über die
+  ganze Trainingszeit. Nicht geprüft: K5 als Trainingsverfahren, ein UFO auf Schlüsseln und Werten, der UFO auf dem
+  Lesemuster, eine rein bilineare Einheit, andere Gewichtsabnahmen, ein zweites Modell. Die Gegenprobe zum Beitrag über
+  kubische Polynome benutzt eigene Netze, nicht das des Beitrags.
 
 ## Nächster Schritt
 
@@ -1556,8 +1628,9 @@ Rückkopplung zwischen SAE und Netz, mit einem SAE, der für die unteren Blöcke
 
 Zu Abschnitt 8: (1) dieselben Maße an einer Aufgabe, bei der die Antwort entweder aus dem Kontext oder aus den Gewichten
 kommen kann (erst dort hat „mehr oder weniger Cache-Nutzung" einen Sinn); (2) die Störungs-Arme mit der Gewichtsabnahme
-des Papers und mindestens acht Startwerten; (3) die Einbrüche des Trainings abstellen (kleinere Lernrate oder größeres
-Epsilon im Optimierer) und prüfen, ob Ungrokking dann noch eintritt und wie es verläuft.
+des Papers, mindestens acht Startwerten und einer Kontrolle, die nach Wirkung abgeglichen ist und über den Lauf gleich
+groß bleibt; (3) versuchen, die Einbrüche des Trainings abzustellen (etwa mit kleinerer Lernrate oder größerem Epsilon
+im Optimierer; ihre Ursache ist nicht untersucht), und prüfen, ob Ungrokking dann noch eintritt und wie es verläuft.
 
 ## Dateien
 
@@ -1584,16 +1657,16 @@ Epsilon im Optimierer) und prüfen, ob Ungrokking dann noch eintritt und wie es 
 | `ufo_compress*.json/.log`, `ufo_grid*.json/.log` | Flaschenhals-Maß auf DSSE-Fragen und auf dem Zahlenraster, trainiert und untrainiert (7.9) |
 | `ufo_grok_{base,ufo,perm}_log.json`, `ufo_grok_{base,ufo,perm}_probe2.json`, `ufo_grok_{base,ufo,perm}_split.json`, `ufo_grok_report.txt` | Kleinversuch (7.10) |
 | `review_ufo.json` | Prüfberichte zu Abschnitt 7 |
-| `kv_plan_review.json`, `kv_literature.json` | Plankritik und Literaturprüfung vor den Läufen von Abschnitt 8 |
+| `kv_plan_review.json`, `kv_literature.json` | Plankritik und Literaturprüfung vor der Auswertung der Läufe von Abschnitt 8 |
 | `kv_summary.json`, `kv_tables.txt`, `kv_logs.json` | alle Läufe von Abschnitt 8: Arme, Fortsetzungen, Messungen je Stand; Tabellen; Trainingsverläufe (darin auch der Vorlauf `pilot_sub0.1` und die Feinmessungen `check0`, `check0.02`) |
-| `kv_probe_*.json` | Weg, Ordnung und Duldsamkeit je gespeichertem Stand eines Laufs (8.3–8.5) |
+| `kv_probe_*.json` | Weg, Ordnung und Duldsamkeit je gespeichertem Stand eines Laufs (8.3–8.5, 8.7) |
 | `kv_path_fine_s{0,1,2}.json`, `kv_transplant_s{0,1,2}.json`, `kv_disp_u1000_s{0,1,2}.json`, `kv_disp_drift3000_s{0,1,2}.json` | Pfad-Analyse und Verschiebung des Cache beim Ungrokking, mit Driftkontrolle (8.6) |
 | `cubic_direction.json`, `cubic_direction.txt` | Gegenprobe zum Beitrag über kubische Polynome (8.7) |
-| `review_kv.json` | Prüfberichte zu Abschnitt 8 |
+| `review_kv.json` | die sieben Prüfberichte zu Abschnitt 8 und eine Notiz zu den Änderungen danach |
 
 Nicht im Repository: Zustände und SAE-Aktivierungen (zusammen etwa 500 MB), für Abschnitt 7 die Statistik echter
-Zustände (`ufo_pool.pt`, 860 MB), die Aktivierungen auf dem Zahlenraster (700 MB) und die Gewichte der Kleinversuche (Abschnitt 8: 640 MB);
-sie entstehen beim Nachrechnen neu.
+Zustände (`ufo_pool.pt`, 860 MB), die Aktivierungen auf dem Zahlenraster (700 MB) und die Gewichte der Kleinversuche
+(Abschnitt 8: rund 770 MB); sie entstehen beim Nachrechnen neu.
 
 ## Nachrechnen
 
@@ -1634,25 +1707,28 @@ python $S/ufo_report.py $U _randinit
 python $S/ufo_compress.py $U $O/neu_act.npy && python $S/ufo_compress_pc.py $R $U
 python $S/ufo_grid.py $R $U && RANDINIT=1 python $S/ufo_grid.py $R $U    # FROMFILE=1: nur die Zerlegung aus den gespeicherten Aktivierungen
 ONLY=4,14,22 BLOCKS=4,14,22 STEPS=600 python $S/ufo_compress.py $U $U/ufo_grid_act.npy _grid          # ebenso mit ufo_grid_act_randinit.npy _grid_randinit
-for m in base ufo; do python $S/ufo_grok.py $U $m 0 70000 0.3; done; python $S/ufo_grok.py $U perm 0 20000 0.3   # Kleinversuch, je 15 bis 30 min
+for m in base ufo; do TAIL=8000 python $S/ufo_grok.py $U $m 0 70000 0.3; done; python $S/ufo_grok.py $U perm 0 20000 0.3   # Kleinversuch, je 15 bis 30 min
 for m in base ufo perm; do python $S/ufo_grok_probe2.py $U/grok_${m}_s0_wd0.3; python $S/ufo_grok_split.py $U/grok_${m}_s0_wd0.3; done
 python $S/ufo_grok_report.py $U
-# Abschnitt 8 (Kleinversuch zum KV-Cache); jeder Lauf mit einem Thread, 10 bis 35 min
+# Abschnitt 8 (Kleinversuch zum KV-Cache); jeder Lauf mit einem Thread; Trainingsläufe 7 bis 35 min, Fortsetzungen 1 bis 11 min
 K=<root>/kv_out; mkdir -p $K/runs
 for s in 0 1 2 3; do for m in base kswap kswapiso kvnoise eqiso swiglu; do KVF=0.5 python $S/kv_grok.py $K/runs $m $s 20000 0.3; done; done
-G=$K/runs/kv_base_s0/ckpt_13500.pt                                        # letzter Stand des Grundlaufs; Startwert 1: ckpt_10000, 2: ckpt_14500
+G=$K/runs/kv_base_s0/ckpt_13500.pt; M=$K/runs/kv_base_s0/ckpt_5000.pt     # G: letzter Stand des Grundlaufs (der Schritt kann auf einem anderen Rechner abweichen); M: Auswendig-Stand
+# G, M und alle Zeilen mit _s0 stehen für Startwert 0; für Startwert 1 und 2: G=ckpt_10000 bzw. ckpt_14500 des jeweiligen Grundlaufs, M=ckpt_5000 desselben Laufs, Startwert-Argument und _s0 entsprechend
 INIT=$G SUB=0.05 STRAT=1 EVAL=250 CKPT=500 TAG=_ungrok5 python $S/kv_grok.py $K/runs base 0 4000 0.3   # Ungrokking; DRAW=1, ohne STRAT, SUB=0.1: weitere Ziehungen
 INIT=$G EVAL=250 CKPT=500 TAG=_drift python $S/kv_grok.py $K/runs base 0 4000 0.3                       # Driftkontrolle
 INIT=$G SUB=0.05 STRAT=1 EVAL=50 CKPT=50 TAG=_ungrok5fine python $S/kv_grok.py $K/runs base 0 1500 0.3  # fein; ebenso TAG=_driftfine ohne SUB
 MIX=0.02 TAG=_mix0.02 python $S/kv_untied.py $K/runs $G tied 0 4000 0.3                                 # selten statt fehlend (0.005 bis 0.2)
 TAG=_untied python $S/kv_untied.py $K/runs $G writer 0 3000 0.3                                         # entkoppelt: writer, reader, both
+INIT=$U/grok_base_s0_wd0.3/ckpt_20000.pt SUB=0.1 EVAL=250 TAG=_pilot_sub0.1 python $S/kv_grok.py $K/pilot base 0 6000 0.3   # Vorlauf aus 8.6
+MIX=0.02 EVAL=25 TAG=_check0.02 python $S/kv_untied.py $K/check $G tied 0 400 0.3                       # Feinmessung aus 8.6; ebenso MIX=0 TAG=_check0
 for d in $K/runs/kv_*_s?; do python $S/kv_probe.py $d; done; for m in base perm ufo; do python $S/kv_probe.py $U/grok_${m}_s0_wd0.3; done
-M=$K/runs/kv_base_s0/ckpt_5000.pt
+# kv_probe.py schreibt <Lauf>/kvprobe.json; im Repository heißen diese Dateien kv_probe_<Arm>_s<n>.json, für die Läufe aus 7.10 kv_probe_old_grok_<m>_s0_wd0.3.json; kv_logs.json fasst die log.json aller Läufe zusammen
 ONLY=path python $S/kv_transplant.py $G $K/runs/kv_base_s0_ungrok5fine $K/runs/kv_base_s0_driftfine $M $K/kv_path_fine_s0.json
 STEPS=500,1000,1500,2000,3000,4000 python $S/kv_transplant.py $G $K/runs/kv_base_s0_ungrok5 $K/runs/kv_base_s0_drift $M $K/kv_transplant_s0.json
 SKIP_MIX=1 STEPS=1000 python $S/kv_transplant.py $G $K/runs/kv_base_s0_ungrok5 $K/runs/kv_base_s0_drift $M $K/kv_disp_u1000_s0.json
 SKIP_MIX=1 STEPS=3000 python $S/kv_transplant.py $G $K/runs/kv_base_s0_drift $K/runs/kv_base_s0_drift $M $K/kv_disp_drift3000_s0.json
-python $S/kv_report.py $K/runs $K/kv_summary $U/grok_base_s0_wd0.3 $U/grok_perm_s0_wd0.3 $U/grok_ufo_s0_wd0.3 && python $S/kv_tables.py $K
-python $S/cubic_direction.py $K/cubic_direction.json 5 8000                 # Gegenprobe zu 8.7, 8 min
+python $S/kv_report.py $K/runs $K/kv_summary $U/grok_base_s0_wd0.3 $U/grok_perm_s0_wd0.3 $U/grok_ufo_s0_wd0.3 && python $S/kv_tables.py $K > $K/kv_tables.txt
+python $S/cubic_direction.py $K/cubic_direction.json 5 8000 > $K/cubic_direction.txt                    # Gegenprobe zu 8.7, 8 min
 # kv_queue.py verteilt eine Liste solcher Läufe auf die Kerne (ein Lauf je Kern)
 ```
