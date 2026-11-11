@@ -13,14 +13,17 @@ MLPs exchanged at all positions:
                      0.95 or above, and lost is at least 0.015 (a hybrid of two networks can fail merely because they have trained apart)
   flip               per block at '=': share of (problem, unit) pairs whose switch differs between G and N (ReLU: mask differs;
                      SwiGLU: the gate input has another sign), share of units switched on (ReLU) or with a positive gate input
-Usage: python act_masks.py <ckpt_G> <ckpt_M> <run_dir_U> <run_dir_D> <out.json>      env: STEPS (comma list; default: all checkpoints of U that D has too)"""
+Usage: python act_masks.py <ckpt_G> <ckpt_M> <run_dir_U> <run_dir_D> <out.json>      env: STEPS (comma list; default: all checkpoints of U that D has too)
+  run_dir_U and run_dir_D may each be a comma list of run directories (for example the fine run to step 1500 and the long run to
+  4000); a step is read from the first directory in the list that has its checkpoint"""
 import glob, json, os, sys
 import torch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from kv_common import fwd, load, make_net, problems, acc4, NL
 
 ckG, ckM, dU, dD, out = sys.argv[1:6]; torch.set_num_threads(int(os.environ.get("NT", "1"))); tr, va = problems(); seq = va; tok = seq[:, :5]
-have = lambda d: set(int(os.path.basename(f)[5:-3]) for f in glob.glob(f"{d}/ckpt_*.pt")); steps = sorted(have(dU) & have(dD)); steps = [int(s) for s in os.environ["STEPS"].split(",")] if os.environ.get("STEPS") else [s for s in steps if s > 0]
+have = lambda ds: set(int(os.path.basename(f)[5:-3]) for d in ds.split(",") for f in glob.glob(f"{d}/ckpt_*.pt")); steps = sorted(have(dU) & have(dD))
+ck = lambda ds, st: next(f"{d}/ckpt_{st}.pt" for d in ds.split(",") if os.path.exists(f"{d}/ckpt_{st}.pt")); steps = [int(s) for s in os.environ["STEPS"].split(",")] if os.environ.get("STEPS") else [s for s in steps if s > 0]
 G = load(ckG); kind = "relu" if not hasattr(G.blocks[0], "gate") else ("bilinear" if G.blocks[0].bilinear else "swiglu"); assert kind in ("relu", "swiglu"), "no switch in a bilinear unit"
 
 
@@ -57,7 +60,7 @@ def reference(target):
 
 M = load(ckM); accG, pG = own(G); res = dict(G=ckG, M=ckM, U=dU, D=dD, kind=kind, n_held=len(seq), own_G=accG, steps=[])
 for st in steps:
-    U, D = load(f"{dU}/ckpt_{st}.pt"), load(f"{dD}/ckpt_{st}.pt"); aU, pU = own(U); aD, pD = own(D); row = dict(step=st, own_U=aU, own_D=aD, U_pattG=with_pattern(U, pG), G_pattU=with_pattern(G, pU), D_pattG=with_pattern(D, pG), G_pattD=with_pattern(G, pD), flip_U=flips(pG, pU), flip_D=flips(pG, pD)); lost = accG - aU
+    U, D = load(ck(dU, st)), load(ck(dD, st)); aU, pU = own(U); aD, pD = own(D); row = dict(step=st, own_U=aU, own_D=aD, U_pattG=with_pattern(U, pG), G_pattU=with_pattern(G, pU), D_pattG=with_pattern(D, pG), G_pattD=with_pattern(G, pD), flip_U=flips(pG, pU), flip_D=flips(pG, pD)); lost = accG - aU
     row["lost"] = lost; row["readable"] = bool(aD >= 0.99 and row["D_pattG"] >= 0.95 and row["G_pattD"] >= 0.95 and lost >= 0.015)
     if lost >= 0.015:
         row["r"] = (row["U_pattG"] - aU) / lost; row["k"] = (accG - row["G_pattU"]) / lost; ref = reference(aU)
