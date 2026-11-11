@@ -1,0 +1,1848 @@
+{
+ "recalc:probe (independent recomputation of the probe measures, before the last probe fixes)": {
+  "summary": "(a) Yes, the stored numbers hold. I recomputed the 13 requested quantities at all 19 checkpoints (247 values) with my own forward pass: numpy, float64, written as a real key-value cache (positions 0..3 are decoded first and write their keys and values, then the '=' token is decoded as one step that reads them). Nothing is imported from kv_common, kv_probe or kv_transplant. At every checkpoint my pass gives the same answer as Net on all 9312 problems (largest logit difference 8e-5).\n- Deterministic quantities (acc_train, acc_held, logit_spread of both blocks, order.w0.top5, S, S_read): largest difference to the stored value 5e-7 (allowed 0.005).\n- Stochastic quantities with my own donors and noise: largest difference 0.035, inside the 0.04 allowance, so I count them as agreeing (A 0.013, L 0.014, top5_shuffled 0.009, iso_1 0.024, noise_kv_1 0.035). The largest one is noise_kv_1 of grok_base_s0_wd0.3 step 5000 (stored 0.339, mine 0.304); the stored value is one high draw, 40 further draws give 0.315 with a scatter of 0.009.\n- With the random draws of the stored run re-created (same generator seed, same order of draws) my pass reproduces every stochastic value to 2e-8, i.e. the same counts.\n- donor_all is 1.0000 everywhere.\n\n(b) Right for the four base seeds, if \"about\" is read loosely at the lower ends. Memorising states: A = 0.087 and 0.098 (seed 0, steps 2500 and 5000), 0.270 (seed 1, 5000), 0.103 (seed 2, 5000), 0.124 (seed 3, 2500). Generalising states: 0.940 (seed 0, 13500), 0.990 (seed 1, 10000), 0.671 (seed 2, 14500), 0.923 (seed 3, 11500). Seed 0 is slightly below 0.1 and seed 2 slightly below 0.7; with 20 donor draws these are 0.088, 0.097 and 0.674, each +-0.001, so this is not sampling noise.\nExceptions: kv_kswap_s0 step 2500 memorises and has A = 1.000. The other computed checkpoints fit: kv_kswapiso_s0 0.163 (2500) and 0.913 (6000); kv_kvnoise_s0 0.263 and 0.826; perm control 0.131 and 0.166 (it fits its permuted labels: 1.000 and 0.996); grok_base_s0_wd0.3 0.101 and 0.902; kv_kswap_s0 step 7500 1.000. One exception outside the list: the untrained seed-0 network has A = 0.82 (recomputed 0.817; it gives only 4 distinct answers), so high A also occurs without generalisation.\n\n(c) Right. kv_kswap_s0 step 2500: acc_train 1.0000, acc_held 0.0142 (chance is about 0.010), A = 1.0000. All 6078 pairs of the stored draws and all 63,555 pairs of my further draws keep their answer. This arm is trained under exactly this intervention on half of every batch.\n\n(d) Right against the runs on my list, not against every probed run. S = 0.4487 (the stored value, my partial regression and an ordinary least-squares fit agree). The next highest on the list are 0.056 (kv_kswap_s0 step 7500), 0.035 (grok_base_s0_wd0.3 step 20000) and 0.020 (kv_kvnoise_s0 step 6500); the four base seeds stay at or below 0.002. But the UFO run of the earlier experiment (ufo_out/grok_ufo_s0_wd0.3, probed by the same script, not on my list and absent from kv_summary.json) has stored S = 0.32 at step 9000 and 0.38 at step 17000; I recomputed those two and they hold. Only one kswapiso seed has been probed.\n\nTwo things about the files. Eight of the nine stored kvprobe.json files were written by an older version of kv_probe.py, which averaged the three donor draws where the current script pools them (difference at most 2e-5). kv_base_s1/kvprobe.json was overwritten twice while I worked: at 11:25 it held only steps 0 and 2500, at 11:28 it was complete again.\nOne definition does not match its docstring: order.*.spread, which is not among the requested quantities (details under bugs_or_doubts).\n\nAbout 4 minutes of CPU in total, one single-threaded python process at a time, nice 10. Everything is in <root>/kv_review/recalc_probe; open compare_out.txt first (every value side by side). recalc.py is the forward pass and the measures, recalc_out.json its output, extras_out.json and extras2_out.json the side checks.",
+  "checks": [
+   {
+    "quantity": "own forward pass against Net of ufo_grok.py (logits at '=' on all 9312 problems)",
+    "where": "all 19 checkpoints",
+    "stored": "reference: Net, float32",
+    "recomputed": "largest logit difference 8.1e-05; 0 of 9312 answers differ at every checkpoint",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s0 step 2500",
+    "stored": "0.9968 / 0.0140",
+    "recomputed": "0.9968 / 0.0140",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s0 step 2500",
+    "stored": "0.0865 / 0.0612 / 1.0000",
+    "recomputed": "same draws 0.0865 / 0.0612 / 1.0000; own draws 0.0906 / 0.0568 / 1.0000",
+    "agrees": true,
+    "note": "'same draws' = the random draws of the stored run re-created; 'own draws' = my own donors and noise. 6078 pairs. The stored file is from the older script, which averages the three draws; my same-draw figure is averaged the same way (pooled value differs by 2e-6). 20 own donor draws: A 0.088 +- 0.001."
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s0 step 2500",
+    "stored": "4.4326 / 5.0162",
+    "recomputed": "4.4326 / 5.0162",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s0 step 2500",
+    "stored": "0.2029 / 0.1425",
+    "recomputed": "0.2029 / same draws 0.1425, own draws 0.1422",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s0 step 2500",
+    "stored": "0.0022 / 0.0105",
+    "recomputed": "0.0022 / 0.0105",
+    "agrees": true,
+    "note": "S computed twice at this checkpoint (least squares on indicator columns, and partial regression); both give the stored value"
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s0 step 2500",
+    "stored": "0.2412 / 0.4194",
+    "recomputed": "same draws 0.2412 / 0.4194; own draws 0.2383 / 0.4233",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s0 step 5000",
+    "stored": "1.0000 / 0.0168",
+    "recomputed": "1.0000 / 0.0168",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s0 step 5000",
+    "stored": "0.0980 / 0.0715 / 1.0000",
+    "recomputed": "same draws 0.0980 / 0.0715 / 1.0000; own draws 0.0919 / 0.0691 / 1.0000",
+    "agrees": true,
+    "note": "20 own donor draws: A 0.097 +- 0.001"
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s0 step 5000",
+    "stored": "3.6851 / 3.8044",
+    "recomputed": "3.6851 / 3.8044",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s0 step 5000",
+    "stored": "0.2308 / 0.1478",
+    "recomputed": "0.2308 / same draws 0.1478, own draws 0.1485",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s0 step 5000",
+    "stored": "0.0014 / 0.0110",
+    "recomputed": "0.0014 / 0.0110",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s0 step 5000",
+    "stored": "0.3218 / 0.4741",
+    "recomputed": "same draws 0.3218 / 0.4741; own draws 0.3042 / 0.4741",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s0 step 13500",
+    "stored": "1.0000 / 1.0000",
+    "recomputed": "1.0000 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s0 step 13500",
+    "stored": "0.9398 / 0.4191 / 1.0000",
+    "recomputed": "same draws 0.9398 / 0.4191 / 1.0000; own draws 0.9408 / 0.4287 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s0 step 13500",
+    "stored": "1.2916 / 0.6119",
+    "recomputed": "1.2916 / 0.6119",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s0 step 13500",
+    "stored": "0.8987 / 0.1710",
+    "recomputed": "0.8987 / same draws 0.1710, own draws 0.1683",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s0 step 13500",
+    "stored": "0.0011 / 0.0105",
+    "recomputed": "0.0011 / 0.0105",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s0 step 13500",
+    "stored": "0.9053 / 0.9966",
+    "recomputed": "same draws 0.9053 / 0.9966; own draws 0.9062 / 0.9976",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s1 step 5000",
+    "stored": "1.0000 / 0.0625",
+    "recomputed": "1.0000 / 0.0625",
+    "agrees": true,
+    "note": "stored file of this run was rewritten at 11:28 by the current script version"
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s1 step 5000",
+    "stored": "0.2701 / 0.0973 / 1.0000",
+    "recomputed": "same draws 0.2701 / 0.0973 / 1.0000; own draws 0.2830 / 0.1016 / 1.0000",
+    "agrees": true,
+    "note": "6071 pairs, pooled (current script). 20 own donor draws: A 0.277 +- 0.002"
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s1 step 5000",
+    "stored": "4.0673 / 3.9994",
+    "recomputed": "4.0673 / 3.9994",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s1 step 5000",
+    "stored": "0.3159 / 0.1471",
+    "recomputed": "0.3159 / same draws 0.1471, own draws 0.1459",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s1 step 5000",
+    "stored": "0.0001 / 0.0103",
+    "recomputed": "0.0001 / 0.0103",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s1 step 5000",
+    "stored": "0.4580 / 0.6509",
+    "recomputed": "same draws 0.4580 / 0.6509; own draws 0.4658 / 0.6616",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s1 step 10000",
+    "stored": "1.0000 / 1.0000",
+    "recomputed": "1.0000 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s1 step 10000",
+    "stored": "0.9900 / 0.9734 / 1.0000",
+    "recomputed": "same draws 0.9900 / 0.9734 / 1.0000; own draws 0.9896 / 0.9714 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s1 step 10000",
+    "stored": "1.5417 / 0.4345",
+    "recomputed": "1.5417 / 0.4345",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s1 step 10000",
+    "stored": "0.6688 / 0.1637",
+    "recomputed": "0.6688 / same draws 0.1637, own draws 0.1723",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s1 step 10000",
+    "stored": "0.0000 / 0.0103",
+    "recomputed": "0.0000 / 0.0103",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s1 step 10000",
+    "stored": "0.8525 / 0.9897",
+    "recomputed": "same draws 0.8525 / 0.9897; own draws 0.8545 / 0.9893",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s2 step 5000",
+    "stored": "1.0000 / 0.0152",
+    "recomputed": "1.0000 / 0.0152",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s2 step 5000",
+    "stored": "0.1034 / 0.0690 / 1.0000",
+    "recomputed": "same draws 0.1034 / 0.0690 / 1.0000; own draws 0.1018 / 0.0630 / 1.0000",
+    "agrees": true,
+    "note": "20 own donor draws: A 0.101 +- 0.001"
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s2 step 5000",
+    "stored": "5.6791 / 5.2179",
+    "recomputed": "5.6791 / 5.2179",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s2 step 5000",
+    "stored": "0.2069 / 0.1418",
+    "recomputed": "0.2069 / same draws 0.1418, own draws 0.1413",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s2 step 5000",
+    "stored": "0.0002 / 0.0105",
+    "recomputed": "0.0002 / 0.0105",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s2 step 5000",
+    "stored": "0.3013 / 0.4541",
+    "recomputed": "same draws 0.3013 / 0.4541; own draws 0.3184 / 0.4736",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s2 step 14500",
+    "stored": "1.0000 / 1.0000",
+    "recomputed": "1.0000 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s2 step 14500",
+    "stored": "0.6712 / 0.5345 / 1.0000",
+    "recomputed": "same draws 0.6712 / 0.5345 / 1.0000; own draws 0.6670 / 0.5316 / 1.0000",
+    "agrees": true,
+    "note": "lowest A of a generalising base state. 20 own donor draws: 0.674 +- 0.001; on all 4656 training problems 0.674"
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s2 step 14500",
+    "stored": "1.5640 / 0.7060",
+    "recomputed": "1.5640 / 0.7060",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s2 step 14500",
+    "stored": "0.7892 / 0.1739",
+    "recomputed": "0.7892 / same draws 0.1739, own draws 0.1745",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s2 step 14500",
+    "stored": "0.0005 / 0.0107",
+    "recomputed": "0.0005 / 0.0107",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s2 step 14500",
+    "stored": "0.9160 / 0.9961",
+    "recomputed": "same draws 0.9160 / 0.9961; own draws 0.8936 / 0.9966",
+    "agrees": true,
+    "note": "20 own noise draws: noise_kv_1 mean 0.907, scatter 0.006"
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s3 step 2500",
+    "stored": "1.0000 / 0.0146",
+    "recomputed": "1.0000 / 0.0146",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s3 step 2500",
+    "stored": "0.1239 / 0.0663 / 1.0000",
+    "recomputed": "same draws 0.1239 / 0.0663 / 1.0000; own draws 0.1196 / 0.0583 / 1.0000",
+    "agrees": true,
+    "note": "20 own donor draws: A 0.123 +- 0.001"
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s3 step 2500",
+    "stored": "4.6065 / 4.8243",
+    "recomputed": "4.6065 / 4.8243",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s3 step 2500",
+    "stored": "0.1678 / 0.1378",
+    "recomputed": "0.1678 / same draws 0.1378, own draws 0.1396",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s3 step 2500",
+    "stored": "0.0004 / 0.0114",
+    "recomputed": "0.0004 / 0.0114",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s3 step 2500",
+    "stored": "0.3130 / 0.4888",
+    "recomputed": "same draws 0.3130 / 0.4888; own draws 0.3193 / 0.5039",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_base_s3 step 11500",
+    "stored": "1.0000 / 0.9996",
+    "recomputed": "1.0000 / 0.9996",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_base_s3 step 11500",
+    "stored": "0.9227 / 0.8388 / 1.0000",
+    "recomputed": "same draws 0.9227 / 0.8388 / 1.0000; own draws 0.9251 / 0.8260 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_base_s3 step 11500",
+    "stored": "2.3921 / 0.8592",
+    "recomputed": "2.3921 / 0.8592",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_base_s3 step 11500",
+    "stored": "0.7565 / 0.1749",
+    "recomputed": "0.7565 / same draws 0.1749, own draws 0.1750",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_base_s3 step 11500",
+    "stored": "0.0001 / 0.0112",
+    "recomputed": "0.0001 / 0.0112",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_base_s3 step 11500",
+    "stored": "0.8389 / 0.9912",
+    "recomputed": "same draws 0.8389 / 0.9912; own draws 0.8467 / 0.9912",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_kswap_s0 step 2500",
+    "stored": "1.0000 / 0.0142",
+    "recomputed": "1.0000 / 0.0142",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_kswap_s0 step 2500",
+    "stored": "1.0000 / 0.1247 / 1.0000",
+    "recomputed": "same draws 1.0000 / 0.1247 / 1.0000; own draws 1.0000 / 0.1389 / 1.0000",
+    "agrees": true,
+    "note": "A: 6078 of 6078 pairs keep their answer; so do all 63,555 pairs of my further draws (20 draws on the 2048 problems, 5 draws on all 4656 training problems). On held-out problems A is 0.909 stored, 0.917 mine on all 4656."
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_kswap_s0 step 2500",
+    "stored": "0.5375 / 1.7675",
+    "recomputed": "0.5375 / 1.7675",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_kswap_s0 step 2500",
+    "stored": "0.2052 / 0.1444",
+    "recomputed": "0.2052 / same draws 0.1444, own draws 0.1458",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_kswap_s0 step 2500",
+    "stored": "0.0107 / 0.0105",
+    "recomputed": "0.0107 / 0.0105",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_kswap_s0 step 2500",
+    "stored": "0.4067 / 0.5884",
+    "recomputed": "same draws 0.4067 / 0.5884; own draws 0.3965 / 0.6123",
+    "agrees": true,
+    "note": "20 own noise draws: noise_kv_1 mean 0.396, scatter 0.008; 10 draws of iso_1: mean 0.619, scatter 0.014"
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_kswap_s0 step 7500",
+    "stored": "1.0000 / 1.0000",
+    "recomputed": "1.0000 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_kswap_s0 step 7500",
+    "stored": "1.0000 / 0.0860 / 1.0000",
+    "recomputed": "same draws 1.0000 / 0.0860 / 1.0000; own draws 1.0000 / 0.0917 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_kswap_s0 step 7500",
+    "stored": "0.6468 / 0.3984",
+    "recomputed": "0.6468 / 0.3984",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_kswap_s0 step 7500",
+    "stored": "0.8001 / 0.1580",
+    "recomputed": "0.8001 / same draws 0.1580, own draws 0.1529",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_kswap_s0 step 7500",
+    "stored": "0.0560 / 0.0148",
+    "recomputed": "0.0560 / 0.0148",
+    "agrees": true,
+    "note": "second highest S on my list"
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_kswap_s0 step 7500",
+    "stored": "0.8940 / 0.9966",
+    "recomputed": "same draws 0.8940 / 0.9966; own draws 0.8945 / 0.9951",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_kswapiso_s0 step 2500",
+    "stored": "0.9976 / 0.0256",
+    "recomputed": "0.9976 / 0.0256",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_kswapiso_s0 step 2500",
+    "stored": "0.1626 / 0.5195 / 1.0000",
+    "recomputed": "same draws 0.1626 / 0.5195 / 1.0000; own draws 0.1692 / 0.5315 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_kswapiso_s0 step 2500",
+    "stored": "4.4925 / 5.3186",
+    "recomputed": "4.4925 / 5.3186",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_kswapiso_s0 step 2500",
+    "stored": "0.2870 / 0.1452",
+    "recomputed": "0.2870 / same draws 0.1452, own draws 0.1428",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_kswapiso_s0 step 2500",
+    "stored": "0.0199 / 0.0114",
+    "recomputed": "0.0199 / 0.0114",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_kswapiso_s0 step 2500",
+    "stored": "0.3770 / 0.9014",
+    "recomputed": "same draws 0.3770 / 0.9014; own draws 0.4053 / 0.8989",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_kswapiso_s0 step 6000",
+    "stored": "1.0000 / 0.9983",
+    "recomputed": "1.0000 / 0.9983",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_kswapiso_s0 step 6000",
+    "stored": "0.9132 / 0.9998 / 1.0000",
+    "recomputed": "same draws 0.9132 / 0.9998 / 1.0000; own draws 0.9141 / 0.9997 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_kswapiso_s0 step 6000",
+    "stored": "1.4122 / 1.4812",
+    "recomputed": "1.4122 / 1.4812",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_kswapiso_s0 step 6000",
+    "stored": "0.8694 / 0.1636",
+    "recomputed": "0.8694 / same draws 0.1636, own draws 0.1623",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_kswapiso_s0 step 6000",
+    "stored": "0.4487 / 0.7229",
+    "recomputed": "0.4487 / 0.7229",
+    "agrees": true,
+    "note": "S also 0.4487 by ordinary least squares on indicator columns. It is 88 % of the variance that the x and y main effects leave unexplained. S_read is 0.716 to 0.838 for other ridge strengths."
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_kswapiso_s0 step 6000",
+    "stored": "0.9609 / 0.9995",
+    "recomputed": "same draws 0.9609 / 0.9995; own draws 0.9678 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_kvnoise_s0 step 2500",
+    "stored": "0.9989 / 0.0539",
+    "recomputed": "0.9989 / 0.0539",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_kvnoise_s0 step 2500",
+    "stored": "0.2628 / 0.3366 / 1.0000",
+    "recomputed": "same draws 0.2628 / 0.3366 / 1.0000; own draws 0.2677 / 0.3495 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_kvnoise_s0 step 2500",
+    "stored": "3.6988 / 4.4102",
+    "recomputed": "3.6988 / 4.4102",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_kvnoise_s0 step 2500",
+    "stored": "0.2690 / 0.1493",
+    "recomputed": "0.2690 / same draws 0.1493, own draws 0.1465",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_kvnoise_s0 step 2500",
+    "stored": "0.0117 / 0.0112",
+    "recomputed": "0.0117 / 0.0112",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_kvnoise_s0 step 2500",
+    "stored": "0.7607 / 0.9121",
+    "recomputed": "same draws 0.7607 / 0.9121; own draws 0.7534 / 0.8945",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "kv_kvnoise_s0 step 6500",
+    "stored": "1.0000 / 0.9998",
+    "recomputed": "1.0000 / 0.9998",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "kv_kvnoise_s0 step 6500",
+    "stored": "0.8255 / 0.3824 / 1.0000",
+    "recomputed": "same draws 0.8255 / 0.3824 / 1.0000; own draws 0.8239 / 0.3741 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "kv_kvnoise_s0 step 6500",
+    "stored": "1.4780 / 0.9803",
+    "recomputed": "1.4780 / 0.9803",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "kv_kvnoise_s0 step 6500",
+    "stored": "0.7106 / 0.1624",
+    "recomputed": "0.7106 / same draws 0.1624, own draws 0.1587",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "kv_kvnoise_s0 step 6500",
+    "stored": "0.0204 / 0.0112",
+    "recomputed": "0.0204 / 0.0112",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "kv_kvnoise_s0 step 6500",
+    "stored": "0.9995 / 1.0000",
+    "recomputed": "same draws 0.9995 / 1.0000; own draws 0.9985 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "grok_perm_s0_wd0.3 step 5000",
+    "stored": "0.0067 / 0.0105",
+    "recomputed": "0.0067 / 0.0105",
+    "agrees": true,
+    "note": "measured against the true answers; against its own permuted training labels the network is right on 1.0000 of the 4656 training problems"
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "grok_perm_s0_wd0.3 step 5000",
+    "stored": "0.1313 / 0.1297 / 1.0000",
+    "recomputed": "same draws 0.1313 / 0.1297 / 1.0000; own draws 0.1263 / 0.1235 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "grok_perm_s0_wd0.3 step 5000",
+    "stored": "3.3854 / 4.1880",
+    "recomputed": "3.3854 / 4.1880",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "grok_perm_s0_wd0.3 step 5000",
+    "stored": "0.1494 / 0.1512",
+    "recomputed": "0.1494 / same draws 0.1512, own draws 0.1534",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "grok_perm_s0_wd0.3 step 5000",
+    "stored": "0.0003 / 0.0103",
+    "recomputed": "0.0003 / 0.0103",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "grok_perm_s0_wd0.3 step 5000",
+    "stored": "0.3477 / 0.4692",
+    "recomputed": "same draws 0.3477 / 0.4692; own draws 0.3169 / 0.4717",
+    "agrees": true,
+    "note": "20 own noise draws: noise_kv_1 mean 0.327, scatter 0.010; the stored draw is on the high side"
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "grok_perm_s0_wd0.3 step 20000",
+    "stored": "0.0067 / 0.0107",
+    "recomputed": "0.0067 / 0.0107",
+    "agrees": true,
+    "note": "against its own permuted training labels: 0.9957"
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "grok_perm_s0_wd0.3 step 20000",
+    "stored": "0.1659 / 0.3842 / 1.0000",
+    "recomputed": "same draws 0.1659 / 0.3842 / 1.0000; own draws 0.1552 / 0.3883 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "grok_perm_s0_wd0.3 step 20000",
+    "stored": "3.0991 / 3.0203",
+    "recomputed": "3.0991 / 3.0203",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "grok_perm_s0_wd0.3 step 20000",
+    "stored": "0.1715 / 0.1610",
+    "recomputed": "0.1715 / same draws 0.1610, own draws 0.1623",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "grok_perm_s0_wd0.3 step 20000",
+    "stored": "0.0008 / 0.0110",
+    "recomputed": "0.0008 / 0.0110",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "grok_perm_s0_wd0.3 step 20000",
+    "stored": "0.3867 / 0.6216",
+    "recomputed": "same draws 0.3867 / 0.6216; own draws 0.3872 / 0.6357",
+    "agrees": true
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "grok_base_s0_wd0.3 step 5000",
+    "stored": "1.0000 / 0.0148",
+    "recomputed": "1.0000 / 0.0148",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "grok_base_s0_wd0.3 step 5000",
+    "stored": "0.1006 / 0.0697 / 1.0000",
+    "recomputed": "same draws 0.1006 / 0.0697 / 1.0000; own draws 0.1001 / 0.0651 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "grok_base_s0_wd0.3 step 5000",
+    "stored": "3.7544 / 3.9853",
+    "recomputed": "3.7544 / 3.9853",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "grok_base_s0_wd0.3 step 5000",
+    "stored": "0.2306 / 0.1454",
+    "recomputed": "0.2306 / same draws 0.1454, own draws 0.1470",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "grok_base_s0_wd0.3 step 5000",
+    "stored": "0.0015 / 0.0107",
+    "recomputed": "0.0015 / 0.0107",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "grok_base_s0_wd0.3 step 5000",
+    "stored": "0.3394 / 0.5078",
+    "recomputed": "same draws 0.3394 / 0.5078; own draws 0.3042 / 0.5034",
+    "agrees": true,
+    "note": "largest own-draw difference of the whole check (0.035, inside the 0.04 allowance). 40 further draws (20 numpy, 20 torch with other seeds) give noise_kv_1 mean 0.315, scatter 0.009, highest 0.333: the stored value is one high draw."
+   },
+   {
+    "quantity": "acc_train / acc_held",
+    "where": "grok_base_s0_wd0.3 step 20000",
+    "stored": "1.0000 / 1.0000",
+    "recomputed": "1.0000 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "route.train A / L / donor_all",
+    "where": "grok_base_s0_wd0.3 step 20000",
+    "stored": "0.9016 / 0.0692 / 1.0000",
+    "recomputed": "same draws 0.9016 / 0.0692 / 1.0000; own draws 0.8909 / 0.0752 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "logit_spread block 0 / block 1",
+    "where": "grok_base_s0_wd0.3 step 20000",
+    "stored": "0.9141 / 0.5710",
+    "recomputed": "0.9141 / 0.5710",
+    "agrees": true
+   },
+   {
+    "quantity": "order.w0 top5 / top5_shuffled",
+    "where": "grok_base_s0_wd0.3 step 20000",
+    "stored": "0.9883 / 0.1772",
+    "recomputed": "0.9883 / same draws 0.1772, own draws 0.1696",
+    "agrees": true
+   },
+   {
+    "quantity": "S / S_read",
+    "where": "grok_base_s0_wd0.3 step 20000",
+    "stored": "0.0353 / 0.0174",
+    "recomputed": "0.0353 / 0.0174",
+    "agrees": true
+   },
+   {
+    "quantity": "tolerance.train noise_kv_1 / iso_1",
+    "where": "grok_base_s0_wd0.3 step 20000",
+    "stored": "0.9644 / 1.0000",
+    "recomputed": "same draws 0.9644 / 1.0000; own draws 0.9663 / 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "not requested, same computation: route.held.A, route.train.L_own, noise_k_1, noise_v_1, dmid_1, split.w1p3 by_x / by_y / rest",
+    "where": "all 19 checkpoints",
+    "stored": "values of the stored rows",
+    "recomputed": "same draws: largest difference 8e-08",
+    "agrees": true
+   },
+   {
+    "quantity": "not requested, bears on (d): S / S_read of the UFO run",
+    "where": "grok_ufo_s0_wd0.3 step 9000",
+    "stored": "0.3184 / 0.2573",
+    "recomputed": "0.3184 / 0.2573",
+    "agrees": true,
+    "note": "run is not on my list; acc, A, L, top5, logit_spread, noise_kv_1 and iso_1 of this checkpoint also reproduce (same draws)"
+   },
+   {
+    "quantity": "not requested, bears on (d): S / S_read of the UFO run",
+    "where": "grok_ufo_s0_wd0.3 step 17000",
+    "stored": "0.3795 / 0.8741",
+    "recomputed": "0.3795 / 0.8741",
+    "agrees": true
+   },
+   {
+    "quantity": "not requested, bears on (b): route.train.A of the untrained network",
+    "where": "kv_base_s0 step 0",
+    "stored": "0.8167",
+    "recomputed": "same draws 0.8167; own draws 0.8226",
+    "agrees": true,
+    "note": "2216 pairs; the network gives only 4 distinct answers on the 2048 training problems, one of them for 77 % of the problems"
+   },
+   {
+    "quantity": "not requested: order.w0.spread",
+    "where": "kv_base_s0 steps 2500, 13500; kv_base_s2 steps 5000, 14500",
+    "stored": "0.3893, 0.7372, 0.2743, 0.7315",
+    "recomputed": "0.3893, 0.7373, 0.2743, 0.7315 with the scale the code uses; 0.1967, 0.0400, 0.0828, 0.0376 with the scale the docstring names",
+    "agrees": true,
+    "note": "the stored number is what the code computes, but not what the docstring describes; see bugs_or_doubts"
+   }
+  ],
+  "bugs_or_doubts": [
+   {
+    "file": "analysis/ju_space/kv_probe.py (scale sc used for order(...).spread)",
+    "what": "The docstring defines spread as the root mean square distance of the rows 'as a fraction of the root mean square length of the = state the vectors are added to'. The code divides by the length of the '=' state AFTER the attention step and its layer norm (recA[l]['xmid'][:, 4]). That length follows the layer-norm gain, which shrinks under weight decay: in block 0 of seed 0 the gain falls from 0.48 (step 2500) to 0.030 (step 13500) and the state length from 5.2 to 0.44, while the state the vectors are really added to (the block input) stays between 8 and 10. Result for w0: the stored spread rises 0.39 -> 0.74 (kv_base_s0, step 2500 -> 13500) and 0.27 -> 0.73 (kv_base_s2, 5000 -> 14500), although the rows themselves move closer together (distance 2.03 -> 0.32 and 0.65 -> 0.30) and the spread on the docstring's scale falls 0.197 -> 0.040 and 0.083 -> 0.038.",
+    "could_change_a_conclusion": "Yes: any statement that a slot holds more (spread grows) as the network generalises. By the docstring's own definition it shrinks. It does not touch A, L, S, S_read, top5, logit_spread or the tolerance values, so none of (a)-(d)."
+   },
+   {
+    "file": "<root>/kv_out/kv_summary.json and ufo_scripts/kv_report.py",
+    "what": "The summary collects probes only from the kv_* run directories unless further directories are passed; kv_summary.json holds 7 runs. The probed UFO run ufo_out/grok_ufo_s0_wd0.3 is missing from it. Its stored S is 0.10 at step 7500, 0.32 at step 9000 and 0.14 to 0.38 from step 10000 to 17000 (S_read up to 0.88). I recomputed steps 9000 and 17000: S 0.3184 and 0.3795, as stored.",
+    "could_change_a_conclusion": "Yes for (d): 'S clearly above the other runs' is true against the base, kswap, kvnoise and perm runs (at most 0.056) but not against the UFO run (0.38 against 0.45). Also only seed 0 of kswapiso has been probed, so it is a statement about one run."
+   },
+   {
+    "file": "ufo_scripts/kv_probe.py (what A can show)",
+    "what": "A is not specific to generalisation. The untrained seed-0 network has A = 0.82 on 2216 pairs (it gives only 4 distinct answers). kv_kswap_s0 has A = 1.000 while memorising, because half of every training batch of that arm is trained under the very intervention that A applies; on held-out problems the same checkpoint has A = 0.91.",
+    "could_change_a_conclusion": "Yes if A is read as a mark of generalisation in general. Statement (b), limited to the base runs, stands."
+   },
+   {
+    "file": "ufo_scripts/kv_probe.py and the stored kvprobe.json files",
+    "what": "kv_probe.py was last changed at 11:24:58 while its queue jobs were running. The kvprobe.json of 8 of the 9 runs (written 11:18 to 11:25) come from the older version: they have no 'pairs' entry, their route values are the mean of the three single-draw shares instead of the pooled share that the docstring ('3 draws ... pooled') and the current code give, and step-0 rows without pairs hold NaN instead of null. Only kv_base_s1/kvprobe.json is from the current version; it was overwritten twice during my check (11:25: only steps 0 and 2500; 11:28: all six steps). I could not read the older script, only its output. kv_common.py and kv_grok.py were also changed at 11:30:36 (gated-MLP variants added); for these ReLU checkpoints fwd is still the same function.",
+    "could_change_a_conclusion": "No. Pooled and averaged shares differ by at most 2e-5 at the 19 checkpoints, and the output of both versions matches my recomputation. A fresh run of the current script over all runs would make the stored files uniform."
+   },
+   {
+    "file": "ufo_scripts/kv_probe.py (acc_train), rows of ufo_out/grok_perm_s0_wd0.3",
+    "what": "acc_train is measured against the true answers. For the perm control this gives 0.0067 at both steps, which looks like an untrained network; the stored row does not show that the control fits its training set. Against its own permuted training labels I get 1.0000 (step 5000) and 0.9957 (step 20000), in line with its training log.",
+    "could_change_a_conclusion": "No, but statement (b) counts the perm control as a memorising state and the stored rows alone do not show that it is one."
+   },
+   {
+    "file": "ufo_scripts/kv_probe.py (route and tolerance loops)",
+    "what": "A and L rest on three donor draws over the same 2048 problems; single draws scatter by 0.004 to 0.010, so a stored value is good to about +-0.005. Each tolerance value is ONE noise draw: repeated draws scatter by 0.006 to 0.010 for noise_kv_1 and by up to 0.014 for iso_1. Example: stored noise_kv_1 of grok_base_s0_wd0.3 step 5000 is 0.339, 40 other draws give a mean of 0.315.",
+    "could_change_a_conclusion": "Not for contrasts such as 0.3 against 0.9. Differences of two or three hundredths between checkpoints or arms in the tolerance columns are within the scatter of a single draw."
+   },
+   {
+    "file": "ufo_scripts/kv_probe.py docstring (A)",
+    "what": "A is introduced as 'address dependence', but it is the share of answers that survive foreign keys, so a high value means the answer does NOT depend on the addresses. Name and direction are opposite.",
+    "could_change_a_conclusion": "Only the wording: 'generalising states have high address dependence' would say the opposite of what was measured."
+   },
+   {
+    "file": "ufo_scripts/kv_probe.py (logit_spread)",
+    "what": "Computed over all 9312 problems, not the 2048 training problems (difference at most 0.03), and on raw logits. A shift common to all five slots of a row cannot change the read pattern but counts here, so a spread above 0 does not by itself mean the pattern varies. Taken relative to the row mean the values are 17 to 28 % smaller with the same ordering: memorising states 2.5 to 4.7, generalising states 0.3 to 2.0. kv_kswap_s0 step 2500 is again the exception (0.44 / 1.34 while memorising).",
+    "could_change_a_conclusion": "No."
+   },
+   {
+    "file": "ufo_scripts/kv_probe.py (readout, S_read)",
+    "what": "The ridge strength is fixed in the code (1e-3 times the mean diagonal, intercept penalised) and is not in the docstring. S_read of kv_kswapiso_s0 step 6000 moves from 0.716 to 0.838 when the strength is varied from 1e-6 to 1e-1 (stored 0.723); the base runs stay at 0.010 to 0.012 for every strength.",
+    "could_change_a_conclusion": "No. The level of a high S_read depends on this setting by about 0.1; whether it is at chance or far above does not."
+   },
+   {
+    "file": "ufo_scripts/ufo_grok.py line 15",
+    "what": "Importing the module sets torch to 3 threads unless NT is set (torch.set_num_threads(int(os.environ.get('NT', '3')))). A script that imports Net or problems and does not reset the thread count afterwards runs on 3 cores.",
+    "could_change_a_conclusion": "No. It matters only for the shared CPU."
+   }
+  ],
+  "not_checked": [
+   "All other steps of the nine runs: only the 19 listed checkpoints were recomputed. Side checks beyond the list: the route of kv_base_s0 step 0, and steps 9000 and 17000 of ufo_out/grok_ufo_s0_wd0.3.",
+   "Other entries of the stored rows: A0, A1, E, E_own, att_cache, att_pos, att_entropy, S_eq, the split of eq_in1 and eq_out, the order tables w1x, w1s, w1y, w1xm and q0, and for w0 top1, n_eff, freqs, top5_additive, pca2, pca8, dims (spread only at 4 checkpoints), the tolerance at noise sizes 0.5 and 2, and all 'held' values except route.held.A.",
+   "The older version of kv_probe.py that wrote 8 of the 9 stored files (overwritten at 11:24:58): I checked its output, not its code.",
+   "The training runs themselves (kv_grok.py arms, ufo_grok.py) and their logs. I only confirmed that the checkpoints load and reproduce the stored accuracies, and that the perm control fits its permuted labels.",
+   "kv_transplant.py: read for its definitions, nothing recomputed (C, R, T, displacement, disorder table).",
+   "kv_report.py and kv_summary.json beyond noting which runs the summary contains.",
+   "Whether (c) and (d) hold in other seeds: only seed 0 of kswap, kswapiso and kvnoise has a probe.",
+   "The stored S values of grok_ufo_s0_wd0.3 at steps other than 9000 and 17000 are quoted from its kvprobe.json, not recomputed."
+  ]
+ },
+ "recalc:path (independent recomputation of the path analysis and the logs)": {
+  "summary": "**Do the stored numbers hold?** Yes. Every number I recomputed agrees with the stored one; one log statement, (c) on the 10 % run, is wrong.\n\n- **Method:** my own forward pass from the raw weights, with position 4 computed alone from a supplied cache. It matches Net to 2e-5 in the logits.\n- **Path analysis, seed 0:** all 72 rows of path_fine_s0.json and transplant_s0.json agree within 0.0002 (one problem of 4656).\n- **M-mix:** all 40 rows are identical, and a = 0.525 is the unique best match.\n- **Disorder rows:** identical when I replay the stored run's random stream (seed 99), and within 0.013 with my own draws. The mean share is 0.963706 in both.\n- **Other starting networks:** 36 rows of path_fine_s1/s2 and 8 rows of transplant_s1/s2 agree within 0.0002.\n- **Subset:** 233 distinct training problems, none held-out, every residue at least twice as x, y and answer.\n- **Scripts:** I found no bug in the code paths I recomputed.\n- **Wrong log statement:** the 10 % run does not oscillate between 0.6 and 0.97. After step 2500 it falls to 0.40 (minimum 0.397, last value 0.402).\n\n**Is the reading supported?** Its conclusion is supported; two of its clauses hold only in part and one holds for seed 0 only.\n\n1. **\"Before the jump both hybrids of U lose much more than the drift control's\"** — only in part.\n   - Seed 0, steps 250–350: the cache-path hybrid loses no more than the drift control's (kv C 0.022 vs 0.034 at step 250).\n   - Seed 0, steps 400–550: holds. At step 500, kv C is 0.386 vs 0.233 and R 0.294 vs 0.136; states C is 0.088 vs 0.024 and R 0.189 vs 0.017.\n   - Seed 0, steps 600–700: the drift control has its own collapse at step 600, and afterwards its kv reader hybrid loses more than U's (0.68–0.81 vs 0.46–0.57).\n   - Seed 2 at step 700 shows the same reversal (kv R 0.308 vs 0.470).\n   - The surplus is robust on the reader path in all three seeds; on the cache path it is small or late.\n2. **\"States cut: R > C\"** — holds at every checkpoint before the jump in all three seeds (step 500: 0.189 vs 0.088, 0.123 vs 0.012, 0.171 vs 0.080). The drift controls do not show it before their own events.\n3. **\"kv cut: C somewhat larger, drift shows it too\"** — holds for seeds 0 and 2 from step 400. In seed 1 it is the other way round until step 700 (R 0.124 vs C 0.028 at step 500). The drift controls do show C > R in all seeds.\n4. **\"After the jump both hybrids are near chance\"** — seed 0 only (kv 0.02–0.08, states 0.06–0.22; chance is 0.01).\n   - Seed 1: reader G with U's states gets 0.82 right at step 850, where U itself gets 0.29.\n   - Seed 2: the same hybrid gets 0.63–0.68 at steps 800–1000, where U itself gets 0.22–0.29.\n   - In both seeds the opposite hybrid stays at 0.22–0.34.\n5. **\"Not carried by the cache path alone\"** — supported. No checkpoint of any seed meets C >= 2R and C >= T/2 in both cuts.\n\n**Three things limit what these numbers can carry:**\n\n- **The hybrids also fail for the drift control, which generalises perfectly.** With own accuracy 1.0, seed 0 at step 3000 gets kv 0.08/0.16 and states 0.27/0.77; seed 2 at step 4000 gets kv 0.21/0.36 and states 0.23/0.24. C and R therefore measure how far two networks have trained apart, not damage. Before the jump T is at most 0.07 while C and R reach 0.75.\n- **The jump is an instability event that the drift controls have too.** The weight norm steps up by 1.5–4, and the kept problems are briefly lost as well. The drift controls show the same events 100–150 steps earlier and recover. Between events U's held-out accuracy rises.\n- **The disorder table is not specific to ungrokking.** I ran the same rows for the seed-0 drift control at step 3000: mean share 0.973 and \"mean only\" 0.093, against 0.964 and 0.104 for U.\n\n**Files:** everything is in <root>/kv_review/recalc_path. The forward pass is mylib.py, the scripts are t0_sanity.py to t12_transplant_s12.py, and the outputs are the my_*.json files. Total CPU was about 5 minutes.",
+  "checks": [
+   {
+    "quantity": "(a) held-out accuracy of kv_base_s0_ungrok5fine at step 700 / 750",
+    "where": "runs/kv_base_s0_ungrok5fine/log.json; step 750 also from ckpt_750.pt with my forward pass",
+    "stored": "about 0.96 / about 0.10 (statement)",
+    "recomputed": "0.9566 / 0.1014 (log); 0.1014 from the checkpoint",
+    "agrees": true,
+    "note": "The weight norm steps up from 47.48 to 50.96 between these two evaluations."
+   },
+   {
+    "quantity": "(a) accuracy on the kept problems around step 750",
+    "where": "same log; step 750 from ckpt_750.pt on the regenerated subset",
+    "stored": "dips to 0.94 at step 750, 1.0 before and after (statement)",
+    "recomputed": "0.9399 = 219/233 at step 750 (log and checkpoint); 1.0000 at all evaluations 50..700 and 800..1350",
+    "agrees": true
+   },
+   {
+    "quantity": "(a) held-out creeps up to about 0.46 at step 1350 and falls again at step 1400",
+    "where": "same log; step 1400 also from ckpt_1400.pt",
+    "stored": "about 0.46 at 1350, falls at 1400 (statement)",
+    "recomputed": "0.1731 (step 800) rising to 0.4562 (1350); 0.0348 at 1400 (log and checkpoint)",
+    "agrees": true,
+    "note": "The statement leaves out that at step 1400 the kept problems are lost too: 0.1717 = 40/233, back at 1.0 at step 1450."
+   },
+   {
+    "quantity": "(b) kv_base_s0_driftfine: single low evaluation at step 600, back at 1.0 from step 700",
+    "where": "runs/kv_base_s0_driftfine/log.json",
+    "stored": "held-out about 0.13, train about 0.14 at step 600; 1.0 from step 700 (statement)",
+    "recomputed": "held-out 0.1282, train 0.1406 at step 600; 0.9790 / 0.9941 at 650; held-out 1.0000 at 700..1500 except 0.9996 at step 1250",
+    "agrees": true,
+    "note": "Train accuracy of drift runs is measured on the first 1024 training problems. The weight norm steps up 49.02 -> 52.72 after step 600 and 47.44 -> 51.33 at step 1250."
+   },
+   {
+    "quantity": "(c) held-out / kept accuracy after 4000 steps: kv_base_s0_ungrok5, ungrok5d1, ungrok5rand",
+    "where": "log.json of the three runs; ungrok5 also from ckpt_4000.pt",
+    "stored": "0.02 to 0.04, kept problems 1.0 (statement)",
+    "recomputed": "0.0294 / 0.0322 / 0.0268; kept 1.0000 in all three (ungrok5 from the checkpoint: 0.0294, 233/233 kept right)",
+    "agrees": true
+   },
+   {
+    "quantity": "(c) kv_base_s1_ungrok5 and kv_base_s2_ungrok5 end at about 0.04",
+    "where": "log.json of both runs; step 4000 also from the checkpoints",
+    "stored": "about 0.04 (statement)",
+    "recomputed": "last log rows: s1 0.0449 at step 5250, s2 0.0393 at step 4750; at step 4000: s1 0.1155, s2 0.0468",
+    "agrees": true,
+    "note": "True for the last evaluation only; at equal length (4000 steps) seed 1 is at 0.12."
+   },
+   {
+    "quantity": "(c) kv_base_s0_ungrok10 oscillates between about 0.6 and 0.97",
+    "where": "runs/kv_base_s0_ungrok10/log.json",
+    "stored": "between about 0.6 and 0.97 (statement)",
+    "recomputed": "0.610..0.965 for steps 750..2500 only; then 0.537, 0.675, 0.397, 0.570, 0.605, 0.402 (step 4000); kept 1.0 throughout",
+    "agrees": false,
+    "note": "The run trends downward: successive peaks 0.965, 0.890, 0.827, 0.675, 0.605; minimum 0.397 at step 3250; last value 0.402."
+   },
+   {
+    "quantity": "(d) drift controls kv_base_s1_drift and kv_base_s2_drift, 16 evaluations each",
+    "where": "log.json of both runs",
+    "stored": "(question, no stored statement)",
+    "recomputed": "s1: held-out 1.0000 and train 1.0000 at all 16 evaluations. s2: held-out 1.0000 at 11 of 16; dips 0.9998 (750), 0.9968 (1250), 0.9991 (2000), 0.9729 (2500, train 0.9844), 0.9936 (3750); 1.0000 at 4000",
+    "agrees": true,
+    "note": "No loss of generalisation. The finer drift runs catch deeper transients: s1 0.6415 at step 1300 (train 0.7227), s0 0.1282 at step 600. The s0 drift run ends at step 4000 inside such a transient (held-out 0.3606, train 0.4053)."
+   },
+   {
+    "quantity": "weight norm at the start and end of the 5 % runs",
+    "where": "log field wnorm; start and end also from the checkpoint weights",
+    "stored": "end (log): s0 ungrok5 40.0445, ungrok5d1 40.2149, ungrok5rand 39.4614 at step 4000; s1 38.2127 at 4000 (38.0594 at 5250); s2 43.8054 at 4000 (41.8307 at 4750)",
+    "recomputed": "start = norm of G: s0 51.7007, s1 46.6056, s2 60.4339 (equal to the last row of the base logs). End from the weights: 40.0445, 40.2149, 39.4614, 38.2127, 43.8054",
+    "agrees": true,
+    "note": "Drift for comparison: s0 51.70 -> 45.04 (step 3750), s1 46.61 -> 41.17, s2 60.43 -> 45.09. In the first 50 steps the norm rises (s0: 52.66 in the 5 % run, 53.32 in the drift run)."
+   },
+   {
+    "quantity": "acc(G,G), held-out accuracy of G at '='",
+    "where": "path_fine_s0.json, transplant_s0.json (acc_GG)",
+    "stored": "1.0000",
+    "recomputed": "1.0000 (4656/4656)",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache U) / acc(reader U, cache G), U = ungrok5fine step 250",
+    "where": "path_fine_s0.json U_path",
+    "stored": "kv 0.9785 / 0.9474 | states 0.9927 / 0.9633 | own 0.9968",
+    "recomputed": "kv 0.9785 / 0.9474 | states 0.9927 / 0.9633 | own 0.9968",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache U) / acc(reader U, cache G), U = ungrok5fine step 500",
+    "where": "path_fine_s0.json U_path",
+    "stored": "kv 0.6138 / 0.7062 | states 0.9117 / 0.8112 | own 0.9873",
+    "recomputed": "kv 0.6138 / 0.7062 | states 0.9117 / 0.8112 | own 0.9873",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache U) / acc(reader U, cache G), U = ungrok5fine step 700",
+    "where": "path_fine_s0.json U_path",
+    "stored": "kv 0.2453 / 0.4304 | states 0.6888 / 0.5722 | own 0.9566",
+    "recomputed": "kv 0.2453 / 0.4304 | states 0.6888 / 0.5722 | own 0.9566",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache U) / acc(reader U, cache G), U = ungrok5fine step 1000",
+    "where": "path_fine_s0.json U_path",
+    "stored": "kv 0.0548 / 0.0326 | states 0.1360 / 0.1317 | own 0.2360",
+    "recomputed": "kv 0.0548 / 0.0326 | states 0.1360 / 0.1317 | own 0.2360",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache D) / acc(reader D, cache G), D = driftfine step 250",
+    "where": "path_fine_s0.json D_path",
+    "stored": "kv 0.9665 / 0.9577 | states 0.9884 / 0.9908 | own 1.0000",
+    "recomputed": "kv 0.9665 / 0.9577 | states 0.9884 / 0.9908 | own 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache D) / acc(reader D, cache G), D = driftfine step 500",
+    "where": "path_fine_s0.json D_path",
+    "stored": "kv 0.7665 / 0.8638 | states 0.9762 / 0.9832 | own 1.0000",
+    "recomputed": "kv 0.7665 / 0.8638 | states 0.9762 / 0.9832 | own 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache D) / acc(reader D, cache G), D = driftfine step 550",
+    "where": "path_fine_s0.json D_path",
+    "stored": "kv 0.6720 / 0.8213 | states 0.9699 / 0.9676 | own 1.0000",
+    "recomputed": "kv 0.6720 / 0.8213 | states 0.9699 / 0.9676 | own 1.0000",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache D) / acc(reader D, cache G), D = driftfine step 1000",
+    "where": "path_fine_s0.json D_path",
+    "stored": "kv 0.2861 / 0.3703 | states 0.8617 / 0.9349 | own 1.0000",
+    "recomputed": "kv 0.2861 / 0.3703 | states 0.8615 / 0.9349 | own 1.0000",
+    "agrees": true,
+    "note": "Difference of one problem of 4656 (rounding in a borderline argmax)."
+   },
+   {
+    "quantity": "acc(reader G, cache U) / acc(reader U, cache G), U = ungrok5 step 4000",
+    "where": "transplant_s0.json U_path",
+    "stored": "kv 0.0404 / 0.0314 | states 0.0614 / 0.0571 | own 0.0294",
+    "recomputed": "kv 0.0404 / 0.0314 | states 0.0614 / 0.0571 | own 0.0294",
+    "agrees": true
+   },
+   {
+    "quantity": "acc(reader G, cache D) / acc(reader D, cache G), D = drift step 3000",
+    "where": "transplant_s0.json D_path",
+    "stored": "kv 0.0803 / 0.1579 | states 0.2741 / 0.7661 | own 1.0000",
+    "recomputed": "kv 0.0803 / 0.1579 | states 0.2741 / 0.7661 | own 1.0000",
+    "agrees": true,
+    "note": "The drift control generalises perfectly here, yet three of its four hybrids are far below 0.5."
+   },
+   {
+    "quantity": "all rows of both seed-0 files (30 fine U, 30 fine D, 6 coarse U, 6 coarse D; six accuracies each)",
+    "where": "path_fine_s0.json, transplant_s0.json",
+    "stored": "72 rows",
+    "recomputed": "largest deviation 0.0002 (one problem), at driftfine steps 650 and 1000",
+    "agrees": true,
+    "note": "The fine and coarse runs are the same trajectories: checkpoints 0, 500, 1000, 1500 are bit-identical, for all three seeds."
+   },
+   {
+    "quantity": "M_mix_matched: own held-out accuracy of (1-a) G + a M, a = 0.525",
+    "where": "transplant_s0.json M_mix_matched",
+    "stored": "0.0294 (target: last U 0.0294)",
+    "recomputed": "0.0294 (137/4656, equal to the target)",
+    "agrees": true
+   },
+   {
+    "quantity": "M_mix_matched: C / R, cut kv",
+    "where": "transplant_s0.json M_mix_matched",
+    "stored": "C 0.9255 / R 0.9852 (accuracies 0.0745 / 0.0148)",
+    "recomputed": "C 0.9255 / R 0.9852 (accuracies 0.0745 / 0.0148)",
+    "agrees": true
+   },
+   {
+    "quantity": "M_mix_matched: C / R, cut states",
+    "where": "transplant_s0.json M_mix_matched",
+    "stored": "C 0.8668 / R 0.9869 (accuracies 0.1332 / 0.0131)",
+    "recomputed": "C 0.8668 / R 0.9869 (accuracies 0.1332 / 0.0131)",
+    "agrees": true
+   },
+   {
+    "quantity": "M_mix: choice of a and all 40 rows a = 0.025..1.0",
+    "where": "transplant_s0.json M_mix",
+    "stored": "a = 0.525",
+    "recomputed": "a = 0.525 is the unique closest of the 40 values; all 40 rows identical (deviation 0.0)",
+    "agrees": true,
+    "note": "M = kv_base_s0/ckpt_5000.pt has train accuracy 1.0 and held-out 0.0168."
+   },
+   {
+    "quantity": "disorder 'mean only' (right answers of G on held-out)",
+    "where": "transplant_s0.json disorder",
+    "stored": "0.1044 (size 5.1569)",
+    "recomputed": "0.1044 (size 5.1569)",
+    "agrees": true
+   },
+   {
+    "quantity": "disorder 'own 1'",
+    "where": "transplant_s0.json disorder",
+    "stored": "0.2163",
+    "recomputed": "0.2163",
+    "agrees": true,
+    "note": "Also identical: own 0.5 (0.9386), own 2 (0.0226), own 1 mean+ (0.0404, equal to the kv hybrid reader G + cache U)."
+   },
+   {
+    "quantity": "disorder 'other 1' (stochastic)",
+    "where": "transplant_s0.json disorder",
+    "stored": "0.4392",
+    "recomputed": "0.4392 with the random stream of the stored run (seed 99, same sequence of draws); 5 own draws 0.4261..0.4444",
+    "agrees": true,
+    "note": "Largest deviation with own draws 0.013, inside the 0.04 tolerance."
+   },
+   {
+    "quantity": "disorder 'spread 1' (stochastic)",
+    "where": "transplant_s0.json disorder",
+    "stored": "0.0642 (size 0.9967)",
+    "recomputed": "0.0642 (size 0.9967) with the stored run's stream; 5 own draws 0.0651..0.0722",
+    "agrees": true,
+    "note": "Largest deviation with own draws 0.008. The size is below 1 because the difference is zero where the two problems share the token of a slot."
+   },
+   {
+    "quantity": "disorder 'iso 1' (stochastic)",
+    "where": "transplant_s0.json disorder",
+    "stored": "0.9626",
+    "recomputed": "0.9626 with the stored run's stream; 5 own draws 0.9618..0.9676",
+    "agrees": true,
+    "note": "Largest deviation with own draws 0.005."
+   },
+   {
+    "quantity": "displacement: mean_share_of_total (training problems)",
+    "where": "transplant_s0.json displacement",
+    "stored": "0.963706",
+    "recomputed": "0.963706",
+    "agrees": true,
+    "note": "Also identical: size_vs_spread_of_G 4.667449; the 48 per-slot sizes agree to 4e-8."
+   },
+   {
+    "quantity": "subset: number of kept problems, membership",
+    "where": "kv_common.subset(tr, 0.05, strat=True, draw=0), checked with own code",
+    "stored": "233 kept training problems (training log)",
+    "recomputed": "233 distinct problems, all 233 in the training half, 0 in the held-out half; every answer equals x / y mod 97",
+    "agrees": true,
+    "note": "subset() is the only function of the checked scripts that I called; the draw is stored nowhere."
+   },
+   {
+    "quantity": "subset: least count of a residue as x / y (1..96) / answer",
+    "where": "same subset; training log line of ungrok5_s0",
+    "stored": "2 / 2 / 2",
+    "recomputed": "2 / 2 / 2 (largest counts 4 / 4 / 5)",
+    "agrees": true,
+    "note": "Other draws: second draw 2/2/2; 10 % 2/2/2; random 5 % 0/0/0 with 0.757 of held-out problems covered, as in the logs."
+   },
+   {
+    "quantity": "subset: is the regenerated draw the one trained on (kept / dropped accuracy from the checkpoints)",
+    "where": "ckpt_750 and ckpt_1400 of ungrok5fine s0; ckpt_4000 of ungrok5 s0, s1, s2; log.json",
+    "stored": "log: 0.939914 / 0.116437 (750); 0.171674 / 0.042505 (1400); 1.0 / 0.034140 (s0 4000); 1.0 / 0.137011 (s1 4000); 1.0 / 0.045670 (s2 4000)",
+    "recomputed": "identical to all printed digits",
+    "agrees": true,
+    "note": "Second route without subset(): 319 training problems are right at all six checkpoints 1500..4000; the 233 are all among them."
+   },
+   {
+    "quantity": "path_fine_s1.json: 18 rows (U 50, 250, 500, 700, 750, 800, 850, 1000, 1400, 1500; D 250, 500, 600, 650, 700, 1000, 1300, 1500)",
+    "where": "path_fine_s1.json",
+    "stored": "e.g. U 500: kv 0.9716 / 0.8761, states 0.9884 / 0.8769; U 850: kv 0.2835 / 0.0524, states 0.8215 / 0.2393 (own 0.2878); D 500: kv 0.9963 / 0.9998, states 1.0000 / 0.9998",
+    "recomputed": "same values; largest deviation over the 18 rows 0.0002",
+    "agrees": true
+   },
+   {
+    "quantity": "path_fine_s2.json: 18 rows (same steps)",
+    "where": "path_fine_s2.json",
+    "stored": "e.g. U 500: kv 0.6757 / 0.8097, states 0.9199 / 0.8293; U 800: kv 0.1439 / 0.0668, states 0.6297 / 0.2191 (own 0.2238); D 600: kv 0.6396 / 0.9723, states 0.9981 / 0.9994",
+    "recomputed": "same values; largest deviation over the 18 rows 0.0002",
+    "agrees": true
+   },
+   {
+    "quantity": "transplant_s1.json / transplant_s2.json: U 4000, D 3000, D 4000, matched M-mix (not asked for)",
+    "where": "transplant_s1.json, transplant_s2.json",
+    "stored": "e.g. s2 D 4000 (own 1.0000): kv 0.2053 / 0.3593, states 0.2307 / 0.2423; s1 D 4000 (own 1.0000): kv 0.2537 / 0.4152, states 0.6439 / 0.9575",
+    "recomputed": "same values; deviation 0.0 in all 8 rows",
+    "agrees": true
+   }
+  ],
+  "bugs_or_doubts": [
+   {
+    "file": "kv_transplant.py (hybrids, C and R)",
+    "what": "The hybrids do not measure damage: they also fail between G and the drift control, which generalises perfectly. Drift with own accuracy 1.0: seed 0 step 500 kv 0.77/0.86, step 1000 kv 0.29/0.37, step 3000 kv 0.08/0.16 and states 0.27/0.77; seed 2 step 4000 kv 0.21/0.36 and states 0.23/0.24 (all recomputed). The docstring's own condition 'both hybrids of the drift pair stay at or above 0.90' fails in the kv cut from step 450 on in seed 0. C and R are also not parts of T: before the jump T is at most 0.07 while C and R reach 0.3 to 0.75, and after the jump the seed-0 hybrids (0.02 to 0.22) lie below U's own accuracy (0.10 to 0.46).",
+    "could_change_a_conclusion": "Yes for any positive attribution of the ungrokking to one path and for every comparison after about step 550. No for the negative statement that the cache path alone does not carry it."
+   },
+   {
+    "file": "kv_transplant.py (displacement and disorder)",
+    "what": "This part has no drift control. I ran the same rows for the seed-0 drift control with my code. Drift step 3000 (own accuracy 1.0) against U step 4000: mean share 0.973 vs 0.964; 'mean only' 0.093 vs 0.104; full displacement 0.080 vs 0.040; 'own 1' 0.853 vs 0.216; 'other 1' 0.849 vs 0.438; 'spread 1' 0.452 vs 0.069; iso 0.996 vs 0.959. At equal size of the specific part (0.55 to 0.57 of the spread of G's cache), U at step 1000 (own accuracy 0.24) and the drift control at step 3000 give nearly the same table: own 0.812 vs 0.853, other 0.826 vs 0.849, spread 0.501 vs 0.452, mean only 0.069 vs 0.093. What differs at the last U is the size of the specific part (0.89 vs 0.55 of G's spread).",
+    "could_change_a_conclusion": "Yes. The mean share of 96 % and 'mean only' breaking G must not be presented as a signature of ungrokking; the own / other / spread rows need a size-matched drift row."
+   },
+   {
+    "file": "kv_grok.py and log.json of all continuation runs",
+    "what": "The jump is an instability event, and the drift controls have the same events. In every run the weight norm falls steadily and then steps up by 1.5 to 4 within 50 to 100 steps, roughly every 600 to 750 steps. U's held-out accuracy drops exactly there (seed 0: 0.957 -> 0.101 with the norm 47.5 -> 51.0; later 0.456 -> 0.035 and 0.227 -> 0.047). The kept problems are briefly lost too (seed 0: 0.94 and 0.17; seed 1: 0.21; seed 2: 0.45 and 0.17). Between events U's held-out accuracy rises (0.17 -> 0.46). The drift controls show the same events 100 to 150 steps earlier (seed 0 step 600: 0.128; seed 1 step 1300: 0.642; seed 2 step 650: 0.994) and recover within 100 steps. The last checkpoint of kv_base_s0_drift (step 4000) is inside such an event (held-out 0.361, train 0.405). I did not verify the mechanism.",
+    "could_change_a_conclusion": "Yes. 'After the jump' compares G with a network after a partial reset. Comparison with the drift control at the same step is clean only before the drift run's own first event (seed 0 up to step 550, seed 1 up to 650, seed 2 up to 600). The seed-0 D row at step 4000 is not a healthy drift control."
+   },
+   {
+    "file": "kv_transplant.py (reference M-mix)",
+    "what": "The reference is matched to the accuracy of the last U (0.029), where everything is saturated: reference C / R 0.93 / 0.99 (kv) and 0.87 / 0.99 (states) against U 0.96 / 0.97 and 0.94 / 0.94. The matched a lies in a flat tail (accuracy 0.0307, 0.0294, 0.0281 for a = 0.5, 0.525, 0.55). In the unsaturated range the reference behaves very differently (a = 0.05: own 0.815, kv C 0.004, R 0.281), because a small linear mix leaves the cache code in place.",
+    "could_change_a_conclusion": "No for the stated conclusion. The criterion 'C / R clearly above the reference' cannot be evaluated with the stored matched pair."
+   },
+   {
+    "file": "kv_transplant.py (asymmetry of the states cut)",
+    "what": "In the states cut the reader path holds much more of the network (key and value weights of both blocks, all of block 1 at the '=' position, output layer) than the cache path (embedding and block 0 at positions 0..3). A degradation spread evenly over all weights already gives R far above C (M-mix a = 0.05: R 0.28 to 0.30, C 0.004 to 0.006). R > C in the states cut does not by itself place the damage in the reader.",
+    "could_change_a_conclusion": "Only if R > C were turned into 'the reader path carries it'. Not for 'not the cache path alone'."
+   },
+   {
+    "file": "kv_common.py subset() and the job list",
+    "what": "Not a bug: the draw depends only on the data split and the draw number, so the runs from the other starting networks (s1, s2) use the identical 233 problems. Only ungrok5d1 and ungrok5rand vary the subset, and neither has a path analysis. The docstring's 'for every draw' is therefore checked for one draw.",
+    "could_change_a_conclusion": "No; it limits how general the statement is."
+   },
+   {
+    "file": "log.json of kv_base_s0_ungrok5, kv_base_s1_ungrok5, kv_base_s2_ungrok5",
+    "what": "These three runs did not end normally: no 'steps' entry in log.json and no 'finished' line. s1 ran to step 5250 and s2 to 4750, although jobs.txt says 4000. The checkpoints and log rows up to there are consistent.",
+    "could_change_a_conclusion": "No. 'After 4000 steps' and 'end' are different steps for s1 and s2 (0.116 vs 0.045; 0.047 vs 0.039)."
+   },
+   {
+    "file": "kv_grok.py",
+    "what": "U and D differ in more than the choice of problems: U takes one full-batch step on all 233 problems per step, D takes mini-batches of 512 (every tenth of 48). At the same step U is 10 to 30 % further from G in weight space (seed 0 step 500: 0.131 vs 0.101 of the norm of G). The logs count a problem as right when the answer and the following EOS are right, the path analysis counts the answer only; this made no difference in any row I compared.",
+    "could_change_a_conclusion": "Hardly. Part of U's larger hybrid loss before the jump may simply go with the larger step away from G."
+   },
+   {
+    "file": "kv_transplant.py (rows sub-k)",
+    "what": "After the rescaling per slot and head (function like) the draw is no longer inside the k main axes that the docstring names. I did not recompute these rows.",
+    "could_change_a_conclusion": "No."
+   }
+  ],
+  "not_checked": [
+   "kv_probe.py: read only; none of its measures (route A / L / E, S, order spectra, tolerance) was recomputed.",
+   "Disorder rows cov-8, cov-32, sub-8, sub-32, the random rows at a = 2, and specific_in_k_axes were not recomputed.",
+   "path_fine_s1.json and path_fine_s2.json: 18 of 60 rows each were recomputed; the rest were only read.",
+   "transplant_s1.json and transplant_s2.json appeared while I worked: 4 rows each were recomputed (U 4000, D 3000, D 4000, matched M-mix); their displacement and disorder parts were not.",
+   "No training was re-run. The logs are taken as written, apart from the accuracies and weight norms I reproduced from checkpoints.",
+   "The subset draw was regenerated by calling kv_common.subset(), because no list of kept problems is stored. That it is the set trained on rests on the exact reproduction of the log accuracies.",
+   "There is no stored path analysis for the second draw, the random 5 % run or the 10 % run, and I computed none.",
+   "The mechanism of the instability events was not examined; I only read their signature in the logs (weight-norm steps, brief loss of the trained problems).",
+   "kv_untied.py, kv_report.py with kv_summary.json, and kv_tables.py were not checked."
+  ]
+ },
+ "critic:interpretation (draft of section 8)": {
+  "summary": "The section is careful in many places (drift control added, missed thresholds listed, K1/K5/R1 declared untested, hybrids declared a measure of divergence), and most of its negative conclusions survive. Five statements should not be committed as they stand. (1) 8.4 reads A as \"generalising states address by position / read by a fixed pattern\". A only shows that the answer survives foreign keys; a light side check shows that in generalising states a quarter to a third of the block-0 attention weight still moves with the keys (1–2 % in the network trained with swapped keys). (2) 8.5 \"the network moves the computation to where it is not disturbed\" leaves out the second arm that disturbs the '=' stream, where the answer does not move into the cache (S 0.02–0.03). (3) 8.6 \"the problem-specific rest acts by its size\" is contradicted by the stored size scans in all three networks. (4) 8.8/K4 places the damage in the reader path, which 8.6 says cannot be concluded. (5) 8.7 \"nothing is damped ... almost off\" is wrong and conflicts with 7.4. Beyond that: three rules fixed in advance are reported without their verdict (K2 thresholds are missed in each of the three genuinely new seeds, seed 0 being the stored run's seed; the ungrokking rule foresaw \"instability of the setup\" when the drift control falls; the path rule makes the keys/values cut undecidable because the drift hybrids drop below 90 %). The jump story, \"rare instead of absent\" and the untied variant are worded more strongly than three networks on one draw of the 233 problems, a 250-step grid and 3,000–4,000 steps carry. The cubic part lacks the direct control (the target itself passes the post's test with c = 0.275–0.30), which would make its point stronger. Side-check scripts and outputs (about one CPU minute, single thread, nice 10, no training): <root>/kv_review/critic_sec8/ (check_read.py/.txt, check_read2.py/.txt, check_cubic.py/.txt, check_disp.py/.txt, tables.txt).",
+  "findings": [
+   {
+    "where": "8.4, erster Punkt; ebenso 8.2 (Definition von A), Überschrift 8.4, letzter Punkt von 8.4, 8.8 K1/K2",
+    "quote": "Auswendig-Stände lesen also je nach Inhalt der Schlüssel anders, verallgemeinernde weitgehend nach festem Muster.",
+    "kind": "overclaim",
+    "problem": "A measures whether the ANSWER survives foreign keys, not whether the READ PATTERN is fixed. For memorising states both go together. For generalising states they do not: their read pattern still moves with the content of the keys, they only tolerate it, as they tolerate every disturbance (8.5). So 'fixed pattern' / 'by position' (8.2: 'Hoch heißt: Das Lesemuster hängt nicht vom Inhalt ab, das Netz adressiert nach Position'; 8.4 last bullet: 'verallgemeinernde nach Position') is not shown. The simpler reading of the high A is the general tolerance of the generalising solution.",
+    "evidence": "Stored: <root>/kv_out/kv_summary.json, probes, logit_spread[0] of generalising base states 0.91–2.10 nats = 3 to 7 times the untrained 0.26–0.36; seed 3 has 1.97–2.10 with A 0.92–0.93. Draft 8.3 itself: block-0 logits are ordered (0.30–0.88) after generalisation, i.e. they vary with the token. Own side check (<root>/kv_review/critic_sec8/check_read.py, check_read.txt, check_read2.txt; 2,048 training problems, one draw of foreign problems): share of the '=' attention weight that moves when the keys are foreign: generalising states 0.26 / 0.35 / 0.37 / 0.32 in block 0 and 0.10–0.24 in block 1 (answers kept 0.95 / 0.99 / 0.67 / 0.92); memorising states 0.38–0.48 and 0.30–0.45; untrained 0.12 and 0.08; network trained with swapped keys 0.01–0.02. The centred logits of block 0 change by 1.5–3.2 nats in generalising states.",
+    "suggested_wording_de": "8.4: „Auswendig-Stände lesen also je nach Inhalt der Schlüssel anders, und ihre Antwort hängt daran. Verallgemeinernde Stände lesen ebenfalls nicht nach festem Muster: Ihre Logits streuen drei- bis siebenmal so stark wie im untrainierten Netz, und mit fremden Schlüsseln wandert in Block 0 ein Viertel bis ein Drittel des Aufmerksamkeitsgewichts (Auswendig-Stände 38 bis 48 %, Netz mit vertauschten Schlüsseln 1 bis 2 %; Nachmessung an einem Stand je Startwert). Ihre Antwort verträgt das aber.“ 8.2: „Hoch heißt: Die Antwort hängt nicht daran, wessen Schlüssel das `=` liest. Ob das Lesemuster selbst fest ist, zeigt A nicht.“ Letzter Punkt von 8.4: „Auswendig-Stände brauchen die eigenen Schlüssel, verallgemeinernde kaum.“ Überschrift: „Wer auswendig lernt, braucht die eigenen Schlüssel; nötig ist das Lesen nach Inhalt nicht“.",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.5, Absatz „Wohin die Rechnung wandert“; 8.8 K1, letzter Satz",
+    "quote": "Wird der `=`-Strom gestört, steht die Antwort am Ende im Cache (S 0,45 bis 0,46; L = 1,00: Block 1 liest sie nur noch ab). [...] Das Netz verlegt die Rechnung dorthin, wo nicht gestört wird.",
+    "kind": "overclaim",
+    "problem": "Two arms disturb the '=' stream; only the one that fits is reported. In the other (control to the cache noise, same seed) the answer does not end up in the cache. By S, that arm lies at the level of the two arms that disturb the cache, one of which is even higher. L cannot rescue the sentence: base seeds reach L 0.79–0.97 with S 0.00, and 8.4 says L is no measure. One seed, one run per arm; 8.8 turns it into 'Wo die Rechnung sitzt, bestimmt die Störung'.",
+    "evidence": "kv_summary.json probes: kv_eqiso_s0 steps 8000 / 8500: S 0.022 / 0.028, S_read 0.015 / 0.016 (chance 0.010), L 0.86 / 0.91. kv_kswap_s0 (cache disturbed): S 0.035–0.056. kv_kvnoise_s0: S 0.013–0.020. kv_kswapiso_s0: S 0.45–0.46. Size of the disturbance at '=' in training (kv_tables.py, part 1, steps 1000–3000): kswapiso 0.71–0.78 after block 0, eqiso 0.43–0.49.",
+    "suggested_wording_de": "„**Wohin die Rechnung wandert** (Startwert 0, je ein Lauf, verallgemeinernde Stände): In einem der beiden Arme mit gestörtem `=`-Strom steht die Antwort am Ende im Cache (Kontrolle zu den vertauschten Schlüsseln: S 0,45 bis 0,46; L = 1,00). Dasselbe hatte der UFO am `=` in 7.10 bewirkt (S 0,14 bis 0,38). Im anderen Arm (Kontrolle zum Rauschen im Cache), dessen Störung am `=` kleiner ist (0,4 bis 0,5 statt 0,7 bis 0,8 der Streuung des Stroms), tut sie das nicht (S 0,02 bis 0,03). Mit Störung im Cache bleibt S bei 0,01 bis 0,06. Eine starke Störung am `=` kann die Rechnung also in den Cache drängen; eine Regel ist das bei einem Startwert nicht.“ 8.8 K1: „Wo die Rechnung sitzt, hängt nicht an der Ordnung: Bei gleicher Ordnung steht die Antwort je nach Lauf im Cache oder nicht (8.5).“",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.6, Tabelle zur Verschiebung, zweiter Punkt und Schlusssatz",
+    "quote": "Der aufgabeneigene Rest wirkt nach seiner Größe. Bei ähnlicher Größe (rund die Hälfte der Streuung des Cache von G) stört der Rest des gekippten Netzes (Schritt 1.000) G so wenig wie der der Driftkontrolle (0,81 bis 0,98 gegen 0,85 bis 0,96). Bei Schritt 4.000 ist er größer und stört entsprechend mehr.",
+    "kind": "wrong statement",
+    "problem": "The stored size scans (0.5, 1, 2 times the rest) say the opposite when the drift column is read by seed: at equal or smaller size the rest of the tipped network disturbs G more than the rest of the drift control, in all three networks. The pooled ranges hide this (seed 2: 0.85 at size 0.46 against 0.96 at size 0.52). The tipped rest is also problem-specific (own rest hurts more than another problem's rest), the drift rest is not. So 'acts by its size' and the closing 'Eine eigene Geometrie des Ungrokking im Cache zeigt sich also nicht' are not carried. A drift row of matching size for step 4,000 is missing.",
+    "evidence": "res/kv_disp_drift3000_s{0,1,2}.json, disorder['own 2'].right = 0.28 / 0.60 / 0.28 at sizes 1.10 / 1.30 / 1.04 of the spread of G's cache (2 x specific_vs_spread_of_G). res/kv_disp_u1000_s{0,1,2}.json, 'own 2' = 0.19 / 0.48 / 0.19 at sizes 1.15 / 1.01 / 0.92. res/kv_transplant_s{0,1,2}.json, 'own 1' = 0.22 / 0.49 / 0.28 at sizes 0.89 / 0.76 / 0.78. Own against other problem: step 4,000 0.22 / 0.49 / 0.28 against 0.44 / 0.72 / 0.49; drift at double size 0.28 / 0.60 / 0.28 against 0.28 / 0.53 / 0.34. One draw each; repeated draws scatter by about 0.01 (recalc_path.json).",
+    "suggested_wording_de": "„**Der aufgabeneigene Rest des gekippten Netzes stört G bei gleicher Größe mehr als der der Driftkontrolle.** Auf das Doppelte vergrößert (rund eine Streuung des Cache von G) lässt der Rest der Driftkontrolle 0,28 / 0,60 / 0,28 der Antworten stehen, der Rest des gekippten Netzes bei Schritt 1.000 nur 0,19 / 0,48 / 0,19, obwohl er in zwei der drei Netze kleiner ist. Der Rest bei Schritt 4.000 richtet denselben Schaden schon bei 0,76 bis 0,89 Streuungen an. Er trifft auch gezielter: Der eigene Rest stört mehr als der einer anderen Aufgabe (0,22 / 0,49 / 0,28 gegen 0,44 / 0,72 / 0,49); bei der Driftkontrolle ist beides gleich. Je eine Ziehung; eine Driftkontrolle gleicher Größe für Schritt 4.000 fehlt.“ Schlusssatz: „Die grobe Gestalt der Verschiebung ist keine Eigenheit des Ungrokking. Ihr aufgabeneigener Rest wirkt aber stärker und gezielter als der der Driftkontrolle. Ob das eine eigene Geometrie ist, entscheidet diese Beschreibung nicht.“",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.8, K4, zweiter Satz",
+    "quote": "Zweiter Teil nicht gestützt: Der Schaden sitzt mindestens so sehr im Lese-Pfad wie im Cache-Pfad (drei Netze), und über den Cache allein geht am wenigsten verloren.",
+    "kind": "inconsistent",
+    "problem": "This is the one sentence that still attributes the damage to a path. 8.6 says C and R 'messen, wie weit zwei Netze auseinandertrainiert sind, keinen Schaden' and lists under 'Was sich nicht folgern lässt: dass der Lese-Pfad das Ungrokking trägt'. In the keys/values cut two of the three networks even have C above R before the jump. The second half comes from the untied network, a different model with two starting networks and 3,000 steps, which by its own script 'locates nothing in the tied network'.",
+    "evidence": "Draft 8.6 (the two quoted passages). res/kv_path_fine_s0.json and _s2.json, step 500, cut kv: C / R = 0.386 / 0.294 and 0.324 / 0.190. Docstring of analysis/ju_space/kv_untied.py.",
+    "suggested_wording_de": "„Zweiter Teil nicht gestützt: Die vorab gesetzte Regel für „der Cache trägt das Ungrokking“ ist in keinem der drei Netze erfüllt. Wo der Schaden sitzt, sagen die Schnitte nicht, denn auch die Driftkontrolle passt nach einigen hundert Schritten nicht mehr zu G. Im entkoppelten Netz (ein anderes Modell, zwei Ausgangsnetze) geht über den Cache allein in 3.000 Schritten am wenigsten verloren.“",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.7, erster Punkt („Was an der Aussage stimmt“)",
+    "quote": "Gedämpft wird dabei nichts: Für positiven Gate-Eingang wächst das Produkt quadratisch, für negativen ist das Neuron fast aus.",
+    "kind": "wrong statement",
+    "problem": "silu(g) x u = g x u x sigmoid(g): the sigmoid multiplies the product by a factor between 0 and 1 (0.5 to 1 for positive gate input, below 0.5 for negative). That is the damping the hint speaks of, so the hint is right. What is true is that the sigmoid does not bound the product. 'fast aus' contradicts 7.4 and the next bullet of the draft: the neurons with negative gate input carry almost the whole measured cancellation in blocks 1 to 9, and their mean gate value is a third to a half of that of the open neurons. 'Dass die Werte nicht davonlaufen, liegt an der Normierung' is an argument from the architecture, not something measured here.",
+    "evidence": "/home/user/DSSE/results/ju_space/README.md 7.4, second table: 'mittlerer Gate-Wert silu bei negativem / positivem Eingang' −0,13 / +0,39 (blocks 1–4) and −0,21 / +0,40 (5–9); 'Up-Zweig, Gate-Eingang negativ' 0,197 and 0,214 of a cancellation of 0,15 bis 0,24.",
+    "suggested_wording_de": "„Die Sigmoid-Funktion dämpft das Produkt (Faktor zwischen 0 und 1), begrenzt es aber nicht: Für großen positiven Gate-Eingang geht der Faktor gegen 1, und das Produkt wächst quadratisch. Für negativen Gate-Eingang bleibt ein kleiner negativer Faktor (`silu` zwischen −0,28 und 0); aus ist das Neuron dort nicht (7.4). Dass die Werte nicht davonlaufen, liegt nach dem Aufbau an der Normierung vor dem MLP; gemessen ist das hier nicht.“",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.4, erster und dritter Punkt; 8.8 K2",
+    "quote": "**Das Muster hält in allen vier neuen Startwerten:** [...] **Die vorab gesetzten Schwellen** (unter 0,2 in jedem Auswendig-Stand, über 0,7 in jedem verallgemeinernden) werden an vier Stellen verfehlt",
+    "kind": "missing caveat",
+    "problem": "The misses are listed, but the verdict of the rule is not drawn. The rule asked for the thresholds to hold 'in the stored runs and in at least two further seeds'. (a) Seed 0 is not a further seed: the new base run starts from the same network as the run of 7.10 and follows it closely up to step 7,500. (b) In each of the three genuinely new seeds a threshold is missed. So the pre-registered 'for' is not reached (the 'against' neither). (c) The critique did not fix up to which held-out accuracy a state counts as memorising; with 5 % instead of the draft's 10 %, seeds 1 and 3 would pass and seed 2 would still fail after the transition. 8.8 adds 'keine Ursache', which rests on one probed state of one network.",
+    "evidence": "review/crit.json, what_each_result_would_mean[0]. kv_summary.json probes: step-0 rows of kv_base_s0 and grok_base_s0_wd0.3 are identical (A 0.8167870036101083, logit_spread 0.3582951…); step 5,000: A 0.098 / 0.101, top5_w0 0.2308 / 0.2306. Misses: kv_base_s1 step 5000 A 0.270; kv_base_s2 step 10000 0.222 and steps 14000 / 14500 0.697 / 0.671; kv_base_s3 step 7500 0.226. Arm with swapped keys: one probed memorising state (kv_kswap_s0, step 2500).",
+    "suggested_wording_de": "„**Das Muster zeigt sich in allen vier Startwerten** (neu sind die Startwerte 1 bis 3; Startwert 0 ist derselbe Anfang wie der Lauf aus 7.10): …“ Nach dem Punkt zu den Schwellen: „Nach der vorab gesetzten Regel (Schwellen in mindestens zwei weiteren Startwerten eingehalten) gilt die Aussage damit nicht als gestützt: In jedem der drei neuen Startwerte ist eine Schwelle verfehlt. Widerlegt ist sie auch nicht. Die Kritik hatte nicht festgelegt, bis zu welcher Genauigkeit ein Stand als auswendig zählt; mit der Grenze 5 % statt 10 % hielten die Startwerte 1 und 3 die Schwellen ein, Startwert 2 nach dem Übergang weiterhin nicht.“ 8.8 K2: „Es ist ein Begleitzeichen und nicht nötig: Im Arm mit vertauschten Schlüsseln lernt das Netz auch ohne das auswendig (ein Startwert, ein Stand).“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, „Es tritt ein.“ und letzter Satz des Punkts zur Driftkontrolle",
+    "quote": "**Es tritt ein.** [...] Die vorab gesetzte Bedingung „Driftkontrolle bleibt über 99 %“ ist an diesen einzelnen Messpunkten verletzt.",
+    "kind": "missing caveat",
+    "problem": "The rule fixed in advance named a reading for exactly this case: 'If the drift control falls too: instability of this training setup.' The draft reports the violation but not this consequence, and the heading reads like a clean pass. The rule's second condition (kept problems stay at or above 99 %) is violated at the jumps as well. Such collapses belong to this setup in general: the base runs lose training accuracy too, before any restart.",
+    "evidence": "review/crit.json, what_each_result_would_mean[2]. Kept problems at the jumps: 0.94 / 0.21 / 0.45 and 0.17 / 0.17 (kv_summary.json continuations base_s{0,1,2}_ungrok5fine). <root>/kv_out/runs/kv_base_s0/log.json: train_acc 0.65 / 0.53 / 0.69 / 0.77 at steps 3500 / 4500 / 9000 / 10000; kv_base_s2: 0.58 at 12500.",
+    "suggested_wording_de": "Überschrift: „**Es tritt ein, aber nicht nach der vorab gesetzten Regel.**“ Am Ende des Punkts: „Die vorab gesetzte Regel verlangte, dass die Driftkontrolle und die behaltenen Aufgaben durchweg bei mindestens 99 % bleiben. Beides ist an einzelnen Messpunkten verletzt (behaltene Aufgaben in den Sprüngen 0,94 / 0,21 / 0,45 und 0,17 / 0,17). Für diesen Fall sah die Regel die Lesart „Instabilität dieses Trainingsaufbaus“ vor. Solche Einbrüche hat der Aufbau auch sonst: Im Grundlauf von Startwert 0 fällt die Genauigkeit auf den Trainingsaufgaben viermal unter 80 %. Über diese Lesart hinaus geht nur der Unterschied danach: mit allen Aufgaben wieder 100 %, mit 5 % nicht.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, Punkt „Solche Einbrüche hat auch die Driftkontrolle“; 8.8 K4, letzter Satz",
+    "quote": "Mit allen Aufgaben kehrt das Netz jedes Mal zur verallgemeinernden Lösung zurück, mit 5 % nicht. Das Ungrokking ist hier also die Folge von Einbrüchen des Trainings bei zu wenigen Aufgaben, kein stetiges Abwandern.",
+    "kind": "overclaim",
+    "problem": "(a) 'jedes Mal': the drift run of seed 0 ends inside its second collapse, so the return is not observed there. (b) 'Folge': what is shown is that the loss coincides with the collapses (three networks, the same 233 problems, two events each). No run prevents the collapses, so it is open whether the network would also tip without them. (c) 'kein stetiges Abwandern' contradicts the draft's own path analysis: before the first jump the halves already fit G worse than those of the drift control and the weights are further away; in the two other draws 9 and 17 % of the held-out answers are gone by step 750. (d) The jumps are resolved (50-step grid) for one draw only. (e) The 5 % run and the drift control differ in more than the problems: full-batch steps on the same 233 problems against mini-batches of 512 (recalc_path.json, point 7); the draft mentions only the larger distance.",
+    "evidence": "kv_summary.json continuations: base_s0_drift, last evaluation step 4000: 0.405 / 0.361 (end of run). base_s0_ungrok5d1: 0.95 / 0.95 / 0.91 at steps 250 / 500 / 750, then 0.21; base_s0_ungrok5rand: 0.91 / 0.91 / 0.83, then 0.28 (both on a 250-step grid). Draft 8.6, 'Vor dem Sprung' and '13 gegen 10 % der Gewichtsnorm'.",
+    "suggested_wording_de": "„Mit allen Aufgaben ist das Netz nach jedem Einbruch, dessen Fortgang gemessen ist, binnen 100 Schritten wieder bei 100 %; der Lauf von Startwert 0 endet bei Schritt 4.000 mitten in einem Einbruch. Mit 5 % kommt es nicht zurück. Die Genauigkeit geht hier also in den Einbrüchen verloren. Das Netz wandert aber schon vorher ab: Vor dem ersten Sprung passen seine Hälften schlechter zu G als die der Driftkontrolle (unten), und in den beiden anderen Ziehungen sind bei Schritt 750 schon 9 und 17 % der ungesehenen Aufgaben verloren. Ob es ohne Einbrüche ebenfalls kippen würde, ist nicht geprüft; fein gemessen ist nur eine Ziehung der 233 Aufgaben.“ 8.8: „Die Genauigkeit geht hier in Sprüngen verloren, bei Einbrüchen des Trainings.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, „Selten statt fehlend“, beide Punkte; 8.8 K4, erster Satz",
+    "quote": "Das genügt in drei Ausgangsnetzen: Die Genauigkeit fällt in den ersten paar hundert Schritten auf 0,80 bis 0,89 (alle 250 Schritte gemessen; bei Startwert 0 feiner gemessen bis 0,75) und steht bei Schritt 4.000 bei 0,99. [...] Dieser Teil von K4 trägt im Kleinversuch: Die Verallgemeinerung hängt an den Aufgaben außerhalb der kleinen Menge, und wenige davon reichen, um sie zu halten.",
+    "kind": "overclaim",
+    "problem": "(a) 'hält' / 'genügt': between the dip and the end the value is mostly below the draft's own 99 % line; 0.99 is the last evaluation. (b) The 250-step grid cannot show collapses: the drift control's own collapses do not appear on its 250-step log at all. 'Kleinster Wert' is therefore an upper bound and not comparable with the finely measured 5 % runs; the 0.63 at 10 % is a collapse caught by chance. (c) The early fall is caused by the mixing, not softened by it: without rare problems the same network stays at 0.98–1.00 in those first 400 steps. The mixed runs differ from the 0 % run in more than the rare problems (the batch changes every step; the weight norm rises in two of three networks where it falls without mixing). A control with changing batches that carry no information on the dropped problems is missing. (d) 'wenige davon': over 4,000 steps almost every dropped problem is drawn, about 4.5 times, so a low rate suffices, not a few problems. (e) All shares except 2 % are one network; one draw of the 233; 4,000 steps (the pilot rule said up to 12,000); with one rare problem per batch the value is still rising at the end. (f) K4's wording can be read the other way round; the result says that being 900 times rarer does not make the network tip.",
+    "evidence": "kv_summary.json continuations tied_s{0,1,2}_mix0.02: evaluations from step 2000 on 0.92–1.00, step 3750: 0.98 / 0.97 / 0.96. base_s0_drift and base_s1_drift (250-step grid): 1.00 at steps 500 / 750 and 1250 / 1500, while the 50-step logs show 0.13 at step 600 and 0.64 at step 1300. tied_s0_mix0.1 step 750: kept 0.97, held-out 0.63. <root>/kv_out/smoke6/kv_tied_s0_check0/log.json (no mixing): 0.98–1.00 for steps 25–400; kv_tied_s0_check0.02: down to 0.75 at step 225. Weight norm: mix 2 % seed 0 55.1 to 59.7, seed 1 47.3 to 58.3; without mixing 50.4 to 41.5 and 46.0 to 38.9. tied_s0_mix0.005: 0.46 at step 1000, 0.68–0.69 at 3250–4000. 5 x 4000 / 4423 = 4.5.",
+    "suggested_wording_de": "„Mit 2 % sieht das Netz jede weggelassene Aufgabe rund 900-mal seltener als eine behaltene; über 4.000 Schritte kommt trotzdem fast jede vor, im Mittel 4- bis 5-mal. In drei Ausgangsnetzen verliert es damit zunächst 11 bis 20 % der ungesehenen Aufgaben (bei Startwert 0 feiner gemessen 25 %; ohne seltene Aufgaben liegt dasselbe Netz in diesen ersten 400 Schritten bei 0,98 bis 1,00), erholt sich und liegt in der zweiten Hälfte des Laufs bei 0,92 bis 1,00, bei Schritt 4.000 bei 0,99. Gemessen ist alle 250 Schritte; kurze Einbrüche wie die der Driftkontrolle sind in diesem Raster nicht zu sehen, der kleinste Wert ist also eine obere Grenze. Mit einer einzigen seltenen Aufgabe je Stapel fällt die Genauigkeit auf 0,46 (Schritt 1.000) und steigt bis Schritt 4.000 wieder auf 0,68.“ Zweiter Punkt: „Dieser Teil von K4 trägt im Kleinversuch in einer Lesart: Ob das Netz kippt, hängt daran, wie oft die Aufgaben außerhalb der kleinen Menge noch vorkommen, und eine geringe Rate reicht über 4.000 Schritte. Selten zu sein lässt das Netz also gerade nicht kippen. Grenzen: eine Ziehung der 233 Aufgaben, andere Anteile als 2 % nur an einem Netz, keine Kontrolle mit wechselnden Stapeln ohne die weggelassenen Aufgaben.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, Pfadanalyse: Punkt „Vor dem Sprung“ und Punkt zur vorab gesetzten Regel",
+    "quote": "**Die vorab gesetzte Regel für „der Cache trägt das Ungrokking“** (C mindestens doppelt so groß wie R und mindestens die Hälfte des Gesamtverlusts, in beiden Schnitten und allen Netzen, und deutlich über dem Verhältnis bei einem über alle Gewichte verteilten Schaden) ist an keinem Stand in keinem Netz erfüllt",
+    "kind": "missing caveat",
+    "problem": "The rule is quoted without two of its parts and without its outcome classes. (1) It required the hybrids of the drift pair to stay at or above 90 %, 'otherwise the method is unusable here' (outcome 'undecidable'). In the keys/values cut this fails from step 400 (seed 0) and 500 (seed 2), the very steps whose surplus the text then interprets. By the rule that cut is undecidable; only the states cut is readable before the jump, and there R exceeds C in all three networks, the rule's 'against'. (2) The timing part (the hybrid with the tipped cache falls below 50 % first) is met in the keys/values cut for seeds 0 and 2. It does not count, because the drift control of seed 2 shows the same, but it should be said. Also still in the text from recalc_path.json: 'auf beiden etwa gleich' does not hold for seed 1, and at step 250 seed 0 has no surplus on the cache path.",
+    "evidence": "review/crit.json, point 11 and what_each_result_would_mean[3]. res/kv_path_fine_s{0,1,2}.json, cut kv, reader G + cache of the drift control: seed 0 0.895 at step 400 and 0.767 at 500; seed 2 0.849 at 500; seed 1 0.996. First step below 0.5 in the 5 % run (cut kv): 550 against 650 (seed 0), 650 against 750 (seed 2), 800 / 800 (seed 1); drift control of seed 2: 650 against never. States cut, step 500, C / R: 0.088 / 0.189, 0.012 / 0.123, 0.080 / 0.171. Surplus in the kv cut for seed 1: +0.12 against +0.02; seed 0 at step 250: C 0.02 against 0.03 in the drift control.",
+    "suggested_wording_de": "Anfügen: „Zur Regel gehörte auch: Die Mischungen mit der Driftkontrolle müssen bei mindestens 90 % bleiben, sonst ist der Schnitt nicht lesbar. Im Schnitt „Schlüssel/Werte“ ist das ab Schritt 400 (Startwert 0) und 500 (Startwert 2) verletzt (0,77 und 0,85 bei Schritt 500); dieser Schnitt bleibt damit unentscheidbar. Im Schnitt „Zustände“ hält die Bedingung bis zum Einbruch der Driftkontrolle; dort ist R in allen drei Netzen größer als C, nach der Regel ein Ergebnis gegen den Cache-Pfad. Der zeitliche Teil der Regel (die Mischung mit dem gekippten Cache fällt früher unter 50 %) trifft im Schnitt „Schlüssel/Werte“ bei zwei Netzen zu, aber auch bei der Driftkontrolle von Startwert 2, und zählt deshalb nicht.“ Im Punkt „Vor dem Sprung“: „… im Schnitt „Schlüssel/Werte“ bei den Startwerten 0 und 2 auf beiden etwa gleich (+0,16 / +0,18 gegen +0,15 / +0,17), bei Startwert 1 fast nur auf dem Lese-Pfad (+0,12 gegen +0,02).“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, „Darf nur eine Hälfte lernen“, Punkt unter der Tabelle",
+    "quote": "Über den Cache allein kippt das Netz also am wenigsten.",
+    "kind": "missing caveat",
+    "problem": "The runs with only the writing copy trainable are still going down when they stop: every low lies below the one before and the run of seed 0 ends on its lowest value. So 'am wenigsten' is 'slowest within 3,000 steps'; the cache alone does lose 17 to 25 % in that time. The script's own caveat is missing: the variant shows what each half can do and locates nothing in the tied network. 8.8 then uses it as evidence on where the ungrokking sits.",
+    "evidence": "kv_summary.json continuations writer_s0_untied: 0.93 / 0.87 / 0.81 / 0.75 at steps 750 / 1500 / 2250 / 3000 (held_min = held_last = 0.753); writer_s1_untied: 0.92 / 0.84 / 0.81 / 0.83 at steps 1000 / 1500 / 2250 / 3000. Docstring of ufo_scripts/kv_untied.py: 'it locates nothing in the tied network; it shows what each path CAN do'.",
+    "suggested_wording_de": "„Über den Cache allein kippt das Netz in 3.000 Schritten also am langsamsten, es kippt aber auch dort: Bei Startwert 0 liegt jeder Tiefpunkt unter dem vorigen (0,93 / 0,87 / 0,81 / 0,75 bei Schritt 750 / 1.500 / 2.250 / 3.000), und der Lauf endet auf seinem tiefsten Wert. Der Versuch zeigt, was jede Hälfte kann; wo das Ungrokking im gekoppelten Netz sitzt, zeigt er nicht. Zwei Ausgangsnetze, je ein Lauf.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.8, K5",
+    "quote": "Die Beschreibung spricht eher dagegen: Die Verschiebung ist zu 96 bis 99 % für alle Aufgaben gleich, und ihr Rest ist kein besonders wirksames Störmuster.",
+    "kind": "overclaim",
+    "problem": "This goes beyond 'not tested'. (a) The rule fixed in advance: 'Neither outcome shows that the displacement is a useful guide for training.' (b) What was measured is how the generalising network G breaks. K5 would need a pattern that hits a memorising solution and spares the generalising one; a pattern that disturbs G little would not speak against it. (c) The rest is not ineffective: it disturbs G clearly more than noise of the same covariance in its own main axes and more than the rest of another problem, so the rule's 'against' ('no more than covariance-matched noise in the same subspace') is not met; the 'for' is not met either, because a shift along G's own code is stronger.",
+    "evidence": "review/crit.json, point 14 and what_each_result_would_mean[5]. res/kv_transplant_s{0,1,2}.json, disorder at size 1: own 0.22 / 0.49 / 0.28; cov-32 0.68 / 0.85 / 0.75; other 0.44 / 0.72 / 0.49; spread 0.06 / 0.21 / 0.08.",
+    "suggested_wording_de": "„**K5.** Nicht geprüft, und die Beschreibung entscheidet nichts. Gemessen ist, wie das verallgemeinernde Netz G bricht; K5 bräuchte ein Muster, das eine auswendige Lösung trifft und die verallgemeinernde schont, und einen Lauf, der es beim Training benutzt. Zur Beschreibung: Die Verschiebung ist zu 96 bis 99 % für alle Aufgaben gleich, wie bei der Driftkontrolle. Ihr Rest stört G weniger als eine gleich lange Verschiebung entlang des Codes von G, aber mehr als Rauschen gleicher Kovarianz (0,22 / 0,49 / 0,28 gegen 0,68 / 0,85 / 0,75) und bei gleicher Größe mehr als der Rest der Driftkontrolle.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.4, Punkt „Ordnung und Adressieren nach Inhalt laufen gegeneinander“; 8.8 K1",
+    "quote": "**Ordnung und Adressieren nach Inhalt laufen gegeneinander:** Je geordneter der Cache, desto weniger kommt es auf den Inhalt der Schlüssel an.",
+    "kind": "overclaim",
+    "problem": "'Je … desto' claims a graded relation. Measured is a contrast between two kinds of state that both change at the transition (crit.json: 'order and route both change with training time in one run per arm'). Among generalising states there is no grading, and one network has A = 1.00 with an unordered cache.",
+    "evidence": "kv_summary.json probes, generalising states, top5_w0 / A: seed 1 0.59–0.67 / 0.99 (lowest order, highest A); seed 3 0.68–0.76 / 0.92–0.93; seed 2 0.70–0.79 / 0.67–0.70; seed 0 0.83–0.90 / 0.90–0.94. Run of 7.10, steps 12000 to 20000: order 0.79 to 0.99, A 0.92 to 0.90. kv_kswap_s0 step 2500: order 0.21, A 1.00.",
+    "suggested_wording_de": "„**Mit dem Verallgemeinern ändert sich beides zugleich:** Der Cache wird geordnet, und die Antworten hängen kaum noch an den eigenen Schlüsseln. Eine Abstufung darüber hinaus zeigt sich nicht: Unter den verallgemeinernden Ständen hat Startwert 1 die geringste Ordnung (0,59 bis 0,67) und das höchste A (0,99), und im Lauf aus 7.10 steigt die Ordnung von 0,79 auf 0,99, während A bei 0,87 bis 0,92 bleibt. Liest man K1 als „geordneter Cache wird inhaltsabhängiger gelesen“, spricht das dagegen.“ 8.8 K1: „… und mit dem Verallgemeinern hängen die Antworten kaum noch an den eigenen Schlüsseln (8.4).“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.7, zweiter Punkt („Was Qwen3-1.7B daraus macht (7.4)“)",
+    "quote": "Dort ist `silu` klein und fast konstant (zwischen −0,28 und 0), das Neuron reicht sein Up-Signal mit kleinem negativem Faktor durch und verhält sich annähernd linear; das ist die gemessene Löschung.",
+    "kind": "missing caveat",
+    "problem": "The numbers match 7.4, the scope does not. 7.4 measured one thing: how the MLP answers a small added vector (exact for small vectors, 16 texts). It does not show what Qwen 'makes of' the product in its ordinary computation. In blocks 10 to 16 neurons with positive gate input take over, and 7.4 itself notes that the cancellation runs largely over weak activations while the output hangs on the stronger half. 'fast konstant' is not in 7.4: the factor ranges over −0.28 to 0; what is small is how much it changes with the gate, shown by the small share of the gate branch.",
+    "evidence": "README 7.4: 'Für einen kleinen Vektor lässt sich exakt ausrechnen …'; table 'Up-Zweig, Gate-Eingang negativ / positiv' 0,049 / +0,098 in blocks 10–16; 'Nach ihr trägt die schwächere Hälfte im vollen Modell 22 bis 45 % der MLP-Löschung'; 7.6 'Der gelöschte Anteil fällt mit der Größe'.",
+    "suggested_wording_de": "„**Was 7.4 dazu an Qwen3-1.7B gemessen hat.** Nur die Antwort des MLP auf einen kleinen zugesetzten Vektor. In den Blöcken 1 bis 9 liegt der Gate-Eingang bei 84 bis 98 % der Neuronen im Negativen. Dort ist `silu` klein (zwischen −0,28 und 0) und ändert sich mit dem Gate-Eingang wenig; das Neuron reicht sein Up-Signal mit kleinem negativem Faktor durch. Das ist die gemessene Löschung. Über den Gate-Zweig laufen 0,007 bis 0,010 der Löschung von 0,15 bis 0,24 je Block. In den Blöcken 10 bis 16 übernehmen Neuronen mit positivem Gate-Eingang. Was das Produkt für die übrige Rechnung des MLP bedeutet, ist damit nicht gemessen.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.7, Punkt „Gegenprobe“, Text unter der Tabelle",
+    "quote": "Der Befund des Beitrags stellt sich also in jedem Netz ein, auch ohne SAE. Die Werte liegen dort, wo sich die Funktion selbst ändert",
+    "kind": "missing caveat",
+    "problem": "The argument points the right way and the replication supports the sentences written about it, but the direct control is missing: apply the post's own test to the target. Side check: the target itself passes. A unit that only follows the height of the output (thresholded or squashed) gives the post's band with c around 0.3 and hardly depends on b. That is a simpler reading than the route via the main direction of the gradient (0.26), it explains the post's intervention (amplifying stretches the curve vertically), and it makes the conclusion stronger. Two smaller points: 'in jedem Netz' holds for the layer as a whole; for single neurons one ReLU network has only 2 of 13. 'Dass b keine Rolle spielt, folgt daraus, dass b nur addiert wird' is incomplete: b also carries only half a per cent of the target's sensitivity in this range.",
+    "evidence": "<root>/kv_review/critic_sec8/check_cubic.py and check_cubic.txt (numpy only, same bucket test as cubic_direction.py): y itself: best c 0.275, R^2 0.970; without b: best c 0.300, R^2 0.984; R^2 at c = 0.25 and 0.325: 0.967 and 0.967; relu / tanh / sigmoid of y: best c 0.275–0.325, R^2 0.93–0.97; share of b in the target's gradient energy 0.0045 (layer: 0.004–0.011). res/cubic_direction.json: relu seed 4 has 2 of 13 units above 0.9 (c 0.150 and 0.200); 14 of 15 networks have at least 6.",
+    "suggested_wording_de": "„Der Befund des Beitrags stellt sich also auch ohne SAE ein: in allen 15 Netzen für die Schicht als Ganze, in 14 von 15 für mindestens sechs einzelne Neuronen (in einem ReLU-Netz nur für 2 von 13). Er folgt schon aus der Aufgabe: Mit dem Test des Beitrags ist die Zielfunktion selbst zu 97 % Funktion von x + c·a allein, am besten mit c = 0,275 (ohne b: 98 %, c = 0,30), und zwischen c = 0,25 und 0,325 ändert sich das nicht. Eine Einheit, die nur der Höhe der Ausgabe folgt, zeigt also dieses Band und hängt kaum von b ab (b trägt 0,5 % der Empfindlichkeit der Zielfunktion). Dazu passt der Eingriff des Beitrags: Verstärken streckt die Kurve senkrecht.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.8, „Wie sicher?“",
+    "quote": "**Wie sicher?** Ein Netz mit zwei Blöcken, eine Aufgabe, Gewichtsabnahme 0,3 (das Zehnfache des Papers), je Arm vier Startwerte.",
+    "kind": "missing caveat",
+    "problem": "'Four seeds per arm' holds for the base runs (and for the training arms once they have finished). Much of 8.4 to 8.6 rests on less: the route measures of the arms come from seed 0 only (so 'nötig ist das nicht' and 'Wohin die Rechnung wandert' are one network each); the ungrokking rests on three starting networks that were all trained on the same 233 problems; shares other than 2 %, the two other draws and the 10 % run are one network; the untied variant is two networks with one run each; seed 0 is the same start as the run of 7.10.",
+    "evidence": "kv_summary.json: probes exist for kv_kswap_s0, kv_kswapiso_s0, kv_kvnoise_s0, kv_eqiso_s0 only; continuations as listed there. recalc_path.json, point 5: 'the runs from the other starting networks (s1, s2) use the identical 233 problems'.",
+    "suggested_wording_de": "„**Wie sicher?** Ein Netz mit zwei Blöcken, eine Aufgabe, Gewichtsabnahme 0,3 (das Zehnfache des Papers). Vier Startwerte haben nur die Grundläufe (Startwert 0 ist derselbe Anfang wie der Lauf aus 7.10). Die Wegmaße der Trainingsarme stammen von Startwert 0. Das Ungrokking ruht auf drei Ausgangsnetzen, die alle auf denselben 233 Aufgaben weitertrainiert wurden und alle erst 500 Schritte verallgemeinern; die Anteile außer 2 % und die beiden anderen Ziehungen auf einem Netz, das entkoppelte Netz auf zweien.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, „Es tritt ein.“ (Satz zu 10 % der Aufgaben)",
+    "quote": "Mit 10 % der Aufgaben (466) pendelt sie bis Schritt 2.500 zwischen 0,61 und 0,97 und liegt bei 4.000 bei 0,40.",
+    "kind": "missing caveat",
+    "problem": "All starting networks are taken 500 steps after the first 99 %. The one stored run from a network that had generalised for longer is not mentioned, and it lost far less: the pilot with 10 % from the run of 7.10 at step 20,000 (8,000 steps after the transition). How fast a network tips evidently depends on the starting state, so 'es tritt ein' is shown for freshly generalised networks.",
+    "evidence": "<root>/kv_out/pilot/kv_base_s0_pilot_sub0.1/log.json (init ufo_out/grok_base_s0_wd0.3/ckpt_20000.pt, sub 0.1, 6,000 steps): held-out 0.94 at step 4000, lowest 0.71 (step 5500), 0.86 at step 6000. Against runs/kv_base_s0_ungrok10: 0.40 at step 4000. The pilot log does not record how the subset was drawn.",
+    "suggested_wording_de": "Anfügen: „Alle Ausgangsnetze sind frisch verallgemeinert (500 Schritte nach den ersten 99 %). Im Vorlauf mit 10 % vom Lauf aus 7.10 bei Schritt 20.000, also 8.000 Schritte nach dem Übergang, lag die Genauigkeit nach 4.000 Schritten noch bei 0,94 und fiel in 6.000 Schritten nicht unter 0,71. Wie schnell ein Netz kippt, hängt also am Ausgangsstand.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, Tabelle zur Verschiebung, erster, dritter und vierter Punkt",
+    "quote": "Beides gilt genauso für die Driftkontrolle. [...] In keinem Fall gibt G danach die Antworten des weitertrainierten Netzes (Übereinstimmung höchstens 12 %).",
+    "kind": "unclear",
+    "problem": "(a) 'genauso' does not hold for seed 1: the common offset of the drift control leaves 0.63 of the answers, that of the tipped network 0.26–0.28, although the drift offset is larger than the tipped one at step 1,000. (b) 'In keinem Fall … höchstens 12 %' is true for the step-4,000 column only. In the drift column G agrees with the further-trained network in up to 100 % of cases (both are right), at step 1,000 in up to 35 %. And 12 % is no more than the tipped network's own right answers in seed 1. (c) 'stört keine Variante nennenswert (0,83 bis 1,00)': 0.83 means 17 % of the answers lost.",
+    "evidence": "res/kv_disp_drift3000_s1.json 'mean only' 0.626; kv_disp_u1000_s1.json 0.255; kv_transplant_s1.json 0.280; size of the common offset in spreads of G's cache (from displacement.slots): 5.0 / 3.1 / 6.4. as_U in the kv_disp files: up to 0.35 (step 1,000) and equal to 'right' for the drift control. kv_transplant_s0.json, size 0.5: spread 0.826, sub-32 0.905, own 0.939.",
+    "suggested_wording_de": "„Beides gilt auch für die Driftkontrolle; bei Startwert 1 bringt ihr Versatz G weniger aus dem Tritt (0,63 gegen 0,26 bis 0,28).“ „Bei Schritt 4.000 gibt G danach in keinem Fall die Antworten des weitertrainierten Netzes (Übereinstimmung höchstens 12 %, nicht mehr, als dessen eigene richtige Antworten erwarten lassen).“ „Bei halber Größe (Schritt 4.000) stört nur die Verschiebung entlang des Codes von G merklich (0,83 bis 0,98), alle anderen kaum (0,90 bis 1,00).“",
+    "importance": "minor"
+   },
+   {
+    "where": "8.7, Punkt zum Beitrag über kubische Polynome und Schluss der Gegenprobe",
+    "quote": "(vier Schichten zu 15 Neuronen; die Aktivierungsfunktion ist nicht genannt) [...] schreibt selbst, dass der Eingriff das nicht bestätigt [...] mit der Auflösung des Beitrags (Schritte von 0,025, neun Einheiten)",
+    "kind": "unclear",
+    "problem": "Three things are said more firmly than the available copy of the post allows. (a) The copy is the text without the notebook's code ('Code Library'), so 'nicht genannt' holds for the text only. (b) The author does not say the intervention fails to confirm it; he leaves it open: 'Does this confirm or refute our Cardano-based interpretation …? Honestly, I don't know.' (c) The step of 0.025 is not stated (the text says 'candidate c values in the range [-1,1]'); it is inferred from the nine values, which are all multiples of 0.025. The rest of the description (64 units, 4 active, nine units, c 0.175–0.35, median 0.30, vertical stretch, one network, one SAE) matches the text.",
+    "evidence": "<root>/wolfram_dl/post_clean.txt, lines 94–98 and 133; no activation function or network code anywhere in wolfram_dl/ (searched post.txt, post.html, inner.html).",
+    "suggested_wording_de": "„(vier Schichten zu 15 Neuronen; im Text ist die Aktivierungsfunktion nicht genannt, der Code des Notebooks lag nicht vor)“; „… und lässt selbst offen, ob der Eingriff das bestätigt oder widerlegt: Verstärkt man die Einheiten, wird die Kurve senkrecht gestreckt, nicht waagrecht verschoben.“; „… mit der Auflösung des Beitrags (neun Einheiten, deren Werte alle Vielfache von 0,025 sind) …“",
+    "importance": "minor"
+   },
+   {
+    "where": "8.3, letzter Punkt („Für K1 heißt das“)",
+    "quote": "Sie ist eine Begleiterscheinung der verallgemeinernden Lösung; dass sie das Netz zu etwas „geneigt“ macht, zeigt das nicht.",
+    "kind": "overclaim",
+    "problem": "'Begleiterscheinung' says the order is a by-product. Measured is that it appears together with generalisation (and not in the control). Whether it is part of the solution or only runs alongside was not tested; no run intervenes on the order itself. In this task the order along the group in which division becomes subtraction may well be the solution.",
+    "evidence": "No intervention on the order in kv_grok.py runs evaluated so far; kv_summary.json probes show co-occurrence only (top5_w0 0.59–0.90 in generalising states, 0.14–0.17 in the control).",
+    "suggested_wording_de": "„Sie tritt zusammen mit der verallgemeinernden Lösung auf. Ob sie Teil dieser Lösung ist oder nur mitläuft, ist nicht geprüft; dass sie das Netz zu etwas „geneigt“ macht, zeigt das nicht.“",
+    "importance": "minor"
+   },
+   {
+    "where": "8.2, letzter Absatz vor „Läufe“ (Bezug für 8.4 bis 8.6)",
+    "quote": "Alle Maße an 2.048 Trainingsaufgaben, drei Ziehungen der fremden Aufgaben (`kv_probe.py`).",
+    "kind": "unclear",
+    "problem": "An objection of recalc_probe.json (point 7) is still in the text: not all measures use the 2,048 training problems. The logit spread, S and the order tables are computed over all 9,312 problems (the order over the 96 residues); the path analysis and the displacement use the held-out problems.",
+    "evidence": "Docstring and code of ufo_scripts/kv_probe.py ('logit_spread[l]: spread of the attention logits of the = row over all 9312 problems'; split over all 9312 problems); ufo_scripts/kv_transplant.py (tok = va).",
+    "suggested_wording_de": "„A, L und die Duldsamkeit an 2.048 Trainingsaufgaben, drei Ziehungen der fremden Aufgaben; S, die Logit-Streuung und die Ordnung über alle 9.312 Aufgaben (`kv_probe.py`).“",
+    "importance": "minor"
+   }
+  ],
+  "checked_and_fine": [
+   "8.3: order in the cache appears with generalisation and without a UFO. Tried: built-in level of the measure (shuffled and 1..96 order stay at 0.14–0.18), training time alone (permuted control stays at 0.14–0.17 for 20,000 steps), early rise (the draft itself says the value rises a little while memorising). Holds in seeds 0–3; note only that seed 0 and the run of 7.10 are the same start.",
+   "8.4: memorising states lose 73–91 % of their answers with foreign keys although random key noise leaves 89–100 %. The draft's explanation ('Zufälliges Rauschen trifft die wenigen Richtungen kaum') is supported by the side check: key noise of size 1 moves 4–8 % of the attention weight and changes the centred logits by 0.4–1.1 nats; foreign keys move 30–48 % and change them by 3.4–6.6 nats (check_read.txt, check_read2.txt).",
+   "8.4: 'Adressieren nach Inhalt ist keine Voraussetzung für Auswendiglernen' as an existence statement. In the arm with swapped keys the network at step 2,500 really reads by position (1–2 % of the attention weight moves with foreign keys) and has the training problems at 100 %, held-out 1 %. The training logs of three seeds of this arm reach 99 % on the training problems at step 1,000, like the base runs. One probed state of one network; the draft's caveat that the arm is trained under this very intervention is right.",
+   "8.4: 'A allein zeigt keine Verallgemeinerung an' (untrained A = 0.82), the counter-test not occurring in any base run, 'L taugt nicht als Maß', S = 0.00 in the base runs, and 'Über Geschwindigkeit sagt nichts davon etwas' all match the data and the rule fixed in advance.",
+   "8.5 'Am fertigen Netz': generalising states tolerate disorder better, in the cache and outside. Tried the reading 'training time only': at steps 12,500–20,000 the permuted control is at 0.39–0.44 (cache noise) and 0.62–0.73 (random vector) against 0.83–0.92 and 0.99–1.00. Holds. 'Nicht auf den Cache beschränkt' and the single-draw caveat are right.",
+   "8.6: ungrokking occurs in the plain sense (five runs at 0.03–0.12 after 4,000 steps with the kept problems at 100 %, dropped problems fall with the held-out ones, drift control back at 100 % after each resolved collapse). The uncovered-token reading is excluded for the two balanced draws (all held-out problems covered).",
+   "8.6 path analysis, body text: 'C und R messen, wie weit zwei Netze auseinandertrainiert sind, keinen Schaden', 'Was sich nicht folgern lässt: dass der Lese-Pfad das Ungrokking trägt' and 'Mehr als nicht im Cache-Pfad allein tragen die Zahlen nicht'. Looked for a sentence in 8.6 that attributes the damage to one path and found none (only 8.8 does). The drift control of seed 2 itself shows the asymmetry of the keys/values cut, which supports the draft's caution. The three caveats are right; what they lack is in the findings.",
+   "8.6 displacement, gross structure: 95–99 % of the displacement is a common offset, in the drift control as well; a shift along G's own code disturbs more than the own rest and arbitrary noise hardly at all, in every column; K5 itself untested.",
+   "8.7: the Qwen numbers (84–98 % negative gate input, silu between −0.28 and 0, 0.007–0.010 of 0.15–0.24 over the gate branch) match README 7.4. The replication table and the shares (79 %, 32 %, 13 % of 156 neurons; layer direction 0.27–0.32 / 0.23–0.25 / 0.23–0.25; untrained −28 to 3; b at most 1.1 %) match cubic_direction.json. The conclusion 'Ein Hinweis darauf, dass ein Netz Cardanos Schritt gefunden hat, ist das nicht' holds, and the direct test on the target makes it stronger.",
+   "8.8: K1 'so nicht prüfbar' (the whole cache of another problem gives that problem's answer in every probed state), 'Zu Geschwindigkeit nichts', K5 'nicht geprüft', R1 'nicht prüfbar' with 'eine Suchanfrage' agree with crit.json and lit.json.",
+   "Objections of the two recomputation reports that are no longer in the text: the 10 % run is described correctly, 'after the jump both hybrids near chance' is now limited to seed 0, the displacement table has a drift column, the unhealthy drift row of seed 0 at step 4,000 is left out, the same 233 problems are named, the UFO run's S is given next to the kswapiso value, and the faulty 'spread' of the order tables is not used anywhere."
+  ],
+  "not_checked": [
+   "The placeholders (ARMS, ROUTE-SEEDS, SWIGLU, K3, SICHER) and everything that depends on them: the speed comparison of the training arms, the K3 verdict, the SwiGLU toy runs. The summary file changed while I worked (arms of seeds 1 and 2 arriving).",
+   "Numbers were taken as right, as instructed. I re-read only those needed for an interpretation and did not re-derive the tables of 8.3 to 8.6.",
+   "8.1 and 8.2 apart from the definition of A and the sentence on the 2,048 problems; the literature statements (lit.json was only searched for R1, K4 and ungrokking).",
+   "My side checks are small: one draw of foreign problems and of key noise on 2,048 training problems, 17 checkpoints, no training, no second draw. The cubic check uses 20,000 points and no network. They should be repeated inside kv_probe.py and cubic_direction.py before their numbers go into the README.",
+   "Why the rest of the tipped network disturbs G more per size than the drift control's rest. A quick look (check_disp.txt) shows the problem-specific displacement pointing against the problem's own code in the tipped network and in the drift control alike, so that alone does not separate them.",
+   "The mechanism of the collapses (weight-norm steps) and whether the mixed runs have collapses between their 250-step evaluations; no fine-grained log exists for them beyond the first 400 steps of seed 0.",
+   "The post was read only as the text copy in the scratchpad (wolfram_dl/post_clean.txt); no web access, the notebook's code and figures were not available.",
+   "Whether the pilot with 10 % from step 20,000 used a balanced draw (its log does not say), and any ungrokking run from a longer-trained network other than this pilot.",
+   "kv_report.py, kv_tables.py and gen_tables_de.py as code; the frozen-group and UFO-in-cache smoke runs."
+  ]
+ },
+ "audit:8.2-8.5 (numbers of the draft against the files)": {
+  "summary": "Number audit of 8.2, 8.3, 8.4, the \"Am fertigen Netz\" part of 8.5 and \"Wohin die Rechnung wandert\". All ranges were recomputed from the 11 kvprobe.json files (kv_summary.json key probes is identical to them, 0 mismatches) with the state definitions of 8.2. An own forward pass, with nothing imported from the project scripts, reproduces the deterministic stored values at 14 checkpoints to 4e-7.\n\nEvery cell of the three tables (8.3, 8.4, 8.5) and all base-run steps in 8.2 are right. Two numbers in the prose are wrong:\n- \"80 bis 92 %\" for y in slot 3 belongs to the run of 7.10; the Grundläufe have 82 to 100 %.\n- L at step 12.000 of the run of 7.10 is 0,48, not 0,49.\n\nThe one must-fix is the paragraph \"Wohin die Rechnung wandert\". Its numbers are right but come from one of the two seed-0 arms with a disturbed '=' stream. The other arm (kv_eqiso_s0, already in kv_summary.json) has S 0,02 to 0,03, so \"Das Netz verlegt die Rechnung dorthin, wo nicht gestört wird\" does not follow. My own computation on the seed-1 checkpoints (no kvprobe.json yet) gives S 0,00 for kswapiso as well.\n\nSix should-fix items: the two wrong numbers aside, they are statements that say more than the files or the code support:\n- The reason given for A = 0,82 in the untrained network is wrong: A only counts pairs with different answers.\n- \"verallgemeinernde [lesen] weitgehend nach festem Muster\" / \"nach Position\": A measures whether the answer survives foreign keys; the logit spread stays at 0,9 to 2,1 nats.\n- \"Je geordneter, desto weniger …\" holds along training within a run, not between seeds or after the transition.\n- \"Alle Maße an 2.048 Trainingsaufgaben\" is false for S, the order measure and the logit spread (all 9.312 problems).\n- \"gleiche Startgewichte\" is false for the SwiGLU arm of 8.7.\n\nThe rest are minor. Scripts and raw outputs are in <root>/kv_review/audit_sec8_a (start with notes.txt).",
+  "findings": [
+   {
+    "where": "8.5, Absatz „Wohin die Rechnung wandert“ (und der darauf gestützte Satz zu K1 in 8.8: „Wo die Rechnung sitzt, bestimmt die Störung, nicht die Ordnung“)",
+    "quote": "Wird der `=`-Strom gestört, steht die Antwort am Ende im Cache (S 0,45 bis 0,46; L = 1,00: Block 1 liest sie nur noch ab). Dasselbe hatte der UFO am `=` in 7.10 bewirkt (S 0,14 bis 0,38, L 0,99 bis 1,00). Wird der Cache verrauscht, bleibt die Rechnung am `=` (S 0,01 bis 0,02). Das Netz verlegt die Rechnung dorthin, wo nicht gestört wird.",
+    "kind": "overclaim",
+    "problem": "All four number pairs are right, but the first sentence generalises from one of the two seed-0 arms in which the '=' stream is disturbed (kv_kswapiso_s0, the control for the swapped keys). The other one (kv_eqiso_s0, the control for the cache noise, the same kind of random vector on the '=' stream) is in kv_summary.json and shows no answer in the cache: S 0.02 to 0.03, L 0.86 to 0.91. Within the matched pair cache noise / same-size vector at '=' S hardly differs (0.01-0.02 against 0.02-0.03), and the arm with swapped keys, which disturbs the cache, has a higher S (0.04-0.06) than this control. So neither the general first sentence nor the closing rule follows from the files, and the K1 sentence in 8.8 rests on it. A high L alone is no sign either: Grundlauf seed 1 has L 0.88-0.97 with S 0.00. My own computation on the seed-1 checkpoints (no kvprobe.json yet) gives S 0.00 for kswapiso as well, so the seed-0 result does not repeat there.",
+    "evidence": "kv_summary.json probes.kv_kswapiso_s0 steps 5500/6000: S 0.4593/0.4487, L 1.0000/0.9998. probes.kv_eqiso_s0 steps 8000/8500 (acc_held 0.9981/1.0000): S 0.0222/0.0278, L 0.8621/0.9075. probes.kv_kvnoise_s0 6000/6500: S 0.0125/0.0204. probes.kv_kswap_s0 7000/7500: S 0.0352/0.0560. probes.kv_base_s1 9500/10000: S 0.0000, L 0.8848/0.9734. Size of the disturbance at step 1000 (block 0 / block 1): arms.kswapiso.0.dmid 0.779/0.649, arms.eqiso.0.dmid 0.494/0.37. Own pass (extra4.py in my directory; it reproduces the stored S of four seed-0 checkpoints exactly): kv_kswapiso_s1 ckpt_5000/ckpt_5500: S 0.0001/0.0000, L 0.998/0.996; kv_eqiso_s1 ckpt_4500/ckpt_5000: S 0.0000, L 0.973/0.999.",
+    "suggested_wording_de": "**Wohin die Rechnung wandert** (Startwert 0, verallgemeinernde Stände): In der Kontrolle zu den vertauschten Schlüsseln steht die Antwort am Ende im Cache (S 0,45 bis 0,46; L = 1,00: Block 1 liest sie nur noch ab). Dasselbe hatte der UFO am `=` in 7.10 bewirkt (S 0,14 bis 0,38, L 0,99 bis 1,00). In der Kontrolle zum Rauschen wird der `=`-Strom ebenfalls gestört, die Antwort steht aber nicht im Cache (S 0,02 bis 0,03; L 0,86 bis 0,91). Mit Rauschen im Cache liegt S bei 0,01 bis 0,02, mit vertauschten Schlüsseln bei 0,04 bis 0,06. Eine Störung am `=` kann die Rechnung also in den Cache drängen. Sie tut es in einem von zwei Armen, dem mit der anfangs größeren Störung (0,78 gegen 0,49 der Streuung des Stroms bei Schritt 1.000). Eine Regel ist das nicht. ⟦ROUTE-SEEDS⟧ — In 8.8 entsprechend: „In einem von zwei Armen mit Störung am `=` wandert die Rechnung in den Cache (Startwert 0; 8.5).“",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.4, Punkt „L taugt nicht als Maß“, zweiter Satz",
+    "quote": "S ist in allen Grundläufen 0,00: Platz 3 von Block 1 trägt y (80 bis 92 % der Streuung) und etwas x, nicht die Antwort.",
+    "kind": "wrong number",
+    "problem": "\"80 bis 92 %\" is the range of the run of 7.10 (its generalising states), not of the Grundläufe the sentence is about. In the four Grundläufe y explains 82 to 100 % (seed 0: 82-91 %, seed 1: 97-100 %, seed 2: 93-96 %, seed 3: 94-98 %) and x 0 to 14 %. \"S = 0,00\" is right for the Grundläufe (largest value 0.0029), but not for the run of 7.10, where S reaches 0.04 at step 20,000.",
+    "evidence": "kvprobe.json rows[].split.w1p3.by_y over all trained steps: kv_base_s0 0.816-0.914, kv_base_s1 0.974-0.998, kv_base_s2 0.930-0.956, kv_base_s3 0.940-0.979; by_x 0.0015 (kv_base_s1, step 10000) to 0.1438 (kv_base_s0, step 5000). ufo_out/grok_base_s0_wd0.3/kvprobe.json generalising steps 12000-20000: by_y 0.9225 ... 0.7997; S 0.0072 (17000), 0.0353 (20000). My own pass reproduces by_x, by_y and S at 14 checkpoints to 4e-7.",
+    "suggested_wording_de": "S ist in allen Grundläufen 0,00: Platz 3 von Block 1 trägt y (82 bis 100 % der Streuung) und wenig x (0 bis 14 %), nicht die Antwort. Im Lauf aus 7.10 sind es 80 bis 92 % y, und S steigt dort bei Schritt 20.000 auf 0,04.",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.4, zweiter Punkt (und die Definition von A in 8.2)",
+    "quote": "A allein zeigt keine Verallgemeinerung an: Das untrainierte Netz (Startwert 0) hat A = 0,82, weil es fast überall dieselbe Antwort gibt.",
+    "kind": "wrong statement",
+    "problem": "The value 0.82 is right, the reason is not. A is counted only over pairs of problems on which the network gives different answers (and which have different true answers), so giving the same answer nearly everywhere cannot raise A. The untrained seed-0 network gives four different answers (77 %, 21 %, 2 %, 0.1 % of the problems); 36 % of the pairs differ, and of these 82 % keep their answer with foreign keys, because its read pattern hardly depends on the content (logit spread 0.36 / 0.25 nats). The untrained networks of seeds 1 to 3 do give one answer everywhere, and for them A is not defined (no pairs, A = null). The definition in 8.2 does not mention the restriction to pairs with different answers.",
+    "evidence": "kv_probe.py line 102: ok = (base[idx] != base) & (seq[idx, 5] != seq[:, 5]). kv_base_s0/kvprobe.json step 0: route.train.A 0.8168, pairs 2216 of 6144, logit_spread [0.358, 0.250]. kv_base_s1, _s2, _s3 step 0: pairs 0, A null. Own pass (extra1.py): seed 0 gives 4 distinct answers with shares 0.765 / 0.211 / 0.022 / 0.001; A over pairs with different answers 0.809 (10 draws), over all pairs 0.891; seeds 1-3 give one answer on all 2048 problems. recalc_probe.json check 118 says the same (4 distinct answers, one for 77 %).",
+    "suggested_wording_de": "A allein zeigt keine Verallgemeinerung an: Das untrainierte Netz (Startwert 0) hat A = 0,82, obwohl es nichts kann. Sein Lesemuster hängt kaum vom Inhalt ab (Logit-Streuung 0,4). Gezählt werden nur Paare von Aufgaben, auf die das Netz verschiedene Antworten gibt (hier 36 % der Paare; das Netz gibt vier verschiedene Antworten). Die untrainierten Netze der Startwerte 1 bis 3 geben überall dieselbe Antwort; für sie ist A nicht bestimmt. — In 8.2 ergänzen: „… wenn nur die Schlüssel beider Blöcke aus einer anderen Aufgabe mit anderer Antwort stammen.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.4, erster Punkt, letzter Satz; ebenso 8.2, Definition von A („Hoch heißt: Das Lesemuster hängt nicht vom Inhalt ab, das Netz adressiert nach Position“) und 8.4, letzter Punkt („verallgemeinernde nach Position“)",
+    "quote": "Auswendig-Stände lesen also je nach Inhalt der Schlüssel anders, verallgemeinernde weitgehend nach festem Muster.",
+    "kind": "overclaim",
+    "problem": "A measures whether the answer survives foreign keys, not whether the read pattern is fixed. The draft's own numbers show that generalising states still read by content: their logits scatter by 0.9 to 2.1 nats over the problems, 2.5 to 6 times the untrained level of the same seed (0.3-0.4); for seed 3 (2.0-2.1) that is about half of its own memorising level (3.8-4.1). A read by position looks like the arm with swapped keys (0.4 nats, A = 1.00). My own check: with foreign keys the attention row of '=' changes in generalising states by 0.25-0.38 (block 0) and 0.11-0.25 (block 1) in total variation, against 0.37-0.49 / 0.31-0.44 in memorising states, 0.09-0.13 / 0.07-0.08 untrained and 0.02 / 0.01 in the kswap arm. What changes with generalisation is that the answer hardly depends on the read pattern any more.",
+    "evidence": "kvprobe.json logit_spread[0]: generalising kv_base_s0 0.909/1.065, s1 1.513/1.271, s2 1.344/1.290, s3 2.100/1.973; untrained 0.358, 0.286, 0.259, 0.358; memorising 2.93-5.01; kv_kswap_s0 step 2500: 0.443 with A 1.0000. Own pass (extra5.py), block 0 / block 1: kv_base_s0 13500 0.262/0.196; s1 10000 0.352/0.105; s2 14500 0.372/0.243; s3 11500 0.318/0.219; memorising s0 2500 0.387/0.427, s2 2500 0.489/0.438; kv_kswap_s0 2500 0.019/0.008.",
+    "suggested_wording_de": "Auswendig-Stände lesen also je nach Inhalt der Schlüssel anders, und ihre Antwort hängt daran. Verallgemeinernde Stände lesen ebenfalls noch nach Inhalt (0,9 bis 2,1 nats gegen 0,3 bis 0,4 untrainiert), ihre Antwort hängt aber kaum noch daran. — In 8.2: „Hoch heißt: Die Antwort hängt nicht daran, wessen Schlüssel gelesen werden. Ob das Lesemuster selbst vom Inhalt abhängt, zeigt die Streuung der Aufmerksamkeits-Logits des `=` über die Aufgaben.“ — Am Ende von 8.4: „In Auswendig-Ständen hängt die Antwort am Inhalt der Schlüssel, in verallgemeinernden kaum.“",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.4, Punkt „Ordnung und Adressieren nach Inhalt laufen gegeneinander“",
+    "quote": "**Ordnung und Adressieren nach Inhalt laufen gegeneinander:** Je geordneter der Cache, desto weniger kommt es auf den Inhalt der Schlüssel an.",
+    "kind": "overclaim",
+    "problem": "The graded form (\"je ... desto\") holds only along training within one run, where both change with training time. Between the seeds it does not hold: among the generalising states seed 1 has the lowest order (0.59-0.67) and the highest A (0.99); seed 2 with order 0.70-0.79 has the lowest A (0.67-0.70); seed 3 with order 0.68-0.76 has A 0.92-0.93. In the run of 7.10 the order rises from 0.79 to 0.99 after the transition while A stays at 0.87-0.92. In the arm with swapped keys A is 1.00 at an order of 0.21.",
+    "evidence": "kv_summary.json probes, generalising states (top5_w0 / A): kv_base_s0 0.832/0.902, 0.899/0.940; kv_base_s1 0.586/0.988, 0.669/0.990; kv_base_s2 0.703/0.697, 0.789/0.671; kv_base_s3 0.680/0.931, 0.757/0.923. grok_base_s0_wd0.3 steps 12000 ... 20000: top5_w0 0.789 ... 0.988, A 0.921, 0.915, 0.883, 0.877, 0.922, 0.869, 0.891, 0.902. kv_kswap_s0 step 2500: top5_w0 0.205, A 1.000.",
+    "suggested_wording_de": "**Ordnung und Adressieren nach Inhalt laufen im Training gegeneinander:** In jedem Lauf steigt die Ordnung, während der Inhalt der Schlüssel an Gewicht verliert. Zwischen den Startwerten gilt das nicht: Unter den verallgemeinernden Ständen hat Startwert 1 die geringste Ordnung (0,59 bis 0,67) und das höchste A (0,99), Startwert 2 bei Ordnung 0,70 bis 0,79 das niedrigste (0,67 bis 0,70). Im Lauf aus 7.10 steigt die Ordnung nach dem Übergang von 0,79 auf 0,99, A bleibt bei 0,87 bis 0,92.",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.2, Satz nach der Liste der Maße",
+    "quote": "Alle Maße an 2.048 Trainingsaufgaben, drei Ziehungen der fremden Aufgaben (`kv_probe.py`).",
+    "kind": "wrong statement",
+    "problem": "Only A and L (three donor draws, pooled over pairs with different answers) and the tolerance (one noise draw) are computed on the 2,048 training problems. S, the order tables (96 residues taken from the full grid) and the logit spread are computed over all 9,312 problems, half of them held-out. The sentence also contradicts the order bullet above it (\"für die 96 Reste\").",
+    "evidence": "kv_probe.py line 54: SETS = dict(train=tr[:NS], held=va[:NS]) is used only in the route and tolerance loop (lines 99-111). Line 84: lgA, recA = fwd(net, ALL[:, :6]); order (lines 88-90), split and S (line 91) and logit_spread (line 97) are taken from recA, i.e. all 9312 problems. Docstring: \"logit_spread[l]: spread ... over all 9312 problems\"; \"split: ... share of the variance over all 9312 problems\".",
+    "suggested_wording_de": "A, L und die Duldsamkeit an 2.048 Trainingsaufgaben (A und L mit drei Ziehungen der fremden Aufgaben, gezählt über Paare mit verschiedenen Antworten). S, die Ordnung und die Logit-Streuung über alle 9.312 Aufgaben, also auch die ungesehenen (`kv_probe.py`).",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.2, Absatz „Läufe“",
+    "quote": "Die Trainingsarme in 8.5 und 8.7 sind je Startwert mit dem Grundlauf gepaart (gleiche Startgewichte, gleiche Reihenfolge der Aufgaben, eigener Zufallsgenerator für die Störung).",
+    "kind": "wrong statement",
+    "problem": "True for the arms of 8.5, not for the SwiGLU arm of 8.7. Its network has other MLP tensors, and because they are created in the middle of the random stream, everything created after them differs too. Only the embedding and the attention weights of block 0 are the same as in the Grundlauf; the attention weights of block 1 and the output layer are different numbers. The order of the problems is the same.",
+    "evidence": "Own comparison of ckpt_0.pt (extra2.py): kv_swiglu_s0 and kv_swiglu_s1 against kv_base_s0 and kv_base_s1: identical emb.weight, blocks.0.qkv.*, blocks.0.o.* (and the layer norms); different blocks.1.qkv.*, blocks.1.o.*, head.*; the MLP tensors are gate/up/down (341 units) instead of fc1/fc2. For kv_kswap_s0, kv_kswapiso_s0, kv_kvnoise_s0, kv_eqiso_s0 all starting tensors equal those of kv_base_s0. Same batch order: kv_grok.py line 53, g = torch.Generator().manual_seed(SEED).",
+    "suggested_wording_de": "Die Trainingsarme in 8.5 sind je Startwert mit dem Grundlauf gepaart (gleiche Startgewichte, gleiche Reihenfolge der Aufgaben, eigener Zufallsgenerator für die Störung). Der SwiGLU-Arm in 8.7 hat mit dem Grundlauf nur die Reihenfolge der Aufgaben, die Einbettung und die Aufmerksamkeitsgewichte von Block 0 gemeinsam; alle anderen Startgewichte sind andere.",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.4, Punkt „L taugt nicht als Maß“, erster Satz",
+    "quote": "im Lauf aus 7.10 fällt es zwischen Schritt 12.000 und 20.000 von 0,49 auf 0,07",
+    "kind": "wrong number",
+    "problem": "L at step 12,000 is 0.4816, which rounds to 0.48. The value 0.49 belongs to step 15,000 (0.4856). The end value 0.07 is right.",
+    "evidence": "ufo_out/grok_base_s0_wd0.3/kvprobe.json route.train.L: step 12000 0.4816, 12500 0.3949, 13000 0.4255, 14000 0.4797, 15000 0.4856, 17000 0.2987, 17500 0.2661, 20000 0.0692 (same values in kv_summary.json probes.grok_base_s0_wd0.3).",
+    "suggested_wording_de": "im Lauf aus 7.10 fällt es zwischen Schritt 15.000 und 20.000 von 0,49 auf 0,07",
+    "importance": "minor"
+   },
+   {
+    "where": "8.4, Punkt „Adressieren nach Inhalt ist keine Voraussetzung für Auswendiglernen“",
+    "quote": "Im Arm mit vertauschten Schlüsseln (8.5) kann das Netz bei Schritt 2.500 die Trainingsaufgaben (100 %, ungesehene 1 %), und fremde Schlüssel ändern keine einzige Antwort (A = 1,00; Logit-Streuung 0,4).",
+    "kind": "missing caveat",
+    "problem": "The numbers are right (A is exactly 1: 6078 of 6078 pairs), but this is one checkpoint of one run (seed 0), and the sentence reads as a property of the arm. In seeds 1 and 2 the same arm is already past memorising at step 2,500 (90 % and 35 % held-out), so there is no memorising checkpoint to compare. Also, 0.4 is the logit spread of block 0 only; in block 1 it is 1.3 nats.",
+    "evidence": "kv_summary.json probes.kv_kswap_s0 step 2500: acc_train 1.0000, acc_held 0.0142, A 1.0000, logit_spread [0.4432, 1.3386]. kv_summary.json arms.kswap.1: held50 1937, held99 3000. runs/kv_kswap_s1/log.json step 2500: train 1.00, held-out 0.90; runs/kv_kswap_s2/log.json (still running) step 2500: 1.00 / 0.35.",
+    "suggested_wording_de": "Im Arm mit vertauschten Schlüsseln (8.5, Startwert 0) kann das Netz bei Schritt 2.500 die Trainingsaufgaben (100 %, ungesehene 1 %), und fremde Schlüssel ändern keine einzige Antwort (A = 1,00; Logit-Streuung in Block 0 0,4, in Block 1 1,3). Das ist ein Stand eines Laufs; bei den Startwerten 1 und 2 ist dieser Arm bei Schritt 2.500 schon über das Auswendiglernen hinaus (90 % und 35 % auf ungesehenen Aufgaben).",
+    "importance": "minor"
+   },
+   {
+    "where": "8.4, erster Punkt",
+    "quote": "**Das Muster hält in allen vier neuen Startwerten:**",
+    "kind": "wrong statement",
+    "problem": "The Grundläufe use seeds 0 to 3. Seed 0 is the seed of the run of 7.10: identical starting weights and the same order of problems; the two runs differ only in thread count and script version. So there are four new runs but three new seeds; the wording suggests four replications independent of 7.10.",
+    "evidence": "Own comparison (extra2.py): all tensors of kv_out/runs/kv_base_s0/ckpt_0.pt equal those of ufo_out/grok_base_s0_wd0.3/ckpt_0.pt; the step-0 probe rows of the two runs are identical (A 0.8168, top5_w0 0.1252). kv_grok.py line 53 and ufo_grok.py line 67 use the same torch.Generator().manual_seed(SEED) for the batch order. 8.2 itself says „Startwert 0 mit drei Threads und früherer Skriptfassung“.",
+    "suggested_wording_de": "**Das Muster hält in allen vier Grundläufen** (Startwert 0 ist der aus 7.10, mit denselben Startgewichten; neu sind die Startwerte 1 bis 3):",
+    "importance": "minor"
+   },
+   {
+    "where": "8.3, erster Punkt, letzter Satz",
+    "quote": "In der Kontrolle, die nichts verallgemeinern kann, bleibt er über 20.000 Schritte auf dem Wert der zufälligen Reihenfolge.",
+    "kind": "missing caveat",
+    "problem": "Up to step 7,500 this is exact. From step 12,500 the control lies slightly above the random-order value (0.17 against 0.15-0.16). In my own check only 3 to 7 % of 2,000 random orders reach the group-order value at steps 15,000 to 20,000 (45 to 60 % at steps 2,000 to 7,500). The excess is tiny against 0.59-0.99, but \"auf dem Wert\" is a little too strong for the main control of the measure.",
+    "evidence": "grok_perm_s0_wd0.3 kvprobe.json order.w0 top5 / top5_shuffled: step 12500 0.1616/0.1565, 15000 0.1695/0.1536, 17500 0.1736/0.1555, 20000 0.1715/0.1610. Own pass (extra2.py), share of 2000 random orders at or above the group value: step 2000 0.47, 5000 0.60, 7500 0.45, 12500 0.15, 15000 0.048, 17500 0.034, 20000 0.070; sd of a single random order 0.005-0.009.",
+    "suggested_wording_de": "In der Kontrolle, die nichts verallgemeinern kann, bleibt er über 20.000 Schritte nahe am Wert der zufälligen Reihenfolge (ab Schritt 15.000: 0,17 gegen 0,15 bis 0,16).",
+    "importance": "minor"
+   },
+   {
+    "where": "8.2, Definition der Stände; betrifft die Kontrollzeilen in 8.3 („Schritt 2.000 bis 20.000“), 8.4 („ab Schritt 2.000“) und 8.5 (ohne Angabe)",
+    "quote": "„Auswendig“ heißt ein Stand mit mindestens 99 % auf den Trainingsaufgaben und unter 10 % auf den ungesehenen",
+    "kind": "unclear",
+    "problem": "For the control the tables count a state as memorising by the accuracy on its own permuted answers (acc_own_labels). Read literally, the definition never applies to the control, because acc_train in the files is measured against the true answers (0.007). By the own-label rule step 10,000 is not a memorising state (89 %), yet it lies inside the stated step range. No range changes with or without it. The control row in 8.5 does not say which steps it covers (it is steps 2,000 to 20,000 as well).",
+    "evidence": "grok_perm_s0_wd0.3/kvprobe.json acc_own_labels: step 1000 0.9878, 2000 0.9979, 3000-7500 1.0000, 10000 0.8911, 12500-17500 1.0000, 20000 0.9957; acc_train 0.0067. Recomputed with and without step 10000: top5_w0 0.14-0.17, shuffled 0.14-0.16, order 1..96 0.13-0.15, A 0.12-0.19, logit spread 2.4-3.6, cache noise 0.28-0.44, random vector 0.44-0.73 in both cases.",
+    "suggested_wording_de": "Bei der Kontrolle mit vertauschten Antworten zählt dabei die Genauigkeit auf ihren eigenen, vertauschten Trainingsantworten. Sie liegt ab Schritt 2.000 bei mindestens 99 %, außer bei Schritt 10.000 (89 %); ohne diesen Stand bleiben alle Spannen gleich.",
+    "importance": "minor"
+   },
+   {
+    "where": "8.2, Absatz „Läufe“",
+    "quote": "50 % auf ungesehenen Aufgaben nach 10.846 / 7.323 / 12.759 / 9.418 Schritten (zwischen zwei Messungen im Abstand von 500 Schritten interpoliert)",
+    "kind": "missing caveat",
+    "problem": "All four numbers are right. For seed 2, however, the interpolation runs through the recovery from a collapse of the base run: held-out accuracy 45 % at step 12,000, 17 % at 12,500 (training problems 56 %), 81 % at 13,000. Just before the collapse the run was already at 45 %, so 12,759 is later than the trend before it suggests. This matters for every ratio of an arm to the base run of seed 2.",
+    "evidence": "runs/kv_base_s2/log.json val_acc: step 11500 0.3213, 12000 0.4463, 12500 0.1688 (train_acc 0.577), 13000 0.8091. kv_base_s2/kvprobe.json step 12500: acc_train 0.5571, acc_held 0.1688. kv_summary.json arms.base.2.held50 12758.6.",
+    "suggested_wording_de": "(zwischen zwei Messungen im Abstand von 500 Schritten interpoliert; bei Startwert 2 fällt die Marke in die Erholung nach einem Einbruch: 45 % bei Schritt 12.000, 17 % bei 12.500, 81 % bei 13.000)",
+    "importance": "minor"
+   }
+  ],
+  "checked_and_fine": [
+   "Files: kv_summary.json key probes equals the 11 kvprobe.json files in every row (18 quantities compared, 0 mismatches); the summary was rebuilt at 12:21 while I worked and the probe rows did not change. The draft file was unchanged at the end (12:12).",
+   "Own forward pass (nothing imported from the project scripts) reproduces accuracy, logit spread of both blocks (relative to the row mean), top5 of w0, w1x, w1s, w1y, w1xm, q0, the order-1..96 values, by_x, by_y and S at 14 checkpoints to 4e-7. Own A with own donor draws at four checkpoints: 0.089 / 0.674 / 1.000 / 0.270 against stored 0.087 / 0.671 / 1.000 / 0.270.",
+   "8.2 steps: 50 % at 10.846 / 7.323 / 12.759 / 9.418 and 99 % at 13.000 / 9.500 / 14.000 / 11.000 (kv_summary.json arms.base, recomputed from the four log.json files; evaluations every 500 steps). The runs end 500 steps after the first 99 % (13.500 / 10.000 / 14.500 / 11.500). Run of 7.10: 99 % at 12.000 (its log evaluates every 1.000 steps).",
+   "8.2 measures: the descriptions of S, L, the order measure (96 residues, x = 5^a, primitive_root 5 in every kvprobe.json, 5 strongest of 48 frequencies, comparison with random order and order 1..96 on the same rows) and the tolerance (noise of one spread per coordinate on keys and values of both blocks; same-length random vector added to the '=' stream) match kv_probe.py and kv_common.py. The exceptions are in the findings.",
+   "8.2 \"zu 100 % deren Antwort\": donor_all is exactly 1.0 in all 184 stored values (training and held-out problems, all runs and steps). It is undefined only for the untrained networks of seeds 1 to 3, which have no pairs with different answers.",
+   "8.2 \"Mehr oder weniger Nutzung gibt es nicht\": the attention mass of '=' on the cache slots is 0.96-1.00 (block 0) and 0.80-1.00 (block 1) in all memorising and generalising states, with no consistent difference between the two kinds.",
+   "8.3 table: all 24 cells are right with the state definitions of 8.2. The two comparison columns are the ranges over memorising and generalising states together.",
+   "8.3 text: untrained 0,13 bis 0,14 (0.125, 0.128, 0.132, 0.137); memorising up to 0,32; generalising 0,59 bis 0,90; run of 7.10 0,79 at step 12.000 and 0,99 at step 20.000; block 0 logits 0,30 bis 0,88 / 0,63 bis 0,97 / untrained 0,20 bis 0,27 / memorising 0,22 bis 0,35.",
+   "8.3 block 1: 0,60 bis 0,98 (run of 7.10) and 0,49 bis 0,93 (Grundläufe) are right for the three tables slot 1, slot 2 and slot 3 averaged over x. The fourth stored table (slot 3 averaged over y, w1xm) would give 0,48 and 0,99 at the ends. In the control the block-1 tables stay at their random-order values (slot 2: 0.18-0.25 against 0.18-0.23).",
+   "8.3 \"In der Reihenfolge 1 bis 96 bleibt der Wert in allen Läufen beim Zufallswert\": true for all six runs of the table (0.13-0.18 against 0.14-0.18; never more than 0.006 above the random-order value).",
+   "8.4 table: all cells right, including the control from step 2.000.",
+   "8.4 text: 73 bis 91 % and 1 bis 33 %; logit spread 2,9 bis 5,0 / 0,9 bis 2,1 / untrained 0,3 bis 0,4 (block 0, as in the table header); A = 0,82 (0.8168); L 0,42 bis 0,97 after the transition; control L 0,11 (step 2.000) to 0,42 (step 17.500; 0,38 at 20.000); S at most 0.003 in every state of the Grundläufe.",
+   "8.4 thresholds: they are missed at exactly the four listed places and nowhere else in the Grundläufe, the run of 7.10 and the control: seed 1 step 5.000 (0.270), seed 2 step 10.000 (0.222), seed 3 step 7.500 (0.226), held-out accuracy there 6 / 10 / 8 %; seed 2 after the transition (0.697 and 0.671). The fourth place covers two checkpoints, so five checkpoints in all. The wording of the thresholds matches crit.json, what_each_result_would_mean[0].",
+   "8.4 \"Gegenprobe tritt in keinem Grundlauf ein\": true (lowest generalising A 0.671, highest memorising A 0.270); also true for the run of 7.10 and the control (highest 0.194).",
+   "8.5 table \"Am fertigen Netz\": all six cells right (0,24 bis 0,50 / 0,41 bis 0,74; 0,83 bis 0,92 / 0,99 bis 1,00; control from step 2.000 0,28 bis 0,44 / 0,44 bis 0,73).",
+   "8.5 bullets: keys-only noise 0,89 bis 1,00 holds for the four Grundläufe and the control (the run of 7.10, not in the table, has 0.86 at step 1.000). Values-only noise (0.30-0.54 in memorising states) is close to full noise (0.24-0.50). \"streuen um 0,01\" matches recalc_probe.json (0.006-0.010 for cache noise, up to 0.014 for the random vector).",
+   "8.5 \"Zufälliges Rauschen trifft die wenigen Richtungen kaum\": my own check agrees. Key noise of size 1 shifts the '=' logits by 0.5-1.2 nats in memorising states, foreign keys by 3.7-7.0 nats; the attention row changes by 0.04-0.08 against 0.30-0.48 (total variation).",
+   "\"Wohin die Rechnung wandert\": the numbers themselves are right: S 0,45 bis 0,46 and L = 1,00 (kv_kswapiso_s0, steps 5.500 and 6.000); UFO run S 0,14 bis 0,38 and L 0,99 bis 1,00 (steps 9.000 to 17.000); cache noise S 0,01 bis 0,02 (kv_kvnoise_s0, steps 6.000 and 6.500)."
+  ],
+  "not_checked": [
+   "Thread count and core pinning (\"ein CPU-Thread auf einem festen Kern\", \"drei Threads\" for the run of 7.10): I read kv_queue.py (taskset, NT=1) and queue.out, but queue.out starts at 10:48, after the Grundläufe had started; the three threads of the 7.10 run rest on the default in ufo_grok.py.",
+   "The stochastic values (A, L, tolerance) were not redrawn systematically. I relied on the independent recomputation in recalc_probe.json and on four own A values. That recomputation was made before the kvprobe.json files were rewritten at 12:03-12:10; the values it quotes agree with the present files.",
+   "The placeholders ⟦ARMS⟧, ⟦ROUTE-SEEDS⟧, ⟦SWIGLU⟧, the part \"Im Training\" of 8.5, and sections 8.1 and 8.6 to 8.8 (outside my role; I only note that the K1 sentence in 8.8 depends on the paragraph \"Wohin die Rechnung wandert\").",
+   "Seeds 1 to 3 of the training arms have no kvprobe.json yet. My S, L and A values for seeds 1 and 2 are own computations from the checkpoints (extra4.py), not checks against result files; several of those runs were still training.",
+   "Whether the scatter of 0,01 for repeated noise draws holds at every checkpoint: the reviewer measured it at a handful of checkpoints only.",
+   "README 7.4, and the statements of 7.10 beyond the three run descriptions and the step 12.000.",
+   "The interpretation sentences of 8.3 and 8.4 that carry no number (for example \"Die Ordnung folgt der Gruppe, in der Division zu Subtraktion wird\") were read but not tested."
+  ]
+ },
+ "audit:8.1+8.6-8.7 (numbers of the draft against the files)": {
+  "summary": "Version checked: the draft as rewritten at 12:58:01 (it changed while I worked; 8.1 is unchanged, 8.6 and 8.7 were revised), against logs and result files as they stood at 13:07.\n\n- **8.6:** all 220 numbers of the five tables (jump, path, displacement, untied, rare-example) agree with the files, seed order included. One statement is contradicted by the stored numbers (agreement of G with the 5 % network). The account of the drift-control events contradicts itself. One number is rounded wrongly (0,97 for 0.965).\n- **8.7:** two numbers do not match the final `cubic_direction.json`. That file was regenerated twice during the audit, last at 13:05:56 from a script whose target scale is now seeded. The Qwen numbers agree with 7.4. The description of the Wolfram post agrees with the local text copy.\n- **8.1:** every arXiv number and figure agrees with `lit.json`; one sentence is more absolute than `lit.json`. I could not check the papers themselves.\n- **8.8** (outside my sections) still carries one range and two statements from the older 8.6.\n\nThe remaining findings are small. My scripts and notes are in <root>/kv_review/audit_sec8_b (crosscheck.py compares every table cell; joint.py is the one recomputation).",
+  "findings": [
+   {
+    "where": "8.6, part on the displacement of the cache, second-to-last bullet",
+    "quote": "Bei Schritt 4.000 gibt G danach in keinem Fall die Antworten des weitertrainierten Netzes (Übereinstimmung höchstens 12 %, nicht mehr, als dessen eigene richtige Antworten erwarten lassen). Die Verschiebung „überträgt\" das Ungrokking nicht.",
+    "kind": "wrong statement",
+    "problem": "12 % is the correct maximum. The clause 'nicht mehr, als dessen eigene richtige Antworten erwarten lassen' is false for the row with the own rest. There G agrees with the 5 % network on 9 / 10 / 9 % of the held-out problems, while that network is itself right on only 3 / 12 / 5 %. In seeds 0 and 2 most of the agreement is therefore on wrong answers. A small part of the ungrokking is carried over, so 'überträgt nicht' is too strong.",
+    "evidence": "<root>/kv_out/kv_transplant_s{0,1,2}.json: disorder['own 1'].as_U = 0.0876 / 0.1035 / 0.0932; U_path[-1].acc_XX = 0.0294 / 0.1155 / 0.0468; disorder['own 2'].as_U = 0.0561 / 0.0273 / 0.0552 with right = 0.0226 / 0.0122 / 0.0271. Own recomputation (<root>/kv_review/audit_sec8_b/joint.py, reproduces the stored right and as_U of 'own 1' to four digits): agreement on right answers 0.0168 / 0.0674 / 0.0277, agreement on WRONG answers of the 5 % network 0.0709 / 0.0361 / 0.0655; chance would be about 0.01.",
+    "suggested_wording_de": "Bei Schritt 4.000 gibt G danach nur selten die Antworten des weitertrainierten Netzes (Übereinstimmung höchstens 12 %). Mit dem eigenen Rest sind es 9 / 10 / 9 %, obwohl dieses Netz selbst nur 3 / 12 / 5 % richtig rechnet. Bei 7 / 4 / 7 % der Aufgaben gibt G dessen falsche Antwort (Zahl des Prüfers; Zufall wäre rund 1 %). Die Verschiebung überträgt das Ungrokking also nur zu einem kleinen Teil.",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.7, Gegenprobe: table row 'Richtung …', column ReLU, and the sentence with the shares",
+    "quote": "| Richtung, entlang der sich die letzte Schicht als Ganzes ändert (c, fünf Startwerte) | 0,27 bis 0,32 | 0,23 bis 0,25 | 0,23 bis 0,25 |  …  32 % innerhalb von 0,025 um 0,26",
+    "kind": "wrong number",
+    "problem": "Two numbers do not match the final cubic_direction.json (13:05:56). The ReLU range is 0,26 bis 0,31, and the share near 0,26 is 33 % (51 of 156). The upper end 0,32 was a double rounding of 0.315 even against the first file (0.3148). The file was regenerated twice during the audit because the target scale was unseeded; the intermediate file of 12:59:52 had 42 of 58 ReLU units and a maximum of 0.3306. All other numbers of the table and of the sentences after it agree with the final file. The table should be read once more from the file that is committed.",
+    "evidence": "<root>/kv_out/cubic_direction.json (13:05:56): layer_c of the five ReLU nets = 0.2711, 0.2790, 0.2646, 0.2922, 0.3148; units with r2 > 0.9 and c of 0.250 or 0.275: 17 + 34 = 51 of 156 = 32.7 %; in 0.19..0.34: 123 of 156 = 78.8 %; within 0.025 of 1/3: 20 of 156 = 12.8 %; 38 of 58, 48 of 75, 70 of 75 units; largest share for b 0.0112. Script analysis/ju_space/cubic_direction.py now has torch.manual_seed(12345) before the target scale; the two test outputs smoke_cubic_det1.json and smoke_cubic_det2.json in <root>/kv_out are bytewise equal.",
+    "suggested_wording_de": "| Richtung, entlang der sich die letzte Schicht als Ganzes ändert (c, fünf Startwerte) | 0,26 bis 0,31 | 0,23 bis 0,25 | 0,23 bis 0,25 |  …  Von den 156 Neuronen liegen 79 % zwischen 0,19 und 0,34, 33 % innerhalb von 0,025 um 0,26 und 13 % innerhalb von 0,025 um 1/3.",
+    "importance": "must fix"
+   },
+   {
+    "where": "8.6, bullet 'Solche Einbrüche hat auch die Driftkontrolle' and the paragraph before the path table",
+    "quote": "Startwert 1: einer bei Schritt 1.300 (0,72 / 0,64). Startwert 2: in 4.000 Schritten nur eine kleine Delle (0,98 / 0,97 bei Schritt 2.500). … binnen 100 Schritten wieder bei 100 %  ||  bevor diese ihren ersten Einbruch hat (Startwert 0 bis Schritt 550, 1 bis 650, 2 bis 600)",
+    "kind": "inconsistent",
+    "problem": "The two passages do not fit. By the bullet, seed 1 has its event at step 1.300 and seed 2 only a dip at 2.500; by the later sentence their first events come right after step 650 and 600. Both are true, because the bullet lists only events that fall on an evaluation with low accuracy. By the weight norm every drift control has six events in 4.000 steps, the first at step 600 to 700. After step 1.500 the drift controls are evaluated only every 250 steps, so 'nur eine kleine Delle' and 'binnen 100 Schritten' are shown only where the run was measured finely.",
+    "evidence": "<root>/kv_out/runs/kv_base_s1_driftfine/log.json: step 700 train 0.9980, held-out 0.9899, weight norm 45.46 -> 48.48; step 1300 0.7227 / 0.6415. <root>/kv_out/runs/kv_base_s2_driftfine/log.json: step 650 held-out 0.9936, weight norm 56.07 -> 59.67; step 1250 held-out 0.9968, norm 52.43 -> 56.07. <root>/kv_out/runs/kv_base_s{0,1,2}_drift/log.json: the norm rises by 1.0 to 3.1 between evaluations six times per run (s0 at 750, 1250, 1750, 2750, 3500, 4000; s1 at 750, 1500, 2000, 2750, 3250, 4000; s2 at 750, 1250, 2000, 2500, 3250, 3750). The dips of seed 2 at 2500 (0.9729) and 3750 (0.9936) are followed by the next evaluation only 250 steps later.",
+    "suggested_wording_de": "**Solche Einbrüche hat auch die Driftkontrolle.** In der Genauigkeit sieht man nur die, die auf einen Messpunkt fallen. Startwert 0: bei Schritt 600 nur 14 % der Trainingsaufgaben und 13 % der ungesehenen richtig, bei Schritt 700 wieder beide 100 %; ein weiterer bei Schritt 4.000 (0,41 / 0,36), mit dem der Lauf endet. Startwert 1: bei Schritt 700 (1,00 / 0,99) und bei Schritt 1.300 (0,72 / 0,64). Startwert 2: bei Schritt 650 (1,00 / 0,99), sonst an keinem Messpunkt unter 0,97 (0,98 / 0,97 bei Schritt 2.500). An der Gewichtsnorm gezählt hat jede der drei Driftkontrollen in 4.000 Schritten sechs solche Ereignisse (Sprung um 1 bis 4), das erste bei Schritt 600 bis 700. Nach Schritt 1.500 ist nur alle 250 Schritte gemessen; kurze tiefe Einbrüche können dort fehlen. Auch die Grundläufe haben sie (Startwert 0: viermal unter 80 % auf den Trainingsaufgaben). Wo fein gemessen ist, ist das Netz mit allen Aufgaben binnen 100 Schritten wieder bei 100 %; mit 5 % kommt es nicht zurück.",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.1, fourth bullet, last sentence",
+    "quote": "In der Literatur zu „aus dem Kontext lernen\" gegen „in den Gewichten lernen\" ist das Auswendiggelernte gerade die Lösung in den Gewichten, und die Nutzung des Kontexts ist ihr Gegenspieler (arXiv 2205.05055, 2311.08360).",
+    "kind": "missing caveat",
+    "problem": "The sentence is more absolute than lit.json. lit.json adds that memorising solutions that also read the context exist, so context use alone indicates memorisation in neither direction. One of them is the paper the draft cites one sentence earlier (2604.12151). arXiv 2205.05055 was read as abstract only, and it reports that both kinds of learning co-existed under a skewed class distribution.",
+    "evidence": "<root>/kv_out/review/lit.json: premises_wrong_or_unverified[4] ('Memorising solutions that also read the context exist (Gibson et al. 2026, Park et al. 2024), so context use alone does not indicate memorisation either way'); entries[9] (2205.05055, read: abstract only, 'both co-existed under a skewed Zipfian class distribution'); entries[12] (2604.12151, 'even the memorising phases adapt to the context'); entries[14] (Park et al., arXiv 2412.01003).",
+    "suggested_wording_de": "In der Literatur zu „aus dem Kontext lernen\" gegen „in den Gewichten lernen\" gilt das Auswendiggelernte meist als die Lösung in den Gewichten und die Nutzung des Kontexts als ihr Gegenspieler (arXiv 2205.05055, nur als Zusammenfassung gelesen; 2311.08360). Es gibt aber auch auswendig lernende Lösungen, die den Kontext lesen (arXiv 2604.12151, 2412.01003). Kontextnutzung allein zeigt also weder Auswendiglernen noch dessen Gegenteil an.",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.8, K4 and K5 (they quote results of 8.6)",
+    "quote": "Der Schaden sitzt mindestens so sehr im Lese-Pfad wie im Cache-Pfad (drei Netze), und über den Cache allein geht am wenigsten verloren.  ||  Die Verschiebung ist zu 96 bis 99 % für alle Aufgaben gleich, und ihr Rest ist kein besonders wirksames Störmuster.",
+    "kind": "inconsistent",
+    "problem": "8.8 still reflects the older 8.6. 8.6 gives 95 bis 99 %; 96 bis 99 % is the step-4.000 column alone. 8.6 now says that C and R measure how far two networks have trained apart, not damage, and that a seat in the reader path cannot be concluded; 'Der Schaden sitzt …' contradicts that. 8.6 says the network also tips through the cache alone, only more slowly. 8.6 says the own rest of the 5 % network disturbs G somewhat more than that of the drift control; 'kein besonders wirksames Störmuster' holds only against a shift along G's own code.",
+    "evidence": "<root>/kv_out/kv_disp_u1000_s0.json: displacement.mean_share_of_total = 0.9461; <root>/kv_out/kv_transplant_s{0,1,2}.json: 0.9637 / 0.9860 / 0.9757. <root>/kv_out/runs/kv_writer_s0_untied/log.json: held-out 0.9338, 0.8673, 0.8086, 0.7528 at steps 750, 1500, 2250, 3000. Draft 8.6, bullets 'Was sich nicht folgern lässt' and 'Der aufgabeneigene Rest des gekippten Netzes stört G bei gleicher Größe etwas mehr …'.",
+    "suggested_wording_de": "**K4.** … Zweiter Teil nicht gestützt: Vor dem Sprung weicht der Lese-Pfad mindestens so stark von G ab wie der Cache-Pfad (drei Netze, eine Ziehung), und über den Cache allein kippt das Netz am langsamsten. Wo das Ungrokking sitzt, zeigt das nicht. **K5.** Nicht geprüft. Die Verschiebung ist zu 95 bis 99 % für alle Aufgaben gleich, bei der Driftkontrolle ebenso. Ihr aufgabeneigener Rest stört G etwas mehr als der der Driftkontrolle, aber weniger als eine gleich lange Verschiebung entlang des Codes von G.",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, first paragraph after the opening, sentence on the 10 % run",
+    "quote": "Mit 10 % der Aufgaben (466) pendelt sie bis Schritt 2.500 zwischen 0,61 und 0,97 und liegt bei 4.000 bei 0,40.",
+    "kind": "wrong number",
+    "problem": "The upper value is 0.964991, which rounds to 0,96 (0,97 is a double rounding of 0.965). The range holds only from step 750: at steps 250 and 500 the run is at 1,00. After step 2.500 the run falls further, with its lowest value at step 3.250.",
+    "evidence": "<root>/kv_out/runs/kv_base_s0_ungrok10/log.json, val_acc: step 250 0.9966, 500 0.9985, 750 0.6104, 1250 0.964991 (4493 of 4656), 2750 0.5367, 3250 0.3971, 4000 0.4021.",
+    "suggested_wording_de": "Mit 10 % der Aufgaben (466) bleibt sie bis Schritt 500 bei 1,00, pendelt von Schritt 750 bis 2.500 zwischen 0,61 und 0,96 und fällt danach weiter (kleinster Wert 0,40 bei Schritt 3.250, bei 4.000 ebenfalls 0,40).",
+    "importance": "should fix"
+   },
+   {
+    "where": "8.6, first bullet under the jump table",
+    "quote": "Bis zum ersten Sprung sinkt die Genauigkeit auf ungesehenen Aufgaben nur wenig (auf 0,94 bis 0,96).  …  (auf 0,46 bis 0,60)",
+    "kind": "wrong number",
+    "problem": "0,94 bis 0,96 are the values at step 700. For seed 1 the last evaluation before its jump is step 750 with 0,93. Right after the restart there is a short dip that the sentence leaves out (step 50: 0,89 and 0,91 for seeds 1 and 2). Before the second jump seed 1 reaches 0,61 at step 1.400; 0,60 is the value at step 1.350.",
+    "evidence": "<root>/kv_out/runs/kv_base_s{0,1,2}_ungrok5fine/log.json, val_acc: step 50 0.9895 / 0.8950 / 0.9055; step 400 0.9944 / 0.9865 / 0.9762; step 700 0.9566 / 0.9476 / 0.9362; seed 1 step 750 0.9278 and step 1400 0.6087.",
+    "suggested_wording_de": "Nach einer kurzen Delle gleich nach dem Neustart (Schritt 50: 0,99 / 0,89 / 0,91) liegt die Genauigkeit auf ungesehenen Aufgaben um Schritt 400 bei 0,98 bis 0,99 und sinkt bis zur letzten Messung vor dem Sprung auf 0,93 bis 0,96. … Danach steigt sie über 600 Schritte wieder an (auf 0,46 bis 0,61), bis der nächste Einbruch sie erneut wegnimmt.",
+    "importance": "minor"
+   },
+   {
+    "where": "8.6, bullet on the pre-set rule for 'der Cache trägt das Ungrokking'",
+    "quote": "Ergebnis: C ist vor dem Sprung an keinem Stand in keinem Netz doppelt so groß wie R.",
+    "kind": "missing caveat",
+    "problem": "True, but only by six problems of 4.656. For seed 2 in the cut 'Schlüssel/Werte' C is 1,97 to 1,995 times R at steps 600 to 700. A reader who divides the two-digit values (0,55 by 0,27) gets 2,04 and will think the sentence is wrong.",
+    "evidence": "<root>/kv_out/kv_path_fine_s2.json, U_path, cut kv: step 600 C 0.4749 / R 0.2388 (ratio 1.988); step 650 C 0.5468 (2546 problems) / R 0.2741 (1276 problems), ratio 1.995; step 700 C 0.6065 / R 0.3082 (1.968). Largest ratio in the other networks and cuts before the jump: 1.36.",
+    "suggested_wording_de": "Ergebnis: C ist vor dem Sprung an keinem Stand in keinem Netz doppelt so groß wie R. Am nächsten kommt dem Startwert 2 im Schnitt „Schlüssel/Werte\" bei Schritt 600 bis 700 (das 1,97- bis 1,995-Fache; gerundet 0,55 gegen 0,27).",
+    "importance": "minor"
+   },
+   {
+    "where": "8.6, bullet 'Die Genauigkeit geht hier also in den Einbrüchen verloren'",
+    "quote": "und in den beiden anderen Ziehungen sind bei Schritt 750 schon 9 und 17 % der ungesehenen Aufgaben verloren",
+    "kind": "missing caveat",
+    "problem": "The two numbers are right. For the random draw, more than half of the 17 % comes from problems whose x, y or answer never occurs in the 233 kept problems; by the pre-set rule that is forgetting of unused tokens. On the covered problems the loss is 11 %. Part of the loss was already there at step 250 (5 % and 9 %).",
+    "evidence": "<root>/kv_out/runs/kv_base_s0_ungrok5rand/log.json: step 750 val_acc 0.8282, val_covered 0.8944, val_uncovered 0.6219; step 250 val_acc 0.9059. <root>/kv_out/runs/kv_base_s0_ungrok5d1/log.json: step 250 0.9538, step 750 0.9113. Stdout <root>/kv_out/logs/ungrok5rand_s0.log: 'held-out problems with x, y and answer covered: 0.757'.",
+    "suggested_wording_de": "und in den beiden anderen Ziehungen sind bei Schritt 750 schon 9 und 17 % der ungesehenen Aufgaben verloren (bei der zufälligen Ziehung 11 % der Aufgaben, deren x, y und Antwort in den 233 vorkommen; 5 und 9 % fehlten schon bei Schritt 250)",
+    "importance": "minor"
+   },
+   {
+    "where": "8.6, first paragraph, sentence after the pilot run",
+    "quote": "Wie schnell ein Netz kippt, hängt also am Ausgangsstand.",
+    "kind": "overclaim",
+    "problem": "The numbers of the pilot run are right (0,94 at step 4.000, lowest value 0,71). The conclusion rests on one pair of runs that also differ in the draw (random against balanced) and in the weight norm at the start (41 against 51 at step 250).",
+    "evidence": "<root>/kv_out/pilot/kv_base_s0_pilot_sub0.1/log.json: init = ckpt_20000.pt of grok_base_s0_wd0.3, sub 0.1, val_acc 0.9369 at step 4000, minimum 0.7148 at step 5500, wnorm 41.26 at step 250. <root>/kv_out/runs/kv_base_s0_ungrok10/log.json: 0.4021 at step 4000, wnorm 50.53 at step 250.",
+    "suggested_wording_de": "Das spricht dafür, dass der Ausgangsstand eine Rolle spielt. Es ist aber nur ein Paar von Läufen, und sie unterscheiden sich auch in der Ziehung (zufällig statt ausgewogen) und in der Gewichtsnorm am Anfang (41 gegen 51).",
+    "importance": "minor"
+   },
+   {
+    "where": "8.6, three places whose numbers are not in the files that go to the repository",
+    "quote": "noch bei 0,94 und fiel in 6.000 Schritten nicht unter 0,71  ||  (bei Startwert 0 feiner gemessen 25 %; ohne seltene Aufgaben liegt dasselbe Netz in diesen ersten 400 Schritten bei 0,98 bis 1,00)  ||  | aufgabeneigener Rest von d / Streuung des Cache von G | 0,89 / 0,76 / 0,78 |",
+    "kind": "unclear",
+    "problem": "All these numbers are right, but a reader cannot find them. The pilot log and the two fine check logs lie outside the runs directory, and to_repo.py copies only logs from there. The three values 0,89 / 0,76 / 0,78 are not stored: kv_transplant_s*.json was written by an older version of kv_transplant.py without the key specific_vs_spread_of_G (the kv_disp files have it).",
+    "evidence": "<root>/kv_out/pilot/kv_base_s0_pilot_sub0.1/log.json; <root>/kv_out/smoke6/kv_tied_s0_check0.02/log.json (minimum 0.7461 at step 225) and <root>/kv_out/smoke6/kv_tied_s0_check0/log.json (0.9817 to 0.9968); <root>/kv_out/to_repo.py (glob runs/kv_*/log.json). Derived from <root>/kv_out/kv_transplant_s{0,1,2}.json: size_vs_spread_of_G / sqrt(1 + size of 'mean only' squared) = 0.8885 / 0.7635 / 0.7793.",
+    "suggested_wording_de": "Kein neuer Satz nötig. Entweder die drei Verläufe mit veröffentlichen und nennen, etwa „(Vorlauf und Feinmessung: `kv_logs.json`, Läufe `pilot_sub0.1`, `check0`, `check0.02`)\", oder die Zahlen streichen. Die drei Dateien `kv_transplant_s*.json` mit der jetzigen Skriptfassung neu schreiben, damit der Wert der Tabellenzeile darin steht.",
+    "importance": "minor"
+   },
+   {
+    "where": "8.6, paragraph before the path table and first bullet after it",
+    "quote": "Schnitt Zustände bei Schritt 4.000: 0,36 und 0,77  ||  seine Hälften passen aber schon schlechter zu G als die der Driftkontrolle",
+    "kind": "unclear",
+    "problem": "The two values are those of seeds 1 and 2. Seed 0 is left out without a word; its drift control is inside an event at step 4.000 (C 0,89 at own accuracy 0,36). The second sentence holds at step 500 for all three networks, but at step 250 the cache path of seed 0 fits G no worse than the drift control's.",
+    "evidence": "<root>/kv_out/kv_transplant_s{0,1,2}.json, D_path step 4000, states C = 0.8924 (acc_XX 0.3606) / 0.3561 / 0.7693. <root>/kv_out/kv_path_fine_s0.json step 250: kv C 0.0215 (5 %) against 0.0335 (drift); states C 0.0073 against 0.0116.",
+    "suggested_wording_de": "… Schnitt Zustände bei Schritt 4.000: 0,36 und 0,77 bei Startwert 1 und 2; Startwert 0 steckt dort im Einbruch …  ||  … seine Hälften passen aber bei Schritt 500 schon schlechter zu G als die der Driftkontrolle (bei Schritt 250 gilt das bei Startwert 0 nur für den Lese-Pfad).",
+    "importance": "minor"
+   },
+   {
+    "where": "8.6, table 'Selten statt fehlend'",
+    "quote": "| Anteil seltener Aufgaben je Stapel | 0 | 0,5 % (1 Aufgabe) | 2 % (5) | 5 % | 10 % | 20 % |  …  0,63 / 1,00",
+    "kind": "unclear",
+    "problem": "0,5 % is the setting, not the share: one rare problem among 234 is 0,4 %. The other headers match the real shares (5 of 238, 12 of 245, 26 of 259, 58 of 291). The lowest value at 10 % (0,63) breaks the trend of the row because an instability event falls on that evaluation; the table does not say so.",
+    "evidence": "<root>/kv_out/runs/kv_tied_s0_mix0.005/log.json: n_mix 1 (kept 233). <root>/kv_out/runs/kv_tied_s0_mix0.1/log.json: step 500 val_acc 0.9979; step 750 val_acc 0.6317 with kept_acc 0.9700; step 1000 0.9998.",
+    "suggested_wording_de": "| Anteil seltener Aufgaben je Stapel | 0 | 0,4 % (1 Aufgabe) | 2 % (5) | 5 % | 10 % | 20 % |  und darunter: Der kleinste Wert bei 10 % (0,63) ist ein Einbruch am Messpunkt 750, bei dem auch die behaltenen Aufgaben auf 0,97 fallen; davor und danach liegt der Lauf bei 1,00.",
+    "importance": "minor"
+   },
+   {
+    "where": "8.1, third bullet (Ootani)",
+    "quote": "der Reihenfolge der Rundung (eine andere Zahl von CPU-Threads kippt 49 von 300 Läufen gleichen Startwerts, die Quote bleibt gleich)",
+    "kind": "unclear",
+    "problem": "lit.json is narrower in three points. The effect is the order of floating-point summation. It appears between 1 and 4 threads; 4 and 16 threads are bit-identical. The rate is 74 against 81 of 300, which is not exactly equal.",
+    "evidence": "<root>/kv_out/review/lit.json, entries[3].finding: '4 and 16 threads are bit-identical; 1 against 4 threads flips the outcome of 49 of 300 same-seed runs (16%), while the rate stays 74/300 against 81/300 (exact McNemar p = 0.39)'; premises_wrong_or_unverified[2]: 'floating-point summation order'.",
+    "suggested_wording_de": "der Reihenfolge der Gleitkomma-Summation (1 statt 4 CPU-Threads kippt 49 von 300 Läufen gleichen Startwerts; die Quote bleibt mit 74 gegen 81 von 300 praktisch gleich; 4 und 16 Threads rechnen bitgleich)",
+    "importance": "minor"
+   },
+   {
+    "where": "8.1, second bullet",
+    "quote": "Ein UFO mit festem Zufallsnetz an derselben Stelle hat das Grokking in 7 von 8 Läufen verhindert",
+    "kind": "missing caveat",
+    "problem": "lit.json reports this within a budget of 150.000 steps; the one run that generalised needed 131.000 steps against a median of 98.000 without UFO. 'verhindert' without the budget says more than that.",
+    "evidence": "<root>/kv_out/review/lit.json, entries[2].finding: 'a fixed, randomly initialised UFO on intracomponent attention grokked in 1 of 8 seeds within 150k steps (131k for that seed; baseline 98k, 8/8)'.",
+    "suggested_wording_de": "Mit einem festen Zufallsnetz als UFO an derselben Stelle blieb das Grokking in 7 von 8 Läufen innerhalb der 150.000 Schritte aus (der achte brauchte 131.000 statt 98.000 im Median ohne UFO)",
+    "importance": "minor"
+   },
+   {
+    "where": "8.1, closing sentence",
+    "quote": "Gelesen wurden das UFO-Paper, Ootani, Varma et al. und arXiv 2603.19664 im Volltext oder in den einschlägigen Abschnitten, mehrere andere nur als Zusammenfassung",
+    "kind": "unclear",
+    "problem": "The sentence reads as if the other papers cited in 8.1 were known only from abstracts. By lit.json only arXiv 2205.05055 is abstract-only among them; five more were read in the relevant sections.",
+    "evidence": "<root>/kv_out/review/lit.json, fields read and citation: entries[5] (2605.05971), [7] (2606.26050), [10] (2311.08360), [11] (2412.00104), [12] (2604.12151) are marked 'full text' with the sections read listed; entries[9] (2205.05055) is 'abstract only'.",
+    "suggested_wording_de": "Im Volltext gelesen wurden das UFO-Paper und Ootani; in den einschlägigen Abschnitten Varma et al., Li und Sreedhar und die arXiv-Arbeiten 2603.19664, 2605.05971, 2311.08360, 2412.00104 und 2604.12151; nur als Zusammenfassung arXiv 2205.05055 und die meisten weiteren Quellen in `kv_literature.json`.",
+    "importance": "minor"
+   },
+   {
+    "where": "8.7, bullet 'Was 7.4 dazu an Qwen3-1.7B gemessen hat'",
+    "quote": "Über den Gate-Zweig, also die Stelle, an der das Produkt zählt, laufen 0,007 bis 0,010 der Löschung von 0,15 bis 0,24 je Block. In den Blöcken 10 bis 16 übernehmen Neuronen mit positivem Gate-Eingang.",
+    "kind": "wrong number",
+    "problem": "0,007 and 0,010 are the means of the block groups 1–4 and 5–9 in 7.4, while 0,15 bis 0,24 is a range per block. Per block the gate branch is 0,007 bis 0,012. 7.4 says positive-gate neurons take over increasingly and carry the larger part only from block 12.",
+    "evidence": "/home/user/DSSE/results/ju_space/README.md, 7.4: 'Gate-Zweig (beide Vorzeichen zusammen) | 0,007 | 0,010 | 0,008' (means over the blocks of the column) and 'Hier übernehmen zunehmend Neuronen mit positivem Gate-Eingang … (ab Block 12 der größere Teil)'. /home/user/DSSE/results/ju_space/ufo_lin.log, 'erasure of irr by path: gate / up', blocks 1 to 9: gate 0.007, 0.007, 0.007, 0.007, 0.009, 0.012, 0.011, 0.008, 0.011; by gate input negative / positive: block 10 0.116 / 0.046, block 11 0.091 / 0.079, block 12 0.066 / 0.119.",
+    "suggested_wording_de": "Über den Gate-Zweig, also die Stelle, an der das Produkt zählt, laufen je Block 0,007 bis 0,012 der Löschung von 0,15 bis 0,24. In den Blöcken 10 bis 16 übernehmen zunehmend Neuronen mit positivem Gate-Eingang (ab Block 12 der größere Teil).",
+    "importance": "minor"
+   },
+   {
+    "where": "8.7, table row with the quartiles and the sentence on the resolution of the post",
+    "quote": "| ihr c, Median (Viertelwerte) | 0,28 (0,25 bis 0,33) | 0,24 (0,20 bis 0,33) | 0,28 (0,25 bis 0,30) |  …  mit der Auflösung des Beitrags (Schritte von 0,025, neun Einheiten)",
+    "kind": "unclear",
+    "problem": "The rounded upper quartile 0,33 reads like 1/3, the very number in question; the values are 0,325 (ReLU) and 0,331 (tanh). The values lie on a grid of 0,025, so two digits round on the boundary. The post does not state a step of 0,025: it says only that candidates in [-1, 1] were tried, and its nine reported values are multiples of 0,025.",
+    "evidence": "<root>/kv_out/cubic_direction.json: units with r2 > 0.9, median and quartiles of c: ReLU 0.275 (0.250, 0.325), tanh 0.2375 (0.200, 0.33125), SiLU 0.275 (0.250, 0.300). Local text copy of the post, <root>/wolfram_dl/post_clean.txt: 'candidate c values in the range [-1,1]'; best c of the nine features 0.225, 0.3, 0.35, 0.3, 0.2, 0.325, 0.3, 0.3, 0.175.",
+    "suggested_wording_de": "| ihr c, Median (Viertelwerte) | 0,275 (0,250 bis 0,325) | 0,238 (0,200 bis 0,331) | 0,275 (0,250 bis 0,300) |  …  mit der Auflösung des Beitrags (die neun genannten Werte sind Vielfache von 0,025)",
+    "importance": "minor"
+   },
+   {
+    "where": "8.7, text after the small table",
+    "quote": "Der Befund des Beitrags stellt sich also in jedem Netz ein, auch ohne SAE.",
+    "kind": "overclaim",
+    "problem": "At the level of the whole layer this holds for all 15 networks. At the level of single neurons two networks are weak: one ReLU network has only 2 of 13 such neurons (c 0,150 and 0,200), one tanh network 6 of 15, one of them with c = -0,525.",
+    "evidence": "<root>/kv_out/cubic_direction.json: units_r2_above_0_9 per network: ReLU 10 of 11, 9 of 12, 8 of 12, 9 of 10, 2 of 13; tanh 13, 12, 9, 6, 8 of 15; SiLU 15, 13, 15, 13, 14 of 15; layer_c of all 15 networks between 0.2258 and 0.3148.",
+    "suggested_wording_de": "Auf der Ebene der Schicht stellt sich der Befund in allen 15 Netzen ein (c 0,23 bis 0,31), an den einzelnen Neuronen in 13 von 15 bei der Mehrzahl; Ausnahmen sind ein ReLU-Netz (2 von 13 Neuronen) und ein tanh-Netz (6 von 15).",
+    "importance": "minor"
+   }
+  ],
+  "checked_and_fine": [
+   "8.1: all nine arXiv numbers (2607.05104, 2309.02390, 2606.26050, 2603.19664, 2412.00104, 2604.12151, 2205.05055, 2311.08360, 2605.05971) and their attributions agree with lit.json.",
+   "8.1: UFO figures agree with lit.json: best of four cases, 12,25 / 7,54 / 3,16 / 2,04, 8.000 against 98.000 steps, 8 seeds, weight decay 0,03; no anti-UFO; keys and values not regularised; 49 of 300 runs; the word Ungrokking absent in Ootani; KV-CAT on Qwen2.5.",
+   "8.6 opening: 233 of 4.656 and 466 problems; every residue at least twice as x, y and answer (stdout logs say 2 / 2 / 2, the random draw 0 / 0 / 0); the starting networks are the checkpoints 500 steps after the first 99 %.",
+   "8.6 five runs: held-out 0,21 bis 0,35 at step 1.000 with the kept problems at 100 %; 0,03 bis 0,12 at step 4.000; dropped problems fall with the held-out ones.",
+   "8.6 pilot run: 0,94 at step 4.000 and never below 0,71 in 6.000 steps, started from step 20.000 of the run of 7.10.",
+   "8.6 jump table: all 36 numbers and the steps of both jumps (750 / 800 / 750 and 1.400 / 1.450 / 1.450). The cell 0,03 for seed 0 at step 1.400 is right (0.0348); kv_tables.py prints 0.04 there because kv_summary.json rounds to three digits first.",
+   "8.6 drift control: 14 % and 13 % at step 600, back at 100 % at step 700, 0,41 / 0,36 at step 4.000 where the run ends, 0,72 / 0,64 at step 1.300, 0,98 / 0,97 at step 2.500; base run of seed 0 four times under 80 % on training problems (steps 3.500, 4.500, 9.000, 10.000); kept problems in the jumps 0,94 / 0,21 / 0,45 and 0,17 / 0,17.",
+   "8.6 weight norm of seed 0 with 5 %: 50,4 / 47,5 / 51,0 / 40,0.",
+   "8.6 rare-example table: all 12 numbers. 'rund 900-mal' is 4.423 / 5 = 885. 'im Mittel 4- bis 5-mal' is 4,5, and 98,9 % of the dropped problems occur at least once. 11 bis 20 % lost, 25 % in the fine check, 0,98 bis 1,00 without rare problems, 0,92 bis 1,00 in the second half, 0,99 at step 4.000, 0,46 at step 1.000 and 0,68 at step 4.000 for one rare problem.",
+   "8.6 path table: all 72 numbers. Excess at step 500: +0,17 / +0,12 / +0,17 against +0,06 / +0,01 / +0,08, and +0,16 / +0,12 / +0,18 against +0,15 / +0,02 / +0,17. Drift control 0,23 against 0,14 and 0,15 against 0,01; C 0,11 bis 0,73 at step 1.000; first drift events after step 550 / 650 / 600.",
+   "8.6 after the first jump: 65 bis 82 %, 24 bis 35 %, 24 bis 28 %, 13 bis 15 %, at most 28 % in the cut Schlüssel/Werte.",
+   "8.6 pre-set rule for the cache path: the 90 % condition fails from step 400 (seed 0) and 500 (seed 2) with 0,77 and 0,85 at step 500; the temporal part is 550 against 650 and 650 against 750 and also holds for the drift control of seed 2; no step of any network meets C at least twice R. The wording agrees with crit.json.",
+   "8.6 reference with all weights moved: 82 bis 94 % own accuracy, C 0,00 bis 0,01, R 0,16 bis 0,44 (cut Zustände, mixes 0,05 / 0,10 / 0,05). 13 against 10 % of the weight norm is the number in recalc_path.json.",
+   "8.6 untied table: all 10 numbers; 75 bis 83 %, 23 bis 25 %, and the lows 0,93 / 0,87 / 0,81 / 0,75 at steps 750 / 1.500 / 2.250 / 3.000.",
+   "8.6 displacement table: all 90 numbers in the order seed 0 / 1 / 2. Bullets after it: 95 bis 99 %; 0,63 against 0,26 bis 0,28; 0,28 / 0,60 / 0,28 against 0,19 / 0,48 / 0,19; 0,76 bis 0,89; 0,44 / 0,72 / 0,49; 0,28 / 0,53 / 0,34; 0,83 bis 0,98; 0,94 bis 1,00; 0,01 bis 0,11; 0,14 bis 0,74; 0,44 bis 0,53; 12 % as the maximum at step 4.000.",
+   "kv_summary.json (regenerated at 13:06) agrees with the 27 continuation logs in every row of 'course'.",
+   "8.7 Qwen numbers agree with 7.4: 84 bis 98 % negative gate input in blocks 1 to 9, silu between -0,28 and 0, erasure 0,15 bis 0,24 per block.",
+   "8.7 description of the post agrees with the local text copy: title, author, 16 July 2026, network 15x15x15x15, inputs between -3 and 3, SAE with 64 units and 4 active, nine units, c 0,175 bis 0,35 with median 0,30, independent of b, vertical stretch, the author leaves the reading open, no activation function named.",
+   "8.7 own check against the final cubic_direction.json: main direction 0,26; half of the gradient weight between 0,19 and 0,34; 15 networks; tanh and SiLU ranges 0,23 bis 0,25; 38 of 58, 48 of 75, 70 of 75; medians and quartiles; untrained c between -28 and 3; at most 1,1 % for b; 156 neurons; 79 % and 13 %.",
+   "The first cubic_direction.json (11:56) came from 8.000 training steps, as the reproduction line says: one network retrained gave fit 0.99984 and c 0.2728 against 0.99985 and 0.2726."
+  ],
+  "not_checked": [
+   "8.1: the papers themselves. I checked only that the draft agrees with lit.json.",
+   "8.7: the Wolfram post online and its notebook code. I read only the local text copy in <root>/wolfram_dl/post_clean.txt, which has no code cells.",
+   "The reviewer's number '13 gegen 10 % der Gewichtsnorm' was taken from recalc_path.json and not recomputed.",
+   "Whether the pilot run used a random draw: its log has no flag for it and comes from an older script version.",
+   "Displacement rows other than 'own 1' and 'own 2' were not recomputed; the random rows are taken as stored. No training was re-run except one small network for 8.7; logs are taken as written.",
+   "The new entries post_test and share_of_gradient_energy_on_b in cubic_direction.json: the draft does not use them.",
+   "The sentence in 8.7 that the normalisation before the MLP keeps the values bounded; the draft itself marks it as not measured.",
+   "Placeholders in double brackets, sections 8.2 to 8.5, and 8.8 apart from its statements about 8.6.",
+   "The draft and cubic_direction.json changed during the audit. Anything edited after 12:58:01 (draft) or 13:05:56 (cubic file) is not covered."
+  ]
+ }
+}

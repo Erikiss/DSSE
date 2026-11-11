@@ -1,0 +1,239 @@
+{
+ "entries": [
+  {
+   "claim": "The UFO paper's '12 times' is the best single treatment, counted in training steps against a baseline with weight decay only.",
+   "citation": "Sheppard, Albalak, Lehman, Stanley (2026), 'Are UFOs Real? Introducing Unified Factored Organizers', arXiv 2611.11862 v1, 9 Nov 2026. Sections 1, 5.1, 5.2, Table 1, captions of Figures 2 and 13. Read from the local text copy <root>/ufo_dl/paper.txt; title, authors and date confirmed on the arXiv listing page.",
+   "finding": "Measured: 'grok step' = first recorded step with at least 99% validation accuracy (validation checked every 1,000 steps). Speedup = median grok step of the control divided by the treatment's median (Kaplan-Meier median over 8 seeds, budget 150k steps). Model: 2-layer decoder-only transformer, division modulo 97, half of the 9,312 problems for training, AdamW, batch 512, weight decay 0.03. Table 1: weight decay alone 98k steps (8/8 seeds). Selective intracomponent attention UFO 8k (8/8) = 12.25x. Selective intercomponent attention 13k = 7.54x. Selective intercomponent MLP 31k = 3.16x. Selective intracomponent MLP 48k (7/8) = 2.04x. The text gives the range as about 2 to 12x. Abstract and Section 1 say 'more than 10x' with weight decay and 'more than 100x' without (Figure 13: 114.1x for the same attention treatment against an unregularised baseline with a median of 1.255M steps; about 157x for weight decay plus UFO against that baseline). The unit is transformer training steps, not time or compute; Section 6 notes the extra cost of training the UFO. The stated thesis is about representations (a learned regulariser that makes representations regular); the grokking speedup is the quantitative evidence for it.",
+   "bears_on": "Task 7, first assumption. '12 times' is right as the top number of Table 1, but it is one of four treatments, on one task, with 8 seeds, in steps, against weight decay 0.03. It is a statement about activations and attention patterns during training, not about weight space as such, so it gives no direct support to R1.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2611.11862"
+  },
+  {
+   "claim": "UFOs do not act on weight matrices. They act on activations and on attention weights (attention probabilities), taken at the '=' position.",
+   "citation": "Sheppard et al. (2026), arXiv 2611.11862, Sections 3.3, 3.4, 5.1, 6, 7 and Appendix C (local text copy, same file as above).",
+   "finding": "A representation r_k is either one hidden node's activations across inputs (intracomponent) or one layer's activations for one input (intercomponent); both are views of the same activation matrix. Section 3.4: 'attention weights' means the weight of an attention edge, i.e. the query-key connection between two fixed sequence positions in one head. Section 5.1 and Appendix C: only the '='-query row is regularised; under the causal mask it has 5 entries per head, with 4 heads that gives a 20-entry vector per layer in the intercomponent case (MLP: 512 entries), and one 9,312-entry vector per attention edge in the intracomponent case. The UFO is an autoencoder with a 2-dimensional bottleneck. Its reconstruction error is added to the task loss and updates the primary parameters; only the lowest-error (most regular) representations update the UFO itself (selectivity 50% to 10%, or 25% to 10%). Section 7: UFOs 'do not directly write or update weights, but instead partially influence the weights by learning to compress representations found in patterns of activations'. Section 6 limitations: fixed-length sequences with a fixed role per position; the intracomponent form does not scale to large domains. A search of the full text finds no occurrence of KV, ungrokking, self-modification, self-improvement or recursive.",
+   "bears_on": "Task 7, second assumption: 'UFO so far on the ordinary weight matrices' is wrong. For K1 and K3: keys and values are activations too, so a UFO on them would be the same kind of object as in the paper, only an untested modality; and the attention UFO already regularises how the '=' position reads the other positions (in the user's words, the read pattern over the cache). The fixed-position requirement is a real obstacle for a language-model cache of variable length.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2611.11862"
+  },
+  {
+   "claim": "In the UFO paper a non-matching regulariser on attention blocked grokking. A reversed ('anti') UFO was not tested.",
+   "citation": "Sheppard et al. (2026), arXiv 2611.11862, Table 1, Section 5.2 text after Table 1, Section 2.2 last paragraph.",
+   "finding": "Controls with weight decay, 8 seeds each: a fixed, randomly initialised UFO on intracomponent attention grokked in 1 of 8 seeds within 150k steps (131k for that seed; baseline 98k, 8/8). Fixed intracomponent MLP 92k (1.07x). Fixed intercomponent attention 33k (2.97x) and MLP 41k (2.39x). Non-selective UFOs 1.24x to 2.58x. Without weight decay the selective intracomponent MLP UFO grokked in only 1 of 8 seeds. Stated motivation (Section 2.2): a memorised solution with no shared regularities between training examples should be less learnable by a small separate network. Section 5.2 says the transformer's representations become more compressible by the UFO over training and points to Appendix D for the reconstruction error plotted next to validation accuracy (appendix not read in detail).",
+   "bears_on": "K3 and K5. The nearest existing data point to an 'Anti-UFO': a wrong constraint on attention patterns delayed or prevented generalisation; it was not shown to reduce memorisation. The UFO reconstruction error is already a learned measure of order that moves with grokking, which is one half of what K5 asks for. A loss that rewards high reconstruction error has not been reported.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2611.11862"
+  },
+  {
+   "claim": "The paper titled 'Grokking Is Conditional and Fragile' is about training-set coverage, weight decay and floating-point summation order. It does not mention ungrokking, semi-grokking, rare examples or any cache.",
+   "citation": "Ootani (2026), 'Grokking Is Conditional and Fragile: A Fully-Tractable, Multi-Seed Study at 12K Parameters', arXiv 2607.05104 v1, 6 Jul 2026. Whole HTML text read.",
+   "finding": "Model: Glimmer-1-Base, 11,856 parameters, hidden size 16, 2 layers, four query heads with a single key/value head (grouped-query attention), pretrained on 500K tokens, then fine-tuned on modular arithmetic with modulus at most 10. A run counts as grokked if best held-out accuracy reaches 0.70; every claim is a rate over 10 or more seeds. (1) Coverage: below a threshold fraction of the input domain in the training set the grok rate is near 0, above it near 1; the threshold follows the modulus (mod 7 and 9 near 5-10%, mod 10 near 20-40%). (2) Weight decay 0 / 0.01 / 0.1 / 1.0 gives grok rates 20% / 27% / 90% / 0% (10 seeds each). (3) CPU threads: 4 and 16 threads are bit-identical; 1 against 4 threads flips the outcome of 49 of 300 same-seed runs (16%), while the rate stays 74/300 against 81/300 (exact McNemar p = 0.39). CPU against GPU flips 19 of 100, rate 86 against 85. (4) Generalising solutions have a more periodic output map (r = +0.37 and +0.65, called partly definitional); embeddings do not form a Fourier circle. (5) Splitting a composite task into sub-task specialists helps by making coverage dense (10/10 against 0/10 at 160 examples). Three single-run stories in the author's own data turned out to be seed confounds. The words ungrok, semi-grok, rare and cache occur 0 times; Varma et al. is cited only for the critical dataset size. Memorisation precedes generalisation 'only narrowly' at this scale (Figure 1).",
+   "bears_on": "Identification of the user's paper (task 1). For K4: this paper gives no link between fragility and ungrokking or rare examples; the nearest notion is coverage. For K5: any distance measure between grokked and ungrokked states must be estimated over many seeds with thread count and device pinned, because one run can flip from summation order alone. This matters on a machine where other jobs change the available threads.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2607.05104"
+  },
+  {
+   "claim": "The one paper found that measures KV-cache read speed says the cache holds no information of its own and says nothing about memorisation.",
+   "citation": "Qasim, Zhang, Shaheen, Alharith, Zhang (2026), 'The Residual Stream Is All You Need: On the Redundancy of the KV Cache in Transformer Inference', arXiv 2603.19664 v1, 20 Mar 2026. Read: abstract, introduction, related work, start of Section 3, and the passages of Sections 5.2 and 5.8 found by search.",
+   "finding": "Six models from 135M to 4B parameters (LLaMA, Qwen2, Qwen3, Gemma 3 families). Keys and values are deterministic projections of the residual stream by frozen weight matrices. Removing the cache gives token-identical greedy output (30 of 30 tokens, all six models) and is 1.7 to 3.8 times slower; 'The cache is a speed optimisation and nothing more.' Latency: recomputing K and V from stored residual vectors against reading cached tensors has ratio 1.1 for 1 token, falls below 1 by 50 tokens, is 0.46 to 0.68 at 100 tokens and 0.17 at 500 tokens for the largest model (memory bandwidth is the limit). Median effective rank of the KV projections is 70 of 256 at 90% spectral energy on Gemma 3-4B-IT, with strong differences between heads. The words memorisation / memorization do not occur in the text.",
+   "bears_on": "K2: this is the closest match to 'measured how fast read operations are', but the comparison is cache read against recomputation, a hardware question, and no claim about memorisation is made. K1 and K3: for a fixed input the cache is fully determined by weights and context, so a model cannot use the cache more or less, or faster; what can vary is how much the output depends on attention to earlier positions. K4: 'depends on the KV cache rather than the weights' is not a separable statement under this result.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2603.19664"
+  },
+  {
+   "claim": "Training for an ordered (compressible) KV cache has been done on Qwen2.5 by masking KV slots; it improved compression and retrieval from compressed caches and left normal behaviour about unchanged.",
+   "citation": "Gelberg, Eitan, Bronstein, Gal, Maron (2026), 'Training Transformers for KV Cache Compressibility', arXiv 2605.05971 (7 May 2026, revised 12 May). Read: abstract, the KV-CAT paragraphs of Section 1, start of Section 4 (routing and objective), results paragraphs Q1 and Q2, conclusion. This is the same paper as the candidate named only by title.",
+   "finding": "Claim proved: almost any sequence-to-vector function has both compressible and non-compressible transformer implementations, so compressibility is a property of the learned representation. Method (KV-CAT): continued pretraining of Qwen2.5-0.5B and 1.5B on FineWeb-Edu at context length 1024; learned routers between layers give each token a score and tokens under a threshold are masked out of attention; loss = self-distillation of the masked model to the dense model + budget penalty + next-token loss on the unmasked pass. Results reported: up to 3.21x better retention of suffix perplexity, up to 5x fewer optimisation steps for the compressor, up to 68% better retrieval accuracy and 39% better long-context QA (LongBench v2) from compressed caches; without compression +0.7 accuracy points (0.5B) and -0.5 points (1.5B) on six multiple-choice benchmarks. I saw no statement about memorisation or about how much the model relies on the context in the parts read.",
+   "bears_on": "K1 and task 5: an 'ordered cache' can be trained for, and the model then keeps working with far fewer cache slots. The study does not measure whether the model uses the context more. K3: the method drops cache slots during training (a form of disorder in the cache) and the effect was a more robust, more compressible use of the cache, not less use of it.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2605.05971"
+  },
+  {
+   "claim": "Ungrokking is produced by further training on a smaller dataset and is described as weight moving from a generalising to a memorising circuit. Where the memorising circuit sits was not found.",
+   "citation": "Varma, Shah, Kenton, Kramár, Kumar (2023), 'Explaining grokking through circuit efficiency', arXiv 2309.02390. Read: abstract, Sections 4.1 and 4.2, training details, Section 5.2 setup and results, Appendix A.2, Appendix B (memorisation logits, flaws).",
+   "finding": "Model: 1-layer transformer, AdamW, modular addition with P = 113 (9 more tasks in the appendix). Theory: a memorising circuit gets less efficient (logit per parameter norm) as the dataset grows, a generalising circuit does not; they cross at a critical dataset size D_crit. Ungrokking: a grokked network trained further on fewer than D_crit examples falls back to low test accuracy; there is a sharp transition around D_crit, and the final test accuracy does not depend on the strength of weight decay. It works by only removing examples. Semi-grokking: near D_crit, delayed generalisation to middling test accuracy, with spikes and long plateaus. D_crit depends on the starting point: about 0.7 test accuracy at 800-1000 examples when ungrokking, about 2000 when training from scratch. Location: 'we do not understand the algorithm underlying memorisation'; the memorising part is defined as what is left of the logits after removing the trigonometric part, and the authors list flaws of this proxy. No split by attention against MLP.",
+   "bears_on": "K4 and K5 (task 2). Ungrokking is a change of weights under gradient descent with weight decay; no inference-time quantity is involved. The trigger is dataset size, not rare examples as such. Nothing here ties it to keys and values. The conjecture 'more KV than weights' is untested in this setting; a testable form would compare changes in attention parameters or attention patterns with changes in MLP parameters during ungrokking.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2309.02390"
+  },
+  {
+   "claim": "A June 2026 paper reports ungrokking inside one ordinary pretraining run and ties a rule's survival to how often the corpus supports it. This is the published result closest to the user's 'rare examples' idea.",
+   "citation": "Li and Sreedhar (2026), 'Natural Ungrokking: Asymmetric Control of Which Rules Survive Pretraining', arXiv 2606.26050, 24 Jun 2026. Read: abstract, parts of the introduction, related work, model setup, mechanism paragraph of Section 4.2.",
+   "finding": "Model: 4-layer decoder-only transformer, d_model 256, two attention heads, 2048-token context, 11.5M parameters, 4,400 steps; two corpora, three data budgets, three seeds. Measured: accuracy on held-out probes for a rule (pronoun gender after a name; a second rule: a/an). The rule is learned (0.94 by step 925) and is near zero by step 3,500 while the loss curve shows nothing. Support frequency of the rule in the corpus decides whether it survives; the data-to-parameter ratio only changes how deep a doomed rule falls. A competing surface pattern takes over; the log-probability margin crosses zero within 100 steps of the collapse. Removing support destroys a rule with monotone dose-response; adding support back, up to 450 times the naturally sustaining level, gave no recovery. Mechanism: the logit gap splits into a direct embedding-path term (stays near zero) and a contextual term (all attention and MLP contributions together) that carries the margin and turns negative. Exploratory head analysis: in surviving runs one last-layer head carries 75-90% of the margin; collapsed runs have no dominant carrier. The same rise-then-collapse pattern is reported for public Pythia checkpoints.",
+   "bears_on": "K4: supports the part 'depends on the less represented training examples' (rare rules are lost). It gives a hint that attention matters (one last-layer head), but attention and MLP are not separated and the hint is marked exploratory. K5: destroying is easy and graded, restoring failed, so steering by ungrokking would be a one-way tool.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2606.26050"
+  },
+  {
+   "claim": "A late collapse of generalisation after very long training ('anti-grokking') was detected from the spectra of weight matrices, also in an MLP without attention.",
+   "citation": "Prakash and Martin (2026), 'Late-Stage Generalization Collapse in Grokking: Detecting anti-grokking with Weightwatcher', arXiv 2602.02859, 2 Feb 2026. Abstract read (from the HTML page).",
+   "finding": "Models: a 3-layer MLP on a subset of MNIST and a transformer on modular addition, trained far longer than usual. After generalising, test accuracy falls back to chance while training accuracy stays perfect. Signals: anomalously large eigenvalues outside the Marchenko-Pastur bulk of shuffled weight matrices ('correlation traps'), and the layer metric alpha moving away from 2. According to the abstract, L2 norm, activation sparsity, absolute weight entropy and local circuit complexity track grokking but do not detect this collapse.",
+   "bears_on": "K4: a reversal of grokking happens in a network with no attention and no cache, and is visible in the weights. K5: geometric measures tuned on the grokking transition did not detect the reverse transition, so a learned 'distance between grokked and ungrokked' needs its own validation.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2602.02859"
+  },
+  {
+   "claim": "Learning from context and learning in weights trade off, and rare classes push a model towards using the context.",
+   "citation": "Chan, Santoro, Lampinen, Wang, Singh, Richemond, McClelland, Hill (2022), 'Data Distributional Properties Drive Emergent In-Context Learning in Transformers', arXiv 2205.05055 (NeurIPS 2022).",
+   "finding": "Transformers trained on synthetic few-shot sequences. In-context learning appears when the data are bursty and have many rarely occurring classes; it traded off against weight-based learning in the first experiments, and both co-existed under a skewed Zipfian class distribution. Recurrent models did not show it.",
+   "bears_on": "K2 and K4 (task 3). Direction: rare items favour use of the context, common items favour storage in weights. This is the opposite pairing to 'cache use = memorisation'; in this literature memorisation means the in-weights solution.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2205.05055"
+  },
+  {
+   "claim": "With long training, use of the context fades and in-weights memorisation takes over; weight decay on MLP or embedding layers, not on attention layers, keeps context use alive.",
+   "citation": "Singh, Chan, Moskovitz, Grant, Saxe, Hill (2023), 'The Transient Nature of Emergent In-Context Learning in Transformers', arXiv 2311.08360. Read: abstract, Sections 5 and 6, discussion paragraphs.",
+   "finding": "Model: 12 layers, embedding size 64, 1,600 classes with 20 exemplars each (image few-shot data; also token-embedding data), up to 5e7 steps, 2 seeds. In-context accuracy rises, then decays while training loss keeps falling; in-weights accuracy rises slowly. L2 regularisation makes the decay slope go to 0 up to a strength of about 0.0001 (beyond that the network is over-regularised); the authors conclude the in-context circuit is the lower-norm solution. Weight decay only on self-attention layers: still transient. Weight decay only on MLP or on the ResNet embedder: transience mitigated; the authors read this as in-weights information being stored in MLP layers. Wider models show less decay. The authors call the effect 'in a sense, the opposite of the grokking phenomenon' and guess that soft attention gives an imperfect match to context, which favours the in-weights solution in the long run.",
+   "bears_on": "K2, K3, K4 (task 3). Less use of the context went together with more memorisation in the weights, not less. So an intervention that makes the model rely less on the cache (K3) would be expected to push towards memorisation in this setting. The competitor to context use was located in MLP and embedding weights, not in keys and values.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2311.08360"
+  },
+  {
+   "claim": "The switch between memorising and using context is explained by how fast two nearly independent sub-circuits learn; the memorising one is the MLP and needs no attention output.",
+   "citation": "Nguyen and Reddy (2024), 'Differential learning kinetics govern the transition from memorization to generalization during in-context learning', arXiv 2412.00104. Read: abstract, Figure 1 caption, model description and the minimal-model paragraphs.",
+   "finding": "Model: one attention layer followed by a 3-layer ReLU MLP (hidden size 512), items of dimension 63, 100 context tokens, SGD. With far fewer than about 10^4 item-label pairs the network memorises (in-weights) and does not learn in-context; with far more it learns in-context and does not memorise; the transition is sharp and solutions near it are bimodal. Minimal model: final logit = MLP logit (uses only the target token) + attention logit (reads labels from the context); 'IWL does not require the output of the attention head'. The relative learning rates of the two parts, not capacity limits, set the transition; the theory also covers the later loss of in-context learning.",
+   "bears_on": "K2: 'speed' in this line of work is speed of learning during training, not speed of reading or writing a cache; and the memorising circuit is the one that ignores the context. Possible source of the user's memory of a speed measurement tied to memorisation.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2412.00104"
+  },
+  {
+   "claim": "A 2026 paper finds four phases in which a transformer either memorises or generalises; both kinds read the context, and the first boundary is set by a 'kinetic competition' between sub-circuits.",
+   "citation": "Gibson, Cui, Reddy (2026), 'Distinct mechanisms underlying in-context learning in transformers', arXiv 2604.12151 (14 Apr 2026, v2 of 6 Nov 2026). Read: abstract and several passages of the main text found by search (setup, circuit tracing, reduced model, Figure 7 caption).",
+   "finding": "Model: two-layer transformer (one attention block and one MLP block per layer) trained on sequences from a finite set of K Markov chains. Four phases: memorising or generalising, each with 1-point or 2-point statistics of the context. Boundaries in K: the first from kinetic competition between sub-circuits, the second from a representational bottleneck. Mechanism of the generalising 2-point solution: the first attention layer writes the previous state into a buffer subspace of the next position; the second head attends to positions whose buffered state matches the current state (a statistical induction head). Near the first boundary runs are bimodal across 16 seeds.",
+   "bears_on": "K2: even the memorising phases adapt to the context, so 'reads the context' does not separate memorisation from generalisation. The write-then-read description here is about what attention computes, not about speed. Possible source of the user's memory because of the date and the words write, read and kinetic.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2604.12151"
+  },
+  {
+   "claim": "After in-context learning fades, the lasting strategy is a hybrid that still needs the context, and it shares sub-circuits with the in-context strategy.",
+   "citation": "Singh, Moskovitz, Dragutinovic, Hill, Chan, Saxe (2025), 'Strategy Coopetition Explains the Emergence and Transience of In-Context Learning', arXiv 2503.05631.",
+   "finding": "The asymptotic strategy is called context-constrained in-weights learning. It competes with in-context learning and replaces it, but the two share sub-circuits, and in the studied setup in-context learning could only appear quickly alongside the slow growth of the hybrid. A minimal model reproduces this, and a setup with persistent in-context learning was found.",
+   "bears_on": "K2, K3, K4: weights and context use are not two separate reservoirs; circuits are shared. An intervention aimed only at 'the cache side' would also hit the in-weights strategy.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2503.05631"
+  },
+  {
+   "claim": "Other small-model studies describe in-context learning as a competition of algorithms or circuits whose winner depends on data statistics and amount of training.",
+   "citation": "Reddy (2023), arXiv 2312.03002; Park, Lubana, Pres, Tanaka (2024), arXiv 2412.01003 (ICLR 2025); B. Chan, Chen, György, Schuurmans (2024), arXiv 2410.23042 (ICLR 2025).",
+   "finding": "Reddy: minimal attention-only network; in-context learning comes from the abrupt formation of an induction head, which then competes with in-weights learning; burstiness, dictionary size and skew control the outcome. Park et al.: mixture of Markov chains; four algorithms (fuzzy retrieval against inference, each with unigram or bigram context statistics) compete; context size or training time alone can switch the winner. B. Chan et al.: theory with a gate between an in-weight and an in-context predictor, giving conditions for emergence and disappearance; checked on a transformer and by fine-tuning a large language model.",
+   "bears_on": "K2 and K4 (task 3): the balance between context and weights is set by data statistics and training length. None of these papers measures order or disorder in keys and values.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2412.01003"
+  },
+  {
+   "claim": "Deliberate forgetting in the weights (resetting embeddings) can raise a model's reliance on context.",
+   "citation": "Anand, Lepori, Merullo, Pavlick (2024), 'Dual Process Learning: Controlling Use of In-Context vs. In-Weights Strategies with Weight Forgetting', arXiv 2406.00053.",
+   "finding": "Toy models, masked language models and autoregressive language models. 'Structural' in-context learning (working on tokens never seen before) appears early in pretraining and then quickly disappears. Training methods built on active forgetting change the preference between structural in-context and in-weights solutions and can make both co-exist.",
+   "bears_on": "K3 in mirror image: disorder injected on the weight side shifted the model towards the context. Nobody in this line injected disorder on the context side.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2406.00053"
+  },
+  {
+   "claim": "In the original grokking paper, noise in training helped generalisation somewhat; weight decay helped most.",
+   "citation": "Power, Burda, Edwards, Babuschkin, Misra (2022), 'Grokking: Generalization Beyond Overfitting on Small Algorithmic Datasets', arXiv 2201.02177. Read: the regularisation passage, Figure 2 caption, the list of interventions in the appendix.",
+   "finding": "Task: product in the group S5, budget 10^5 steps. Compared: full-batch and minibatch optimisers, learning rates, residual dropout 0.1, weight decay, Gaussian noise on the update, Gaussian weight noise (std 0.01). Weight decay more than halved the data needed compared with most other interventions. Minibatch noise and Gaussian noise on weights are called beneficial for generalisation.",
+   "bears_on": "K3 and task 4: disorder injected into weights or gradients during training tends to help generalisation here; it does not act as a brake. No noise was applied to attention or to keys and values.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2201.02177"
+  },
+  {
+   "claim": "Dropout in the transformer blocks can remove the grokking delay, while noise from small batches goes with delayed generalisation.",
+   "citation": "Liu, Kitouni, Nolte, Michaud, Tegmark, Williams (2022), 'Towards Understanding Grokking: An Effective Theory of Representation Learning', arXiv 2205.10343. Read: the dropout sentences and the batch-size passage only.",
+   "finding": "'With a significant dropout rate, the generalization time can be brought down to under 10^3 steps and the grokking phenomenon vanishes completely.' In the phase diagram over batch size, grokking sits at small batch size and small decoder learning rate, large batch gives direct generalisation; the authors write that smaller batch size 'seems harmful'.",
+   "bears_on": "Task 4 and K3: two kinds of injected disorder point in different directions in the same paper. A prediction for 'disorder in the cache' cannot be read off from this literature.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2205.10343"
+  },
+  {
+   "claim": "Models trained with dropout instead of weight decay took much longer to grok and did not show the clean Fourier structure.",
+   "citation": "Nanda, Chan, Lieberum, Smith, Steinhardt (2023), 'Progress measures for grokking via mechanistic interpretability', arXiv 2301.05217. Read: Appendix C.2.3 passage and the neighbouring paragraph only.",
+   "finding": "One-layer transformer, modular addition. With dropout 0.2 or 0.5 the embedding and unembedding matrices are not sparse in the Fourier basis; the authors guess at too few epochs ('dropout models seem to take much longer to grok') and at the need for redundancy under dropout.",
+   "bears_on": "Task 4, K3, K5: random disorder during training led to a less ordered solution that still generalised late. Order in the sense of a sparse Fourier basis is not required for generalisation, which weakens any simple reading of geometry as a grokking signature.",
+   "read": "full text",
+   "url": "https://arxiv.org/abs/2301.05217"
+  },
+  {
+   "claim": "Memorising units could be identified as individual neurons and pruned; weight decay and dropout push all neurons to generalising representations.",
+   "citation": "Doshi, Das, He, Gromov (2023), 'To grok or not to grok: Disentangling generalization and memorization on corrupted algorithmic datasets', arXiv 2310.13061.",
+   "finding": "MLP and transformer on modular arithmetic with a fraction of corrupted labels. A network can memorise the corrupted labels and still generalise fully. Memorising neurons can be found and pruned. Weight decay and dropout make the network ignore corrupted data; BatchNorm damps memorising neurons. With regularisation there are two stages: grokking, then unlearning of the memorised part (train accuracy drops to the uncorrupted fraction).",
+   "bears_on": "K4 and K5 (task 2): memorisation was located in neurons, with no mention of keys and values in the abstract. The memorised exceptions here are the 'rare' items, and they live in specific neurons.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2310.13061"
+  },
+  {
+   "claim": "Grokking is sensitive to floating-point effects; plain isotropic noise is reported not to produce it.",
+   "citation": "Prieto, Barsbey, Mediano, Birdal (2025), 'Grokking at the Edge of Numerical Stability', arXiv 2501.04697 (abstract read). Acharya and Dhakal (2026), arXiv 2603.15492 (only the first sentences of the abstract read; the noise claim comes from a search-engine summary).",
+   "finding": "Prieto et al.: without regularisation, rounding errors in the softmax ('Softmax Collapse') stop learning and prevent grokking; a stabilised softmax (StableMax) gives grokking without regularisation; a gradient method that removes the logit-scaling direction gives quick generalisation. Acharya and Dhakal, as summarised by the search tool: isotropic noise injection fails to induce grokking on modular arithmetic; the anisotropic behaviour of adaptive optimisers is needed.",
+   "bears_on": "Task 4, K3, K5: structure-free noise is not a reliable lever on the transition, and numerical details can decide single runs. Supports the need for a guide (K4), but not for ungrokking as that guide.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2501.04697"
+  },
+  {
+   "claim": "Two studies tie memorisation of training text to attention components, but to attention modules and heads in the weights, not to cache speed.",
+   "citation": "Menta, Agrawal, Agarwal (2025), 'Analyzing Memorization in Large Language Models through the Lens of Model Attribution', arXiv 2501.05078. Stoehr, Gordon, Zhang, Lewis (2024), 'Localizing Paragraph Memorization in Language Models', arXiv 2403.19851.",
+   "finding": "Menta et al.: Pythia and GPT-Neo, five datasets; attention modules are bypassed block by block; attention in deeper blocks is 'primarily responsible for memorization', earlier blocks matter for generalisation. Stoehr et al.: memorisation is spread over layers and components; gradients of memorised paragraphs are larger in lower layers; one low-layer attention head that attends mainly to rare tokens is especially involved; a few distinctive early prefix tokens can corrupt the whole continuation.",
+   "bears_on": "K2 and K4: the closest support for 'memorisation has to do with attention' and for a link between rare tokens and memorisation. Both concern recall of training data stored in weights and triggered through attention; neither measures read or write speed, and neither concerns grokking.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2501.05078"
+  },
+  {
+   "claim": "How much a model follows the context instead of its memorised answer can be dialled directly by scaling the value vectors of single attention heads.",
+   "citation": "Yu, Merullo, Pavlick (2023), 'Characterizing Mechanisms for Factual Recall in Language Models', arXiv 2310.15910.",
+   "finding": "Pythia and GPT-2, world-capital questions with a counterfactual statement in the prompt. Measured: share of answers that follow the prompt. It depends strongly on the training frequency of the country and of the in-context city. Head attribution finds heads that promote the memorised answer and heads that promote the in-context answer; scaling the value vector of one head raised the in-context answer rate to 88%.",
+   "bears_on": "K3 and K5: a targeted, low-dimensional control of context reliance in the value vectors already exists, which avoids the combinatorial problem of 'making disorder'. K4: frequency in the training data again decides between weights and context.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2310.15910"
+  },
+  {
+   "claim": "Models follow context evidence more when the evidence is coherent and convincing.",
+   "citation": "Xie, Zhang, Chen, Lou, Su (2023), 'Adaptive Chameleon or Stubborn Sloth: Revealing the Behavior of Large Language Models in Knowledge Conflicts', arXiv 2305.13300 (ICLR 2024).",
+   "finding": "Controlled knowledge-conflict tests on large language models. Models are highly receptive to external evidence that contradicts their parametric memory if the evidence is coherent and convincing; they show confirmation bias when part of the evidence agrees with their memory.",
+   "bears_on": "K1: the only evidence found in the direction 'more ordered context, more use of it', and it is about coherence of the text, not about geometric order of keys and values. No study was found that varies the order of the KV tensors and measures use.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2305.13300"
+  },
+  {
+   "claim": "Nothing was found on a model's inclination to modify itself as a function of how organised its representations are.",
+   "citation": "Zweiger, Pari, Guo, Akyürek, Kim, Agrawal (2025), 'Self-Adapting Language Models' (SEAL), arXiv 2506.10943 (abstract), plus one web search on self-modification propensity and representation structure.",
+   "finding": "SEAL: a language model writes its own fine-tuning data and update instructions ('self-edits'); these are applied by supervised fine-tuning; a reinforcement loop rewards self-edits by the downstream performance of the updated model. Measured: performance after self-edits on knowledge incorporation and few-shot tasks, not the willingness to self-edit, and not any property of internal organisation. The search returned only neighbouring work: a 2026 paper on knowledge editing (arXiv 2606.00570, seen only as a search summary) arguing that local parameter edits spread along fragile directions of the representation space. The UFO paper does not discuss self-modification.",
+   "bears_on": "R1 (task 6): no evidence for or against. The neighbouring result concerns how well edits work given the representation geometry, which is a different and weaker claim than inclination. One search query only, so absence is not established.",
+   "read": "abstract only",
+   "url": "https://arxiv.org/abs/2506.10943"
+  },
+  {
+   "claim": "A NeurIPS 2026 poster places memorised sequences in MLPs, with attention heads passing sequence information to them, and speaks of 'fast memorisation'.",
+   "citation": "Nguyen, Norman, Reddy (2026), 'Meta-memorization and memorization scaling laws in transformers', NeurIPS 2026 poster page. Known only from search-engine summaries; no arXiv listing found.",
+   "finding": "As summarised: transformers trained to memorise many random sequences learn to memorise new ones faster ('meta-memorisation'); in one-layer models this traces to structured attention heads that carry length-invariant sequence information to MLPs, where the memorised sequences are stored; capacity in bits grows roughly linearly with parameter count.",
+   "bears_on": "K2: another possible source of the user's memory (speed and memorisation in a recent paper). If the summary is right, the speed is learning speed, the store is the MLP, and attention is the access path, which is not 'fast cache use means memorisation'.",
+   "read": "secondary source",
+   "url": "https://neurips.cc/virtual/2026/poster/150978"
+  }
+ ],
+ "users_papers": "Paper 1 ('Grokking is fragile, conditional ...'): identified with confidence by its title as arXiv 2607.05104, Yoshiyuki Ootani, 'Grokking Is Conditional and Fragile: A Fully-Tractable, Multi-Seed Study at 12K Parameters', 6 Jul 2026. I read the whole text. It does not say what the user attaches to it: ungrokking, semi-grokking and rare examples are not mentioned (0 occurrences). On seeds: every claim is a rate over 10 or more seeds; three single-run stories of the author's own turned out to be seed confounds. On CPU threads: 4 and 16 threads are bit-identical, 1 against 4 threads flips 49 of 300 same-seed runs with no change in the overall rate (74 against 81 of 300); CPU against GPU flips 19 of 100. The ungrokking content the user recalls matches Varma et al. 2023 (arXiv 2309.02390: ungrokking when the training set shrinks below a critical size) and, for 'rare examples', Li and Sreedhar 2026 (arXiv 2606.26050: 'Natural Ungrokking', survival of a rule decided by its support frequency in the corpus). The user's memory probably merges these.\n\nPaper 2 (fast KV-cache reading or writing shown to mean memorisation): not found. I could not find any paper that shows this. What I checked: (a) arXiv 2603.19664 measures the latency of reading cached keys and values against recomputing them and concludes that the cache is only a speed optimisation; it makes no statement about memorisation. (b) 'Training Transformers for KV Cache Compressibility' is arXiv 2605.05971 (the two candidates are one paper); nothing on memorisation or read/write speed in the parts read. (c) The 'kinetics' line of Reddy and co-authors (arXiv 2412.00104; arXiv 2604.12151, revised 6 Nov 2026; a NeurIPS 2026 poster on meta-memorisation) relates the speed at which memorising and generalising sub-circuits are learned to the memorisation-generalisation transition; there the speed is training speed and the memorising circuit is the MLP, which does not need the attention output. (d) Menta et al. 2025 and Stoehr et al. 2024 tie memorisation of training text to attention modules or heads, without any speed measurement. A further guess, not checked: the project's own dossier, Section 4.10 of /home/user/DSSE/research/DOSSIER_kv_cache_vs_weights.md, discusses a LessWrong post by Tang (9 Nov 2026) and the question whether a network writes the answer before the intermediate value; that could be the origin of 'how fast writing and reading are compared with the output'.\n\nUFO paper: arXiv 2611.11862, Sheppard, Albalak, Lehman, Stanley, 9 Nov 2026; read from the local copy <root>/ufo_dl/paper.txt.\n\nMy text copies of all pages read are in <root>/kv_review/scout_lit/txt/ (converter: <root>/kv_review/scout_lit/scripts/html2txt.py). Nothing was trained and no existing file was changed. I used about 37 tool calls, more than the 30 aimed for.",
+ "premises_wrong_or_unverified": [
+  "Wrong: 'UFOs act on the ordinary weight matrices.' In arXiv 2611.11862 UFOs take activations (MLP hidden activations) and attention weights (attention probabilities of the '='-query row) as input. The paper says UFOs 'do not directly write or update weights'.",
+  "Partly right: '12 times faster grokking is the main thesis.' 12.25x is the best of four selective treatments (intracomponent attention UFO plus weight decay 0.03, 8k against 98k median steps, 8 seeds, division mod 97). The range is about 2 to 12x; the abstract says more than 10x with and more than 100x without weight decay. The unit is training steps. The paper's thesis is about regular representations.",
+  "Wrong attribution: the paper 'Grokking Is Conditional and Fragile' (arXiv 2607.05104) does not link grokking to ungrokking and does not discuss rare examples or exceptions. Its fragility is to floating-point summation order (threads, device); its conditions are coverage and weight decay.",
+  "Not found: a paper that 'proved' that heavy and fast KV-cache use means memorisation by measuring read/write speed against the output. The only cache-speed measurement found (arXiv 2603.19664) is about hardware latency and says nothing on memorisation.",
+  "Direction problem in K2: in the in-context against in-weights literature (Chan 2022, Singh 2023, Nguyen and Reddy 2024) 'memorisation' is the in-weights solution, located mainly in MLP layers, and use of the context is its competitor. Memorising solutions that also read the context exist (Gibson et al. 2026, Park et al. 2024), so context use alone does not indicate memorisation either way.",
+  "Ill-posed as stated in K1 to K3: a model does not use the KV cache more, less or faster. Keys and values are deterministic projections of the residual stream, and output without the cache is token-identical (arXiv 2603.19664). The measurable quantity is how much the output depends on attention to earlier positions.",
+  "Unverified and not separable as stated in K4: 'ungrokking depends more on the KV cache than on the weights.' Ungrokking in Varma et al. is a change of weights under continued training; a late collapse of generalisation also occurs in an MLP without attention (arXiv 2602.02859, abstract). A testable form compares attention parameters or attention patterns with MLP parameters; only one exploratory head-level hint exists (arXiv 2606.26050).",
+  "Partly supported in K4: the link to rare training examples. Support frequency decides which rules are lost (arXiv 2606.26050); in Varma et al. the trigger is dataset size below a critical value, not rarity of single examples.",
+  "Untested, with contrary hints, in K3: 'less ordered cache, so less reliance on it, so less memorisation.' Where context reliance fell during training, in-weights memorisation rose (Singh 2023). A non-matching attention regulariser blocked grokking in 7 of 8 seeds (UFO paper, fixed intracomponent attention). Training with dropped cache slots made cache use more robust, not smaller (arXiv 2605.05971).",
+  "Untested in K1: 'well-ordered cache, so more use.' Only text-level evidence (coherent evidence is followed more; Xie et al. 2023, abstract).",
+  "Unverified in K5: that ungrokking can serve as a steerable guide. Removal of a rule was graded and predictable, but restoration failed even at 450 times the support (arXiv 2606.26050), and standard grokking diagnostics did not detect a later collapse (arXiv 2602.02859, abstract).",
+  "No evidence either way for R1: nothing found that relates a model's inclination to edit its own weights to how organised its representations are. One search query only.",
+  "Not checked: the terms 'Hyper-Out-of-Distribution' and 'Hyper-Hidden' in the request; I do not know a source for them and did not search."
+ ],
+ "already_done_elsewhere": [
+  "An order regulariser on the read pattern over earlier positions already exists: the attention UFOs in arXiv 2611.11862 regularise the '='-query attention row and gave the largest speedups (12.25x and 7.54x). The fixed and non-selective controls in the same Table 1 are the nearest existing data on a 'wrong' regulariser. Keys and values themselves were not regularised.",
+  "Training for an ordered, compressible KV cache in real language models: KV-CAT on Qwen2.5-0.5B and 1.5B (arXiv 2605.05971), including a variant with random dropping of cache slots as an ablation.",
+  "Direct runtime control of context reliance in value vectors: scaling one attention head's value vector raised the in-context answer rate to 88% (Yu et al. 2023, arXiv 2310.15910, abstract).",
+  "Locating the competition between context use and in-weights memorisation by selective weight decay on attention, MLP or embedding layers: Singh et al. 2023 (arXiv 2311.08360), Section 6.",
+  "Ungrokking defined, predicted and tested with dataset-size and weight-decay sweeps: Varma et al. 2023 (arXiv 2309.02390). Within-run ungrokking with a frequency law and dose-response corpus edits: Li and Sreedhar 2026 (arXiv 2606.26050).",
+  "A learned measure of representational order that moves with grokking: the UFO reconstruction error itself (arXiv 2611.11862, Section 5.2 and Appendix D).",
+  "Multi-seed protocol with pinned thread count and device for any grokking comparison: Ootani 2026 (arXiv 2607.05104).",
+  "In this project: /home/user/DSSE/research/DOSSIER_kv_cache_vs_weights.md and /home/user/DSSE/research/icl_vs_ft_literature.json already collect the literature on the in-context (KV cache) route against the fine-tuning (weights) route, for example Dherin et al. (arXiv 2507.16003) and Cartridges (arXiv 2506.06266). I did not re-read those sources and did not repeat that survey; neither file mentions grokking, ungrokking or the two KV-cache papers above.",
+  "In this project's scratchpad: UFO and grokking runs and reviews exist under <root>/ufo_out, analysis/ju_space and <root>/ufo_review (for example directories grok_base_s0_wd0.3, grok_ufo_s0_wd0.3, grok_perm_s0_wd0.3 and files ufo_compress*.json). I saw only the file names, not the contents. The names suggest one seed per condition; if so, the thread-count result in arXiv 2607.05104 applies to them."
+ ]
+}
