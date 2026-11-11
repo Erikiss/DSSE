@@ -1,0 +1,1185 @@
+{
+ "kv_swiglu_s0": [
+  {
+   "step": 0,
+   "acc_train": 0.012027491815388203,
+   "acc_held": 0.01073883194476366,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.5031488152071586,
+      "y": 0.48791405669288035,
+      "z_beyond": 0.00013227004369832171,
+      "rest": 0.00880487339216234
+     },
+     "state": {
+      "x": 0.5051386296848939,
+      "y": 0.4877448008409414,
+      "z_beyond": 8.813138236450326e-05,
+      "rest": 0.007028434832171172
+     },
+     "units_by_answer_alone": 0.0037557358862534574,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.0038563006580025726
+    },
+    {
+     "units": {
+      "x": 0.4854524496688189,
+      "y": 0.5041792213277712,
+      "z_beyond": 0.0001527835998874652,
+      "rest": 0.01021549756046319
+     },
+     "state": {
+      "x": 0.48808898430163244,
+      "y": 0.505972297890063,
+      "z_beyond": 9.021099669096868e-05,
+      "rest": 0.005848462108129997
+     },
+     "units_by_answer_alone": 0.003954451633095,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.004322324527341632
+    }
+   ]
+  },
+  {
+   "step": 2500,
+   "acc_train": 0.974012017250061,
+   "acc_held": 0.015249140560626984,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4262597527864397,
+      "y": 0.37927746435413445,
+      "z_beyond": 0.004214647240926705,
+      "rest": 0.1902480866985981
+     },
+     "state": {
+      "x": 0.44970520495989186,
+      "y": 0.37512582604561984,
+      "z_beyond": 0.003104581813820066,
+      "rest": 0.17206445609853868
+     },
+     "units_by_answer_alone": 0.00691036620585933,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.006459509219044835
+    },
+    {
+     "units": {
+      "x": 0.213937805469059,
+      "y": 0.2458538091341443,
+      "z_beyond": 0.01688090793122251,
+      "rest": 0.523327421353389
+     },
+     "state": {
+      "x": 0.1683414338077558,
+      "y": 0.1668126667678743,
+      "z_beyond": 0.07675034992897382,
+      "rest": 0.5880955066545577
+     },
+     "units_by_answer_alone": 0.02171359876773922,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.08611933551734441
+    }
+   ]
+  },
+  {
+   "step": 5000,
+   "acc_train": 1.0,
+   "acc_held": 0.022121993824839592,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.43899530007685544,
+      "y": 0.41170769489574627,
+      "z_beyond": 0.004150563159063657,
+      "rest": 0.145146479223101
+     },
+     "state": {
+      "x": 0.46270106923318755,
+      "y": 0.38805532816597754,
+      "z_beyond": 0.002902018603723659,
+      "rest": 0.14634154930534538
+     },
+     "units_by_answer_alone": 0.007027972003437664,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.00818807229694483
+    },
+    {
+     "units": {
+      "x": 0.2800640107395302,
+      "y": 0.29985214812276895,
+      "z_beyond": 0.02469058706743334,
+      "rest": 0.3953931838136208
+     },
+     "state": {
+      "x": 0.13573003908848447,
+      "y": 0.12790547326390916,
+      "z_beyond": 0.14955758744684078,
+      "rest": 0.5868069118422977
+     },
+     "units_by_answer_alone": 0.029453772959944405,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.1591763375892879
+    }
+   ]
+  },
+  {
+   "step": 7500,
+   "acc_train": 0.3580326437950134,
+   "acc_held": 0.023625429719686508,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.49798803186652185,
+      "y": 0.3824004081594638,
+      "z_beyond": 0.0036830349800806355,
+      "rest": 0.11592856146921872
+     },
+     "state": {
+      "x": 0.5010409194989307,
+      "y": 0.37516728696659984,
+      "z_beyond": 0.002617685389912618,
+      "rest": 0.12117412095024213
+     },
+     "units_by_answer_alone": 0.009329903425610273,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.012714606759462024
+    },
+    {
+     "units": {
+      "x": 0.412853074173948,
+      "y": 0.3346620532195979,
+      "z_beyond": 0.012923205924015326,
+      "rest": 0.23956168653125107
+     },
+     "state": {
+      "x": 0.3236387133741086,
+      "y": 0.2553426944687368,
+      "z_beyond": 0.09444371064048773,
+      "rest": 0.3265749534613357
+     },
+     "units_by_answer_alone": 0.01914447759368308,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.10569666615032904
+    }
+   ]
+  },
+  {
+   "step": 10000,
+   "acc_train": 1.0,
+   "acc_held": 0.9890463948249817,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.3618282039608876,
+      "y": 0.5709242128532561,
+      "z_beyond": 0.0032416127435327072,
+      "rest": 0.06400600601720881
+     },
+     "state": {
+      "x": 0.4258477309270434,
+      "y": 0.5140446944445722,
+      "z_beyond": 0.0031444664406451123,
+      "rest": 0.05696309514922312
+     },
+     "units_by_answer_alone": 0.01573423969611895,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.022159210671990566
+    },
+    {
+     "units": {
+      "x": 0.41194462836868034,
+      "y": 0.4546024079449895,
+      "z_beyond": 0.04274636388507025,
+      "rest": 0.09070664258389073
+     },
+     "state": {
+      "x": 0.07099006163692563,
+      "y": 0.06332565394308823,
+      "z_beyond": 0.703021380916713,
+      "rest": 0.16266292306104724
+     },
+     "units_by_answer_alone": 0.04965819692404344,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.712117596325688
+    }
+   ]
+  },
+  {
+   "step": 10500,
+   "acc_train": 1.0,
+   "acc_held": 0.9997852444648743,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.334863101336057,
+      "y": 0.6101693982028402,
+      "z_beyond": 0.003549938614080734,
+      "rest": 0.05141758228655127
+     },
+     "state": {
+      "x": 0.40309583441978725,
+      "y": 0.5495328018373,
+      "z_beyond": 0.0031578701346461706,
+      "rest": 0.044213549371205786
+     },
+     "units_by_answer_alone": 0.018032427653235126,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.02514047351923984
+    },
+    {
+     "units": {
+      "x": 0.43374106971506826,
+      "y": 0.4531573954902019,
+      "z_beyond": 0.04394663567538503,
+      "rest": 0.06915489163966049
+     },
+     "state": {
+      "x": 0.056633101444062486,
+      "y": 0.04891135780032055,
+      "z_beyond": 0.7908599438873026,
+      "rest": 0.10359560338757234
+     },
+     "units_by_answer_alone": 0.05160175052710547,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.8000437769202221
+    }
+   ]
+  },
+  {
+   "step": 11000,
+   "acc_train": 1.0,
+   "acc_held": 1.0,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.3181754442844553,
+      "y": 0.6317726515280857,
+      "z_beyond": 0.0032724648701835416,
+      "rest": 0.04677948837678389
+     },
+     "state": {
+      "x": 0.37156798628783716,
+      "y": 0.5884774406689544,
+      "z_beyond": 0.0031623402325146634,
+      "rest": 0.036792289854201486
+     },
+     "units_by_answer_alone": 0.013884244269801158,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.02988059368807871
+    },
+    {
+     "units": {
+      "x": 0.43819465840551325,
+      "y": 0.4564664304244301,
+      "z_beyond": 0.04499594377231626,
+      "rest": 0.06034293758086611
+     },
+     "state": {
+      "x": 0.04667611979081843,
+      "y": 0.03693815553175775,
+      "z_beyond": 0.8528455392014761,
+      "rest": 0.06354025090135866
+     },
+     "units_by_answer_alone": 0.05307779809809423,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.8618556609214315
+    }
+   ]
+  }
+ ],
+ "kv_swiglu_s1": [
+  {
+   "step": 0,
+   "acc_train": 0.01009450200945139,
+   "acc_held": 0.010953607968986034,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4978997196508569,
+      "y": 0.495148790622644,
+      "z_beyond": 0.00010073740155910283,
+      "rest": 0.006850770674905141
+     },
+     "state": {
+      "x": 0.4967023116174709,
+      "y": 0.49853569385493035,
+      "z_beyond": 6.545603633051973e-05,
+      "rest": 0.0046965887826872525
+     },
+     "units_by_answer_alone": 0.006928215451519485,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.00606694245330585
+    },
+    {
+     "units": {
+      "x": 0.5108448788384666,
+      "y": 0.48063960483283785,
+      "z_beyond": 0.00014466179773003885,
+      "rest": 0.008370808443230973
+     },
+     "state": {
+      "x": 0.5093781817055693,
+      "y": 0.4860362243496621,
+      "z_beyond": 8.019187962025633e-05,
+      "rest": 0.004505425348212723
+     },
+     "units_by_answer_alone": 0.007681249048137406,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.006653145385189718
+    }
+   ]
+  },
+  {
+   "step": 2500,
+   "acc_train": 1.0,
+   "acc_held": 0.014390034601092339,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.3749281729430247,
+      "y": 0.31317483208517605,
+      "z_beyond": 0.00740822891950087,
+      "rest": 0.30448878048416034
+     },
+     "state": {
+      "x": 0.3727213430735678,
+      "y": 0.34053052730552125,
+      "z_beyond": 0.007831341603628115,
+      "rest": 0.27891690396694335
+     },
+     "units_by_answer_alone": 0.04775764621498623,
+     "weight_of_units_answer_0_5": 0.0035567833110690117,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 1,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.03469500581891568
+    },
+    {
+     "units": {
+      "x": 0.250039116086451,
+      "y": 0.23363346107492214,
+      "z_beyond": 0.015314368923329887,
+      "rest": 0.5010130829027121
+     },
+     "state": {
+      "x": 0.10504786605334832,
+      "y": 0.09623232830890562,
+      "z_beyond": 0.09675350417022367,
+      "rest": 0.7019663047271514
+     },
+     "units_by_answer_alone": 0.02409953857404884,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.10670028434938572
+    }
+   ]
+  },
+  {
+   "step": 5000,
+   "acc_train": 1.0,
+   "acc_held": 0.015893470495939255,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4629018018581613,
+      "y": 0.30625283493224453,
+      "z_beyond": 0.006184546336583997,
+      "rest": 0.22466083278211885
+     },
+     "state": {
+      "x": 0.39086977846087156,
+      "y": 0.35131004794661824,
+      "z_beyond": 0.007191786675420345,
+      "rest": 0.2506283759740496
+     },
+     "units_by_answer_alone": 0.06904333348505898,
+     "weight_of_units_answer_0_5": 0.00033835676731541753,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 1,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.032772232946501556
+    },
+    {
+     "units": {
+      "x": 0.29835384285436356,
+      "y": 0.28237667081031886,
+      "z_beyond": 0.012546184629861009,
+      "rest": 0.40672324960960005
+     },
+     "state": {
+      "x": 0.0974411812473122,
+      "y": 0.08861715582348752,
+      "z_beyond": 0.10644666014275522,
+      "rest": 0.7074949953358645
+     },
+     "units_by_answer_alone": 0.021445878129443142,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.1165149050143963
+    }
+   ]
+  },
+  {
+   "step": 7500,
+   "acc_train": 1.0,
+   "acc_held": 0.02598797343671322,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4510893890512305,
+      "y": 0.3178602792726841,
+      "z_beyond": 0.006019869016633867,
+      "rest": 0.22503051061000165
+     },
+     "state": {
+      "x": 0.39592091953171377,
+      "y": 0.3632892604736725,
+      "z_beyond": 0.007533674382889004,
+      "rest": 0.23325613722982153
+     },
+     "units_by_answer_alone": 0.05325514190828477,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.028518218612584568
+    },
+    {
+     "units": {
+      "x": 0.3148654729329787,
+      "y": 0.2955964934496175,
+      "z_beyond": 0.016061079103207705,
+      "rest": 0.3734769091704283
+     },
+     "state": {
+      "x": 0.11226617235788727,
+      "y": 0.1016933575600257,
+      "z_beyond": 0.15682067027923707,
+      "rest": 0.6292197532367212
+     },
+     "units_by_answer_alone": 0.022926211378659453,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.16696052823703206
+    }
+   ]
+  },
+  {
+   "step": 10000,
+   "acc_train": 0.9591924548149109,
+   "acc_held": 0.1114690750837326,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.443618388751126,
+      "y": 0.3682030742434673,
+      "z_beyond": 0.006691258546432289,
+      "rest": 0.181487286272898
+     },
+     "state": {
+      "x": 0.399249861442975,
+      "y": 0.399546149308057,
+      "z_beyond": 0.00999941026356787,
+      "rest": 0.19120460622658542
+     },
+     "units_by_answer_alone": 0.05576492658508058,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.0305810827151127
+    },
+    {
+     "units": {
+      "x": 0.35467492650204313,
+      "y": 0.32561585459209974,
+      "z_beyond": 0.03505909117622039,
+      "rest": 0.2846501429509401
+     },
+     "state": {
+      "x": 0.21239013415926658,
+      "y": 0.1921937984100499,
+      "z_beyond": 0.23192839440867385,
+      "rest": 0.3634877105077433
+     },
+     "units_by_answer_alone": 0.04118476132244701,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.24306026226873345
+    }
+   ]
+  },
+  {
+   "step": 12500,
+   "acc_train": 1.0,
+   "acc_held": 0.9948453903198242,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4505511075052222,
+      "y": 0.44869802052903,
+      "z_beyond": 0.012703378669712866,
+      "rest": 0.08804755269462228
+     },
+     "state": {
+      "x": 0.36340045000631693,
+      "y": 0.5228055304633468,
+      "z_beyond": 0.014073274927185549,
+      "rest": 0.0997206400330879
+     },
+     "units_by_answer_alone": 0.08807202237400757,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.0507796944211965
+    },
+    {
+     "units": {
+      "x": 0.41135372334217407,
+      "y": 0.38465391345632693,
+      "z_beyond": 0.07892730889661158,
+      "rest": 0.12506497428390556
+     },
+     "state": {
+      "x": 0.06481109297777671,
+      "y": 0.058386797925072946,
+      "z_beyond": 0.774200674238366,
+      "rest": 0.10260146140147768
+     },
+     "units_by_answer_alone": 0.08566204308172735,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.7828666870700205
+    }
+   ]
+  },
+  {
+   "step": 13000,
+   "acc_train": 1.0,
+   "acc_held": 0.9997852444648743,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4466903566332169,
+      "y": 0.4876336749880944,
+      "z_beyond": 0.00813000408285676,
+      "rest": 0.0575459717963211
+     },
+     "state": {
+      "x": 0.36977250546164453,
+      "y": 0.542838760649592,
+      "z_beyond": 0.012511854354748903,
+      "rest": 0.07487684373630307
+     },
+     "units_by_answer_alone": 0.10826696494962004,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.04945438546406577
+    },
+    {
+     "units": {
+      "x": 0.4299419695532043,
+      "y": 0.4411751511664298,
+      "z_beyond": 0.051418101355110817,
+      "rest": 0.07746482797656752
+     },
+     "state": {
+      "x": 0.050507119124058246,
+      "y": 0.03989111601337822,
+      "z_beyond": 0.8239178731125247,
+      "rest": 0.08568391782707088
+     },
+     "units_by_answer_alone": 0.05889524541758173,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.8330947795581028
+    }
+   ]
+  }
+ ],
+ "kv_swiglu_s2": [
+  {
+   "step": 0,
+   "acc_train": 0.010309278033673763,
+   "acc_held": 0.010309278033673763,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4785470140176345,
+      "y": 0.5158811546365032,
+      "z_beyond": 9.165394038701241e-05,
+      "rest": 0.005480178783359775
+     },
+     "state": {
+      "x": 0.48011270542684836,
+      "y": 0.5162324547968659,
+      "z_beyond": 5.237808138237093e-05,
+      "rest": 0.003602483580983872
+     },
+     "units_by_answer_alone": 0.0040444247479205645,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.004333620006745381
+    },
+    {
+     "units": {
+      "x": 0.5336986662607026,
+      "y": 0.4569437857244266,
+      "z_beyond": 0.00012902421393864072,
+      "rest": 0.009228445993660263
+     },
+     "state": {
+      "x": 0.5385699170625654,
+      "y": 0.4567815229777026,
+      "z_beyond": 8.022107343843492e-05,
+      "rest": 0.00456832910740667
+     },
+     "units_by_answer_alone": 0.004735246428160715,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.00488338136545279
+    }
+   ]
+  },
+  {
+   "step": 2500,
+   "acc_train": 1.0,
+   "acc_held": 0.04231099784374237,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4089240884868257,
+      "y": 0.39422355297582773,
+      "z_beyond": 0.005653264722845063,
+      "rest": 0.19119910524048342
+     },
+     "state": {
+      "x": 0.3960091332997994,
+      "y": 0.3796933158029283,
+      "z_beyond": 0.006389422722943999,
+      "rest": 0.21790811117769124
+     },
+     "units_by_answer_alone": 0.0066956536578173,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.009769879527907845
+    },
+    {
+     "units": {
+      "x": 0.2839489870355755,
+      "y": 0.25284489978763164,
+      "z_beyond": 0.03437312997994599,
+      "rest": 0.4288329359904339
+     },
+     "state": {
+      "x": 0.10264259585332408,
+      "y": 0.0939675398967904,
+      "z_beyond": 0.23270754263649146,
+      "rest": 0.570682259680443
+     },
+     "units_by_answer_alone": 0.04092077718631369,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.24105477282231413
+    }
+   ]
+  },
+  {
+   "step": 5000,
+   "acc_train": 1.0,
+   "acc_held": 0.1748281717300415,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.4216402250449639,
+      "y": 0.41494602480892323,
+      "z_beyond": 0.005719857414114522,
+      "rest": 0.15769391048431172
+     },
+     "state": {
+      "x": 0.4143712385691074,
+      "y": 0.4066770901767982,
+      "z_beyond": 0.006280931966286556,
+      "rest": 0.17267073602817876
+     },
+     "units_by_answer_alone": 0.01961226688327314,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.015489362980643377
+    },
+    {
+     "units": {
+      "x": 0.35628845246394214,
+      "y": 0.32515733581092265,
+      "z_beyond": 0.029922335699400882,
+      "rest": 0.2886318570500369
+     },
+     "state": {
+      "x": 0.09326115812280329,
+      "y": 0.08115226362443922,
+      "z_beyond": 0.3530318792966635,
+      "rest": 0.4725547096663036
+     },
+     "units_by_answer_alone": 0.03580567118384613,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.3627608118348431
+    }
+   ]
+  },
+  {
+   "step": 7500,
+   "acc_train": 1.0,
+   "acc_held": 0.9924828410148621,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.3747927214913141,
+      "y": 0.5128567897058471,
+      "z_beyond": 0.006699509133144257,
+      "rest": 0.10565098518940363
+     },
+     "state": {
+      "x": 0.38790447722572063,
+      "y": 0.5035924931218324,
+      "z_beyond": 0.009703799501493436,
+      "rest": 0.09879924528494533
+     },
+     "units_by_answer_alone": 0.014512186866507088,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.017178299880049215
+    },
+    {
+     "units": {
+      "x": 0.4114049963633099,
+      "y": 0.36143091056353044,
+      "z_beyond": 0.08625545568187233,
+      "rest": 0.14090859502338612
+     },
+     "state": {
+      "x": 0.06536374722150064,
+      "y": 0.05821538201358471,
+      "z_beyond": 0.7767317533652791,
+      "rest": 0.09968907816767203
+     },
+     "units_by_answer_alone": 0.09046256156176607,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.7867114003913697
+    }
+   ]
+  },
+  {
+   "step": 8000,
+   "acc_train": 1.0,
+   "acc_held": 0.999355673789978,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.3621137853344227,
+      "y": 0.547614620890994,
+      "z_beyond": 0.005819613561282536,
+      "rest": 0.08445194819965572
+     },
+     "state": {
+      "x": 0.35002576025544907,
+      "y": 0.5593427064952514,
+      "z_beyond": 0.009282607991470486,
+      "rest": 0.08134889953004282
+     },
+     "units_by_answer_alone": 0.014486408082652705,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.017695559817088074
+    },
+    {
+     "units": {
+      "x": 0.42773356224189485,
+      "y": 0.3775406209732115,
+      "z_beyond": 0.08054534530609342,
+      "rest": 0.11418043976290099
+     },
+     "state": {
+      "x": 0.05931091473661313,
+      "y": 0.05374036150578651,
+      "z_beyond": 0.811959115013495,
+      "rest": 0.0749896642742138
+     },
+     "units_by_answer_alone": 0.08551122355688329,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.8214484671010933
+    }
+   ]
+  }
+ ],
+ "kv_swiglu_s3": [
+  {
+   "step": 0,
+   "acc_train": 0.011168384924530983,
+   "acc_held": 0.00923539511859417,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.5039476782006956,
+      "y": 0.48422809655221866,
+      "z_beyond": 0.0001853270242845633,
+      "rest": 0.011638958060276502
+     },
+     "state": {
+      "x": 0.5053420274919008,
+      "y": 0.48564675053149675,
+      "z_beyond": 0.00011749341951061408,
+      "rest": 0.008893728557091817
+     },
+     "units_by_answer_alone": 0.002388326329029477,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.0026782989537502545
+    },
+    {
+     "units": {
+      "x": 0.5177343705486872,
+      "y": 0.47139163350361635,
+      "z_beyond": 0.0001908158685553122,
+      "rest": 0.01068315248870973
+     },
+     "state": {
+      "x": 0.5189809266312396,
+      "y": 0.4743737745581321,
+      "z_beyond": 9.938034415032384e-05,
+      "rest": 0.006545954322396985
+     },
+     "units_by_answer_alone": 0.004603996924581053,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.004401230659330898
+    }
+   ]
+  },
+  {
+   "step": 2500,
+   "acc_train": 1.0,
+   "acc_held": 0.023625429719686508,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.35261197497644875,
+      "y": 0.297693802987403,
+      "z_beyond": 0.007296053406578322,
+      "rest": 0.3423981702230046
+     },
+     "state": {
+      "x": 0.4057454062877491,
+      "y": 0.34441956121058037,
+      "z_beyond": 0.006240432185074439,
+      "rest": 0.24359460264490257
+     },
+     "units_by_answer_alone": 0.04569247427189223,
+     "weight_of_units_answer_0_5": 0.018642043694853783,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 3,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.0359371707751711
+    },
+    {
+     "units": {
+      "x": 0.24668509882546585,
+      "y": 0.26767384208863665,
+      "z_beyond": 0.032608273910392976,
+      "rest": 0.45303274291674267
+     },
+     "state": {
+      "x": 0.1141301653835494,
+      "y": 0.1144126636165577,
+      "z_beyond": 0.14554294599366852,
+      "rest": 0.6259142170899825
+     },
+     "units_by_answer_alone": 0.038434049291467876,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.154947227719736
+    }
+   ]
+  },
+  {
+   "step": 5000,
+   "acc_train": 1.0,
+   "acc_held": 0.038445018231868744,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.3752944284986177,
+      "y": 0.3032207114597131,
+      "z_beyond": 0.007941264657907142,
+      "rest": 0.31354353477503516
+     },
+     "state": {
+      "x": 0.4368161531669039,
+      "y": 0.3429774495786453,
+      "z_beyond": 0.00615557406754361,
+      "rest": 0.21405074565430288
+     },
+     "units_by_answer_alone": 0.02831330337041068,
+     "weight_of_units_answer_0_5": 0.006246645003557205,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 4,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.039779983179980674
+    },
+    {
+     "units": {
+      "x": 0.2786322826584719,
+      "y": 0.2988034262372806,
+      "z_beyond": 0.04195575764317804,
+      "rest": 0.38060854847864595
+     },
+     "state": {
+      "x": 0.1230657771679296,
+      "y": 0.12160092725316358,
+      "z_beyond": 0.1907747812442101,
+      "rest": 0.564558457989681
+     },
+     "units_by_answer_alone": 0.04646706928318386,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.20068011039476508
+    }
+   ]
+  },
+  {
+   "step": 7500,
+   "acc_train": 1.0,
+   "acc_held": 0.2542955279350281,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.41460230270910514,
+      "y": 0.3854054703221823,
+      "z_beyond": 0.006651460832429095,
+      "rest": 0.19334082083238535
+     },
+     "state": {
+      "x": 0.43998066323919793,
+      "y": 0.3787797607203497,
+      "z_beyond": 0.007028856062072191,
+      "rest": 0.17421072358725512
+     },
+     "units_by_answer_alone": 0.02615741724371865,
+     "weight_of_units_answer_0_5": 0.00018806909793056548,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 1,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.03735892797610475
+    },
+    {
+     "units": {
+      "x": 0.32313799753027594,
+      "y": 0.36265301378892345,
+      "z_beyond": 0.05030793074564595,
+      "rest": 0.26390110514156767
+     },
+     "state": {
+      "x": 0.11510032447714862,
+      "y": 0.1102549876384945,
+      "z_beyond": 0.34663602101769025,
+      "rest": 0.42800871948639213
+     },
+     "units_by_answer_alone": 0.05459284404342357,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.3567772347774635
+    }
+   ]
+  },
+  {
+   "step": 9500,
+   "acc_train": 1.0,
+   "acc_held": 0.9995704293251038,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.31923216298831386,
+      "y": 0.6137802039396199,
+      "z_beyond": 0.006318171884143548,
+      "rest": 0.06066940400358544
+     },
+     "state": {
+      "x": 0.37170991250314334,
+      "y": 0.5582557569378694,
+      "z_beyond": 0.00801726879902719,
+      "rest": 0.06201697503054523
+     },
+     "units_by_answer_alone": 0.03527913455938024,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.04437486859398144
+    },
+    {
+     "units": {
+      "x": 0.3834057042124044,
+      "y": 0.4747313967523631,
+      "z_beyond": 0.0559227521573835,
+      "rest": 0.08594011273905588
+     },
+     "state": {
+      "x": 0.0584705380051462,
+      "y": 0.051157202135705654,
+      "z_beyond": 0.7845132440286549,
+      "rest": 0.10585905587736401
+     },
+     "units_by_answer_alone": 0.06257218815419473,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.7939729736040755
+    }
+   ]
+  },
+  {
+   "step": 10000,
+   "acc_train": 1.0,
+   "acc_held": 1.0,
+   "blocks": [
+    {
+     "units": {
+      "x": 0.2914174148085851,
+      "y": 0.6562194343002459,
+      "z_beyond": 0.006787942058268946,
+      "rest": 0.04557524933932855
+     },
+     "state": {
+      "x": 0.3579775889884194,
+      "y": 0.5834798659273431,
+      "z_beyond": 0.009308528434791819,
+      "rest": 0.04923406699907231
+     },
+     "units_by_answer_alone": 0.05207287761165234,
+     "weight_of_units_answer_0_5": 2.331659197807312e-05,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 1,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.04645745149001567
+    },
+    {
+     "units": {
+      "x": 0.38735840461906335,
+      "y": 0.49016987128384093,
+      "z_beyond": 0.06100948204582334,
+      "rest": 0.061462184076442154
+     },
+     "state": {
+      "x": 0.04484145072682287,
+      "y": 0.03772986021194216,
+      "z_beyond": 0.8558986042020214,
+      "rest": 0.06153000953850041
+     },
+     "units_by_answer_alone": 0.06768710552531607,
+     "weight_of_units_answer_0_5": 0.0,
+     "weight_of_units_answer_0_9": 0.0,
+     "number_of_units_answer_0_5": 0,
+     "number_of_units": 341,
+     "state_by_answer_alone": 0.865383086731836
+    }
+   ]
+  }
+ ]
+}

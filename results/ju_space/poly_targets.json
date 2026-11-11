@@ -1,0 +1,197 @@
+{
+ "targets": {
+  "deg2": {
+   "gradient_angle": 22.507851035168898,
+   "gradient_slope": 0.41437410791549334,
+   "gradient_share": 0.9714154837227473,
+   "mean_outer_product": [
+    [
+     14.994613557239182,
+     6.000230488779077
+    ],
+    [
+     6.000230488779077,
+     3.0007282982583723
+    ]
+   ],
+   "share_of_gradient_energy_on_b": 0.05264448555899952,
+   "bucket_best_angle": 24.0,
+   "bucket_best_slope": 0.4452286853085362,
+   "bucket_best_r2": 0.8199576103050891,
+   "bucket_without_b_best_angle": 24.0,
+   "bucket_without_b_best_r2": 0.9714477539856112,
+   "bucket_r2_at_gradient_direction": 0.8189039063520681,
+   "bucket_r2_at_named": {
+    "1/2": 0.8155574127169987
+   },
+   "bucket_r2_at_p_alone": 0.3822084266395297,
+   "bucket_r2_at_q_alone": -0.0048908766613176
+  },
+  "deg3": {
+   "gradient_angle": 14.605598152925694,
+   "gradient_slope": 0.26058482754682943,
+   "gradient_share": 0.987299451519053,
+   "mean_outer_product": [
+    [
+     200.82709064216036,
+     51.614205458399205
+    ],
+    [
+     51.614205458399205,
+     16.20632221026114
+    ]
+   ],
+   "share_of_gradient_energy_on_b": 0.00458645299781122,
+   "bucket_best_angle": 16.0,
+   "bucket_best_slope": 0.2867453857588079,
+   "bucket_best_r2": 0.9695875948038682,
+   "bucket_without_b_best_angle": 16.0,
+   "bucket_without_b_best_r2": 0.9840326426035597,
+   "bucket_r2_at_gradient_direction": 0.9684177856846803,
+   "bucket_r2_at_named": {
+    "1/3": 0.9663711845847986
+   },
+   "bucket_r2_at_p_alone": 0.7374951512606367,
+   "bucket_r2_at_q_alone": 0.13874871629228858
+  },
+  "deg4": {
+   "gradient_angle": 11.304192747846656,
+   "gradient_slope": 0.19989581788229727,
+   "gradient_share": 0.9905524128760563,
+   "mean_outer_product": [
+    [
+     2105.9234236499296,
+     416.79140297214593
+    ],
+    [
+     416.79140297214593,
+     104.19514612562767
+    ]
+   ],
+   "share_of_gradient_energy_on_b": 0.0004522597809404253,
+   "bucket_best_angle": 13.0,
+   "bucket_best_slope": 0.23086819112556312,
+   "bucket_best_r2": 0.9617446458883382,
+   "bucket_without_b_best_angle": 13.0,
+   "bucket_without_b_best_r2": 0.9655248174029231,
+   "bucket_r2_at_gradient_direction": 0.957579852508648,
+   "bucket_r2_at_named": {
+    "1/4": 0.9613508314691965
+   },
+   "bucket_r2_at_p_alone": 0.6063423049797898,
+   "bucket_r2_at_q_alone": -0.0032907925996055187
+  },
+  "prod": {
+   "gradient_angle": -74.63018864285256,
+   "gradient_slope": -3.6379629328087595,
+   "gradient_share": 0.5003999749410101,
+   "mean_outer_product": [
+    [
+     2.9966047951563612,
+     -0.0012261077376667805
+    ],
+    [
+     -0.0012261077376667805,
+     3.0007282982583723
+    ]
+   ],
+   "share_of_gradient_energy_on_b": 0.14291159026588443,
+   "bucket_best_angle": 45.0,
+   "bucket_best_slope": 0.9999999999999999,
+   "bucket_best_r2": 0.5468147398031244,
+   "bucket_without_b_best_angle": 45.0,
+   "bucket_without_b_best_r2": 0.7296701288032978,
+   "bucket_r2_at_gradient_direction": 0.24689548697676314,
+   "bucket_r2_at_named": {
+    "bisector +45": 0.5468147398031244,
+    "bisector -45": 0.532258135053669
+   },
+   "bucket_r2_at_p_alone": -0.00394791346709078,
+   "bucket_r2_at_q_alone": -0.006458350991837891
+  },
+  "swiglu": {
+   "gradient_angle": -0.24476190600677228,
+   "gradient_slope": -0.004271927129637879,
+   "gradient_share": 0.5433654023847387,
+   "mean_outer_product": [
+    [
+     1.4576973655535346,
+     -0.0009939532047461088
+    ],
+    [
+     -0.0009939532047461088,
+     1.2250306941491809
+    ]
+   ],
+   "share_of_gradient_energy_on_b": 0.2715378338526369,
+   "bucket_best_angle": 44.0,
+   "bucket_best_slope": 0.9656887748070739,
+   "bucket_best_r2": 0.36365392936669705,
+   "bucket_without_b_best_angle": 41.0,
+   "bucket_without_b_best_r2": 0.6443386751402826,
+   "bucket_r2_at_gradient_direction": -0.004409338478729102,
+   "bucket_r2_at_named": {
+    "bisector +45": 0.3627668190956116,
+    "bisector -45": 0.32214095959751243
+   },
+   "bucket_r2_at_p_alone": -0.005573799839078797,
+   "bucket_r2_at_q_alone": 0.1183790983818025
+  },
+  "deg2w": {
+   "gradient_angle": 14.88286221781172,
+   "gradient_slope": 0.2657591649262125,
+   "gradient_share": 0.9478715797959306,
+   "mean_outer_product": [
+    [
+     23.9795235117576,
+     5.999004381041411
+    ],
+    [
+     5.999004381041411,
+     3.0007282982583723
+    ]
+   ],
+   "share_of_gradient_energy_on_b": 0.03573949251028664,
+   "bucket_best_angle": 19.0,
+   "bucket_best_slope": 0.34432761328966527,
+   "bucket_best_r2": 0.8533260970142271,
+   "bucket_without_b_best_angle": 19.0,
+   "bucket_without_b_best_r2": 0.913405366096269,
+   "bucket_r2_at_gradient_direction": 0.8339004147948863,
+   "bucket_r2_at_named": {
+    "1/2": 0.7986139350487054
+   },
+   "bucket_r2_at_p_alone": 0.16351286292084632,
+   "bucket_r2_at_q_alone": -0.004227030075501181
+  },
+  "deg3w": {
+   "gradient_angle": 9.715576160593002,
+   "gradient_slope": 0.1712129417478759,
+   "gradient_share": 0.9773227895276491,
+   "mean_outer_product": [
+    [
+     308.80023603255233,
+     51.60871598775663
+    ],
+    [
+     51.60871598775663,
+     16.20632221026114
+    ]
+   ],
+   "share_of_gradient_energy_on_b": 0.0030674229542805346,
+   "bucket_best_angle": 13.0,
+   "bucket_best_slope": 0.23086819112556312,
+   "bucket_best_r2": 0.925783922672676,
+   "bucket_without_b_best_angle": 13.0,
+   "bucket_without_b_best_r2": 0.9326067223265622,
+   "bucket_r2_at_gradient_direction": 0.9067718349520083,
+   "bucket_r2_at_named": {
+    "1/3": 0.9016514457764802
+   },
+   "bucket_r2_at_p_alone": 0.42858042101666594,
+   "bucket_r2_at_q_alone": 0.3153224696978054
+  }
+ },
+ "nets": [],
+ "depth": null
+}

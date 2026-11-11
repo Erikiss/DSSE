@@ -2,11 +2,11 @@
 reordered while it runs; earlier lines start first). A job is one line:
     <name> grok <mode> <seed> <max_steps> <weight_decay> [ENV=value ...]      a training run of kv_grok.py
     <name> py <script.py> [ENV=value ...] <arguments ...>                     any other script of this directory
-A job is started on a core as soon as no kv_*.py process is pinned to that core; a job whose log file exists is skipped.
+A job is started on a core as soon as no script of this directory is pinned to that core; a job whose log file exists is skipped.
 Usage: python kv_queue.py <jobs.txt> <out_dir> <log_dir> [cores, default 0,1,2,3]      env: RUNCWD (working directory of the jobs)"""
 import os, re, subprocess, sys, time
 
-jobs, out, logs = sys.argv[1], sys.argv[2], sys.argv[3]; cores = [int(c) for c in (sys.argv[4] if len(sys.argv) > 4 else "0,1,2,3").split(",")]; here = os.path.dirname(os.path.abspath(__file__)); mine = {}; isenv = lambda t: re.match(r"^[A-Z_]+=", t)
+jobs, out, logs = sys.argv[1], sys.argv[2], sys.argv[3]; cores = [int(c) for c in (sys.argv[4] if len(sys.argv) > 4 else "0,1,2,3").split(",")]; here = os.path.dirname(os.path.abspath(__file__)); mine = {}; isenv = lambda t: re.match(r"^[A-Z_][A-Z0-9_]*=", t)
 
 
 def busy():
@@ -15,7 +15,7 @@ def busy():
         if not pid.isdigit(): continue
         try:
             cmd = open(f"/proc/{pid}/cmdline", "rb").read().decode(errors="ignore")
-            if "/kv_" in cmd and "python" in cmd and "kv_queue.py" not in cmd:
+            if here in cmd and "python" in cmd and "kv_queue.py" not in cmd:
                 aff = os.sched_getaffinity(int(pid))
                 if len(aff) == 1: b |= aff
         except Exception: pass

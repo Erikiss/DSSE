@@ -29,6 +29,17 @@ eigenem Code nachgerechnet und die Befehle unter „Nachrechnen" gegen die Skrip
 eingearbeitet (zwei davon betrafen falsche Aussagen in Kurzfassung und Kopf). Was dabei geändert wurde, hat niemand mehr
 gegengelesen. Alle sieben Berichte und eine Notiz zu diesen letzten Änderungen stehen in `review_kv.json`.
 
+Abschnitt 9 ist ein Nachtrag vom 11. November zur Aktivierungsfunktion: ob sie Ungrokking bewirkt, ob ein Netz seine
+eigenen Gates abbildet, wie quadratisch SwiGLU ist und was Halbieren und Dritteln damit zu tun haben, am Kleinversuch
+und an Qwen3-1.7B. Plan und Plankritik entstanden, bevor ein Lauf ausgewertet war (`act_plan_review.json`); die
+Literaturprüfung (`act_literature.json`) wurde erst fertig, als die ersten Läufe schon ausgewertet waren, und aus ihr
+kam nachträglich der Verlust in float64. Die Entscheidungsregeln des Prüfers sind angewandt (`act_verdicts.json`; die
+Abweichungen nennt Abschnitt 9), die Mathematik hat ein weiterer Prüfer mit eigenem Code nachgerechnet
+(`act_math_review.json`). Den fertigen Entwurf haben drei Prüfer gelesen: Zwei haben die Zahlen gegen die Dateien
+abgeglichen, einer hat die Deutung gegen die Regeln geprüft, und jeden ihrer Befunde hat ein eigener Gegenprüfer
+nachgerechnet. 61 der 68 Befunde hielten ganz oder teilweise und sind eingearbeitet; unter anderem ist die Folgerung zu
+V1 enger gefasst und der allmähliche Verlust vor den Einbrüchen ergänzt. Alle Berichte stehen in `review_act.json`.
+
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
 (Chat-Vorlage, Denken aus). Die 18 DSSE-Kategorien sind an dieser Stelle 18 Familien von Testfragen (Thema, Ton, Form),
 kein gezeigtes Verhalten. Aussagen über Nebenwirkungen des Fine-Tunings folgen daraus nicht; dafür braucht es denselben
@@ -87,6 +98,21 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    nicht, und die Verschiebung des Cache gleicht in ihrer groben Gestalt der eines Netzes, das einfach weitertrainiert.
    SwiGLU statt ReLU bringt hier keinen klaren Vorteil. Zur Frage, ob ein innen geordnetes Netz eher die eigenen
    Gewichte ändert, sagt nichts davon etwas.
+10. **Aktivierungsfunktion, SwiGLU als quadratische Einheit, Dritteln** (Nachtrag, Abschnitt 9; Kleinversuch und
+   Qwen3-1.7B). Ob Ungrokking eintritt, entscheidet die Art der Aktivierungsfunktion im Kleinversuch nicht: Mit ReLU,
+   SwiGLU und einer rein bilinearen Einheit ohne Schwelle geht die Verallgemeinerung mit 5 % der Aufgaben in allen
+   Netzen verloren (Endstand 0,02 bis 0,09 richtig), mit eingefrorenen ReLU-Masken ebenso (0,09 bis 0,11). Ob es
+   überhaupt eine MLP-Nichtlinearität braucht, bleibt offen. Der größte Teil des Verlusts kommt mit Einbrüchen des
+   Trainings, die sich mit keiner geprüften Einstellung (größeres ε, AMSGrad, kleinere Lernrate, Verlust in float64,
+   kleine Stapel) abstellen ließen; ein kleinerer Teil geht schon vorher allmählich verloren. Ob Ungrokking die
+   Einbrüche braucht, bleibt deshalb offen. Die eigenen Gate-Werte sind aus dem Endzustand nicht besser lesbar als
+   zufällige Gates auf denselben Eingängen; ob ein Netz sich selbst abbildet, ist so nicht prüfbar. SwiGLU ist in
+   Qwen3-1.7B nur in Block 0 ungefähr quadratisch, und das knapp; im Kleinversuch hängt die Rechnung im zweiten Block an
+   einem quadratischen Glied, mit ReLU genauso. Die Richtung x + c·a aus dem Beitrag über kubische Polynome folgt der
+   Zielfunktion und wandert mit der Verteilung der Eingaben (kein einziges von 15 Netzen bleibt bei Cardanos 1/3, wenn
+   sich beides trennen lässt; fünf Netze in der Größe des Beitrags wandern ebenfalls mit, liegen aber 0,02 bis 0,08
+   darüber); für ein Produkt gibt es keine solche Richtung. Halbieren gehört rechnerisch zu Produkten aus zwei Faktoren,
+   Dritteln zu Produkten aus drei; über trainierte Netze folgt daraus nichts Prüfbares.
 
 ## Material
 
@@ -1477,12 +1503,13 @@ Community, 16. Juli 2026, „Interpreting How Neural Nets Regress Cubic Polynomi
   schneller, einer deutlich langsamer; der Unterschied ist nicht größer als die Streuung zwischen den Startwerten, und
   die Startgewichte sind nicht dieselben (8.2). Das Bild im Cache ist dasselbe wie mit ReLU: A 0,08 bis 0,17 in
   Auswendig-Ständen und 0,70 bis 0,98 in verallgemeinernden, Ordnung 0,17 bis 0,25 und 0,70 bis 0,81. Ein Vorteil der
-  quadratischen Wechselwirkung zeigt sich in dieser Aufgabe nicht. Eine rein bilineare Einheit ohne SiLU ist im Skript
-  vorhanden, aber nicht gelaufen.
-* **Der Beitrag über kubische Polynome.** Ein kleines Netz (vier Schichten zu 15 Neuronen; im Text ist die
-  Aktivierungsfunktion nicht genannt, der Code des Notebooks lag nicht vor) lernt y = x³ + a·x² + x + b aus (x, a, b),
-  alle zwischen −3 und 3. Ein SAE (64 Einheiten, 4 aktiv) auf der letzten Schicht findet neun Einheiten, die nur von t =
-  x + c·a abhängen, mit c zwischen 0,175 und 0,35 (Median 0,30), unabhängig von b. Der Autor stellt das neben Cardanos
+  quadratischen Wechselwirkung zeigt sich in dieser Aufgabe nicht. Eine rein bilineare Einheit ohne SiLU ist im Skript vorhanden, aber nicht gelaufen (in Abschnitt 9 nachgeholt).
+* **Der Beitrag über kubische Polynome.** Ein MLP mit vier verdeckten Schichten (64, 64, 64 und 15 Neuronen, ReLU; nach
+  9.1 berichtigt: hier stand zuerst „vier Schichten zu 15 Neuronen", die Aktivierungsfunktion sei nicht genannt und der
+  Code liege nicht vor) lernt y = x³ + a·x² + x + b aus (x, a, b), alle zwischen −3 und 3. In einem SAE (64 Einheiten, 4
+  aktiv) auf der letzten verdeckten Schicht wählt der Autor nach Augenschein neun Einheiten aus, die vor allem von t = x
+  + c·a abhängen (sein Test erklärt 88 bis 98,5 % ihrer Streuung damit), mit c zwischen 0,175 und 0,35 (Median 0,30);
+  dass sie nicht von b abhängen, beruht auf dem Vergleich zweier Bilder. Der Autor stellt das neben Cardanos
   Substitution t = x + a/3 und lässt selbst offen, ob der Eingriff das bestätigt oder widerlegt: Verstärkt man die
   Einheiten, wird die Kurve senkrecht gestreckt, nicht waagrecht verschoben. Ein Netz, ein SAE.
 * **Gegenprobe** (`cubic_direction.py`). Die Zielfunktion selbst ändert sich in der (x, a)-Ebene entlang x + c·a mit c =
@@ -1493,8 +1520,9 @@ Community, 16. Juli 2026, „Interpreting How Neural Nets Regress Cubic Polynomi
   Test ist schon die Zielfunktion zu 97 % Funktion von x + c·a allein, am besten mit c = 0,275 (ohne b: 98 %, c = 0,30);
   zwischen c = 0,25 und 0,325 ändert sich das kaum (0,967 und 0,967), mit c = 0 sind es 74 %. Eine Einheit, die nur der
   Höhe der Ausgabe folgt, zeigt also dieses Band und hängt kaum von b ab (b trägt 0,5 % der Empfindlichkeit der
-  Zielfunktion). Dazu passt der Eingriff des Beitrags: Verstärken streckt die Kurve senkrecht. In 15 eigenen Netzen
-  derselben Größe (je fünf Startwerte mit ReLU, tanh und SiLU, ohne SAE, direkt an den Neuronen der letzten Schicht):
+  Zielfunktion). Dazu passt der Eingriff des Beitrags: Verstärken streckt die Kurve senkrecht. In 15 eigenen, kleineren
+  Netzen (15-15-15-15; das Netz des Beitrags ist größer, siehe 9.5; je fünf Startwerte mit ReLU, tanh und SiLU, ohne
+  SAE, direkt an den Neuronen der letzten Schicht):
 
   | | ReLU | tanh | SiLU |
   |---|---|---|---|
@@ -1572,6 +1600,461 @@ mit Störung. A, L und die Duldsamkeit der Arme bei den Startwerten 1 bis 3, der
 SwiGLU-Arms sind nicht unabhängig nachgerechnet. Die Deutung wurde zweimal gegengelesen und danach jeweils an vielen
 Stellen zurückgenommen; die Änderungen nach dem zweiten Durchgang hat niemand mehr gegengelesen (`review_kv.json`).
 
+## 9 Aktivierungsfunktion, Ungrokking, SwiGLU als quadratische Einheit, Halbieren und Dritteln (Nachtrag vom 11. November 2026)
+
+Anlass ist eine Erweiterung der Kette aus Abschnitt 8:
+
+* **V1** Was Ungrokking bewirkt, ist letztlich die Aktivierungsfunktion. Der Satz lässt zwei Lesarten zu: Die
+  Aktivierungsfunktion ist die Ursache, oder sie ist der Ort, an dem Ungrokking wirkt.
+* **V2** Überwacht ein Netz sich selbst, also seine eigenen Aktivierungsfunktionen, hat es vielleicht auch eine
+  Repräsentation von SwiGLU.
+* **V3** Wenn SwiGLU ungefähr quadratisch ist, gelten dafür die Beobachtungen des Beitrags über kubische Polynome (8.7).
+* **V4** Das lässt sich mathematisch mit Dreiteilung und Dreiteilenden weiterdenken (Pehlivan und Williams, Arhimede
+  Mathematical Journal 13/1, 2026).
+
+Der Versuchsplan wurde geschrieben, bevor ein Lauf ausgewertet war; nur die Grundläufe mit rein bilinearer Einheit
+liefen da schon. Ein Prüfer hat ihn zerlegt (`act_plan_review.json`, darin auch der ursprüngliche Plan). Er hat beide
+Lesarten von V1 eingefordert, gezeigt, dass beim Tausch der Schaltmuster mit ReLU schon nach der Bedingung des Plans
+(beide Mischungen mit der Driftkontrolle bei mindestens 90 %) jeder Schritt nach dem ersten Einbruch der Driftkontrolle
+unlesbar ist, die Bedingung verschärft, ein Vergleichsnetz mit gleichmäßig verteiltem Schaden verlangt, die Prüfung mit
+beruhigtem Optimierer an den Anfang gestellt, einen Lauf mit eingefrorenem Schaltmuster ergänzt und den Trainingsarm mit
+Selbstüberwachung gestrichen (er prüft V2 nicht und war nicht sauber kontrollierbar). Seine Entscheidungsregeln sind
+hier angewandt (`act_verdicts.py`, `act_verdicts.json`). Abweichend vom Plan endeten die Läufe mit kleinerer Lernrate
+nach rund 5.000 Schritten (der 5-%-Lauf mit ε = 10⁻⁸ nach 13.350) statt nach 13.333 und 26.667 und sind wie eine
+Vorprüfung gelesen; ihre Driftkontrollen hatten da schon Ereignisse, das Ergebnis bleibt damit nach der Regel
+unentschieden. Ihre Ereignisse sind aus der Aufzeichnung von Stapelverlust und Gewichtsnorm gezählt, ohne die
+Genauigkeit auf den Trainingsaufgaben. Der vorgesehene Prüflauf mit einer zweiten Ziehung der 233 Aufgaben je
+Architektur (außerhalb der Regel) ist nicht gelaufen. Zwei Prüfer haben die Literatur gesichtet (`act_literature.json`),
+ein dritter hat die Mathematik mit eigenem Code nachgerechnet (`act_math_review.json`). Alles gilt für das kleine Netz
+aus Abschnitt 8, in 9.5 und 9.6 zum Teil für kleine Netze, die Polynome lernen, und, wo genannt, für Qwen3-1.7B. Über
+Ungrokking in Sprachmodellen sagt der Kleinversuch nichts; Qwen3-1.7B wurde nicht weitertrainiert.
+
+### 9.1 Was die Literatur zu den Annahmen sagt
+
+* **Ungrokking hängt in der Literatur an der Größe der Trainingsmenge, nicht an der Aktivierungsfunktion.** Varma et al.
+  (arXiv 2309.02390) erklären es mit der Effizienz der Schaltungen unter Gewichtsabnahme: Unterhalb einer kritischen
+  Größe der Trainingsmenge ist die auswendig lernende Lösung die billigere. Die Aktivierungsfunktion wird dort nie
+  variiert. Eine Arbeit, die Ungrokking mit der Aktivierungsfunktion verbindet, fand sich nicht. Am nächsten liegen: Mit
+  der ungeraden Aktivierung x³ fiel die Genauigkeit eines MLP nach einem Höchststand wieder ab (Einzelläufe, arXiv
+  2411.05353); ein für Addition modulo p trainiertes ReLU-Netz rechnet unverändert, wenn man ReLU nachträglich durch |x|
+  oder x² ersetzt, mit x oder x³ nicht mehr, nutzt also nur den geraden Teil der Aktivierung (arXiv 2602.16849).
+  Verzögertes Verallgemeinern gibt es auch ganz ohne verdeckte Nichtlinearität (lineare Schätzer, Kernmethoden).
+* **Die Einbrüche des Trainings (8.6) sind ein bekanntes Phänomen**, beschrieben als „Slingshot" in fast genau diesem
+  Aufbau (Thilak et al., arXiv 2206.04817: zwei Blöcke, Division modulo 97, Adam mit Lernrate 10⁻³, β = 0,9 / 0,98, ε =
+  10⁻⁸, Stapel 512); mit Gewichtsabnahme verschwinden dort die Slingshots selbst, das Training bleibt nach Anhang C.1
+  aber instabil (nach Abschnitt 3.3 nicht). Deutliche Slingshots trotz Gewichtsabnahme 1 sahen Nanda et al. in
+  zweischichtigen Transformern (arXiv 2301.05217, Anhang D.2). Die Ursache ist umstritten: eine Krümmungsgrenze, die von
+  ε und der Lernrate abhängt (Thilak et al.), ein zweites Moment von Adam, das sich vom Gradienten löst (arXiv
+  2506.04805), der Rand der Stabilität (arXiv 2207.14484) oder Rundung in float32 in der Kreuzentropie (arXiv
+  2605.06152; dort ohne Gewichtsabnahme durch einen Verlust in float64 beseitigt).
+* **SwiGLU ist zur Hälfte exakt quadratisch.** Weil silu(g) − silu(−g) = g, ist der Teil einer SwiGLU-Einheit
+  silu(g)·u, der sich beim Vorzeichenwechsel der Eingabe nicht ändert, genau g·u/2, ein Polynom vom Grad 2. Der Rest,
+  (g/2)·tanh(g/2)·u, ist nahe g = 0 etwa g²·u/4 (Grad 3) und weit davon etwa |g|·u/2. Als Architektur kommt eine rein
+  bilineare Einheit bis auf etwa 0,01 nats an SwiGLU heran (arXiv 2002.05202, 2410.08417). Wie viel eines trainierten
+  SwiGLU-MLP ein Polynom vom Grad 2 tatsächlich erfasst, hat nach dieser Suche niemand gemessen.
+* **Dass ein Netz seine eigene Aktivierungsfunktion oder den Zustand seiner eigenen Gates repräsentiert, zeigt keine
+  Arbeit.** Die Studien zur Selbstbeobachtung betreffen Richtungen im Residualstrom oder Verhalten (arXiv 2505.13763,
+  2410.13787, Lindsey 2025), und selbst diese sind 2026 bestritten worden (arXiv 2605.26242). Das Selbstmodellieren von
+  Premakumar et al. (arXiv 2407.10188) sagt eigene Aktivierungen voraus, ohne das Ziel vom Gradienten abzutrennen, und
+  hat als Kontrolle nur ein Netz ohne Selbstmodell.
+* **Der Beitrag über kubische Polynome benutzt ein ReLU-Netz mit 64, 64, 64 und 15 Neuronen**, nicht vier Schichten zu
+  15 (so stand es in 8.7; die 15 × 15 × 15 × 15 betreffen nur 49 Netze am Schluss des Beitrags, die je ein einzelnes
+  Polynom in x lernen). Die neun Merkmale hat der Autor nach Augenschein ausgewählt; sein Test erklärt 88 bis 98,5 %
+  ihrer Streuung mit x + c·a; dass sie nicht von b abhängen, beruht auf dem Vergleich zweier Bilder. 8.7 ist
+  entsprechend korrigiert.
+* **Der Satz über die Dreiteilende stimmt** (Pehlivan und Williams, Satz 1: R s³ + S s² + T = 0 ohne lineares Glied, für
+  die Dreiteilende neben der Seite CA). Die abgedruckte Herleitung hat zwei Druckfehler, die den Satz nicht berühren.
+
+### 9.2 Ungrokking und Aktivierungsfunktion (V1)
+
+Aufbau wie in 8.6: Ein verallgemeinerndes Netz G (Grundlauf 500 Schritte nach der ersten Messung mit 99 %) wird auf 233
+seiner 4.656 Trainingsaufgaben weitertrainiert (U, 5 %), die Driftkontrolle D mit allen, je 4.000 Schritte. Die neuen
+Läufe werden alle 50 Schritte gemessen, die vier mit Lernrate 3·10⁻⁴ alle 150 (Gewichtsnorm und Stapelverlust auch dort
+alle 50 Schritte); bei ReLU sind die beiden Läufe aus 8.6 zusammengesetzt (bis Schritt 1.500 alle 50 Schritte, danach
+alle 250). Festgelegt vor der Auswertung: Ereignis = Messung, bei der die Gewichtsnorm um mindestens 0,5 gegenüber der
+vorigen Messung steigt, der Stapelverlust mindestens 0,1 beträgt oder weniger als 99 % der eigenen Trainingsaufgaben
+stimmen; Endstand = Median der Genauigkeit auf ungesehenen Aufgaben über die Messungen von Schritt 3.500 bis 4.000; eine
+Driftkontrolle ist lesbar, wenn sie an mindestens 90 % der Messungen und im Endstand bei 99 % oder darüber liegt.
+
+**Mit jeder Nichtlinearität geht die Verallgemeinerung verloren, auch ohne Schaltschwelle.**
+
+| MLP (je Startwert ein Ausgangsnetz G) | Endstand des 5-%-Laufs, Startwert 0 / 1 / 2 | Driftkontrolle lesbar | Ereignisse im 5-%-Lauf bis Schritt 1.500 |
+|---|---|---|---|
+| ReLU, 512 Neuronen (Läufe aus 8.6) | 0,03 / 0,09 / 0,04 | ja, alle drei | je 2 |
+| SwiGLU, 341 Einheiten | 0,03 / 0,02 / 0,04 | ja, alle drei | je 2 |
+| rein bilinear, gate(x)·up(x), 341 Einheiten | 0,04 / 0,06 / 0,09 | ja, alle drei | je 2 |
+| linear, down(up(x)), ohne jede MLP-Nichtlinearität | 0,07 / – | nein (an 66 von 80 Messungen bei 99 %) | 2 |
+
+* Nach der vorab gesetzten Regel ist damit (a) „die Art der Nichtlinearität entscheidet, ob Ungrokking eintritt"
+  widerlegt: Alle drei Arten liegen in allen drei Netzen unter 50 %. (b) „Ungrokking braucht eine Schwelle oder ein
+  Gate" ist ebenfalls widerlegt: Die bilineare Einheit hat keines und verliert die Verallgemeinerung genauso. (c) „Es
+  braucht überhaupt eine MLP-Nichtlinearität" ist nach der Regel nicht entscheidbar: Von zwei Netzen ohne
+  MLP-Nichtlinearität hat nur eines die Aufgabe in 20.000 Schritten gelernt (Startwert 0: 99 % bei Schritt 18.000;
+  Startwert 1 lernte die Trainingsaufgaben auswendig und kam auf ungesehenen nie über 0,03). Das eine verliert die
+  Verallgemeinerung ebenfalls (Endstand 0,07), seine Driftkontrolle ist aber unruhig (5 Ereignisse bis Schritt 1.500,
+  tiefster Stand 0,68). Die Nichtlinearität steckt in diesem Netz nur noch in der Aufmerksamkeit und der
+  Schichtnormierung.
+* Die Ausgangsnetze unterscheiden sich in mehr als der Nichtlinearität (Gewichtsnorm 41 bis 64, Verlust auf ungesehenen
+  Aufgaben 0,004 bis 0,034, Startgewichte). Für die Frage „ob" spielt das keine Rolle, weil alle Netze weit unter der
+  Schwelle landen. Zur Beschreibung: Unter 50 % fällt jeder 5-%-Lauf an seinem ersten Ereignis, bei ReLU bei Schritt 750
+  / 800 / 750, bei SwiGLU 450 / 600 / 500, bilinear 700 / 500 / 700. Einen Unterschied in der Geschwindigkeit benennt
+  die Regel ohne Läufe ohne Einbrüche nicht.
+
+**Ein verändertes Schaltmuster braucht der Verlust nicht (ReLU).** Drei Prüfungen, die ersten beiden nach vorab
+gesetzten Regeln.
+
+* *Eingefrorenes Schaltmuster (ReLU; ein anderes Modell, wie das entkoppelte Netz in 8.6).* Das weitertrainierte Netz
+  rechnet mit den Masken einer eingefrorenen Kopie von G auf derselben Eingabe, in Training und Messung; die Gewichte
+  können sich ändern, welche Neuronen schalten, nicht. Der 5-%-Lauf verliert die Verallgemeinerung trotzdem (Endstand
+  0,09 / 0,11 / 0,11; ohne Einfrieren 0,03 / 0,09 / 0,04), die Driftkontrolle mit eingefrorenen Masken bleibt lesbar
+  (Endstand 1,00). Nach der Regel spricht das in allen drei Netzen gegen „der Verlust braucht ein verändertes
+  Schaltmuster". Mit eingefrorenen Masken kommt der erste Einbruch etwas später (Schritt 850 / 850 / 950 statt 750 / 800
+  / 750; bei Schritt 750 noch 0,91 / 0,87 / 0,88 richtig), und das Netz entfernt sich gleich weit von G (relativer
+  Gewichtsabstand bei Schritt 4.000: 0,49 / 0,48 / 0,51, ohne Einfrieren 0,48 / 0,44 / 0,46).
+* *Tausch des Schaltmusters.* Schalter einer Einheit sind bei ReLU die Maske 1[fc1(x) > 0], bei SwiGLU der Faktor
+  sigmoid(gate(x)) (silu(g) = sigmoid(g)·g). Gerechnet wird U mit dem Schaltmuster von G (r = zurückgewonnener Anteil
+  des Verlusts) und G mit dem Schaltmuster von U (k = verlorener Anteil), an dem lesbaren Schritt mit dem größten
+  Verlust, verglichen mit einem Netz, dessen Gewichte gleichmäßig zum Auswendig-Stand verschoben sind, bis es gleich
+  viel verloren hat (r_ref, k_ref). Lesbar ist ein Schritt nur, wenn D bei mindestens 99 % liegt, die beiden Mischungen
+  aus G und D bei mindestens 95 % und U mindestens 1,5 % verloren hat. *SwiGLU:* Die Mischungen mit D bleiben auch nach
+  den Einbrüchen von D lesbar. In zwei Netzen spricht das Ergebnis nach der Regel gegen „der Verlust sitzt im
+  Schaltmuster" (Startwert 0, Schritt 450: r = 0,03, k = 0,00 bei r_ref = 0,08; Startwert 2, Schritt 700: r = 0,06, k =
+  0,00 bei r_ref = 0,09). Im dritten (Startwert 1) liegt der größte Verlust bei Schritt 600 mitten in einem Einbruch, in
+  dem U auch die eigenen Aufgaben verliert (0,14 richtig, ungesehene 0,02); Schritt 450 bei Startwert 0 liegt zwar
+  ebenfalls auf einem Ereignis, dort stimmen aber alle eigenen Aufgaben. Bei Schritt 600 verliert G mit den
+  Gate-Faktoren von U 0,42 des Verlusts (Referenz 0,01), 50 Schritte später noch 0,02. Nach der Regel ist SwiGLU damit
+  unentschieden. Die Regel nennt für den üblichen Aufbau außerdem: Die lesbaren Schritte enden mit dem ersten Ereignis
+  der Driftkontrolle, bei SwiGLU in allen drei Netzen Schritt 500. So gelesen spräche der Tausch bei Schritt 450 in
+  allen drei Netzen dagegen (r = 0,03 / 0,28 / 0,25 bei r_ref = 0,08 / 0,29 / 0,30, k = 0,00), und SwiGLU wäre
+  „dagegen". Gezählt sind hier alle Schritte, die die Bedingungen erfüllen. Die vorgesehene Hauptlesung an Läufen ohne
+  Einbrüche gibt es nicht, weil keine Einstellung solche Läufe lieferte. *ReLU:* Jeder Einbruch der Driftkontrolle
+  sortiert deren Masken so um, dass die Mischungen danach unlesbar sind; lesbar sind nur Schritte vor dem ersten Sprung
+  von U. Nach der Regel wörtlich spricht das Ergebnis in allen drei Netzen dagegen, aber schwach: Bei Startwert 0 ist
+  nur Schritt 550 lesbar, an dem U erst 0,02 verloren hat (r = −21, weil U mit den Masken von G viel schlechter rechnet,
+  siehe unten; k = 0,00, r_ref = 0,06). In den beiden anderen Netzen ist der lesbare Schritt mit dem größten Verlust
+  Schritt 50, eine kurze Delle gleich nach dem Wechsel auf 5 % (kein Ereignis; U bei 0,89 / 0,91, bei Schritt 400 wieder
+  bei 0,99 / 0,98), nicht der spätere Sprung. An den lesbaren Schritten kurz vor dem Sprung (Startwert 1, Schritt 500
+  bis 650) verliert G mit den Masken von U 0,14 bis 0,26 des Verlusts (Referenz 0,00), mehr als die Regel für „dagegen"
+  zulässt.
+* *Ein Vorzeichen vor dem Sprung, aber nicht im Muster selbst (Beschreibung).* Bei ReLU passen die Gewichte von U schon
+  vor dem ersten Sprung nicht mehr zum Schaltmuster von G: U mit den Masken von G fällt bis Schritt 550 auf 0,59 / 0,24
+  / 0,45, während U selbst noch 0,98 / 0,98 / 0,96 richtig rechnet und D mit den Masken von G bei 1,00 bleibt (an jeder
+  Messung von Schritt 50 bis 550 in allen drei Netzen unter dem Bereich von D). Umgekehrt rechnet G mit den Masken von U
+  weiter fast fehlerfrei (mindestens 0,995). Die Gewichte von U arbeiten also schon vor dem Sprung nicht mehr mit dem
+  alten Muster zusammen, die der Driftkontrolle schon; das Muster von U allein kostet G höchstens 0,005. Mehr Umschalten
+  als in der Drift darf nach der Regel nicht gesagt werden (U müsste D in beiden Blöcken aller drei Netze um das
+  1,5-Fache übertreffen; Startwert 0: 0,9 und 1,2).
+
+**Keine geprüfte Einstellung stellt die Einbrüche ab, und der größte Teil des Verlusts kommt mit ihnen.** Nach der Regel
+sollte zuerst ein beruhigter Optimierer die Einbrüche beseitigen; dann wäre lesbar, ob Ungrokking sie braucht.
+Vorprüfung an Startwert 0, 5-%-Lauf und Driftkontrolle, 1.500 Schritte (bei kleinerer Lernrate 5.000, gleich viel
+Lernrate mal Schritte; dort sind die Ereignisse aus der Aufzeichnung alle 50 Schritte gezählt):
+
+| Einstellung | Ereignisse im 5-%-Lauf (Schritt) | in der Driftkontrolle | ungesehene Aufgaben im 5-%-Lauf |
+|---|---|---|---|
+| wie in 8.6 | 750, 1.400 | 600, 1.250 | 0,24 bei Schritt 1.000, 0,14 bei 1.500 |
+| ε = 10⁻⁶ | 700, 1.300 | 600, 1.300 | 0,49 / 0,24 |
+| ε = 10⁻⁵ | 650, 1.250 | 500, 1.000 | 0,55 / 0,27 |
+| AMSGrad | 1.100 | 1.150 | 0,95 / 0,10 |
+| Verlust in float64 (nachträglich, siehe unten) | 700, 1.400 | 600, 1.250 | 0,32 / 0,10 |
+| Lernrate 3·10⁻⁴ | 1.900, 3.100, 4.200 | 1.700, 2.550, 3.900, 4.950 | 0,54 bei Schritt 3.300, 0,68 bei 4.950 |
+| Lernrate 3·10⁻⁴, ε = 10⁻⁵ | 4.400 | 2.200, 4.900 | 0,95 / 0,85 |
+
+* Keine Einstellung bleibt ohne Ereignis; nach der Regel ist die Frage „braucht Ungrokking die Einbrüche?" damit
+  unentschieden. Den Verlust in float64 hat die Literaturprüfung vorgeschlagen (arXiv 2605.06152), nachdem die Regel
+  feststand; er ändert an den Einbrüchen fast nichts (dieselben Schritte bis auf 50). Die Einbrüche sind hier also
+  kein Rundungsfehler der Verlustfunktion.
+* In jeder Einstellung fällt die Genauigkeit auf ungesehenen Aufgaben dort, wo die Gewichtsnorm springt. Mit AMSGrad
+  kommt der erste Einbruch erst bei Schritt 1.100, und der Verlust kommt mit ihm (bei Schritt 1.000 noch 0,95, bei 1.500
+  0,10). An den Startwerten 1 und 2 wiederholt: erstes Ereignis bei Schritt 1.100 und 1.150, bei Schritt 1.000 noch 0,97
+  und 0,94 richtig (ohne AMSGrad, 8.6: 0,35 und 0,29), bei 1.500 0,34 und 0,08; die Driftkontrolle bricht bei 1.250 und
+  1.200 ebenfalls ein und ist bei 1.500 wieder bei 1,00. Mit Lernrate 3·10⁻⁴ und ε = 10⁻⁵ fällt sie in fünf Stufen (0,94
+  / 0,93 / 0,84 / 0,70 / 0,69 bei Schritt 1.200, 2.100, 2.850, 3.600, 4.500), jedes Mal an einem Sprung der Gewichtsnorm
+  um 0,25 bis 0,65, von denen nur der letzte die Ereignisschwelle 0,5 überschreitet; dazwischen erholt sie sich
+  teilweise. Die Driftkontrolle hat ebenfalls Sprünge der Gewichtsnorm, aber nur drei und an anderen Schritten (2.250,
+  3.700 und 4.900; 0,39 bis 0,81), und bleibt bei 1,00.
+* Ein kleinerer Teil geht schon vorher verloren, ohne Ereignis und während die Gewichtsnorm gleichmäßig fällt. Bis zum
+  ersten Ereignis sinkt die Genauigkeit auf ungesehenen Aufgaben bei ReLU um 0,04 bis 0,06, bei SwiGLU um 0,06 bis 0,19
+  (Startwerte 1 und 2: von 0,94 und 0,99 auf 0,77 und 0,79), bilinear um 0,03 bis 0,11 und mit eingefrorenen ReLU-Masken
+  um 0,10 bis 0,16, bis zu etwa einem Fünftel des ganzen Verlusts. Unter 50 % fällt jeder 5-%-Lauf erst an einem
+  Ereignis.
+* Mit Lernrate 3·10⁻⁴ und ε = 10⁻⁸ fällt die Genauigkeit einmal auch ohne Ereignis (auf 0,83 bei Schritt 750, danach
+  wieder 0,96); bis Schritt 13.350 (gleich viel Lernrate mal Schritte wie 4.000 bei 10⁻³) liegt sie bei 0,11.
+* Die Plankritik hatte eine Kontrolle mit kleinen Stapeln vorgesehen, ohne Entscheidungsregel: Die 233 Aufgaben passen
+  in einen Stapel von 512, der 5-%-Lauf sieht also bei jedem Schritt dieselben Aufgaben, die Driftkontrolle nicht (die
+  Lücke aus 8.6; nach arXiv 2605.06152 sind solche Einbrüche bei fast vollem Stapel zudem am stärksten). Mit Stapeln von
+  26 Aufgaben (sonst wie in 8.6, Startwerte 0 bis 2) bleiben Einbrüche und Verlust: erste Ereignisse bei Schritt 650 /
+  850 / 900, Endstand 0,05 / 0,05 / 0,04. Der Verlust tritt also auch ein, wenn nicht jeder Schritt dieselben Aufgaben
+  sieht.
+
+**Zusammengefasst für V1:** In diesem Kleinversuch entscheidet die Art der Aktivierungsfunktion nicht, ob Ungrokking
+eintritt: ReLU, SwiGLU und eine Einheit ohne jede Schwelle verlieren alle die Verallgemeinerung. Ob es überhaupt eine
+MLP-Nichtlinearität braucht, bleibt nach der Regel offen; das eine Netz ohne sie verliert die Verallgemeinerung zwar
+auch, seine Driftkontrolle ist aber unruhig. Ein verändertes Schaltmuster braucht der Verlust nicht: Mit eingefrorenen
+ReLU-Masken (ein anderes Modell) geht die Verallgemeinerung ebenfalls verloren. Ob der Verlust im Schaltmuster sitzt,
+beantwortet der Tausch nur schwach: Bei ReLU spricht er nach der Regel dagegen, ist aber nur an frühen Schritten lesbar,
+an denen U 0,02 bis 0,11 verloren hat; bei SwiGLU ist er unentschieden. Bei ReLU arbeiten die Gewichte von U vor dem
+Sprung nicht mehr mit dem alten Muster zusammen. Der größte Teil des Verlusts kommt in jeder Einstellung mit Einbrüchen
+oder kleineren Sprüngen der Gewichtsnorm; die Driftkontrolle hat sie auch, erholt sich aber jedes Mal ganz, der 5-%-Lauf
+nur teilweise. Ein kleinerer Teil geht schon vorher allmählich verloren. Ob Ungrokking ohne die Einbrüche einträte,
+bleibt offen, weil keine geprüfte Einstellung sie beseitigt. Für V1 spricht damit nichts; dagegen spricht die Regel nur
+in diesen engeren Formen.
+
+### 9.3 Selbstüberwachung: Sind die eigenen Gates aus dem Endzustand lesbar? (V2)
+
+V2 lässt sich hier nicht als Ganzes prüfen: Jeder spätere Zustand eines Netzes ist eine Funktion seiner früheren
+Aktivierungen, also auch seiner Gate-Werte; dass sie sich daraus ablesen lassen, zeigt keine Repräsentation der
+Funktion SwiGLU. Ein Kleinversuch hat zudem keine Ausgabe, in der sich ein Selbstmodell zeigen könnte. Prüfbar ist nur,
+ob der Endzustand etwas trägt, das *spezifisch* zu den eigenen Gates gehört (`act_selfprobe.py`, Ridge-Regression vom
+Zustand des `=` nach dem letzten Block auf die Gate-Werte beider Blöcke am `=`, angepasst an den Trainingsaufgaben,
+gelesen an den ungesehenen; alle gespeicherten Stände aller vier Startwerte).
+
+| | SwiGLU | ReLU (Masken) | bilinear |
+|---|---|---|---|
+| eigene Gate-Werte, erklärter Anteil (trainierte Stände) | 0,27 bis 0,89 | 0,18 bis 0,61 | 0,30 bis 0,95 |
+| eigene Gate-Werte, untrainiertes Netz | 0,99 bis 1,00 | 0,55 bis 0,58 | 0,99 bis 1,00 |
+| eigene minus zufällige Gates auf denselben MLP-Eingängen | −0,06 bis +0,097 | −0,06 bis +0,097 | −0,05 bis +0,13 |
+| aus den beiden Operanden allein (x und y getrennt kodiert) | 0,61 bis 0,98 | 0,41 bis 0,64 | 0,69 bis 0,98 |
+| aus dem Endzustand eines anderen Netzes derselben Art | 0,24 bis 0,39 | 0,14 bis 0,23 | 0,25 bis 0,46 |
+
+* Was der Endzustand über die eigenen Gates trägt, trägt er ebenso über Gates mit zufälligen Gewichten, die auf
+  dieselben MLP-Eingänge angewandt werden: Der Unterschied liegt bei SwiGLU und ReLU in jedem Stand jedes Startwerts
+  unter 0,10 (größter Wert 0,097). Bei SwiGLU ist der Gate-Eingang vor der SiLU praktisch so gut oder besser lesbar als
+  der Gate-Wert danach (Unterschied −0,001 bis +0,05; in 7 von 42 Fällen ist er um höchstens 0,001 schlechter, das ist
+  hier als gleich gezählt). Nach der vorab gesetzten Regel spricht das gegen eine spezifische Selbstrepräsentation. Die
+  einzige Ausnahme ist ein Stand eines bilinearen Netzes (+0,13).
+* Die beiden Operanden allein erklären die Gate-Werte fast immer besser als der Endzustand des Netzes selbst (bei SwiGLU
+  in 41 von 42 Fällen). Der Endzustand trägt also, was in den MLP-Eingängen steckt, und davon weniger als die Eingabe.
+* Der Trainingsarm, der ein Netz seine eigenen Gate-Werte vorhersagen lässt (eine Form des Selbstmodellierens nach
+  Premakumar et al.), ist implementiert (`kv_grok.py`, Arme `selfmon`, `selfdet`, `othermon`), wurde aber auf Rat der
+  Plankritik nicht gerechnet: Er prüft V2 nicht (er misst, wann ein Netz verallgemeinert), und die Kontrolle mit fremdem
+  Ziel wäre in Dosis und Verlauf nicht gleich.
+
+### 9.4 Wie quadratisch ist SwiGLU? (Voraussetzung von V3)
+
+Gemessen wird je Einheit, wie gut ein Polynom vom Grad 1, 2 und 3 in ihren beiden Eingängen g = gate(x) und u = up(x)
+(bei ReLU in fc1(x)) die Einheit über die Daten beschreibt: angepasst auf der einen Hälfte, gelesen auf der anderen,
+gemittelt mit dem Gewicht, das die Einheit im Ausgang des MLP hat (`act_quad.py`, `act_qwen.py`). Vorab gesetzte Regel:
+„ungefähr quadratisch" heißt in einem Block R²(Grad 2) ≥ 0,90 und R²(Grad 2) − R²(Grad 1) ≥ 0,20, im Kleinversuch
+außerdem, dass das Netz mit Grad 2 höchstens 0,01 und mit Grad 1 mindestens 0,10 weniger richtig rechnet; „nicht
+quadratisch" heißt R²(Grad 2) − R²(Grad 1) < 0,05 oder R²(Grad 2) < 0,70 oder, im Kleinversuch, mit Grad 2 mehr als 0,10
+weniger richtig; dazwischen „teilweise".
+
+**Im Kleinversuch rechnet der zweite MLP-Block als Polynom vom Grad 2, mit SwiGLU wie mit ReLU.**
+
+| verallgemeinernde Stände, vier Startwerte | SwiGLU, Block 0 | SwiGLU, Block 1 | ReLU, Block 0 | ReLU, Block 1 |
+|---|---|---|---|---|
+| R² Grad 1 / 2 / 3 | 0,99 bis 1,00 / 1,00 / 1,00 | 0,73 bis 0,87 / 1,00 / 1,00 | 0,79 bis 0,99 / 0,96 bis 1,00 / 0,99 bis 1,00 | 0,75 bis 0,81 / 0,98 / 0,98 bis 0,99 |
+| Anteil des quadratischen Glieds am Ausgang des MLP | 0,00 bis 0,01 | 0,11 bis 0,26 | 0,00 bis 0,22 | 0,10 bis 0,19 |
+| ungesehene Aufgaben richtig, nur dieser Block linear genähert | 0,99 bis 1,00 | 0,03 bis 0,05 | 0,99 bis 1,00 | 0,03 bis 0,08 |
+| ungesehene Aufgaben richtig, alle Einheiten durch Grad 2 ersetzt | 0,99 bis 1,00 | | 0,99 bis 1,00 | |
+
+* Block 0 wirkt am `=` auf diesen Daten fast linear: Mit linear genähertem Block 0 rechnet das Netz weiter 0,99 bis 1,00
+  richtig, auch in dem ReLU-Stand, in dem Block 0 nur zu 0,79 linear erklärt ist (quadratisches Glied 0,22). In Block 1
+  macht das quadratische Glied nur 10 bis 26 % der Streuung des Ausgangs aus, aber an ihm hängt die Rechnung: Linear
+  genähert verliert das Netz fast alles, mit Grad 2 nichts. Das gilt für ReLU genauso wie für SwiGLU. „Quadratisch" ist
+  hier also eine Eigenschaft der Aufgabe (die Antwort braucht ein Produkt der beiden Operanden-Merkmale; so auch Nanda
+  et al., arXiv 2301.05217: dort sind die meisten Neuronen gut durch Polynome vom Grad 2 in Sinus und Kosinus einer
+  Frequenz der beiden Operanden beschrieben), nicht von SwiGLU. Nach der Regel ist Block 1 je nach Stand „ungefähr
+  quadratisch" (SwiGLU 3, ReLU 2 der 8 Stände) oder „teilweise": R²(2) liegt immer über 0,90, R²(2) − R²(1) bei 0,13 bis
+  0,26 (SwiGLU) und 0,17 bis 0,23 (ReLU), also um die Schwelle 0,20. Block 0 ist „nicht" quadratisch (bei ReLU in 2 der
+  8 Stände „teilweise").
+* Gate und Up einer SwiGLU-Einheit richten sich beim Lernen aneinander aus: Die Korrelation von g und u über die
+  Aufgaben liegt untrainiert bei 0,11 bis 0,13 (Median über die Einheiten), in verallgemeinernden Ständen in Block 0 bei
+  0,67 bis 0,93 und in Block 1 bei 0,39 bis 0,50. Viele Einheiten von Block 0 hängen damit fast nur von einer einzigen
+  Linearkombination ihrer Eingabe ab, wie die Merkmale im Beitrag über kubische Polynome (Einheiten mit einer
+  Korrelation über 0,9 tragen 27 bis 53 % des Gewichts im Ausgang). Ihr Gate-Eingang ändert sich am `=` über die
+  Aufgaben aber kaum (Streuung im Median 0,003 bis 0,007, in Block 1 0,27 bis 0,40). Deshalb wirken sie dort linear und
+  nicht als Quadrat.
+* Die rein bilineare Einheit ist in g und u schon gebaut als Polynom vom Grad 2 (R²(Grad 2) = 1), und ihre Netze
+  verteilen die Rechnung genauso: Block 0 wirkt linear (R²(Grad 1) 0,99 bis 1,00), Block 1 ist zu 0,70 bis 0,84 linear
+  erklärt, sein quadratisches Glied macht 0,10 bis 0,24 des Ausgangs aus, linear genähert rechnet das Netz noch 0,01 bis
+  0,03 richtig. Gate und Up richten sich auch hier aneinander aus (Median der Korrelation in Block 0: 0,42 bis 0,85).
+
+**In Qwen3-1.7B ist SwiGLU nur in Block 0 ungefähr quadratisch, und das knapp (R²(Grad 2) = 0,908; Block 16 verfehlt die
+Schwelle 0,90 mit 0,898).** Angepasst an 4.082 Positionen aus 24 Wikitext-Absätzen, gelesen an 902 Positionen aus 16
+anderen Texten, 8 Wikitext-Absätzen und 8 Chats (dieselbe Textauswahl wie in Abschnitt 7; beim Anpassen war kein Chat
+dabei):
+
+| Blöcke | R² Grad 1 / 2 / 3 | Einordnung nach der Regel | Gate-Eingang negativ |
+|---|---|---|---|
+| 0 | 0,14 / 0,91 / 1,00 | ungefähr quadratisch | 75 % |
+| 1 bis 4 | 0,23 bis 0,26 / 0,43 bis 0,53 / 0,76 bis 0,86 | nicht quadratisch | 95 bis 98 % |
+| 5 bis 9 | 0,22 bis 0,31 / 0,64 bis 0,72 / 0,92 bis 0,98 | 5 teilweise, 6 bis 9 nicht | 84 bis 90 % |
+| 10 bis 19 | 0,23 bis 0,51 / 0,71 bis 0,898 / 0,92 bis 0,99 | teilweise | 57 bis 77 % |
+| 20 bis 26 | 0,08 bis 0,18 / 0,56 bis 0,697 / 0,86 bis 0,92 | nicht quadratisch | 78 bis 87 % |
+| 27 | 0,52 / 0,77 / 0,93 | teilweise | 89 % |
+
+R²(Grad 2) liegt in Block 9 bei 0,698 und in Block 26 bei 0,697, knapp unter der Schwelle 0,70; die Einordnung folgt den
+ungerundeten Werten.
+
+* Wo die Gate-Eingänge fast alle negativ sind (Blöcke 1 bis 4), trägt das Glied vom Grad 3 so viel wie das vom Grad 2
+  (Anteil am Ausgang des MLP 0,26 bis 0,38 gegen 0,21 bis 0,29). Die SiLU-Kurve hat bei g = −1,28 ihr Minimum. Gemittelt
+  über normalverteilte Gate-Eingänge mit einer Streuung von 0,5 / 1 / 2 ist ihre Steigung null, wenn deren Mittelwert
+  bei −1,44 / −1,90 / −3,57 liegt (Rechnung in `act_math_review.json`, M8); dort verschwindet der bilineare Anteil. In
+  den Blöcken 1 bis 9 sind 84 bis 98 % der Gate-Eingänge negativ (wie in 7.4); ob ihre Mittelwerte gerade dort liegen,
+  ist nicht gemessen.
+* Die Einheiten sind Produkte zweier fast unabhängiger Richtungen, keine Quadrate einer einzigen: Die Korrelation von g
+  und u über die Positionen liegt im Median der Einheiten bei 0,06 bis 0,19, der Kosinus der beiden Gewichtsvektoren bei
+  0,03 bis 0,10 (zufällige Vektoren dieser Länge: 0,018). Einheiten mit einer Korrelation über 0,9 tragen höchstens 4 %
+  des Ausgangs eines Blocks. Die Achsen ihrer quadratischen Form liegen damit auf den beiden Winkelhalbierenden von Gate-
+  und Up-Richtung mit fast gleich großen Eigenwerten entgegengesetzten Vorzeichens (9.6).
+* *Ganz ersetzt.* Jede Einheit aller 28 Blöcke durch ihr Polynom vom Grad 2 ersetzt (angepasst an den 4.082 Positionen;
+  die ersten vier Token und die Chat-Vorlage behalten das echte MLP, weil dort die Eingänge weit außerhalb des
+  angepassten Bereichs liegen): Die Kreuzentropie des nächsten Tokens auf den 902 Prüfpositionen steigt von 3,63 auf
+  5,80 (Grad 1: 8,06; jede Einheit durch ihren Mittelwert: 9,84), das wahrscheinlichste nächste Token bleibt an 35 % der
+  Positionen dasselbe. Nur eine Gruppe von Blöcken ersetzt geht es besser: Blöcke 0 bis 9 mit Grad 2 KL im Median 0,44
+  (gleiches Token an 58 %), Blöcke 19 bis 27 0,35 (61 %). In den Blöcken 10 bis 18 ist Grad 2 nur im Median und beim
+  gleichen Token besser als Grad 1 (KL im Median 0,17 gegen 1,12, gleiches Token an 66 gegen 42 %). An mindestens einem
+  Zehntel der Positionen liegt Grad 2 dort weit daneben (KL über 19), und im Mittel ist es schlechter (KL 3,71 gegen
+  1,67, Kreuzentropie 6,87 gegen 4,54). Als Ganzes ist SwiGLU in Qwen also kein Polynom vom Grad 2, das man ohne Verlust
+  einsetzen könnte; in den Blöcken 0 bis 9 und 19 bis 27 kommt Grad 2 näher heran als Grad 1, in den Blöcken 10 bis 18
+  nur im Median.
+
+### 9.5 Der Beitrag über kubische Polynome, weitergedacht (V3)
+
+V3 überträgt die Beobachtung des Beitrags auf SwiGLU: Ist die Einheit ungefähr quadratisch, sollten sich ihre Merkmale
+verhalten wie die Merkmale im Beitrag, die von einer einzigen Kombination x + c·a abhängen, mit c nahe Cardanos 1/3.
+8.7 hatte gefunden, dass diese Kombination dort liegt, wo sich die Zielfunktion selbst am stärksten ändert
+(Hauptrichtung ihres Gradienten, c = 0,26), und dass sich das im Bereich des Beitrags nicht von 1/3 trennen lässt.
+Vorab gesetzt war jetzt (`poly_direction.py`): Die Lesart „Eigenschaft der Aufgabe" gilt, wenn in mindestens 12 von
+15 eigenen Netzen die Richtung, entlang der sich die letzte verdeckte Schicht ändert, innerhalb von 0,05 bei der
+Hauptrichtung des Gradienten liegt (Grad 2, 3, 4) und bei doppelt so breitem Bereich von a in ein Band um die neue
+Hauptrichtung mitwandert. Die Lesart „Algebra" gilt, wenn sie dann in mindestens 12 von 15 Netzen bei der Verschiebung
+a/n bleibt, denn die hängt von der Verteilung der Eingaben nicht ab.
+
+| Zielfunktion | Bereich von a | Hauptrichtung des Gradienten | Verschiebung der Algebra | eigene Netze 15-15-15-15 (ReLU, tanh, SiLU, je 5 Startwerte) | Netze in der Größe des Beitrags, 64-64-64-15, ReLU (5 Startwerte) |
+|---|---|---|---|---|---|
+| x² + a·x + b | ±3 | 0,414 | 1/2 | 0,39 bis 0,48; 14 von 15 innerhalb von 0,05 | |
+| x³ + a·x² + x + b (8.7) | ±3 | 0,261 | 1/3 | 0,23 bis 0,31; 14 von 15 | 0,29 bis 0,33; 1 von 5 |
+| x⁴ + a·x³ + x + b | ±3 | 0,200 | 1/4 | 0,16 bis 0,24; 15 von 15 | |
+| x² + a·x + b | ±6 | 0,266 | 1/2 | 0,23 bis 0,66; 13 von 15 im Band 0,19 bis 0,34, keines bei 0,43 bis 0,57 | 0,26 bis 0,37; 4 von 5 im Band, keines bei 1/2 |
+| x³ + a·x² + x + b | ±6 | 0,171 | 1/3 | 0,13 bis 0,26; 14 von 15 im Band 0,10 bis 0,25, keines bei 0,28 bis 0,39 | 0,19 bis 0,25; 4 von 5 im Band, keines bei 1/3 |
+
+x und b liegen immer zwischen −3 und 3; jede Anpassung erreicht R² ≥ 0,9996.
+
+* Nach der vorab gesetzten Regel gilt die Lesart „Eigenschaft der Aufgabe": Die Richtung der Netze liegt bei der
+  Hauptrichtung des Gradienten, und wenn sich die Verteilung der Eingaben ändert, wandert sie mit. Bei der Verschiebung
+  der Algebra liegt bei doppeltem Bereich kein einziges Netz. Für eine quadratische Zielfunktion ist die Richtung 0,414,
+  nicht die 1/2 der quadratischen Ergänzung.
+* Netze in der Größe des Beitrags (64-64-64-15, ReLU, nach seiner LessWrong-Fassung; hier eigenes Training, ohne SAE, an
+  den Neuronen der letzten verdeckten Schicht; von der Regel nicht erfasst, die für die 15 kleinen Netze gilt) liegen im
+  Bereich des Beitrags bei 0,29 bis 0,33; nur eines liegt innerhalb von 0,05 bei der Hauptrichtung 0,26, vier liegen
+  näher an 1/3. In den fünf Netzen sind 42 der 60 Neuronen der letzten Schicht, die überhaupt variieren, zu über 90 %
+  Funktion einer einzigen Kombination (Median 0,32), wie im Beitrag (0,175 bis 0,35, Median 0,30). Bei doppeltem Bereich
+  von a fällt die Richtung auf 0,19 bis 0,25: Sie wandert mit und bleibt nicht bei 1/3. In beiden Bereichen liegt sie
+  0,02 bis 0,08 über der Hauptrichtung; dieser Abstand wird bei doppeltem Bereich nicht größer, obwohl 1/3 dort mehr als
+  doppelt so weit entfernt ist (0,16 statt 0,07). Die Nähe zu 1/3 im Bereich des Beitrags spricht deshalb nicht für
+  Cardanos Verschiebung; woher der Abstand kommt, ist offen (fünf Netze).
+* *Ein Produkt und eine SwiGLU-Einheit als Zielfunktion* (p·q + b und silu(p)·q + b, gleiche Netze und Bereiche). Hier
+  hat schon die Zielfunktion keine Hauptrichtung: Die stärkere der beiden Richtungen trägt 0,50 und 0,54 des Gradienten
+  (Verhältnis der Eigenwerte 1,00 und 1,19), und der Fächertest des Beitrags erreicht schon an der Zielfunktion selbst
+  höchstens R² 0,55 (Produkt, bei 45°) und 0,36 (SwiGLU-Einheit, bei 44°), also entlang der Winkelhalbierenden, und auch
+  dort wenig. In 14 von 15 Netzen je Zielfunktion folgen weniger als 10 % der Neuronen einer einzigen Kombination
+  (insgesamt 3 von 210 und 3 von 207), und die Richtung der Schicht streut (Produkt: −53° bis 79°, Verhältnis der
+  Eigenwerte 1,0 bis 2,4). Nach der Regel bestätigt das die Erwartung: Für ein Produkt gibt es kein x + c·a; seine
+  natürlichen Achsen sind die beiden Winkelhalbierenden (9.6).
+* *Das Gegenstück im Kleinversuch* (Beschreibung, `act_units.py`): Hängt ein MLP-Neuron am `=` von der Antwort allein
+  ab, so wie ein Merkmal des Beitrags von einer einzigen Kombination? In verallgemeinernden Ständen nicht: In Block 1
+  erklären die beiden Operanden getrennt 0,38 bis 0,44 und 0,35 bis 0,49 der Streuung der Neuronen (gewichtet wie in
+  9.4), die Antwort über beide hinaus nur 0,04 bis 0,11, und kein Neuron erreicht 0,9 durch die Antwort allein. In Block
+  0 der ReLU-Netze kommen einige Neuronen darüber (bei Startwert 0 mit 14 % des Gewichts im Ausgang), aber nur, weil sie
+  fast nur bei x = 0 anschlagen, wo auch die Antwort 0 ist; durch x allein sind sie ebenso gut erklärt. Der Zustand nach
+  Block 1 ist dagegen zu 0,71 bis 0,89 von der Antwort über die Operanden hinaus bestimmt. Das gilt für ReLU, SwiGLU und
+  die bilineare Einheit gleich (der vorab gesetzte Unterschied von 0,20 zwischen den Architekturen wird nicht erreicht).
+  Einzelne Neuronen hängen also kaum von der Antwort allein ab, der Zustand nach dem Block sehr wohl. Gemessen ist das
+  am ganzen Zustand (mit Residualstrom und Aufmerksamkeit), nicht am Ausgang des MLP allein; dass die Antwort erst in
+  der Summe der Neuronen entsteht, liegt nahe (ohne das quadratische Glied von Block 1 geht fast alles verloren, 9.4),
+  ist hier aber nicht getrennt gemessen. Entlang des 5-%-Laufs (ReLU) trägt der Zustand weniger von der Antwort als in
+  der Driftkontrolle, und zwar von der ersten Messung nach dem Wechsel auf 5 % an (Schritt 50: 0,50 bis 0,64 gegen 0,74
+  bis 0,80; Schritt 550: 0,61 bis 0,65 gegen 0,88 bis 0,90), an jeder Messung bis Schritt 550 in allen drei Netzen unter
+  dem Bereich der Driftkontrolle, während U noch 0,96 bis 0,98 richtig rechnet. Deutlich wächst der Abstand nur bei
+  Startwert 0.
+* *Für V3 folgt:* Die Beobachtung des Beitrags hängt nicht an quadratischen Einheiten: Sie zeigt sich in Netzen mit
+  ReLU, tanh und SiLU und folgt der Zielfunktion und der Verteilung ihrer Eingaben. Netze aus SwiGLU- oder bilinearen
+  Einheiten sind auf diese Richtung nicht geprüft. 8.7 ist entsprechend berichtigt: Das Netz des Beitrags hat 64, 64, 64
+  und 15 Neuronen und ReLU, seine neun Merkmale sind nach Augenschein gewählt, und die eigenen Netze dort sind kleiner,
+  nicht „derselben Größe".
+
+### 9.6 Halbieren und Dritteln: was die Mathematik hergibt (V4)
+
+Alle Aussagen sind numerisch geprüft (`trisect_math.py`, `trisect_math.json`) und von einem zweiten Prüfer unabhängig
+nachgerechnet (`act_math_review.json`). Die meisten sind Lehrbuchwissen; neu zusammengestellt ist nur der Bezug.
+
+* **Ein Produkt zweier Linearformen hat seine Achsen auf den Winkelhalbierenden.** Die quadratische Form (g·x)(u·x),
+  also eine bilineare Einheit, hat höchstens zwei von null verschiedene Eigenwerte, |g||u|(cos φ + 1)/2 = |g||u|
+  cos²(φ/2) und |g||u|(cos φ − 1)/2 = −|g||u| sin²(φ/2), mit den Achsen g/|g| + u/|u| und g/|g| − u/|u| (φ = Winkel
+  zwischen g und u). Das ist die Halbwinkelformel. Zeigen g und u in dieselbe Richtung, ist die Einheit das Quadrat
+  einer einzigen Linearkombination (wie die Merkmale im Beitrag über kubische Polynome); stehen sie senkrecht, ist sie
+  eine Differenz zweier gleich großer Quadrate. Unter Eingaben mit einer Kovarianz tritt an die Stelle von cos φ die
+  Korrelation von g·x und u·x über die Daten.
+* **Auf dem Kreis: zweite Harmonische für zwei Faktoren, dritte für drei.** Das Produkt zweier Linearformen mit den
+  Richtungen ψ₁, ψ₂ ist auf dem Einheitskreis (cos(2ψ − ψ₁ − ψ₂) + cos(ψ₁ − ψ₂))/2: eine Konstante und eine zweite
+  Harmonische (ein Anteil, der sich bei einem Umlauf um den Kreis zweimal wiederholt), deren Phase auf der
+  Winkelhalbierenden liegt. Das Produkt dreier Linearformen enthält eine dritte Harmonische mit der Phase beim mittleren
+  Winkel der drei (bis auf 120°) und drei erste Harmonische, die genau dann verschwinden, wenn die drei Richtungen 120°
+  auseinanderliegen.
+* **Winkelhalbierende und Dreiteilende im Dreieck sind dieselbe Aussage für zwei Tschebyschow-Polynome.** Tₙ ist das
+  Polynom mit Tₙ(cos θ) = cos(nθ), also T₂(X) = 2X² − 1 und T₃(X) = 4X³ − 3X. Für die Linie von C, die mit CA den Winkel
+  C/n bildet und bis AB die Länge sₙ hat, gilt Tₙ(h/sₙ) = cos(n·A + C − n·π/2), h die Höhe von C (geprüft für n = 2 bis
+  5 an 5.000 Dreiecken, Fehler unter 4·10⁻¹³). n = 2 ist die Winkelhalbierende (Länge s₂): 2(h/s₂)² − 1 = cos(A − B),
+  eine Quadratwurzel. n = 3 ist die Dreiteilende: 4X³ − 3X = sin(2A − B) mit X = h/s₃. Das ist die kubische Gleichung
+  von Pehlivan und Williams (Arhimede Mathematical Journal 13/1, 2026, Satz 1: R s³ + S s² + T = 0 ohne lineares Glied),
+  in 1/s geschrieben. Dass ihr in 1/s das quadratische Glied fehlt, liegt daran, dass sich n Kosinusse im Abstand 2π/n
+  zu null addieren. Die kubische Gleichung gilt für die Dreiteilende neben der Seite CA; die andere erfüllt dieselbe
+  Form mit vertauschten a und b. Die abgedruckte Herleitung hat zwei Druckfehler (S. 16), der Satz stimmt.
+* **Ein Polynom vom Grad n verliert durch t = x + a/n sein Glied vom Grad n − 1** (Ergänzen zum Quadrat bei n = 2,
+  Cardanos erster Schritt bei n = 3). Die gedrückte Kubik auszuwerten heißt einen Winkel verdreifachen: Mit t = 2ρ cos φ
+  und p = −3ρ² ist t³ + p·t = 2ρ³ cos 3φ. Sie zu lösen heißt dritteln: eine Quadratwurzel (aus der Diskriminante) und
+  dann die Kubikwurzel einer komplexen Zahl mit bekanntem Betrag und Winkel θ; diese Kubikwurzel ist die Dreiteilung von θ.
+  Die drei Wurzeln sind ein lineares Bild von (Mittelwert, ρ cos(θ/3), ρ sin(θ/3)), der diskreten Fourier-Transformierten
+  über Z/3. Beim Grad 4 hört das auf: Eine gedrückte Quartik hat einen freien Koeffizienten mehr, als cos 4φ zulässt.
+* **Was das für Netze heißt.** Eine Schicht bilinearer Einheiten ist ein Polynom vom Grad 2 ihrer Eingabe, zwei
+  gestapelte Schichten sind eines vom Grad 4. Die Kubik des Beitrags lässt sich mit zwei bilinearen Schichten exakt
+  darstellen (Breiten 3 und 2, in Horner-Form x·x·(x + a) + (x + b); die Richtungen sind x und x + a, nicht x + a/3).
+  Cardanos Form bräuchte fünf echte Produkte statt zwei. Eine einzige bilineare Schicht ist für diese Kubik nicht besser
+  als eine lineare Abbildung: Das beste Polynom vom Grad höchstens 2 ist die lineare Funktion 6,4x + 3a + b mit R² =
+  0,7998, weil der Anteil x³ + a·x² der Kubik ungerade ist (er wechselt das Vorzeichen, wenn alle Eingaben es tun) und
+  deshalb zu allen Gliedern vom Grad 2 senkrecht steht. Kleine Anpassungen bestätigen das nach der vorab gesetzten Regel
+  (Breite 16, je 5 Startwerte, `poly_direction.py`): Eine bilineare Schicht erreicht R² 0,799 bis 0,804, zwei erreichen
+  1,000; eine SwiGLU-Schicht erreicht schon 0,9999, weil silu(g)·u auch Glieder vom Grad 3 und höher enthält. cos(C/3)
+  als Funktion von cos C hat bei C = 180° eine Wurzel-Singularität: Polynome vom Grad 2, 4 und 8 in cos C, nach
+  kleinsten Quadraten über gleich verteilte Winkel C angepasst, haben dort ihren größten Fehler, 0,073 / 0,041 / 0,022
+  (auch die bestmöglichen kommen nur auf 0,039 / 0,020 / 0,010), in der Halbwinkel-Variablen cos(C/2) nur 0,0015 /
+  2·10⁻⁵ / 10⁻⁸.
+* **Für die Vermutung V4 folgt daraus nichts Prüfbares.** Die Brücke zwischen „quadratische Einheit" und „Dreiteilung"
+  ist eine Gradzählung: Zwei Faktoren geben die zweite Harmonische und die Winkelhalbierende, drei Faktoren die dritte
+  und den Mittelwinkel; dritteln verlangt eine Kubikwurzel, die keine endliche Zahl von Produkten exakt liefert. Über
+  ein trainiertes Netz sagt das nichts voraus.
+
+### 9.7 Was folgt daraus
+
+* **V1, Aktivierungsfunktion und Ungrokking:** Im Kleinversuch spricht nichts dafür, entschieden ist aber nur ein Teil.
+  Die Art der Aktivierungsfunktion entscheidet nicht, ob Ungrokking eintritt, und eine Schwelle oder ein Gate braucht es
+  nicht. Ob es überhaupt eine MLP-Nichtlinearität braucht, ist offen. Ein verändertes Schaltmuster braucht der Verlust
+  nicht (eingefrorene ReLU-Masken, ein anderes Modell). Ob er im Schaltmuster sitzt, entscheidet der Tausch der Schalter
+  bei ReLU nur schwach (dagegen), bei SwiGLU nicht. Bei ReLU arbeiten die Gewichte vor dem Sprung nicht mehr mit dem
+  alten Schaltmuster zusammen, und der Zustand trägt von der ersten Messung an weniger von der Antwort. Der größte Teil
+  des Verlusts kommt mit Einbrüchen des Trainings, die auch die Driftkontrolle hat; keine geprüfte Einstellung hat sie
+  beseitigt. Ob Ungrokking ohne sie einträte, bleibt offen.
+* **V2, Selbstüberwachung und eine Repräsentation von SwiGLU:** Hier nicht prüfbar. Gemessen ist nur: Der Endzustand
+  trägt über die eigenen Gates nicht mehr als über zufällige Gates auf denselben Eingängen und fast immer weniger als die
+  Eingabe selbst. Im untrainierten Netz sind die eigenen Gate-Werte am besten lesbar (SwiGLU und bilinear 0,99 bis 1,00,
+  ReLU 0,55 bis 0,58). Eine Repräsentation „von SwiGLU" im Sinn eines Modells der eigenen Funktion ließe sich so ohnehin
+  nicht zeigen; dafür bräuchte es ein Netz, das über sich Auskunft geben kann, und eine Kontrolle, die nicht schon aus
+  dem Aufbau folgt. Die Literatur zeigt so etwas auch nicht.
+* **V3, SwiGLU ungefähr quadratisch, also gilt der Beitrag:** Die Voraussetzung trifft nur teilweise zu. Im
+  Kleinversuch hängt die Rechnung im zweiten Block an einem quadratischen Glied, mit ReLU genauso; in Qwen3-1.7B ist nur
+  Block 0 ungefähr quadratisch, und das knapp, und als Ganzes lässt sich SwiGLU dort nicht ohne Verlust durch Grad 2
+  ersetzen. Der Schluss von „ungefähr quadratisch" auf „die Beobachtung des Beitrags gilt" trägt nicht: Die Beobachtung
+  zeigt sich auch in Netzen ohne quadratische Einheiten (ReLU, tanh, SiLU) und folgt der Zielfunktion und der
+  Verteilung ihrer Eingaben. Netze aus SwiGLU- oder bilinearen Einheiten sind auf diese Richtung nicht geprüft. Ist die
+  Zielfunktion selbst ein Produkt, hat schon sie keine Hauptrichtung. Ihre quadratische Form hat die beiden
+  Winkelhalbierenden als Achsen; die Netze finden keine gemeinsame Richtung (−53° bis 79°).
+* **V4, Dritteln:** Die Mathematik stimmt und hängt sauber zusammen: Produkt zweier Linearformen, Winkelhalbierende,
+  Halbwinkel und T₂ auf der einen Seite, drei Faktoren, Dreiteilende, gedrückte Kubik, Cardano und T₃ auf der anderen.
+  Eine prüfbare Aussage über trainierte Netze folgt daraus nicht; nichts in 9.2 bis 9.5 stützt oder schwächt sie.
+
 ## Grenzen
 
 * Basismodell, Fragenfamilien, erstes Antwort-Token, ein Eingriffsort (Block 21, letztes Token).
@@ -1611,8 +2094,21 @@ Stellen zurückgenommen; die Änderungen nach dem zweiten Durchgang hat niemand 
   enden nach 1.500. Die Driftkontrolle hat eigene Einbrüche; vergleichbar ist sie nur davor. Das entkoppelte Netz ist
   ein anderes Modell. Seltene Aufgaben wurden nur als Anteil je Stapel geprüft, nicht mit schiefer Verteilung über die
   ganze Trainingszeit. Nicht geprüft: K5 als Trainingsverfahren, ein UFO auf Schlüsseln und Werten, der UFO auf dem
-  Lesemuster, eine rein bilineare Einheit, andere Gewichtsabnahmen, ein zweites Modell. Die Gegenprobe zum Beitrag über
-  kubische Polynome benutzt eigene Netze, nicht das des Beitrags.
+  Lesemuster, eine rein bilineare Einheit (in Abschnitt 9 nachgeholt), andere Gewichtsabnahmen, ein zweites Modell. Die Gegenprobe zum Beitrag über kubische Polynome benutzt eigene Netze, nicht das des Beitrags (Abschnitt 9 rechnet Netze in seiner Größe nach, ohne SAE).
+* Abschnitt 9: derselbe Kleinversuch (zwei Blöcke, eine Aufgabe, Gewichtsabnahme 0,3), je Architektur drei Netze; vom
+  Netz ohne MLP-Nichtlinearität nur eines (das zweite lernte die Aufgabe nicht), und seine Driftkontrolle ist unruhig.
+  Alle 5-%-Läufe benutzen dieselbe Ziehung der 233 Aufgaben; die vorgesehene zweite Ziehung je Architektur ist nicht
+  gelaufen. Die Vorprüfung der Optimierer-Einstellungen lief an einem Startwert über 1.500 Schritte (AMSGrad an dreien,
+  kleinere Lernrate über rund 5.000); SGD, Adagrad und eine viel kleinere Lernrate über lange Zeit sind nicht geprüft.
+  Der Verlust in float64 kam nach der Regel hinzu; die kleinen Stapel hatte die Plankritik vorgesehen, ohne
+  Entscheidungsregel. Der Tausch der Schaltmuster ist bei ReLU nur vor dem Sprung lesbar, und die vorgesehene
+  Hauptlesung an Läufen ohne Einbrüche gibt es nicht; eingefroren wurde nur das ReLU-Muster, und das eingefrorene
+  Schaltmuster macht ein anderes Modell. Über Ungrokking in Sprachmodellen sagt der Kleinversuch nichts. Die
+  Polynomanpassungen in Qwen gelten für die Textstichprobe (4.082 Positionen aus 24 Wikitext-Absätzen zum Anpassen, 902
+  aus 16 Texten zum Lesen); die Ersatzrechnung nimmt die ersten vier Token und die Chat-Vorlage aus. Die Gegenproben zum
+  Beitrag über kubische Polynome benutzen eigene Netze, auch die in seiner Größe, ohne SAE. Der Trainingsarm mit
+  Selbstüberwachung ist nicht gelaufen. Die Mathematik in 9.6 ist nachgerechnet; an Netzen geprüft ist nur die
+  Gradzählung für bilineare Schichten (kleine Anpassungen an die Kubik), der Bezug zu Halbieren und Dritteln nicht.
 
 ## Nächster Schritt
 
@@ -1631,6 +2127,16 @@ kommen kann (erst dort hat „mehr oder weniger Cache-Nutzung" einen Sinn); (2) 
 des Papers, mindestens acht Startwerten und einer Kontrolle, die nach Wirkung abgeglichen ist und über den Lauf gleich
 groß bleibt; (3) versuchen, die Einbrüche des Trainings abzustellen (etwa mit kleinerer Lernrate oder größerem Epsilon
 im Optimierer; ihre Ursache ist nicht untersucht), und prüfen, ob Ungrokking dann noch eintritt und wie es verläuft.
+
+Zu Abschnitt 9: (1) Ungrokking mit einem Optimierer, der diese Einbrüche nicht hat (nach Thilak et al. etwa SGD oder
+Adagrad, mit Gewichtsabnahme), und derselben Driftkontrolle; lesbar ist dann, ob der Verlust mit diesem Optimierer die
+Einbrüche braucht, nicht mit dem ursprünglichen. Von SGD rät die Plankritik ab: Eine einzige Lernrate für Parameter,
+deren Gradienten sich um das Tausendfache unterscheiden, macht daraus ein anderes Optimierungsproblem. Punkt (3) zu
+Abschnitt 8 ist mit größerem ε, kleinerer Lernrate, AMSGrad, Verlust in float64 und kleinen Stapeln versucht worden,
+ohne Erfolg. (2) Ob ein Netz seine eigene Aktivierungsfunktion abbildet, lässt sich nur an einem Modell prüfen, das über
+sich Auskunft geben kann, mit einer Kontrolle, die nicht schon aus dem Aufbau folgt. (3) Wie quadratisch SwiGLU ist, an
+einem zweiten Sprachmodell und an mehr Text; die Richtung aus dem Beitrag an Netzen aus SwiGLU- oder bilinearen
+Einheiten.
 
 ## Dateien
 
@@ -1663,10 +2169,19 @@ im Optimierer; ihre Ursache ist nicht untersucht), und prüfen, ob Ungrokking da
 | `kv_path_fine_s{0,1,2}.json`, `kv_transplant_s{0,1,2}.json`, `kv_disp_u1000_s{0,1,2}.json`, `kv_disp_drift3000_s{0,1,2}.json` | Pfad-Analyse und Verschiebung des Cache beim Ungrokking, mit Driftkontrolle (8.6) |
 | `cubic_direction.json`, `cubic_direction.txt` | Gegenprobe zum Beitrag über kubische Polynome (8.7) |
 | `review_kv.json` | die sieben Prüfberichte zu Abschnitt 8 und eine Notiz zu den Änderungen danach |
+| `act_plan_review.json`, `act_literature.json`, `act_math_review.json` | Plan mit Plankritik und Entscheidungsregeln, Literaturprüfung und Nachrechnung der Mathematik (Abschnitt 9) |
+| `act_report.json`, `act_verdicts.json`, `act_logs.json` | alle Läufe von Abschnitt 9 mit den festgelegten Kennzahlen, die Regeln angewandt, Trainingsverläufe (9.2) |
+| `act_masks_{relu,swiglu}_s{0,1,2}.json` | Tausch des Schaltmusters (9.2) |
+| `act_selfprobe_{relu,swiglu,bilinear}.json` | eigene Gates aus dem Endzustand (9.3) |
+| `act_quad_{relu,swiglu,bilinear}.json`, `act_qwen.json`, `act_qwen_surrogates.json` | Polynomanpassungen im Kleinversuch und in Qwen3-1.7B, Ersatzrechnungen (9.4) |
+| `act_units_{relu,swiglu,bilinear}.json`, `act_units_early_relu.json` | wovon einzelne Neuronen und der Zustand am `=` abhängen (9.5) |
+| `poly_targets.json`, `poly_A.json`, `poly_B.json`, `poly_C.json`, `poly_D2.json`, `poly_D3.json` | Richtungen der Zielfunktionen und der eigenen Netze, Netze in der Größe des Beitrags, Tiefe (9.5, 9.6) |
+| `trisect_math.json` | Nachrechnung der Mathematik (9.6) |
+| `review_act.json` | Prüfberichte zum fertigen Abschnitt 9 |
 
 Nicht im Repository: Zustände und SAE-Aktivierungen (zusammen etwa 500 MB), für Abschnitt 7 die Statistik echter
 Zustände (`ufo_pool.pt`, 860 MB), die Aktivierungen auf dem Zahlenraster (700 MB) und die Gewichte der Kleinversuche
-(Abschnitt 8: rund 770 MB); sie entstehen beim Nachrechnen neu.
+(Abschnitt 8: rund 770 MB, Abschnitt 9: rund 1,2 GB, dazu die Koeffizienten der Qwen-Anpassung mit 16 MB); sie entstehen beim Nachrechnen neu.
 
 ## Nachrechnen
 
@@ -1731,4 +2246,23 @@ SKIP_MIX=1 STEPS=3000 python $S/kv_transplant.py $G $K/runs/kv_base_s0_drift $K/
 python $S/kv_report.py $K/runs $K/kv_summary $U/grok_base_s0_wd0.3 $U/grok_perm_s0_wd0.3 $U/grok_ufo_s0_wd0.3 && python $S/kv_tables.py $K > $K/kv_tables.txt
 python $S/cubic_direction.py $K/cubic_direction.json 5 8000 > $K/cubic_direction.txt                    # Gegenprobe zu 8.7, 8 min
 # kv_queue.py verteilt eine Liste solcher Läufe auf die Kerne (ein Lauf je Kern)
+# Abschnitt 9 (Aktivierungsfunktion); K wie oben; jeder Lauf mit einem Thread; Grundläufe 13 bis 30 min, Fortsetzungen 3 bis 15 min
+# G: letzter Stand des Grundlaufs der jeweiligen Architektur und des Startwerts (ReLU wie oben, die anderen in der Zeile „G je Architektur"); M: Stand bei Schritt 5.000 desselben Grundlaufs (SwiGLU Startwert 2: 2.500). Die Zeilen mit Startwert 0 gelten ebenso für 1 und 2, außer der Vorprüfung mit ε und float64, der kleineren Lernrate und dem linearen Netz (nur Startwert 0); AMSGRAD=1 lief auch an Startwert 1 und 2.
+A=$R/act_out; mkdir -p $A/runs
+for s in 0 1 2 3; do python $S/kv_grok.py $A/runs bilinear $s 20000 0.3; done; for s in 0 1; do python $S/kv_grok.py $A/runs linear $s 20000 0.3; done
+# G je Architektur: SwiGLU $K/runs/kv_swiglu_s{0,1,2}/ckpt_{11000,13000,8000}.pt; bilinear $A/runs/kv_bilinear_s{0,1,2}/ckpt_{8000,10500,7000}.pt; linear $A/runs/kv_linear_s0/ckpt_18500.pt
+INIT=$G SUB=0.05 STRAT=1 EVAL=50 CKPT=500 TAG=_U python $S/kv_grok.py $A/runs swiglu 0 4000 0.3       # 5-%-Lauf; ebenso TAG=_D ohne SUB und STRAT; ebenso bilinear und linear
+INIT=$G SUB=0.05 STRAT=1 EVAL=50 CKPT=50 TAG=_ungrok5fine python $S/kv_grok.py $A/runs swiglu 0 1500 0.3   # fein, für den Tausch; ebenso TAG=_driftfine ohne SUB und STRAT; beide ebenso bilinear
+INIT=$G FROZEN=$G SUB=0.05 STRAT=1 EVAL=50 CKPT=1000 TAG=_fzU python $S/kv_grok.py $A/runs base 0 4000 0.3   # ReLU-Masken eingefroren; ebenso TAG=_fzD ohne SUB und STRAT
+INIT=$G SUB=0.05 STRAT=1 EPS=1e-6 EVAL=50 CKPT=250 TAG=_scr_eps6_U python $S/kv_grok.py $A/runs base 0 1500 0.3   # Vorprüfung; ebenso EPS=1e-5 (_scr_eps5), AMSGRAD=1 (_scr_ams), F64=1 (_scr_f64), jeweils _U und _D ohne SUB und STRAT
+INIT=$G SUB=0.05 STRAT=1 LR=3e-4 EVAL=150 CKPT=1500 TAG=_fb_lr3_U python $S/kv_grok.py $A/runs base 0 26667 0.3   # nach 13.350 Schritten von Hand beendet (gleich viel Lernrate mal Schritte wie 4.000 bei 10⁻³); ebenso _fb_lr3_D ohne SUB und STRAT über 13333 Schritte, nach 5.250 beendet; LR=3e-4 EPS=1e-5 CKPT=2500 als _fb_lr3e5_U und _fb_lr3e5_D (D ohne SUB und STRAT) über 5000
+INIT=$G SUB=0.05 STRAT=1 BATCH=26 EVAL=50 CKPT=1000 TAG=_b26U python $S/kv_grok.py $A/runs base 0 4000 0.3    # kleine Stapel
+STEPS=50,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000 python $S/act_masks.py $G $M $K/runs/kv_base_s0_ungrok5fine $K/runs/kv_base_s0_driftfine $A/act_masks_relu_s0.json   # SwiGLU mit den feinen Läufen aus $A/runs
+python $S/act_report.py $K/runs $A/runs $A/act_report.json && python $S/act_verdicts.py $A
+for p in act_selfprobe act_quad act_units; do python $S/$p.py $A/${p}_relu.json $K/runs/kv_base_s{0,1,2,3}; python $S/$p.py $A/${p}_swiglu.json $K/runs/kv_swiglu_s{0,1,2,3}; python $S/$p.py $A/${p}_bilinear.json $A/runs/kv_bilinear_s{0,1,2,3}; done
+STEPS=50,100,150,200,250,300,350,400,450,500,550,600 python $S/act_units.py $A/act_units_early_relu.json $K/runs/kv_base_s{0,1,2}_{ungrok5fine,driftfine}
+python $S/act_qwen.py $R $A/act_qwen.json && COEF=$A/act_qwen.json.coef.pt python $S/act_qwen.py $R $A/act_qwen_surrogates.json   # Qwen, etwa 25 und 13 min
+PARTS=1 python $S/poly_direction.py $A/poly_targets.json && TARGETS=deg2,deg4,deg2w PARTS=2 python $S/poly_direction.py $A/poly_A.json 5 8000 && TARGETS=prod,swiglu,deg3w PARTS=2 python $S/poly_direction.py $A/poly_B.json 5 8000
+TARGETS=deg3 ARCHS=post PARTS=23 python $S/poly_direction.py $A/poly_C.json 5 8000 && for t in 2 3; do TARGETS=deg${t}w ARCHS=post PARTS=2 python $S/poly_direction.py $A/poly_D$t.json 5 8000; done
+python $S/trisect_math.py $A/trisect_math.json
 ```

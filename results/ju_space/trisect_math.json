@@ -1,0 +1,104 @@
+{
+ "depress": {
+  "largest_coefficient_of_degree_n_minus_1_after_the_shift": 3.3306690738754696e-16,
+  "degrees": [
+   2,
+   3,
+   4,
+   5,
+   6
+  ],
+  "trials_per_degree": 200
+ },
+ "roots_and_tripling": {
+  "largest_errors": {
+   "mean": 0.0,
+   "roots": 1.8048673666726245e-11,
+   "resolvent": 3.2334947784230958e-15,
+   "cube": 8.335960724225651e-12,
+   "tripling": 1.687538997430238e-14,
+   "doubling": 6.661338147750939e-16
+  },
+  "cubics": 2000
+ },
+ "trisector": {
+  "triangles": 20000,
+  "largest_relative_errors": {
+   "cubic": 3.0784100440156626e-14,
+   "depressed": 3.080435219247522e-14,
+   "inverse_formula": 4.736239098859115e-15,
+   "other_trisector": 3.062813358512343e-14
+  },
+  "sign_of_R": {
+   "R_positive": 12860,
+   "R_negative": 7140
+  },
+  "real_roots_of_the_cubic_in_1_over_s": {
+   "three_real": 20000,
+   "one_real": 0
+  },
+  "which_root_is_the_trisector": {
+   "largest": 18717,
+   "middle": 1283,
+   "smallest": 0,
+   "only": 0
+  }
+ },
+ "bisectors": {
+  "trials": 500,
+  "largest_errors": {
+   "eigenvalues": 9.947598300641403e-14,
+   "eigenvectors": 7.771561172376096e-16,
+   "others": 4.823743005975137e-14,
+   "tan2": 2.2370000744809964e-15
+  }
+ },
+ "chebyshev": {
+  "triangles": 5000,
+  "largest_errors": {
+   "2": 6.161737786669619e-14,
+   "3": 1.34781075189494e-13,
+   "4": 2.2370993946196904e-13,
+   "5": 3.3784086639343514e-13
+  }
+ },
+ "circle": {
+  "trials": 500,
+  "largest_error_two_forms": 1.1102230246251565e-15,
+  "largest_error_three_forms": 1.2628786905111156e-15
+ },
+ "factors": {
+  "degree_2": {
+   "gradient_main_slope": 0.41421356237309503,
+   "bisector_of_x_and_x_plus_a": 0.41421356237309503,
+   "completing_the_square": 0.5
+  },
+  "degree_3_leading_terms": {
+   "gradient_main_slope": 0.2717978300880869,
+   "mean_direction_of_the_three_factors": 0.2679491924311227,
+   "cardano": 0.3333333333333333
+  },
+  "degree_3_of_the_post": {
+   "gradient_main_slope": 0.26054780976895636
+  },
+  "degree_4_leading_terms": {
+   "gradient_main_slope": 0.2,
+   "mean_direction_of_the_four_factors": 0.198912367379658,
+   "quarter": 0.25
+  }
+ },
+ "half_angle": {
+  "2": {
+   "max_error_in_cos_C": 0.07297945938815109,
+   "max_error_in_cos_half_C": 0.0014541812398908283
+  },
+  "4": {
+   "max_error_in_cos_C": 0.040738013255100736,
+   "max_error_in_cos_half_C": 2.3358361475156464e-05
+  },
+  "8": {
+   "max_error_in_cos_C": 0.021597789906477427,
+   "max_error_in_cos_half_C": 1.060568688426855e-08
+  }
+ }
+}

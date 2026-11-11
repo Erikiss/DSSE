@@ -1,0 +1,217 @@
+{
+ "summary": "Checked M1 to M8 with small numpy / sympy / scipy / mpmath scripts on one core (each run under 5 minutes; no training, no web access). Hold exactly: M1, M2 (i)-(iii), M3, M4 (i)-(ii), M5, M6 (i), (v), (vi) and the representation claims of M7. Hold with a correction or caveat: M2 (iv) (the cube of the resolvent needs the square root of the discriminant, it is not a polynomial in the coefficients); M6 (ii)-(iv) (0.2605 is the value for the uncentred second moment of the gradient, the centred covariance gives 0.2196; the limit 1/n needs |x| much larger than |a|, not just large inputs). Wrong as stated: the 'three uncorrelated parts' of M8 (alpha*u and beta*g*u are correlated unless the gate mean is zero; the gate has to be centred first, and when the multiplier is correlated with the gate even the centred parts are correlated). Main new results: (1) the trisector cubic in w = 1/s is exactly the triple-angle identity 4X^3 - 3X = sin(2A - B) for X = h/s (h the altitude from C); it always has three real roots, and the trisector is the principal (largest) root only when -pi/2 <= 2A - B <= 3 pi/2 (82 to 88 % of random triangles), otherwise the middle root. (2) For y = x^3 + a x^2 + x + b on the symmetric box the best polynomial of degree <= 2 is the linear function 6.4x + 3a + b with R^2 = 4459/5575 = 0.7998, so one bilinear layer gains nothing over a linear map; an exact two-layer representation without skip connections needs widths 3 and 2 (1 and 1 with skip connections), but widths (2,2) and (4,1) approximate y to any accuracy with large weights. (3) cos(C/3) as a polynomial in cos(C): maximum error 0.098 / 0.058 / 0.032 for least squares of degree 2 / 4 / 8 (0.039 / 0.020 / 0.010 for the best uniform approximation), always at C = 180 degrees, caused by a square-root singularity that disappears in the half-angle variable cos(C/2). (4) silu(g)*u with independent Gaussian inputs is 70 % a pure product at gate mean 0 and spread 1 but 0.3 % at gate mean -2, because the bilinear coefficient E[silu'(g)] passes through zero near the minimum of SiLU.",
+ "checks": [
+  {
+   "statement": "M1. For x^n + a x^(n-1) + (lower terms) the substitution t = x + a/n removes the term of degree n-1; for n = 2 this is completing the square.",
+   "method": "sympy: substitute x = t - a/n with symbolic coefficients for n = 2..8 and read off the coefficient of t^(n-1); the same with a general shift h. numpy: 2,200 random polynomials of degree 2 to 12 (m1.py).",
+   "result": "Holds exactly. The coefficient of t^(n-1) is 0 for n = 2..8; for a general shift h it is a - n h, so a/n is the only shift that works. Random polynomials: largest remaining coefficient 2.2e-16 (relative); |mean of roots + a/n| <= 1.4e-15, i.e. the shift is minus the mean of the roots. n = 2: (x + a/2)^2 + b - a^2/4 = x^2 + a x + b identically. n = 3: the shifted cubic is t^3 + p t + q with p = b - a^2/3 and q = 2a^3/27 - ab/3 + c, as used in M2.",
+   "holds": true,
+   "correction": "None. Precise wording: substitute x = t - a/n (that is t = x + a/n)."
+  },
+  {
+   "statement": "M2 (i),(ii). Cubic x^3 + a x^2 + b x + c with three real roots: the mean of the roots is -a/3; with p = b - a^2/3, q = 2a^3/27 - ab/3 + c, rho = sqrt(-p/3), cos(theta) = (3q/(2p)) sqrt(-3/p) the roots are -a/3 + 2 rho cos(theta/3 - 2 pi k/3), k = 0, 1, 2.",
+   "method": "200,000 cubics built from three roots drawn uniformly from [-3, 3]; the formula is compared with the sorted roots (m2.py).",
+   "result": "Holds exactly. |mean + a/3| = 0 to rounding. p < 0 in every case (largest p: -1.0e-5). (3q/(2p)) sqrt(-3/p) equals -q/(2 rho^3) (difference 8e-16) and lies in [-1, 1]. Formula against roots: median error 4e-16, largest 6e-10 (cubics with two nearly equal roots, where arccos is ill-conditioned; 8e-11 when the smallest gap between roots exceeds 0.001). With theta = arccos(...) in [0, pi], k = 0 gives the largest root, k = 1 the middle one, k = 2 the smallest (true in all 200,000 cases).",
+   "holds": true,
+   "correction": "None. Add that the formula needs p < 0 (three real roots, not all equal) and that k = 0, 1, 2 lists the roots in descending order."
+  },
+  {
+   "statement": "M2 (iii). The three roots are an invertible linear image of (mean, rho cos(theta/3), rho sin(theta/3)); this triple is, up to constants, the discrete Fourier transform over Z/3 of the roots (first coefficient = Lagrange resolvent).",
+   "method": "Same 200,000 cubics; matrix M = [[1, 2, 0], [1, -1, sqrt3], [1, -1, -sqrt3]]; numpy.fft on the roots in descending order; tests with relabelled roots (m2.py).",
+   "result": "Holds exactly once the conventions are fixed. roots = M (mean, rho cos(theta/3), rho sin(theta/3)) with det M = 6 sqrt(3) = 10.39; the columns of M are orthogonal (singular values sqrt6, sqrt6, sqrt3); largest error 6e-10. With F_j = sum_k r_k exp(-2 pi i j k/3) and the roots in descending order: F_0 = 3 mean, F_1 = 3 rho exp(-i theta/3), F_2 = conj(F_1) = r0 + w r1 + w^2 r2 = 3 rho exp(+i theta/3), the Lagrange resolvent (w = exp(2 pi i/3); largest error 1e-9). So mean = F_0/3, rho cos(theta/3) = Re F_1/3, rho sin(theta/3) = -Im F_1/3. Relabelling the roots cyclically multiplies the resolvent by a cube root of unity, exchanging two roots conjugates it (checked to 4e-15): the cubic fixes the resolvent only up to these six choices, which are the three trisections of theta and of -theta.",
+   "holds": true,
+   "correction": "None. State the ordering of the roots (descending) and the sign convention of the transform."
+  },
+  {
+   "statement": "M2 (iv). The cube of the resolvent is a polynomial in the coefficients (give it), so 'trisecting the angle' is taking the cube root of a known complex number.",
+   "method": "sympy with symbolic roots (exact) and the 200,000 random cubics (m2.py).",
+   "result": "Holds with a correction. For L = r0 + w r1 + w^2 r2 (roots descending): L^3 = (-2a^3 + 9ab - 27c)/2 + i (3 sqrt(3)/2) sqrt(D), where D = a^2 b^2 - 4b^3 - 4a^3 c + 18abc - 27c^2 = -4p^3 - 27q^2 is the discriminant (the product of the squared differences of the roots). Equivalently L^3 = -27q/2 + i (3 sqrt(3)/2) sqrt(-4p^3 - 27q^2) = 27 rho^3 exp(i theta), with modulus (a^2 - 3b)^(3/2) and argument theta. The symbolic differences are 0; numeric relative errors 3e-13 (real part) and 2e-15 (imaginary part). The roots are recovered from the principal cube root as mean + (2/3) Re(w^(-k) L), largest error 3e-11. Only the symmetric combinations are polynomials: L^3 + conj(L)^3 = -2a^3 + 9ab - 27c = -27q and L conj(L) = a^2 - 3b = -3p, so L^3 is a root of z^2 + 27 q z - 27 p^3 = 0 (residual 2e-13).",
+   "holds": false,
+   "correction": "The cube of the resolvent is not a polynomial in the coefficients: its real part (-2a^3 + 9ab - 27c)/2 is one, its imaginary part is (3 sqrt(3)/2) times the square root of the discriminant. Solving the cubic is therefore one square root (of the discriminant) followed by one cube root of a complex number with known modulus (a^2 - 3b)^(3/2) and argument theta; that cube root is the trisection of theta. The conclusion of the statement stands."
+  },
+  {
+   "statement": "M3. With t = 2 rho cos(phi), p = -3 rho^2: t^3 + p t = 2 rho^3 cos(3 phi). Degree 2: cos(2 phi) = 2 cos(phi)^2 - 1, and solving u^2 = (1 + cos(2 phi))/2 is the half-angle formula. In which sense is evaluating the depressed cubic tripling an angle and solving it trisecting?",
+   "method": "200,000 random (rho, phi); random t outside the interval; numpy.roots for the number of real roots; sympy for the Chebyshev (Dickson) forms (m3.py).",
+   "result": "Holds exactly (largest relative error 4e-15). Precise sense: for p < 0 and rho = sqrt(-p/3) the function f(t) = t^3 + p t satisfies f(2 rho X) = 2 rho^3 T3(X) for every real X, where T3(X) = 4X^3 - 3X is the Chebyshev polynomial (error 5e-15). On |t| <= 2 rho, in the coordinate phi = arccos(t/(2 rho)), f acts as phi -> 3 phi (three-to-one; the amplitude goes from 2 rho to 2 rho^3). The equation f(t) = -q has three real solutions exactly when |q| <= 2 rho^3 (three real roots in 2,000 of 2,000 such cases, one real root in 2,000 of 2,000 cases with |q| > 2 rho^3), namely t_k = 2 rho cos((theta + 2 pi k)/3) with theta = arccos(-q/(2 rho^3)): the trisections of theta, theta + 2 pi and theta + 4 pi (residual 6e-15). Outside this range there is no angle: for |t| > 2 rho, t = 2 rho cosh(psi) gives 2 rho^3 cosh(3 psi); for p > 0, t = 2 r sinh(psi) with r = sqrt(p/3) gives 2 r^3 sinh(3 psi) (both checked, 6e-15). The constant term plays no role in the evaluation, and a general cubic is first shifted by a/3 (M1). Degree 2: t^2 - 2 rho^2 = 2 rho^2 cos(2 phi) for any rho > 0 (a depressed quadratic has no scale of its own), and sqrt((1 + cos(2 phi))/2) = |cos(phi)|, so the sign has to be chosen. Complex form: with t = z + rho^2/z, t^3 - 3 rho^2 t = z^3 + rho^6/z^3 and t^2 - 2 rho^2 = z^2 + rho^4/z^2 (checked): evaluating raises z to a power, solving takes a root.",
+   "holds": true,
+   "correction": "None. The angle picture is valid only for p < 0 and |t| <= 2 rho (equivalently: three real roots). Every depressed quadratic and every depressed cubic with p < 0 is 2 rho^n T_n(t/(2 rho)) plus a constant; a general depressed quartic t^4 + p t^2 + q t + r is not (only if q = 0), so degrees 2 and 3 are special."
+  },
+  {
+   "statement": "M4 (i). Article (Pehlivan and Williams): the length s of an angle trisector satisfies R s^3 + S s^2 + T = 0 with no linear term. Extract R, S, T and verify on random triangles with s = a b sin(3 theta)/(a sin(2 theta) + b sin(theta)), theta = C/3; which trisector is it, and is the closed form right?",
+   "method": "R, S, T read from Theorem 1, eq. (13)-(14), of the local text copy (article text, lines 355 to 1312 of amj.txt, read in full as data; PDF pages 15, 16, 18 viewed as images for Figure 2 and for the display after eq. 12). Two samples of about 200,000 random triangles (angles uniform on the simplex; three random points in the unit square). Lengths obtained independently by intersecting the two trisector rays with the line AB in coordinates; 300 triangles with 40-digit arithmetic (m4_extract.py, m4.py).",
+   "result": "Holds. R = a^2 c^2 - (a^2 - b^2)^2, S = 3 a b^2 c^2, T = -a b^2 (a+b+c)(a+b-c)(a-b+c)(-a+b+c), with a = BC, b = CA, c = AB. The closed form is right (it is the area identity a b sin(3 theta) = a s sin(2 theta) + b s sin(theta)) and agrees with the intersection construction to 4e-14 / 2e-13 (relative, first / second sample). It is the trisector CQ next to the side CA of length b: angle theta with CA, 2 theta with CB, foot Q nearer to A. The cubic holds for this length: largest relative residual 7e-12 / 9e-11 in double precision and 3e-38 with 40 digits. It does not hold for the other trisector CP (median relative residual 0.09 / 0.08); CP has length r = a b sin(3 theta)/(a sin(theta) + b sin(2 theta)) and satisfies the cubic with a and b exchanged (7e-12 / 9e-11). The article's examples are reproduced: (a,b,c) = (4,3,2): R, S, T = 15, 432, -4860, s = 3.182834; (4, 14, 3 sqrt15): -30240, 317520, -5186160, s = 7 (double root); (1,4,4): -209, 768, -1008, s = 1.48368; (2,1,2): 7, 24, -30, s = 0.9853679355, r = 1.1948633308; (4,6,5): R = 0, s = sqrt(21), r = (9 sqrt(21) - 21)/5 = 4.048636. Theorem 8 (r as a rational function of s) agrees with the geometry (median relative error 2e-15).",
+   "holds": true,
+   "correction": "None for the theorem. Two misprints in the derivation on journal page 16 (seen in the text copy and in the PDF page image): the display after eq. (12) has 4ab^2 s^2 where eq. (9) gives 4ab^2 s, and the constant coefficient is printed as -4a^2 b^2 (...) instead of -4a^2 b^4 (...). With E^2 from eq. (9), sympy confirms that the sextic equals 4ab^2 (R s^3 + S s^2 + T) exactly."
+  },
+  {
+   "statement": "M4 (ii). In w = 1/s the equation reads T w^3 + S w + R = 0, a depressed cubic (no quadratic term), so Cardano's shift is zero in the variable 1/s.",
+   "method": "sympy identity; residual of the w-cubic on the random triangles (m4.py).",
+   "result": "Holds exactly: T/s^3 + S/s + R = (R s^3 + S s^2 + T)/s^3; residual 7e-12 / 9e-11. Divided by T: w^3 + p w + q = 0 with p = S/T = -3c^2/V = -3/(4 h^2) and q = R/T, where V = (a+b+c)(a+b-c)(a-b+c)(-a+b+c) = 16 area^2 and h is the altitude from C. The three roots add to 0 (checked: 1e-15). In the variable s the shift would be S/(3R) = a b^2 c^2/R, which is not zero.",
+   "holds": true,
+   "correction": "None."
+  },
+  {
+   "statement": "M4 (iii). Does the cubic in w have three real roots for every triangle, which root is the trisector, and is 1/s related to cos(theta) by a simple formula?",
+   "method": "Trigonometric solution of the depressed cubic compared with the angles of the triangle on both samples; direct construction of the three lines through C at the angles (C + 2 pi k)/3 from CA; comparison with the article's Theorems 5 to 7 (m4.py).",
+   "result": "Yes, always three real roots. With X = h w = h/s the cubic is exactly 4X^3 - 3X = sin(2A - B) (2 rho = 1/h to 4e-16; -q/(2 rho^3) = sin(2A - B) to 6e-13). This is the triple-angle identity for the angle phi0 = A + C/3 - pi/2 between the trisector and the altitude from C: 1/s = cos(phi0)/h = sin(A + C/3)/(b sin A). The three roots are w_k = sin(A + (C + 2 pi k)/3)/(b sin A), the reciprocals of the signed lengths of the three lines through C that make the angles C/3, (C + 2 pi)/3 and (C + 4 pi)/3 with CA (checked by construction, 1e-10). Discriminant/(-4p^3) = cos^2(2A - B) >= 0: a double root exactly when cos(2A - B) = 0; a root w = 0 (one of the lines parallel to AB; the s-cubic degenerates to a quadratic) when R = 0, i.e. 2A = B or 2A = B + pi. Which root: 1/s is the largest root of the w-cubic (the principal trisection, k = 0 in the formula of M2) exactly when -pi/2 <= 2A - B <= 3 pi/2, otherwise it is the middle root; it is never the smallest (negative) root. The rule agreed with the geometry in every triangle of both samples; 1/s was the largest root in 87.7 % (angles uniform) and 82.5 % (random points) of the triangles and the middle root in 12.3 % and 17.5 %. In the variable s: R > 0 (the same as 0 < 2A - B < pi; 50 % / 51 % of the triangles) gives one positive root, which is s; for R < 0, s is the smaller of the two positive roots in 75 % / 64 % and the larger in 25 % / 36 % of those triangles, and the article's criterion in Theorem 7 agreed with the geometry in 100 % of them. Relation to cos(theta), theta = C/3: 1/s = (b + 2a cos(theta))/(a b (4 cos(theta)^2 - 1)) (checked to 2e-13), with inverse cos(theta) = (a s + sqrt(a^2 s^2 + 4ab^2 s + 4a^2 b^2))/(4ab) (the article's eq. 11, checked to 4e-16). The simpler form is 1/s = (cos(theta) + cot(A) sin(theta))/b, a cosine of the shifted angle theta + A - pi/2.",
+   "holds": true,
+   "correction": "No claim was wrong; two clarifications. The cubic in w does not trisect C itself but the angle 3A + C - 3 pi/2, whose cosine is sin(2A - B); since A is known from the sides this is equivalent. 1/s is not an affine function of cos(theta); it is a rational function of cos(theta), and a linear combination of cos(theta) and sin(theta) with coefficients 1/b and cot(A)/b."
+  },
+  {
+   "statement": "M5. Q(x) = (g.x)(u.x) has the symmetric matrix (g u^T + u g^T)/2; its only non-zero eigenvalues are |g||u|(cos(phi) + 1)/2 and |g||u|(cos(phi) - 1)/2 with eigenvectors along g/|g| + u/|u| and g/|g| - u/|u|; cos(phi) = +-1: plus or minus one square; cos(phi) = 0: balanced difference of two squares; ratio of the absolute eigenvalues tan^2(phi/2).",
+   "method": "20,000 random pairs (g, u) in dimension 2 to 12, every tenth pair nearly parallel, nearly antiparallel or exactly orthogonal; numpy.linalg.eigh (m5.py).",
+   "result": "Holds exactly: eigenvalue errors <= 1.4e-15 |g||u|, all other eigenvalues <= 5e-16, eigenvector residuals <= 8e-16, |lambda-|/lambda+ = tan^2(phi/2) to 5e-12. The eigenvalues are the half-angle formulas: lambda+ = |g||u| cos^2(phi/2), lambda- = -|g||u| sin^2(phi/2) (4e-16). The identity behind it: (g.x)(u.x) = (|g||u|/4) [((g/|g| + u/|u|).x)^2 - ((g/|g| - u/|u|).x)^2] (6e-16). Special cases in dimension 6: u = 1.7 g gives one non-zero eigenvalue g.u = 3.7412 (rank 1); u = -0.6 g gives -1.3204 (rank 1); u orthogonal to g gives +0.9259 and -0.9259 = +-|g||u|/2.",
+   "holds": true,
+   "correction": "None."
+  },
+  {
+   "statement": "M5 (addition). Under inputs x with covariance Sigma, what replaces cos(phi)?",
+   "method": "5,000 random (g, u, Sigma) in dimension 2 to 10: eigenvalues of Sigma^(1/2) M Sigma^(1/2) and of M Sigma; Monte Carlo with 2,000,000 Gaussian inputs in dimension 5 (m5.py).",
+   "result": "Question, answered: cos(phi) is replaced by the correlation rho of the two projections, rho = g^T Sigma u / sqrt(g^T Sigma g * u^T Sigma u), and |g||u| by the product s_g s_u of their standard deviations. In whitened coordinates the non-zero eigenvalues are s_g s_u (rho +- 1)/2 (errors <= 4e-15; M Sigma has the same non-zero eigenvalues). The axes are the standardised sum and difference e+ = (g.x/s_g + u.x/s_u)/sqrt(2(1 + rho)) and e- = (g.x/s_g - u.x/s_u)/sqrt(2(1 - rho)): uncorrelated, unit variance, and (g.x)(u.x) = lambda+ e+^2 + lambda- e-^2 exactly (Monte Carlo: correlation of e+ and e- -0.0007, variances 1.0015 and 0.9988, identity to 4e-15). For Gaussian inputs: mean s_g s_u rho (sample -0.2262, exact -0.2267), variance s_g^2 s_u^2 (1 + rho^2) (0.2596 against 0.2600), share of the variance carried by the '+' square (1 + rho)^2/(2(1 + rho^2)) (0.1021 against 0.1017), |lambda-|/lambda+ = tan^2(arccos(rho)/2) (2.9716 both).",
+   "holds": true,
+   "correction": "Valid for inputs with mean zero (or after centring). With a non-zero mean the product also has a linear part, see M8."
+  },
+  {
+   "statement": "M6 (i). y = x^2 + a x + b with x, a uniform on [-3, 3]: the top eigenvector of the mean outer product of the gradient with respect to (x, a) has slope sqrt(2) - 1 = tan(22.5 degrees) = 0.4142.",
+   "method": "Exact integration with sympy; Monte Carlo with 4,000,000 points and, with another seed, 10,000,000 points; 3 x 3 version including b (m6.py, m6b_m8b.py, m6c.py).",
+   "result": "Holds exactly. G = [[15, 6], [6, 3]], slope sqrt(2) - 1 = 0.414214, angle 22.5 degrees, eigenvalues 17.485 and 0.515 (97.1 % of the trace). Monte Carlo: 0.41437 (4e6 points) and 0.41415 (1e7 points), standard error 0.00007. Including b changes nothing (its gradient is 1 and its cross moments are 0). The value does not depend on the box: G = v H^2 with H = [[2, 1], [1, 0]] for any inputs with mean zero, equal variance v and no correlation; in general tan(2 alpha) = 4 v_x/(3 v_x + v_a).",
+   "holds": true,
+   "correction": "None. The 22.5 degrees are the bisector of the two linear factors of x^2 + a x = x (x + a), which point in the directions 0 and 45 degrees; the eigenvalues of the form are (1 +- sqrt(2))/2, as M5 predicts."
+  },
+  {
+   "statement": "M6 (ii),(iii). y = x^3 + a x^2 + x + b: slope about 0.26. y = x^4 + a x^3 + x + b: give the slope.",
+   "method": "Exact integration with sympy; the two Monte Carlo runs; 3 x 3 version including b (m6.py, m6b_m8b.py, m6c.py).",
+   "result": "Degree 3: G = [[1004/5, 258/5], [258/5, 81/5]] = [[200.8, 51.6], [51.6, 16.2]], slope (sqrt(1118185) - 923)/516 = 0.260548 (14.60 degrees), eigenvalues 214.24 and 2.76 (98.7 % of the trace); Monte Carlo 0.26068 and 0.26049 (standard error 0.00006). Degree 4: G = [[73664/35, 2916/7], [2916/7, 729/7]] = [[2104.69, 416.57], [416.57, 104.14]], slope (sqrt(5752965961) - 70019)/29160 = 0.199908 (11.30 degrees), eigenvalues 2187.96 and 20.87 (99.1 %); Monte Carlo 0.20001 and 0.19987. With b included (3 x 3 matrix): 0.2606 and 0.1999.",
+   "holds": true,
+   "correction": "The number depends on the convention. The gradient has a non-zero mean for degree 3, namely (10, 3), and for degree 4, namely (1, 0). With the mean removed (covariance of the gradient) the slopes are 0.2196 (degree 3) and exactly 0.2 (degree 4); the mean gradient of degree 3 itself has slope 0.30. Say which matrix is meant (here: the uncentred second moment)."
+  },
+  {
+   "statement": "M6 (iv). In each case the local slope (dy/da)/(dy/dx) tends to 1/n for |x| large compared with the other terms.",
+   "method": "Closed form of the local slope; exact top-eigenvector slopes for x uniform on [-L, L] with a on [-3, 3], and for both on [-L, L]; distribution of the local slope over the box with 4,000,000 points (m6.py).",
+   "result": "Holds as a limit: the local slope is 1/(n + (n-1) a/x + ...). At a = 3 (n = 2, 3, 4): x = 10: 0.435, 0.277, 0.204; x = 100: 0.4926, 0.3268, 0.2445; x = 1000: 0.49925, 0.33267, 0.24944. Top-eigenvector slope with x on [-L, L] and a on [-3, 3]: L = 10: 0.4911, 0.3250, 0.2446; L = 100: 0.49991, 0.33325, 0.24994. On the box of the task the limit is far away: median local slope 0.400, 0.225, 0.158, quartiles (0.250, 0.667), (0.120, 0.410), (0.033, 0.304); the local slope is within 20 % of 1/n on 21 %, 16 %, 14 % of the box and negative on 12.5 %, 7.2 %, 19.2 % of it.",
+   "holds": true,
+   "correction": "The limit needs |x| much larger than |a|, not just large inputs. If both ranges grow together (x and a on [-L, L]) the slope stays at 0.4142 for degree 2 for every L and tends to 0.2718 (degree 3) and 0.2000 (degree 4), not to 1/3 and 1/4. Reason: x^n + a x^(n-1) = (x + a/n)^n - ((n-1)/(2n)) a^2 x^(n-2) - ..., and the remainder is small only when (a/x)^2 is small."
+  },
+  {
+   "statement": "M6 (v). y = g u with g, u uniform on [-3, 3]: the mean outer product of the gradient is a multiple of the identity, so there is no preferred direction.",
+   "method": "Exact moments; Monte Carlo with 4,000,000 points (m6.py).",
+   "result": "Holds exactly: the gradient is (u, g) and the matrix is [[3, 0], [0, 3]]; Monte Carlo [[3.0015, 0.0002], [0.0002, 2.9979]]. The directions g + u and g - u show up only in the second derivative: the Hessian [[0, 1], [1, 0]] has the eigenvectors (1, 1) and (1, -1) with eigenvalues +1 and -1.",
+   "holds": true,
+   "correction": "None. It needs equal variances and no correlation of g and u."
+  },
+  {
+   "statement": "M6 (vi). y = silu(g) u, silu(g) = g/(1 + exp(-g)): the mean outer product of the gradient is diagonal in (g, u); give the two diagonal entries.",
+   "method": "scipy.integrate.quad (error estimates below 2e-13) and Monte Carlo with 4,000,000 points (m6.py).",
+   "result": "Holds. Entry for g: E[u^2] E[silu'(g)^2] = 3 x 0.486054 = 1.458162. Entry for u: E[silu(g)^2] = 1.223928. Off-diagonal: E[u] E[silu(g) silu'(g)] = 0 because E[u] = 0. Monte Carlo: [[1.45865, 0.00056], [0.00056, 1.22248]]. The top direction is the gate axis, but only weakly (ratio 1.19). For comparison the pure product g u has 3 and 3.",
+   "holds": true,
+   "correction": "It is diagonal only because u has mean zero: E[silu(g) silu'(g)] = 0.678861, so a mean m_u of u gives the off-diagonal entry 0.6789 m_u (Monte Carlo with m_u = 1: 0.67892)."
+  },
+  {
+   "statement": "M7 (a). A network of purely bilinear units (w1.h + c1)(w2.h + c2), each layer followed by a linear map, represents y = x^3 + a x^2 + x + b exactly with two stacked layers (give a construction with the widths needed) and cannot represent it with one layer (degree at most 2).",
+   "method": "Explicit weights evaluated on 1,000,000 and 400,000 random points (m7a.py, m7e.py); a random one-layer net fitted by the monomials of degree <= 2; hand argument with unique factorisation for the lower bounds; Levenberg-Marquardt searches from random starts in the smaller classes and, as a control, in the class of widths (3, 2) (m7b.py, m7b2.py, m7b3.py, m7b_c.py, m7d.py).",
+   "result": "Holds. Construction without skip connections, widths 3 and 2: layer 1 computes x*x, (x + a)*1 and (x + b)*1; layer 2 computes (x^2)*(x + a) and (x + b)*1; the read-out adds the two (largest error 2e-14 on values up to 59.5). Only two of the five units are true products. With skip connections (later layers and the read-out also see the input, as in a residual stream) one unit per layer is enough: x*x, then (x^2)*(x + a), plus x + b from the input (error 1.4e-14). One layer of any width is a polynomial of degree <= 2 (a random layer with 7 units is reproduced by the 10 monomials to 1e-13) and y has degree 3. Lower bounds without skip connections (hand proof): a single second-layer unit would need y - d = Q1 Q2 with factors of degree <= 2, which is impossible because y - d is irreducible (it has degree 1 in b with coefficient 1); two first-layer units P1, P2 (each a product of two affine forms) would need y = F(P1, P2) with a quadratic polynomial F; the degree-4 part has to cancel, which leaves one product and one affine form, and the degree-3 part x^2 (x + a) then forces all three linear forms to be multiples of x or x + a plus constants, so b cannot appear. So 3 and 2 are the smallest widths for an exact representation. Control for the searches: in the (3, 2) class the random search finds an exact fit (unexplained share 2e-29 in 1 of 6 starts).",
+   "holds": true,
+   "correction": "Two additions. (1) 'Cannot represent exactly' is not 'cannot fit': smaller nets without skip connections come arbitrarily close with large weights. Widths (2, 2): P1 = (x + 2 eps b)(x + 1 - eps a/2), P2 = x (x - 1 + eps (a/2 + 2b)), D = P1 - P2, output (P1 - D^2/4 - D/2)/eps + (D/2)(P1 - D/2) + D/2 = y + O(eps); unexplained share of the variance 4.0e-4, 4.0e-6, 4.0e-8, 4.0e-10 for eps = 1e-2, 1e-3, 1e-4, 1e-5 (weights about 1/eps). Widths (4, 1): ((1 + eps x - eps^2 a x/2)(1 - eps x + eps^2 (x^2 + a x/2) + eps^3 (x + b)) - 1)/eps^3 = y + O(eps); unexplained share 5.0e-5, 5.0e-7, 5.0e-9 for eps = 1e-2, 1e-3, 1e-4 (read-out weight 1/eps^3). The random searches reached 2e-9 (first layer of width 2) and 3.5e-5 (second layer of width 1). A fit experiment therefore cannot separate 'representable' from 'not representable' by R^2 alone; weight size has to be looked at. (2) The constants c1, c2 are needed: without them (and without a constant input) two layers give only homogeneous polynomials of degree 4."
+  },
+  {
+   "statement": "M7 (b). Best R^2 of a polynomial of degree at most 2 in (x, a, b) for y = x^3 + a x^2 + x + b with x, a, b uniform on [-3, 3].",
+   "method": "Exact normal equations with the moments of the uniform law in rational arithmetic; least squares on 200,000 random points (m7a.py).",
+   "result": "R^2 = 4459/5575 = 0.799821. The best polynomial of degree <= 2 is the linear function 6.4 x + 3 a + b; all quadratic coefficients are zero, because y is an odd function of (x, a, b) and the box is symmetric. Var(y) = 1338/7 = 191.14; unexplained 6696/175 = 38.26 = Var(x^3 - 5.4 x) + Var(a (x^2 - 3)) = 16.66 + 21.60. Degree 3 gives R^2 = 1. Monte Carlo: 0.79974 (degree 1), 0.79975 (degree 2), 1.0 (degree 3).",
+   "holds": true,
+   "correction": "For this target one bilinear layer is no better than a linear map (both 0.7998); the first useful degree is 3. A fit with one bilinear layer should therefore land at 0.80, not somewhere between 0.80 and 1."
+  },
+  {
+   "statement": "M7 (c). cos(C/3) as a function of c = cos(C) on [-1, 1] is not a polynomial; maximum error of the best polynomial of degree 2, 4 and 8, and where the error concentrates.",
+   "method": "Least squares in a Chebyshev basis on 200,001 equally spaced points; best uniform approximation by linear programming on a grid refined towards the ends (m7c.py).",
+   "result": "f(c) = cos(arccos(c)/3) is the largest root of 4X^3 - 3X = c (checked to 1e-15); f(-1) = 0.5, f(0) = 0.8660, f(1) = 1. It is not a polynomial (a polynomial f of degree d would make 4f^3 - 3f of degree 3d, not 1) and it has a square-root singularity at c = -1: (f(c) - 1/2)/sqrt((1 + c)/6) = 0.9868, 0.99864, 0.999864, 0.9999864 for 1 + c = 1e-2, 1e-4, 1e-6, 1e-8, so the slope is infinite there (at c = 1 the slope is 1/9). Least squares: maximum error 0.0982 (degree 2), 0.0581 (degree 4), 0.0321 (degree 8), each at c = -1 (C = 180 degrees); root-mean-square error 0.0115, 0.0041, 0.0013. Best uniform approximation: 0.0387, 0.0200, 0.0101. The error only halves when the degree doubles (least squares 0.058, 0.032, 0.017, 0.0087, 0.0044 for degree 4, 8, 16, 32, 64; exponent -0.93). It concentrates at c = -1: 53 %, 55 %, 75 % of the squared least-squares error lies in c <= -0.9 (5 % of the interval); on c > -0.9 the maximum error is 0.016, 0.0076, 0.0018. Fitted only on c in [-0.5, 1] (C <= 120 degrees): 0.0038, 0.00025, 1.7e-6; on [0, 1]: 5.4e-4, 9.1e-6, 4.3e-9.",
+   "holds": true,
+   "correction": "The obstacle is of half-angle type: in the variable v = cos(C/2) = sqrt((1 + c)/2) the same function is analytic, and polynomials of degree 2, 4, 8, 16 in v reach 1.2e-3, 1.9e-5, 8.8e-9, 5e-15. Since k stacked bilinear layers give degree at most 2^k, the numbers for degree 2, 4, 8 are lower bounds for 1, 2, 3 bilinear layers with input c."
+  },
+  {
+   "statement": "M8 (a). For g Gaussian (mean mu, standard deviation sigma) and independent standard normal u, with the least-squares line silu(g) = alpha + beta g + r(g): silu(g) u = alpha u + beta g u + r(g) u, three uncorrelated parts.",
+   "method": "Gauss-Hermite quadrature with 240 nodes (agrees with scipy.integrate.quad to 1e-14) and Monte Carlo with 2,000,000 samples (m8.py).",
+   "result": "Wrong as stated unless mu = 0. r(g) u is uncorrelated with the other two parts, but Cov(alpha u, beta g u) = alpha beta mu, so their correlation is sign(alpha beta) mu/sqrt(mu^2 + sigma^2): -0.992 at (mu, sigma) = (4, 0.5), -0.894 at (-2, 1), +0.447 at (1, 2) (Monte Carlo -0.9923, -0.8945, +0.4471). The three variance 'shares' then do not add to 1: their sum is 20.3 at (-4, 0.5), 1.21 at (-2, 1), 0.81 at (1, 2) and 1.16 at (4, 0.5).",
+   "holds": false,
+   "correction": "Centre the gate: silu(g) = m + beta (g - mu) + r(g) with m = E[silu(g)] and beta = E[silu'(g)] (Stein's identity, checked to 4e-16). Then m*u (linear in u), beta*(g - mu)*u (a pure product) and r(g)*u are uncorrelated for independent u (Monte Carlo cross terms below 0.001), with variances m^2, beta^2 sigma^2 and Var(silu(g)) - beta^2 sigma^2 and total E[silu(g)^2]. In a network, 'beta g u' contains the linear piece beta mu u, so a 'bilinear share' has to be defined after centring."
+  },
+  {
+   "statement": "M8 (b). Shares of variance of the three parts for mu in {-4, -2, -1, 0, 1, 2, 4} and sigma in {0.5, 1, 2} (u independent of g).",
+   "method": "Gauss-Hermite quadrature for the centred parts; the split by polynomial degree was cross-checked against a weighted least-squares fit on a 120 x 120 quadrature grid (agreement 1.5e-12) (m8.py, m8_check.py, m6b_m8b.py).",
+   "result": "Shares linear / bilinear / remainder of the centred parts (they add to 1), for mu = -4, -2, -1, 0, 1, 2, 4. sigma 0.5: .884/.111/.005, .973/.023/.004, .903/.048/.049, .048/.865/.087, .745/.251/.004, .916/.084/.000, .982/.018/.000. sigma 1: .697/.274/.029, .791/.003/.206, .180/.362/.458, .120/.703/.177, .517/.456/.027, .759/.239/.002, .932/.068/.000. sigma 2: .205/.025/.770, .000/.266/.734, .061/.484/.455, .209/.569/.222, .388/.525/.087, .555/.417/.027, .788/.211/.001. Total variance E[silu(g)^2] at sigma = 1: 0.0106, 0.0481, 0.0875, 0.356, 1.48, 4.29, 16.4. R^2 of the best polynomial of degree <= 2 in (g, u), equal to 1 minus the remainder: sigma 0.5: .995 .996 .951 .913 .996 1.000 1.000; sigma 1: .971 .794 .542 .823 .973 .998 1.000; sigma 2: .230 .266 .545 .778 .913 .973 .999. Reading: the unit is mostly a pure product only around mu = 0 (bilinear share 0.87, 0.70, 0.57 for sigma = 0.5, 1, 2). For clearly positive gates it is close to the product g u, whose variance is dominated by the linear piece mu u. For negative gates the bilinear share collapses, because beta = E[silu'(g)] passes through zero near the minimum of SiLU (at g = -1.278): beta = 0 at mu = -1.44, -1.90, -3.57 for sigma = 0.5, 1, 2. For mu in {-4, -2, -1} the remainder (degree 3 and higher in the inputs) is 0.4 to 5 % at sigma 0.5, 3 to 46 % at sigma 1 and 46 to 77 % at sigma 2. Most of the remainder is the degree-3 term, for example 0.173 of 0.177 at (0, 1).",
+   "holds": true,
+   "correction": "No claim to correct. Exact special case found on the way: E[silu(g)] = 0 when mu = -sigma^2/2, so the linear share is exactly 0 at (mu, sigma) = (-2, 2) and at (-0.5, 1)."
+  },
+  {
+   "statement": "M8 (c). What changes if u is correlated with g (correlation 0.5 and 0.9)?",
+   "method": "u = rho z + sqrt(1 - rho^2) e with z = (g - mu)/sigma and e independent; quadrature for the variances and covariances of the three centred parts; split by polynomial degree with the Hermite coefficients c_k = E[silu(g) He_k(z)] and d_j = c_(j+1) + j c_(j-1); Monte Carlo with 2,000,000 samples and a direct quadrature fit as checks (m8.py, m8_check.py).",
+   "result": "Three things change. (1) The unit gets a mean rho sigma beta. (2) The three centred parts are no longer uncorrelated: Cov(m u, r u) = m rho^2 E[r z^2] and Cov(beta (g - mu) u, r u) = beta sigma rho^2 E[r z^3], while m u and beta (g - mu) u stay uncorrelated. The cross terms 2 Cov/Var reach -0.69 at (mu, sigma, rho) = (-2, 1, 0.9), where the three 'shares' are .746/.005/.995 and add to 1.75; -0.61 at (-1, 0.5, 0.9); +0.22 at (1, 2, 0.9); at rho = 0.5 up to -0.22. Monte Carlo agrees (for example -0.693 against -0.692). (3) An orthogonal split still exists by polynomial degree in the inputs. Shares degree 1 / degree 2 / degree >= 3 at sigma = 1 for mu = -4, -2, -1, 0, 1, 2, 4: rho 0: .697/.274/.029, .791/.003/.206, .180/.362/.458, .120/.703/.177, .517/.456/.027, .759/.239/.002, .932/.068/.000; rho 0.5: .687/.278/.034, .618/.038/.344, .134/.437/.430, .219/.623/.159, .517/.452/.031, .733/.264/.004, .917/.083/.000; rho 0.9: .673/.285/.042, .252/.114/.634, .091/.505/.404, .313/.546/.141, .517/.446/.037, .684/.310/.006, .884/.116/.000. R^2 of the best quadratic in (g, u) at rho = 0.5: sigma 0.5: .994 .992 .922 .909 .995 1.000 1.000; sigma 1: .966 .656 .570 .841 .969 .996 1.000; sigma 2: .175 .500 .683 .825 .919 .968 .997. At rho = 0.9: sigma 0.5: .991 .983 .838 .905 .993 1.000 1.000; sigma 1: .958 .366 .596 .859 .963 .994 1.000; sigma 2: .148 .627 .780 .871 .926 .961 .994. Around mu = 0 the correlation moves variance from degree 2 to degree 1 (degree-1 share 0.12, 0.22, 0.31 at sigma = 1) and leaves the quadratic fit about as good (0.82, 0.84, 0.86); at (mu, sigma) = (-2, 1) it makes the unit much less quadratic (0.79, 0.66, 0.37).",
+   "holds": true,
+   "correction": "With correlated gate and multiplier, report the split by polynomial degree (or the cross terms), not three 'shares'."
+  }
+ ],
+ "further_remarks": [
+  "Chebyshev statement for bisector and trisector (verified, m4.py): for the line from C that makes the angle C/n with CA and has length s_n up to AB, T_n(h/s_n) = cos(n A + C - n pi/2), h the altitude from C (n = 2 to 6, errors below 5e-10). n = 2 is the bisector: (h/l)^2 = (1 + cos(A - B))/2, the half-angle formula, equivalent to the article's eq. (2), l^2 = ab(1 - c^2/(a + b)^2) (both checked, 2e-10). n = 3 is the trisector cubic 4X^3 - 3X = sin(2A - B). So 'bisector / one square root' and 'trisector / one cube root' are the same statement for T2 and T3, and in both the equation in 1/length has no term of degree n - 1 because n cosines spaced by 2 pi/n add to zero; that is the whole content of 'the shift is zero in 1/s'. The identity the article calls amazing, U + W^2 = 4a^2 b^4 c^6 (eq. 23, confirmed symbolically), is sin^2 + cos^2 = 1 for the angle 2A - B: R sqrt(V) = 2ab^2 c^3 sin(2A - B) and W = 2ab^2 c^3 cos(2A - B) (checked to 6e-13 and 3e-10).",
+  "Products in Fourier coordinates (verified to 5e-14, remarks.py): two numbers m + d and m - d have the product m^2 - d^2; three numbers m + 2 rho cos(phi - 2 pi k/3) have sum 3m, pair sum 3(m^2 - rho^2) and product m^3 - 3 m rho^2 + 2 rho^3 cos(3 phi). The phase enters a product of two only through its double and a product of three only through its triple. This is the common root of 'quadratic unit and bisector' and 'cubic and trisector': a product of two forms is diagonal in the sum/difference basis (Fourier transform over Z/2), and solving a cubic is undoing the Fourier transform over Z/3 after a cube root.",
+  "On the unit circle (verified to 2e-15, remarks.py): the product of two unit linear forms with directions psi1, psi2 is (1/2)[cos(2 psi - psi1 - psi2) + cos(psi1 - psi2)], a constant plus a second harmonic whose phase is the bisector; its extreme values are the eigenvalues cos^2(phi/2) and -sin^2(phi/2) of M5. The product of three unit forms is (1/4)[cos(3 psi - psi1 - psi2 - psi3) + three first harmonics]; the phase of the third harmonic is the mean direction (psi1 + psi2 + psi3)/3, defined up to 120 degrees. The first harmonics vanish exactly when the three forms are 120 degrees apart, and then the product is cos(3(psi - psi0))/4.",
+  "Where the analogy is exact and where not (verified, remarks.py): for degree 2 the target x^2 + a x = x (x + a) is a product of two forms 45 degrees apart and the main gradient direction is exactly their bisector (22.5 degrees, slope 0.4142) for any centred, uncorrelated inputs of equal variance. For degree 3 there is no exact counterpart: x^2 (x + a) has the factor directions 0, 0, 45 degrees with mean 15 degrees (slope 0.2679), while the main gradient direction of this homogeneous part is 0.2718 for a uniform box and 0.2937 for Gaussian inputs (Monte Carlo 0.2937); for degree 4, 0.2000 and 0.2259 against tan(11.25 degrees) = 0.1989. For the cubic of the task: 0.2605 (uniform box) and 0.2848 (Gaussian inputs of the same variance). Cardano's 1/3 is only the limit |x| much larger than |a|. So the gradient statistics of the target predict a direction between 0.26 and 0.29 depending on the input law, not x + a/3.",
+  "Completing the square and principal axes are two different ways of writing the same quadratic as a difference of two squares (both verified): x^2 + a x = (x + a/2)^2 - (a/2)^2 (direction of slope 1/2, not orthogonal) = 1.2071 X^2 - 0.2071 Y^2 with X along slope 0.4142 (orthogonal axes). Only the first generalises to Cardano's shift; only the second is what M5 and the gradient direction describe.",
+  "The exact bilinear constructions use the Horner form x*x*(x + a) + (x + b), with first-layer directions x and x + a (slope 1), not x + a/3. Writing y in Cardano's form t^3 + (1 - a^2/3) t + (2a^3/27 - a/3 + b), t = x + a/3, needs five true products instead of two (identity checked numerically, 2e-14).",
+  "For variance shares of a whole MLP write (many neurons): with Gaussian inputs and every multiplier uncorrelated with its own gate, the three centred parts are polynomials of different degree (1, 2, 3 and higher) and are therefore uncorrelated across neurons as well. A two-neuron Monte Carlo (2,000,000 samples, m8_check.py) gave correlations of at most 0.002 between unlike parts and 0.26, -0.11, -0.04 between like parts. If a multiplier is correlated with its own gate, or the inputs are not Gaussian, cross terms appear and have to be reported.",
+  "Sources and how they were read. Pehlivan and Williams, 'Angle Trisectors and Cubic Equations', Arhimede Mathematical Journal 13(1), 2026, pages 11 to 31: full text of the article in the local text copy (lines 355 to 1312 of amj.txt), plus PDF pages 15, 16 and 18 (journal pages 13, 14, 16) viewed as page images; the other articles of the issue were not read. The project plan act_out/plan.md was read in full as context. No web access was used and nothing was downloaded."
+ ],
+ "files": [
+  "<root>/act_review/math/m1.py",
+  "<root>/act_review/math/m1.out",
+  "<root>/act_review/math/m2.py",
+  "<root>/act_review/math/m2.out",
+  "<root>/act_review/math/m3.py",
+  "<root>/act_review/math/m3.out",
+  "<root>/act_review/math/m4_extract.py",
+  "<root>/act_review/math/m4_extract.out",
+  "<root>/act_review/math/m4.py",
+  "<root>/act_review/math/m4.out",
+  "<root>/act_review/math/m5.py",
+  "<root>/act_review/math/m5.out",
+  "<root>/act_review/math/m6.py",
+  "<root>/act_review/math/m6.out",
+  "<root>/act_review/math/m6b_m8b.py",
+  "<root>/act_review/math/m6b_m8b.out",
+  "<root>/act_review/math/m6c.py",
+  "<root>/act_review/math/m6c.out",
+  "<root>/act_review/math/m7a.py",
+  "<root>/act_review/math/m7a.out",
+  "<root>/act_review/math/m7b.py",
+  "<root>/act_review/math/m7b.out",
+  "<root>/act_review/math/m7b2.py",
+  "<root>/act_review/math/m7b2.out",
+  "<root>/act_review/math/m7b3.py",
+  "<root>/act_review/math/m7b3.out",
+  "<root>/act_review/math/m7b_c.py",
+  "<root>/act_review/math/m7b_c.out",
+  "<root>/act_review/math/m7c.py",
+  "<root>/act_review/math/m7c.out",
+  "<root>/act_review/math/m7d.py",
+  "<root>/act_review/math/m7d.out",
+  "<root>/act_review/math/m7e.py",
+  "<root>/act_review/math/m7e.out",
+  "<root>/act_review/math/m8.py",
+  "<root>/act_review/math/m8.out",
+  "<root>/act_review/math/m8.json",
+  "<root>/act_review/math/m8_check.py",
+  "<root>/act_review/math/m8_check.out",
+  "<root>/act_review/math/remarks.py",
+  "<root>/act_review/math/remarks.out",
+  "<root>/act_review/math/build_result.py",
+  "<root>/act_out/review/math.json"
+ ],
+ "not_checked": [
+  "No network was trained. Whether trained bilinear, SwiGLU or other networks actually use the directions described here (bisectors, slope 0.26, x and x + a) was not checked.",
+  "The lower bound 'widths 3 and 2 without skip connections' for an exact representation is a hand proof (irreducibility and unique factorisation); it was not machine-checked. The numerical searches are consistent with it but are not proofs, and the values they reached (2e-9 and 3.5e-5) are not minima: the explicit families show that the infimum is 0 in both smaller classes.",
+  "The best uniform errors for cos(C/3) come from linear programming on a grid (LP value and fine-grid check agree to 1e-7), not from a certified Remez computation.",
+  "M8 was computed for Gaussian g and u only. Other input laws, and a multiplier u with non-zero mean, were not tabulated (the effect of a mean of u was checked only for the gradient matrix in M6 (vi)).",
+  "The Wolfram post was not read in this check; its value 'c about 0.3' is taken from the plan.",
+  "Article: Theorems 1, 2, 5, 6, 7 and 8 were checked on random triangles; Theorems 3 and 4 (case R = 0) only at the article's own example, the 4-5-6 triangle. The plan's statement that the trisector length is not a polynomial in the side lengths was not checked separately (only cos(C/3) as a function of cos(C)).",
+  "Statements S1 and S2 of the plan (activation function and ungrokking, self-monitoring) are outside this check.",
+  "The first run of m7b.py used up its time budget before its third part and stopped with an error (recorded in m7b.out); that part was run separately in m7b_c.py and the other two parts were repeated in m7b3.py and m7d.py."
+ ]
+}

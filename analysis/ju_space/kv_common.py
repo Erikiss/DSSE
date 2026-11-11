@@ -16,6 +16,11 @@ exactly as if the stored entries had been changed after they were written:
   add_kv={block: (dk or None, dv or None)} given tensors are added to the cached keys / values
   set_res={block: states [B, 4, D]}        the cache of that block is computed from these states (with the network's own weights)
   set_eq={block: state [B, D]}             the state of position 4 at the input of that block is replaced (not a cache intervention)
+  set_gate={block: tensor [B, T, units]}   the gate factor of the MLP of that block is replaced at all positions (ReLU: the 0/1 mask;
+                                           gated units: silu(gate(x)), bilinear: gate(x)); not a cache intervention
+  set_h={block: function}                  the hidden activations of the MLP of that block are computed by the given function of (gate
+                                           input, gated signal) [gated units] or of (fc1(x), fc1(x)) [ReLU units]; each has the shape [B, T, units]
+  rec_gate=True                            record the gate factor (gf), the gated signal (gs) and the input of the gate function (gi) of every block
   eq_noise=f                               noise on the stream of position 4 after the attention step, size f * spread
   gen=torch.Generator for all random draws
 Returns the logits and, per block, a dict: q, k, v (clean, [B, heads, T, dh]), att (as used, [B, heads, T, T]), h (MLP activations),
@@ -29,26 +34,41 @@ from ufo_grok import Net, problems, D, H, NH, NL, P  # noqa: F401
 
 class GluBlock(nn.Module):
     """The block of ufo_grok.py with a gated MLP instead of the ReLU MLP: down(act(gate(x)) * up(x)).
-    act = SiLU gives SwiGLU (as in Qwen3); act = identity gives a purely bilinear unit, a polynomial of degree 2 in x."""
-    def __init__(s, hs, bilinear):
-        super().__init__(); s.qkv = nn.Linear(D, 3 * D); s.o = nn.Linear(D, D); s.ln1 = nn.LayerNorm(D); s.gate = nn.Linear(D, hs); s.up = nn.Linear(D, hs); s.down = nn.Linear(hs, D); s.ln2 = nn.LayerNorm(D); s.bilinear = bilinear
+    act = SiLU gives SwiGLU (as in Qwen3); act = identity gives a purely bilinear unit, a polynomial of degree 2 in x.
+    linear=True: no gate at all, the MLP is the linear map down(up(x)) (an MLP without a nonlinearity)."""
+    def __init__(s, hs, bilinear, linear=False):
+        super().__init__(); s.qkv = nn.Linear(D, 3 * D); s.o = nn.Linear(D, D); s.ln1 = nn.LayerNorm(D); s.up = nn.Linear(D, hs); s.down = nn.Linear(hs, D); s.ln2 = nn.LayerNorm(D); s.bilinear = bilinear; s.linear = linear
+        if not linear: s.gate = nn.Linear(D, hs)
 
 
 class GluNet(nn.Module):
     """Net of ufo_grok.py with gated MLPs; 341 hidden units give the same number of MLP weights as 512 ReLU units (3 * 341 against 2 * 512 times 128)."""
-    def __init__(s, hs=341, bilinear=False):
-        super().__init__(); s.emb = nn.Embedding(100, D); s.blocks = nn.ModuleList([GluBlock(hs, bilinear) for _ in range(NL)]); s.head = nn.Linear(D, 100)
+    def __init__(s, hs=341, bilinear=False, linear=False):
+        super().__init__(); s.emb = nn.Embedding(100, D); s.blocks = nn.ModuleList([GluBlock(hs, bilinear, linear) for _ in range(NL)]); s.head = nn.Linear(D, 100)
         pos = torch.arange(8)[:, None]; i = torch.arange(0, D, 2)[None]; pe = torch.zeros(8, D); pe[:, 0::2] = torch.sin(pos / 10000 ** (i / D)); pe[:, 1::2] = torch.cos(pos / 10000 ** (i / D)); s.register_buffer("pe", pe); s.bilinear = bilinear
 
 
-def make_net(arch="relu"): return Net() if arch == "relu" else GluNet(bilinear=(arch == "bilinear"))
+def make_net(arch="relu"): return Net() if arch == "relu" else GluNet(bilinear=(arch == "bilinear"), linear=(arch == "linear"))
 
 
 def mlp(b, x):
     """Hidden activations and the write of the MLP of block b."""
     if hasattr(b, "gate"):
         g = b.gate(x); h = (g if b.bilinear else torch.nn.functional.silu(g)) * b.up(x); return h, b.down(h)
+    if hasattr(b, "up"): h = b.up(x); return h, b.down(h)                  # linear MLP
     h = torch.relu(b.fc1(x)); return h, b.fc2(h)
+
+def mlp_parts(b, x, gate=None, hfun=None):
+    """As mlp(), and also the factors of every hidden unit: (h, write, gate factor, gated signal, input of the gate function).
+    ReLU unit: h = m * p with p = fc1(x) and the mask m = 1[p > 0]; the "switch" is m. Gated unit: h = a * u with a = silu(g) =
+    sigmoid(g) * g (bilinear: a = g), g = gate(x), u = up(x); the switch of a SwiGLU unit is sigmoid(g).
+    gate replaces the gate factor (m or a): a tensor, for example the factor of another network, or a function of (own factor,
+    gated signal, input of the gate function) that returns the factor to use.
+    hfun replaces the hidden activation itself: a function of (gate input, gated signal) for gated units, of (p, p) for ReLU units."""
+    if hasattr(b, "gate"):
+        g = b.gate(x); a = g if b.bilinear else torch.nn.functional.silu(g); u = b.up(x); f = a if gate is None else (gate(a, u, g) if callable(gate) else gate); h = f * u if hfun is None else hfun(g, u); return h, b.down(h), a, u, g
+    if hasattr(b, "up"): u = b.up(x); h = u if hfun is None else hfun(u, u); return h, b.down(h), torch.ones_like(u), u, u                    # linear MLP: no gate
+    p = b.fc1(x); m = (p > 0).to(p.dtype); h = (torch.relu(p) if gate is None else (gate(m, p, p) if callable(gate) else gate) * p) if hfun is None else hfun(p, p); return h, b.fc2(h), m, p, p
 
 CP = 4                                                                    # positions 0..3 are the cache of the '=' query
 DH = D // NH
@@ -89,7 +109,9 @@ def fwd(net, tok, ctl=None):
                 xm = torch.cat([x0[:, :CP], x0[:, CP:] + d], 1)
             dmid = float(((xm - x0)[:, 4].detach() ** 2).sum(-1).mean().sqrt() / ((x0[:, 4].detach() - x0[:, 4].detach().mean(0)) ** 2).sum(-1).mean().sqrt().clamp_min(1e-12))
         if ctl.get("eq_noise"): xm = torch.cat([xm[:, :4], xm[:, 4:5] + ctl["eq_noise"] * x0[:, 4:5].std(0, keepdim=True).detach() * rn(xm[:, 4:5]), xm[:, 5:]], 1)
-        h, w = mlp(b, xm); x = b.ln2(xm + w); rec.append(dict(q=q, k=k, v=v, att=att, h=h, x=x, xin=xin, xmid=xm, dmid=dmid))
+        if ctl.get("rec_gate") or "set_gate" in ctl or "set_h" in ctl: h, w, gf, gs, gi = mlp_parts(b, xm, ctl.get("set_gate", {}).get(l), ctl.get("set_h", {}).get(l))
+        else: (h, w), gf, gs, gi = mlp(b, xm), None, None, None
+        x = b.ln2(xm + w); rec.append(dict(q=q, k=k, v=v, att=att, h=h, x=x, xin=xin, xmid=xm, dmid=dmid, gf=gf, gs=gs, gi=gi))
     return net.head(x), rec
 
 
@@ -97,7 +119,8 @@ def cache(rec, l): return rec[l]["k"][:, :, :CP], rec[l]["v"][:, :, :CP]
 
 
 def load(path):
-    ck = torch.load(path, weights_only=True); sd = ck["net"]; net = GluNet(sd["blocks.0.gate.weight"].shape[0], bool(ck.get("bilinear"))) if "blocks.0.gate.weight" in sd else Net(); net.load_state_dict(sd); net.eval(); return net
+    ck = torch.load(path, weights_only=True); sd = ck["net"]
+    net = GluNet(sd["blocks.0.gate.weight"].shape[0], bool(ck.get("bilinear"))) if "blocks.0.gate.weight" in sd else (GluNet(sd["blocks.0.up.weight"].shape[0], linear=True) if "blocks.0.up.weight" in sd else Net()); net.load_state_dict(sd); net.eval(); return net
 
 
 def ans(lg): return lg[:, 4].argmax(-1)

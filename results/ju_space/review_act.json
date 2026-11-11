@@ -1,0 +1,917 @@
+{
+ "final: numbers against the files": {
+  "numbers 9.1-9.3, header, summary, limits (reviewer A)": {
+   "findings": [
+    {
+     "location": "9.2, SwiGLU, Startwert 1: \"Dort verliert G mit den Gate-Faktoren von U 0,41 des Verlusts\"",
+     "problem": "The value is rounded wrongly. k at step 600 is 0.41524, which rounds half up to 0,42, not 0,41.",
+     "evidence": "act_verdicts.json E2.swiglu.networks[1].k = 0.41524308656682074. act_masks_swiglu_s1.json step 600: own_G 0.99979, G_pattU 0.5926, lost 0.98067. k_ref = 0.0111 (0,01) and k at step 650 = 0.0198 (0,02) are correct.",
+     "severity": "wrong",
+     "fix": "Dort verliert G mit den Gate-Faktoren von U 0,42 des Verlusts (Referenz 0,01), 50 Schritte später noch 0,02."
+    },
+    {
+     "location": "9.2, Lernrate 3·10⁻⁴ mit ε = 10⁻⁵: \"Die Driftkontrolle hat dieselben Sprünge und bleibt bei 1,00.\"",
+     "problem": "The drift control does not have the same jumps. U has five weight-norm jumps. D has three, and they fall at other steps.",
+     "evidence": "Trace in kv_base_s0_fb_lr3e5_U/log.json, weight-norm jumps: 1100 (+0.251), 2100 (+0.247), 2850 (+0.490), 3600 (+0.475), 4400 (+0.651). Trace in kv_base_s0_fb_lr3e5_D/log.json: 2250 (+0.393), 3700 (+0.444), 4900 (+0.814), plus a batch loss of 0.31 at 2200. D has no jump of 0.1 or more at 1100, 2100, 2850, 3600 or 4400. D's lowest held-out value is 0.9979, so 'bleibt bei 1,00' is correct.",
+     "severity": "wrong",
+     "fix": "Die Driftkontrolle hat ebenfalls Sprünge der Gewichtsnorm, aber nur drei und an anderen Schritten (2.250, 3.700 und 4.900, um 0,39 bis 0,81), und bleibt bei 1,00."
+    },
+    {
+     "location": "9.2, last E3 bullet: \"Nachträglich ergänzt, ohne vorab gesetzte Regel: Die 233 Aufgaben des 5-%-Laufs passen in einen Stapel von 512\"",
+     "problem": "The provenance is wrong. The plan review already demanded the batch-26 control before any run was evaluated, so it was not added afterwards. Only the decision rule was missing, so 'ohne vorab gesetzte Regel' is correct. The stated motivation (arXiv 2605.06152) also hides the reason the critic gave, which is the gap that 8.6 names.",
+     "evidence": "crit.json key 'add' item 5 reads: 'Small-batch control for the 5 % run: the 233 problems in batches of 26 (about nine batches per pass, as the drift control has), to separate every step sees the same full batch from the other problems are missing (README 8.6 names this gap)'. order_of_priority item 8 lists it too. crit.json was written at 15:24, the first evaluation file (act_masks_relu_s0.json) at 15:47. crit.json 'rules' has no rule for it.",
+     "severity": "wrong",
+     "fix": "Von der Plankritik verlangt, aber ohne vorab gesetzte Regel: Die 233 Aufgaben des 5-%-Laufs passen in einen Stapel von 512, der Lauf rechnet also mit dem vollen Gradienten; das ist die Lücke, die 8.6 nennt, und nach arXiv 2605.06152 sind solche Einbrüche bei (fast) vollem Stapel zudem am stärksten."
+    },
+    {
+     "location": "GRENZEN: \"Die kleinen Stapel und der Verlust in float64 kamen nach der Regel hinzu.\"",
+     "problem": "This is wrong for the small batches. The plan review proposed them in the same document that fixed the rules, only without a rule of their own. It is correct for float64, which the literature review proposed after the rules were fixed.",
+     "evidence": "The small-batch control is item 5 of crit.json 'add' (file time 15:24). The float64 runs scr_f64_U and scr_f64_D started at 16:34 (queue2.log), after lit_act.json (16:32).",
+     "severity": "wrong",
+     "fix": "Für die kleinen Stapel (von der Plankritik verlangt) und den Verlust in float64 (erst von der Literaturprüfung vorgeschlagen) gab es keine vorab gesetzte Regel."
+    },
+    {
+     "location": "HEADER: \"Plan, Plankritik und Literaturprüfung entstanden, bevor ein Lauf ausgewertet war\"",
+     "problem": "This is false for the literature review. Both literature reports were finished after the first evaluations of section 9 had been written.",
+     "evidence": "File times: plan.md 14:34:35 and review/crit.json 15:24:08. Evaluation outputs: res/act_masks_relu_s0.json 15:47:41, act_masks_swiglu_s0.json 15:55:36, act_masks_relu_s1.json 15:58:40, act_masks_swiglu_s1.json 16:00:38, act_masks_relu_s2.json 16:02:13, act_qwen_first_run_surrogates_all_positions.json 16:02:32. Literature reports: review/lit_self.json 16:20:41 and review/lit_act.json 16:32:43. Section 9.2 itself says the float64 loss was proposed 'nachdem die Regel feststand'.",
+     "severity": "wrong",
+     "fix": "Plan und Plankritik entstanden, bevor ein Lauf ausgewertet war (`act_plan_review.json`); die Literaturprüfung wurde fertig, als die ersten Läufe schon ausgewertet wurden (`act_literature.json`)"
+    },
+    {
+     "location": "9.2, table V1, row 'linear': \"nein (an 82 % der Messungen bei 99 %)\"",
+     "problem": "The share is exactly 82.5 %. Rounded half up that is 83 %, so the text truncates.",
+     "evidence": "act_out/runs/kv_linear_s0_D/log.json has 80 evaluations (steps 50 to 4000), and 66 of them have val_acc ≥ 0.99, so 66/80 = 0.825. act_report.json runs.linear_s0_D.share_held_099 = 0.825. The other numbers in the row are correct: lowest value 0.67504 gives 0,68, and there are 5 events up to step 1,500.",
+     "severity": "imprecise",
+     "fix": "nein (an 66 von 80 Messungen, 82,5 %, bei 99 %)"
+    },
+    {
+     "location": "9.2, first bullet: \"(a) „die Art der Nichtlinearität entscheidet, ob Ungrokking eintritt\" widerlegt\" … \"(b) … ist ebenfalls widerlegt\"",
+     "problem": "This overstates the rule. The pre-set rule has only the categories for, against and undecided, and its outcome here is 'against'. Everywhere else the section renders that as 'spricht dagegen' (E2, E2b, 9.3). The critic also noted that the user's sentence in its natural reading is not touched.",
+     "evidence": "crit.json rules[2].counts_against: '(a): late level below 0.50 in every network … (b): bilinear below 0.50 in all 3 networks … In each case the user's sentence in its natural reading (where ungrokking acts) is not touched.' act_verdicts.json E1.verdict_a = 'against: …' and verdict_b = 'against: …'. The numbers are correct: late levels 0.029/0.092/0.043, 0.029/0.017/0.042 and 0.042/0.056/0.087, all drift controls readable.",
+     "severity": "imprecise",
+     "fix": "Nach der vorab gesetzten Regel spricht das gegen (a) „die Art der Nichtlinearität entscheidet, ob Ungrokking eintritt\": Alle drei Arten liegen in allen drei Netzen unter 50 %. Es spricht auch gegen (b) „Ungrokking braucht eine Schwelle oder ein Gate\": Die bilineare Einheit hat keines und verliert die Verallgemeinerung genauso."
+    },
+    {
+     "location": "9.3, first bullet: \"mindestens so gut lesbar wie der Gate-Wert danach (Unterschied −0,001 bis +0,05)\"",
+     "problem": "The text contradicts itself: 'mindestens so gut' cannot hold when the range includes −0,001. Read strictly per state, the rule's condition 'gate input at least as readable as the gate factor' holds in every state only for seed 0. The rule needs at least 3 of 4 seeds. So the verdict 'spricht dagegen' holds only if differences of about 0.001 count as equal, and the text should say so.",
+     "evidence": "In act_selfprobe_swiglu.json, pre − own is negative in 7 of 42 (trained state, block) cases: s1 10000 b0 −0.00117, s1 13000 b0 −0.00038, s2 5000 b0 −0.00012, s2 7500 b0 −0.00054, s3 7500 b0 −0.00058, s3 9500 b1 −0.00113, s3 10000 b1 −0.00020. The maximum is +0.0523. crit.json rules[5].counts_against: '… and the gate input before the SiLU at least as readable as the gate factor'.",
+     "severity": "imprecise",
+     "fix": "Bei SwiGLU ist der Gate-Eingang vor der SiLU praktisch so gut oder besser lesbar als der Gate-Wert danach (Unterschied −0,001 bis +0,05; in 7 von 42 Fällen um höchstens 0,001 schlechter, das ist hier als gleich gezählt)."
+    },
+    {
+     "location": "9.2, bullet on learning rate 3·10⁻⁴ and ε = 10⁻⁸: \"(auf 0,83 bei Schritt 750, danach wieder 0,96)\"",
+     "problem": "The recovery goes up to 0.97, not 0.96. 0.96 is only an intermediate value.",
+     "evidence": "kv_base_s0_fb_lr3_U/log.json val_acc: 750 0.826, 900 0.865, 1050 0.901, 1200 0.933, 1350 0.956, 1500 0.9695, 1650 0.970, 1800 0.963; then 1950 0.636 (event at 1900).",
+     "severity": "imprecise",
+     "fix": "(auf 0,83 bei Schritt 750, danach wieder bis 0,97)"
+    },
+    {
+     "location": "9.2, intro: \"Die neuen Läufe werden alle 50 Schritte gemessen\"",
+     "problem": "This does not hold for the four new runs with learning rate 3·10⁻⁴. They are evaluated every 150 steps. The text later only hints at this.",
+     "evidence": "act_report.json eval_every = 150 for base_s0_fb_lr3_U, base_s0_fb_lr3_D, base_s0_fb_lr3e5_U and base_s0_fb_lr3e5_D (log steps 150, 300, …). The trace of batch loss and weight norm is stored every 50 steps in all runs (kv_grok.py).",
+     "severity": "imprecise",
+     "fix": "Die neuen Läufe werden alle 50 Schritte gemessen, die mit Lernrate 3·10⁻⁴ alle 150 (Gewichtsnorm und Stapelverlust sind auch dort alle 50 Schritte aufgezeichnet);"
+    },
+    {
+     "location": "GRENZEN: \"die Ersatzrechnung nimmt die ersten vier Token aus\"",
+     "problem": "The list is incomplete. The chat template positions also keep the true MLP, as 9.4 itself says.",
+     "evidence": "act_qwen.py docstring: 'the first four tokens and the chat template keep the true MLP'. Section 9.4: 'die ersten vier Token und die Chat-Vorlage behalten das echte MLP'.",
+     "severity": "imprecise",
+     "fix": "die Ersatzrechnung nimmt die ersten vier Token und die Chat-Vorlage aus"
+    },
+    {
+     "location": "GRENZEN: \"Die Mathematik in 9.6 ist nachgerechnet, an Netzen aber nicht getestet.\"",
+     "problem": "This contradicts 9.6, which reports small network fits that confirm the degree statement for bilinear layers under the pre-set rule.",
+     "evidence": "poly_C.json key 'depth': one bilinear layer has fit_r2 0.7990 to 0.8036 (5 seeds), two layers 1.0 (5 seeds), one SwiGLU layer 0.99992 to 0.99993. Section 9.6: 'Kleine Anpassungen bestätigen das nach der vorab gesetzten Regel (Breite 16, je 5 Startwerte …)'.",
+     "severity": "imprecise",
+     "fix": "Die Mathematik in 9.6 ist nachgerechnet; an Netzen geprüft ist nur die Gradzählung für bilineare Schichten (kleine Anpassungen an die Kubik), der Bezug zu Halbieren und Dritteln nicht."
+    },
+    {
+     "location": "9 (before 9.1): \"Alles gilt für das kleine Netz aus Abschnitt 8 und, wo genannt, für Qwen3-1.7B.\"",
+     "problem": "The scope statement is incomplete. Sections 9.5 and 9.6 also use other networks: MLPs that regress polynomials, including the post's 64-64-64-15 size, and small bilinear and SwiGLU layers.",
+     "evidence": "poly_A/B/C/D2/D3.json nets have arch '15x4 relu/tanh/silu' and '64-64-64-15 relu'. poly_C.json 'depth' contains the bilinear and SwiGLU layers of 9.6.",
+     "severity": "imprecise",
+     "fix": "Alles gilt für das kleine Netz aus Abschnitt 8, in 9.5 und 9.6 auch für kleine Netze, die Polynome lernen, und, wo genannt, für Qwen3-1.7B."
+    },
+    {
+     "location": "9 (before 9.1): \"den Tausch der Schaltmuster nur noch an Schritten für lesbar erklärt, an denen die Mischungen mit der Driftkontrolle funktionieren\"",
+     "problem": "This misattributes the condition. The plan already contained it. The critic showed that the plan's own condition fails after the first collapse, tightened the thresholds and added the reference network. The header leaves out the reference network, which 9.2 uses throughout.",
+     "evidence": "plan.md E2: '… while both hybrids with the drift control stay at 0.90 or above at the same step (otherwise that step is unreadable)'. crit.json verdict point 2: 'the plan's own condition … fails at every step after the first jump'. rules[3]: D ≥ 0.99, both hybrids ≥ 0.95, lost ≥ 0.015. add[2]: reference network.",
+     "severity": "imprecise",
+     "fix": "gezeigt, dass der Tausch der Schaltmuster nach dem ersten Einbruch der Driftkontrolle schon nach der Bedingung des Plans unlesbar ist, diese Bedingung verschärft und ein Vergleichsnetz mit gleichmäßig verteiltem Schaden verlangt"
+    },
+    {
+     "location": "9.1, second bullet: \"mit Gewichtsabnahme bleiben sie dort als Instabilität erhalten\"",
+     "problem": "This compresses Thilak et al. misleadingly. With weight decay the slingshots themselves disappear there, and only an instability remains (App. C.1). Their Sec. 3.3 says the opposite. Nanda et al. give the direct evidence for slingshots despite weight decay.",
+     "evidence": "lit_act_readable.txt, Thilak item: 'Sec. 3.3 says with weight decay the model does not become unstable, but App. C.1 (weight decay 0 to 1.0, AdamW) says slingshots and grokking delay disappear while the model experiences instability'. Nanda item: App. D.2, 'our 2-layer transformers exhibit significant slingshots', full-batch AdamW with weight decay 1.",
+     "severity": "imprecise",
+     "fix": "mit Gewichtsabnahme verschwinden dort die Slingshots selbst, nach Anhang C.1 bleibt aber eine Instabilität (Abschnitt 3.3 sagt das Gegenteil); deutliche Slingshots trotz Gewichtsabnahme 1 sahen Nanda et al. in zweischichtigen Transformern (arXiv 2301.05217, Anhang D.2)."
+    },
+    {
+     "location": "9.1, fifth bullet: \"die 15 × 15 × 15 × 15 betreffen nur 49 Netze im Anhang des Beitrags\"",
+     "problem": "The source does not mention an appendix. The 49 networks are the closing 'early result' of the post.",
+     "evidence": "lit_self_readable.txt B1: 'The sentence I trained an NN of size 15x15x15x15 belongs to the closing early result about 49 networks, each regressing a single polynomial from x alone.' Summary: 'refers only to the 49 single-polynomial networks at the end'.",
+     "severity": "imprecise",
+     "fix": "die 15 × 15 × 15 × 15 betreffen nur 49 Netze am Schluss des Beitrags, die je ein einzelnes Polynom in x lernen"
+    },
+    {
+     "location": "9.2, ReLU exchange: \"Nach der Regel wörtlich spricht das Ergebnis in allen drei Netzen dagegen, aber schwach: In zwei Netzen ist der lesbare Schritt mit dem größten Verlust Schritt 50\"",
+     "problem": "The step chosen for seed 0 is not given. It is step 550, the only readable step there, where U has lost only 0.02. Its r of −21 is the most extreme case of 'against'.",
+     "evidence": "act_verdicts.json E2.relu.networks[0]: step 550, readable_steps [550], lost 0.0189, r −20.89, k 0.00, r_ref 0.057, k_ref 0.00. networks[1] and networks[2]: step 50 (lost 0.105 and 0.0945).",
+     "severity": "unclear",
+     "fix": "Nach der Regel wörtlich spricht das Ergebnis in allen drei Netzen dagegen, aber schwach: Bei Startwert 0 ist nur Schritt 550 lesbar, an dem U erst 0,02 verloren hat (r = −21, k = 0,00 bei r_ref = 0,06). In den beiden anderen ist der lesbare Schritt mit dem größten Verlust Schritt 50, …"
+    },
+    {
+     "location": "9.2, ReLU exchange: \"ein kurzer Einbruch gleich nach dem Wechsel auf 5 %\"",
+     "problem": "There is no event at step 50. Elsewhere in 9.2 'Einbruch' means an event or collapse, and 8.6 calls the same dip 'Delle'.",
+     "evidence": "act_report.json events: base_s1_U_standard_combined [[800,850],[1450,1500]] and base_s2_U_standard_combined [[750,800],[1450,1500]], so nothing at step 50. README 8.6: 'Nach einer kurzen Delle gleich nach dem Neustart (Schritt 50: 0,99 / 0,89 / 0,91)'. The values 0,89 / 0,91 and 0,99 / 0,98 at step 400 are correct.",
+     "severity": "unclear",
+     "fix": "eine kurze Delle gleich nach dem Wechsel auf 5 % (kein Ereignis; U bei 0,89 / 0,91, bei Schritt 400 wieder bei 0,99 / 0,98)"
+    },
+    {
+     "location": "9.2, SwiGLU exchange: \"Im dritten (Startwert 1) liegt der größte Verlust genau im Einbruch bei Schritt 600\"",
+     "problem": "The sentence suggests that what sets seed 1 apart is that its chosen step lies on a collapse. But seed 0's chosen step, 450, is also an event of U. What differs at seed 1 is that U also fails on its own problems at that step.",
+     "evidence": "kv_swiglu_s0_ungrok5fine/log.json: step 400 val 0.936, wnorm 51.05. Step 450 val 0.202, train_acc 1.0, wnorm 53.54 (+2.49), which is event [450,450] in act_report.json. kv_swiglu_s1_ungrok5fine step 600: val 0.019, train_acc 0.137, batch loss 3.89. The chosen steps 450/600/700 are confirmed in act_verdicts.json.",
+     "severity": "unclear",
+     "fix": "Im dritten (Startwert 1) liegt der größte Verlust bei Schritt 600 mitten in einem Einbruch, in dem U auch nur 14 % der eigenen Aufgaben und 0,02 der ungesehenen richtig rechnet (Schritt 450 bei Startwert 0 liegt ebenfalls auf einem Ereignis, dort stimmen aber alle eigenen Aufgaben): Dort verliert G mit den Gate-Faktoren von U 0,42 des Verlusts (Referenz 0,01), 50 Schritte später noch 0,02."
+    },
+    {
+     "location": "KURZ: \"mit eingefrorenem Schaltmuster ebenso\"",
+     "problem": "Only the ReLU masks were frozen. The frozen runs end at 0.09 to 0.11, outside the range 0,02 bis 0,09 just quoted.",
+     "evidence": "act_verdicts.json E2b.networks late_frozen_U: 0.0863, 0.1110, 0.1076. Frozen runs exist only for base_s0, base_s1 and base_s2 (ReLU). GRENZEN: 'eingefroren wurde nur das ReLU-Muster'.",
+     "severity": "unclear",
+     "fix": "mit eingefrorenen ReLU-Masken ebenso (Endstand 0,09 bis 0,11)"
+    }
+   ],
+   "checked": "Header of 9 (before 9.1): 12 statements checked against plan.md, crit.json (verdict, rules, drop, add, order_of_priority), the queue logs and file times; 10 correct (plan written before evaluation, only bilinear base runs running, both readings of V1, optimiser check first, frozen-pattern run added, self-monitoring arm cut, two literature reviewers, maths reviewer with own code, citations of V1 to V4). 9.1: 26 literature claims checked against lit_act_readable.txt, lit_self_readable.txt and math.json; 24 correct (Varma, 2411.05353, 2602.16849, no-nonlinearity grokking, Thilak setup, the four causes, silu identity and its remainder, about 0.01 nats, nobody measured the degree-2 share, self-monitoring sources, Premakumar, 64-64-64-15, 88 to 98.5 %, Theorem 1, two misprints per math.json M4). 9.2: about 190 numbers recomputed from act_report.json, act_verdicts.json, act_masks_{relu,swiglu}_s{0,1,2}.json and the log.json files (V1 table 20 of 21 correct; starting networks 41 to 64 and 0.004 to 0.034 correct; linear arm 6 of 6; E2b 20 of 20; exchange 33 of 34; early-sign bullet 14 of 14, including 0.59/0.24/0.45, at least 0.995, 0.9 and 1.2; E3 table 38 of 38; E3 bullets 39 of 41; small batches 6 of 6). All 8 'nach der Regel' verdicts (E1 a/b/c, E2 ReLU and SwiGLU per network, E2b, E3) match act_verdicts.json and the crit.json rule text. Chosen steps confirmed: ReLU 550/50/50, SwiGLU 450/600/700. 9.3: 12 table ranges (24 endpoints) and 6 text numbers (largest difference 0.097, 41 of 42, single bilinear exception +0.13, pre minus own −0.001 to +0.05) recomputed from act_selfprobe_*.json; all values correctly rounded, one wording problem. HEADER/KURZ/GRENZEN: 17 statements checked, 13 correct (end level 0.02 to 0.09; Qwen block 0 the only 'ungefähr quadratisch' block under the rule; 4,082 positions from 24 texts and 902 from 16; 0 of 15 networks in the 0.28 to 0.39 band; every setting has events; linearised block 1 at 0.01 to 0.08 against 0.99 to 1.00 quadratised; limits of the screen). Helper script: <root>/review_tmp/sp.py; everything else was inline read-only python."
+  },
+  "counter-check of A": {
+   "verdicts": [
+    {
+     "index": 0,
+     "verdict": "confirmed",
+     "reason": "act_verdicts.json E2.swiglu.networks[1].k = 0.41524. Recomputed from act_masks_swiglu_s1.json at step 600: (own_G 0.99979 - G_pattU 0.59257) / lost 0.98067 = 0.4152. Because the value is above 0.415, every rounding rule gives 0,42, not 0,41. The other numbers are right: k_ref 0.01114 gives 0,01, k at step 650 is 0.02044 (0,02) and own_U at 600 is 0.01912 (0,02).",
+     "fix": "Dort verliert G mit den Gate-Faktoren von U 0,42 des Verlusts (Referenz 0,01), 50 Schritte später noch 0,02. (Fix [18] already contains this.)"
+    },
+    {
+     "index": 1,
+     "verdict": "confirmed",
+     "reason": "Trace of kv_base_s0_fb_lr3e5_U (every 50 steps), weight-norm jumps: 1100 +0.251 (1150 +0.136), 2100 +0.247, 2850 +0.490, 3600 +0.475, 4400 +0.651. Trace of kv_base_s0_fb_lr3e5_D: only 2250 +0.393, 3700 +0.444 and 4900 +0.814. D has no jump of 0.05 or more at any of U's steps; it also has a batch loss of 0.313 at 2200. So 'dieselben Sprünge' is wrong in both number and position. 'bleibt bei 1,00' is right: D's lowest held-out value is 0.99785 at step 4950.",
+     "fix": "Die Driftkontrolle hat ebenfalls Sprünge der Gewichtsnorm, aber nur drei und an anderen Schritten (2.250, 3.700 und 4.900; 0,39 bis 0,81), und bleibt bei 1,00."
+    },
+    {
+     "index": 2,
+     "verdict": "confirmed",
+     "reason": "crit.json add[4] reads: 'Small-batch control for the 5 % run: the 233 problems in batches of 26 ... to separate every step sees the same full batch from the other problems are missing (README 8.6 names this gap)'. order_of_priority[7] also lists it ('8. Small-batch control ...'). crit.json was written at 15:24:08, in the same file as the rules. plan.md has no such control. The b26 runs started at 17:24 (queue2.log). The draft itself uses 'nachträglich' to mean 'after the rule was fixed' (the float64 row; 'nachdem die Regel feststand'), so 'Nachträglich ergänzt' is wrong here. 'ohne vorab gesetzte Regel' is right: crit.json rules has no rule for it, and act_verdicts.py does not read the b26 runs. README 8.6 (lines 1302-1304: 'Mit 233 Aufgaben geht jeder Schritt über alle, mit allen Aufgaben über einen Stapel von 512') names the gap the critic gave as the reason. The literature point is correct as an addition: lit_act says 'Slingshots are most prominent when the batch size is large enough'. Checked: the batch-26 numbers in the draft are right (first events 650/850/900, late 0.051/0.045/0.041).",
+     "fix": "Von der Plankritik verlangt, aber ohne vorab gesetzte Regel: Die 233 Aufgaben des 5-%-Laufs passen in einen Stapel von 512. Der Lauf rechnet also mit dem vollen Gradienten, die Driftkontrolle mit wechselnden Stapeln; diesen Unterschied nennt 8.6 als Lücke. Nach arXiv 2605.06152 sind solche Einbrüche zudem bei (fast) vollem Stapel am stärksten."
+    },
+    {
+     "index": 3,
+     "verdict": "confirmed",
+     "reason": "The small batches are crit.json add[4], written at 15:24:08 in the same file that fixed the rules, only without a rule of their own. So they did not come 'nach der Regel'. Read as 'according to the rule', the sentence is wrong as well, because there was no rule. The float64 loss is in no part of crit.json. It was first proposed by the literature review (lit_act.json, 16:32:43; 9.2 says so too). The scr_f64 runs started at 16:34:56 and again at 16:43 (queue2.log). So the sentence is right only for float64.",
+     "fix": "Für die kleinen Stapel (von der Plankritik verlangt) und den Verlust in float64 (erst von der Literaturprüfung vorgeschlagen) gab es keine vorab gesetzte Regel."
+    },
+    {
+     "index": 4,
+     "verdict": "confirmed",
+     "reason": "File times: plan.md 14:34:35 and review/crit.json 15:24:08, both before any evaluation. The first evaluations of section 9 runs are res/act_masks_relu_s0.json 15:47:41, act_masks_swiglu_s0.json 15:55:36, act_masks_relu_s1.json 15:58:40, act_masks_swiglu_s1.json 16:00:38 and act_masks_relu_s2.json 16:02:13. The literature reports were finished later: review/lit_self.json 16:20:41 and review/lit_act.json 16:32:43. act_to_repo.py builds act_literature.json from exactly these two files. So the header is false for the literature review.",
+     "fix": "Plan und Plankritik entstanden, bevor ein Lauf ausgewertet war (`act_plan_review.json`); die Literaturprüfung wurde erst fertig, als die ersten Läufe schon ausgewertet waren (`act_literature.json`); die Entscheidungsregeln des Prüfers sind unverändert angewandt (`act_verdicts.json`), die Mathematik hat ein weiterer Prüfer mit eigenem Code nachgerechnet (`act_math_review.json`)."
+    },
+    {
+     "index": 5,
+     "verdict": "confirmed",
+     "reason": "kv_linear_s0_D/log.json has 80 evaluations (steps 50 to 4000), and 66 of them have val_acc >= 0.99. That is 66/80 = 33/40 = 0.825 exactly (act_report.json runs.linear_s0_D.share_held_099 = 0.825). Rounded half up this is 83 %. '82 %' is what binary float formatting gives. The rest of the row is right: lowest value 0.67504 gives 0,68, there are 5 events up to step 1.500, and the late level of 0.9979 shows that only the 90 % condition fails.",
+     "fix": "nein (an 66 von 80 Messungen bei 99 %)"
+    },
+    {
+     "index": 6,
+     "verdict": "refuted",
+     "reason": "The rule words its own 'against' outcome as a conclusion. crit.json rules[2].counts_against reads: '(b): bilinear below 0.50 in all 3 networks: the loss needs no threshold and no gate'. (a) and (b) are the narrow statements the rule defines, and the results are counterexamples to them in this toy: late levels 0.029/0.092/0.043, 0.029/0.017/0.042 and 0.042/0.056/0.087, all drift controls readable (act_verdicts.json E1). So 'widerlegt' does not overstate the rule for these narrow statements. The critic's caveat is about the user's sentence in its natural reading, and the draft does not claim that (a) or (b) touch that reading. It names two readings of V1 at the start and handles the reading 'Ort' separately with the frozen pattern and the pattern exchange. The difference in wording from E2 ('spricht dagegen') follows the logic: E2's 'against' only means 'no effect beyond the reference'.",
+     "fix": "keine Änderung"
+    },
+    {
+     "index": 7,
+     "verdict": "confirmed",
+     "reason": "act_selfprobe_swiglu.json has 21 trained states x 2 blocks = 42 cases. pre - own runs from -0.00117 to +0.05228 and is negative in 7 cases: s1 10000 b0 -0.00117, s1 13000 b0 -0.00038, s2 5000 b0 -0.00012, s2 7500 b0 -0.00054, s3 7500 b0 -0.00058, s3 9500 b1 -0.00113 and s3 10000 b1 -0.00020. Only seed 0 has none. 'mindestens so gut' next to '-0,001' contradicts itself. The verdict holds if differences of about 0,001 count as equal, which matches the critic's own precision (crit.json P9: 'as readable or more (by 0.00 to 0.03)'). The text should say that this is how they are counted. The proposed fix is right; I only reworded it slightly.",
+     "fix": "Bei SwiGLU ist der Gate-Eingang vor der SiLU praktisch so gut oder besser lesbar als der Gate-Wert danach (Unterschied −0,001 bis +0,05; in 7 von 42 Fällen ist er um höchstens 0,001 schlechter, das ist hier als gleich gezählt)."
+    },
+    {
+     "index": 8,
+     "verdict": "refuted",
+     "reason": "kv_base_s0_fb_lr3_U/log.json held-out values: 750 0.8258, 900 0.865, 1050 0.901, 1200 0.933, 1350 0.9564, 1500 0.9695, 1650 0.9704, 1800 0.9635, then 1950 0.6357 after the event at 1900. 0,96 is the value at 1350 and at 1800, the last measurement before the next event. So it is not 'only an intermediate value', and 'danach wieder 0,96' is right. The text claims no maximum, and the peak of 0,97 differs by one hundredth without changing the statement. 'ohne Ereignis' is also right by the definition: the largest trace jump before 750 is +0.461 at 650, below 0.5.",
+     "fix": "keine Änderung"
+    },
+    {
+     "index": 9,
+     "verdict": "confirmed",
+     "reason": "act_report.json gives eval_every = 150 for base_s0_fb_lr3_U, base_s0_fb_lr3_D, base_s0_fb_lr3e5_U and base_s0_fb_lr3e5_D (log steps 150, 300, ...). All other new runs have 50. kv_grok.py (line 137) stores batch loss and weight norm every 50 steps in every new run. The intro's general claim is wrong for these four runs. The later hint ('dort sind die Ereignisse aus der Aufzeichnung alle 50 Schritte gezählt') never gives the interval.",
+     "fix": "Die neuen Läufe werden alle 50 Schritte gemessen, die vier mit Lernrate 3·10⁻⁴ alle 150 (Gewichtsnorm und Stapelverlust auch dort alle 50 Schritte);"
+    },
+    {
+     "index": 10,
+     "verdict": "confirmed",
+     "reason": "The act_qwen.py docstring says 'the first four tokens and the chat template keep the true MLP'. In ufo_common.texts, valid = ~template_mask(...) for the chat texts and valid[:FIRST] = False. Section 9.4 names both exclusions, but GRENZEN names only the first.",
+     "fix": "die Ersatzrechnung nimmt die ersten vier Token und die Chat-Vorlage aus"
+    },
+    {
+     "index": 11,
+     "verdict": "confirmed",
+     "reason": "poly_C.json 'depth': one bilinear layer has fit_r2 0.7990 to 0.8036 (5 seeds), two bilinear layers 1.0 (5 seeds), one SwiGLU layer 0.99992 to 0.99993. The best polynomial of degree 1 or 2 reaches 0.7996. 9.6 reports these fits as a confirmation under the pre-set rule (crit.json rules[11]). 'an Netzen aber nicht getestet' contradicts this.",
+     "fix": "Die Mathematik in 9.6 ist nachgerechnet; an Netzen geprüft ist nur die Gradzählung für bilineare Schichten (kleine Anpassungen an die Kubik), der Bezug zu Halbieren und Dritteln nicht."
+    },
+    {
+     "index": 12,
+     "verdict": "confirmed",
+     "reason": "9.5 uses 15-15-15-15 MLPs with ReLU, tanh and SiLU and the post's 64-64-64-15 ReLU network (poly_A/B/C/D2/D3.json). 9.6 uses bilinear and SwiGLU layers of width 16 (poly_C.json 'depth'). None of these is the small network of section 8. 'Alles gilt für das kleine Netz aus Abschnitt 8' is therefore false for two subsections.",
+     "fix": "Alles gilt für das kleine Netz aus Abschnitt 8, in 9.5 und 9.6 auch für kleine Netze, die Polynome lernen, und, wo genannt, für Qwen3-1.7B."
+    },
+    {
+     "index": 13,
+     "verdict": "partly",
+     "reason": "The attribution problem is real. plan.md E2 already says 'while both hybrids with the drift control stay at 0.90 or above at the same step (otherwise that step is unreadable)'. What the critic did is in crit.json P4 and verdict point 2: under this condition every step after the first jump is unreadable 'in all three ReLU networks'. It then tightened the condition (rules[3]: D >= 0.99, both hybrids >= 0.95, lost >= 0.015) and added the reference network (add[2]), which 9.2 uses as r_ref and k_ref. assemble9.py shows that the header was changed from 'vor dem ersten Einbruch der Driftkontrolle' to the general wording. The proposed fix is wrong, however: it says the exchange is unreadable after D's first collapse without restricting this to ReLU. For SwiGLU that is false. 9.2 says 'Die Mischungen mit D bleiben auch nach den Einbrüchen von D lesbar'. The SwiGLU readable steps reach 1000 while D has events at 500 (driftfine logs; act_verdicts.json E2.swiglu readable_steps). The critic computed only ReLU.",
+     "fix": "Ersetze „den Tausch der Schaltmuster nur noch an Schritten für lesbar erklärt, an denen die Mischungen mit der Driftkontrolle funktionieren,“ durch: „gezeigt, dass beim Tausch der Schaltmuster mit ReLU schon nach der Bedingung des Plans (beide Mischungen mit der Driftkontrolle bei mindestens 90 %) jeder Schritt nach dem ersten Einbruch der Driftkontrolle unlesbar ist, die Bedingung verschärft, ein Vergleichsnetz mit gleichmäßig verteiltem Schaden verlangt,“"
+    },
+    {
+     "index": 14,
+     "verdict": "confirmed",
+     "reason": "lit_act_readable.txt, Thilak item: 'Sec. 3.3 says with weight decay the model does not become unstable, but App. C.1 (weight decay 0 to 1.0, AdamW) says slingshots and grokking delay disappear while the model experiences instability'. The draft follows only the reviewer's one-line summary ('persisted as instability'). The sentence suggests that Thilak et al. still saw the collapses with weight decay, but by App. C.1 the slingshots themselves disappear, and Sec. 3.3 contradicts the instability. The toy uses weight decay 0.3, so this point carries the argument. The direct evidence is Nanda et al. (same file: full-batch AdamW, weight decay 1, App. D.2 'our 2-layer transformers exhibit significant slingshots').",
+     "fix": "Ersetze „mit Gewichtsabnahme bleiben sie dort als Instabilität erhalten.“ durch: „mit Gewichtsabnahme verschwinden dort die Slingshots selbst, das Training bleibt nach Anhang C.1 aber instabil (nach Abschnitt 3.3 nicht). Deutliche Slingshots trotz Gewichtsabnahme 1 sahen Nanda et al. in zweischichtigen Transformern (arXiv 2301.05217, Anhang D.2).“"
+    },
+    {
+     "index": 15,
+     "verdict": "confirmed",
+     "reason": "lit_self_readable.txt B1 says: 'The sentence I trained an NN of size 15x15x15x15 belongs to the closing early result about 49 networks, each regressing a single polynomial from x alone'. The summary says 'the 49 single-polynomial networks at the end'. The source mentions no appendix. 'im Anhang' is unsupported and should be 'am Schluss'.",
+     "fix": "die 15 × 15 × 15 × 15 betreffen nur 49 Netze am Schluss des Beitrags, die je ein einzelnes Polynom in x lernen"
+    },
+    {
+     "index": 16,
+     "verdict": "confirmed",
+     "reason": "act_verdicts.json E2.relu.networks[0]: step 550, readable_steps [550], lost 0.0189, r -20.89, k 0.0, r_ref 0.0571, k_ref 0.0. networks[1] and networks[2] use step 50 (lost 0.105 and 0.0945). The text says the result is weak 'in allen drei Netzen' but explains this for only two. For seed 0 the reason is missing: the only readable step, where U has lost just 0,02. rules[3] expected exactly this: 'lost is 0.02 to 0.04; that reading is weak'. act_masks_relu_s0.json step 550: own_U 0.981, U_pattG 0.586, which is why r is negative.",
+     "fix": "Nach der Regel wörtlich spricht das Ergebnis in allen drei Netzen dagegen, aber schwach: Bei Startwert 0 ist nur Schritt 550 lesbar, an dem U erst 0,02 verloren hat (r = −21, weil U mit den Masken von G viel schlechter rechnet, siehe unten; k = 0,00, r_ref = 0,06). In den beiden anderen Netzen ist der lesbare Schritt mit dem größten Verlust Schritt 50,"
+    },
+    {
+     "index": 17,
+     "verdict": "confirmed",
+     "reason": "act_report.json events: base_s1_U_standard_combined [[800,850],[1450,1500]] and base_s2_U_standard_combined [[750,800],[1450,1500]], so nothing at step 50. At step 50 the kv_out ungrok5fine logs show train_acc 1.0, batch loss 0.003 and 0.002 and no weight-norm jump. The values in the draft are right: held-out 0.89497 and 0.90550 give 0,89 / 0,91, and step 400 gives 0.98647 and 0.97616, so 0,99 / 0,98. In 9.2 'Einbruch' means an event (e.g. 'kommt der erste Einbruch etwas später (Schritt 850 / 850 / 950 ...)'), and 8.6 calls this dip 'Delle'.",
+     "fix": "eine kurze Delle gleich nach dem Wechsel auf 5 % (kein Ereignis; U bei 0,89 / 0,91, bei Schritt 400 wieder bei 0,99 / 0,98)"
+    },
+    {
+     "index": 18,
+     "verdict": "confirmed",
+     "reason": "kv_swiglu_s0_ungrok5fine at step 450: val 0.2023, train_acc 1.0, batch loss 0.065, weight norm 53.54 against 51.05 at step 400 (+2.49). That is event [450,450] (act_report). kv_swiglu_s1_ungrok5fine at step 600: val 0.0191, train_acc 0.1373, batch loss 3.89 (event [600,650]). Seed 2's step 700 is not an event. So 'genau im Einbruch' does not set seed 1 apart from seed 0. What does is that U also fails its own problems there. The proposed fix is right in content, but after its parenthesis 'Dort' can be read as step 450, so I restructured it. The fix includes 0,42 from [0].",
+     "fix": "Im dritten (Startwert 1) liegt der größte Verlust bei Schritt 600 mitten in einem Einbruch, in dem U auch die eigenen Aufgaben verliert (0,14 richtig, ungesehene 0,02); Schritt 450 bei Startwert 0 liegt zwar ebenfalls auf einem Ereignis, dort stimmen aber alle eigenen Aufgaben. Bei Schritt 600 verliert G mit den Gate-Faktoren von U 0,42 des Verlusts (Referenz 0,01), 50 Schritte später noch 0,02."
+    },
+    {
+     "index": 19,
+     "verdict": "confirmed",
+     "reason": "Frozen runs exist only for base_s0 to base_s2, which are ReLU (runs/kv_base_s*_fzU and fzD; act_verdicts.json E2b). late_frozen_U is 0.0863, 0.1110 and 0.1076, giving 0,09 / 0,11 / 0,11, outside the range 0,02 bis 0,09 given just before. KURZ lists three architectures directly before, so 'mit eingefrorenem Schaltmuster ebenso' reads as if all three were frozen. GRENZEN says 'eingefroren wurde nur das ReLU-Muster'.",
+     "fix": "mit eingefrorenen ReLU-Masken ebenso (Endstand 0,09 bis 0,11)"
+    }
+   ]
+  },
+  "numbers 9.4-9.7, files, reproduction, corrections to 8.7 (reviewer B)": {
+   "findings": [
+    {
+     "location": "NACHRECHNEN, line 57: \"# fein, für den Tausch; ebenso TAG=_driftfine\"",
+     "problem": "The drift control has no SUB and no STRAT. If you copy the line and change only the TAG, you get a second 5-% run under the name of the drift control. In the same place in Section 8 the line says \"ebenso TAG=_driftfine ohne SUB\".",
+     "evidence": "jobs.txt: \"swiglu_s0_driftfine grok swiglu 0 1500 0.3 INIT=…/kv_swiglu_s0/ckpt_11000.pt EVAL=50 CKPT=50 TAG=_driftfine\" (no SUB, no STRAT), while swiglu_s0_ungrok5fine has SUB=0.05 STRAT=1. README Section 8 Nachrechnen: \"# fein; ebenso TAG=_driftfine ohne SUB\".",
+     "severity": "wrong",
+     "fix": "INIT=$G SUB=0.05 STRAT=1 EVAL=50 CKPT=50 TAG=_ungrok5fine python $S/kv_grok.py $A/runs swiglu 0 1500 0.3   # fein, für den Tausch; ebenso TAG=_driftfine ohne SUB und STRAT"
+    },
+    {
+     "location": "NACHRECHNEN, line 60: \"… base 0 26667 0.3   # ebenso _fb_lr3_D über 13333 Schritte; LR=3e-4 EPS=1e-5 als _fb_lr3e5_U und _D über 5000\"",
+     "problem": "The two lr 3e-4 runs were not run for 26,667 and 13,333 steps. stop_fb.sh stopped them by hand at about 13,350 (U) and 5,250 (D), which is the amount of lr × steps that Section 9.2 reads. The comment also leaves out that _fb_lr3_D runs without SUB and STRAT. The _fb_lr3e5 runs used CKPT=2500, not the 1500 the line implies. Note also that crit.json E3 had set U at 26,667 and D at 13,333 steps, so the early stop is a change from the plan and should be stated.",
+     "evidence": "stop_fb.sh: limits (\"D\", 5000), (\"U\", 13350), then pkill. act_out/runs/kv_base_s0_fb_lr3_U/log.json: last row step 13350, no \"steps\" key (run killed). logs2/fb_lr3_U.log has no \"finished\" line. kv_base_s0_fb_lr3_D/log.json: last step 5250. jobs2.txt: \"fb_lr3_D grok base 0 13333 0.3 INIT=… LR=3e-4 EVAL=150 CKPT=1500\" (no SUB/STRAT) and \"fb_lr3e5_U … LR=3e-4 EPS=1e-5 EVAL=150 CKPT=2500\". kv_grok.py has no schedule that depends on max_steps, so the first 13,350 steps would replicate.",
+     "severity": "imprecise",
+     "fix": "INIT=$G SUB=0.05 STRAT=1 LR=3e-4 EVAL=150 CKPT=1500 TAG=_fb_lr3_U python $S/kv_grok.py $A/runs base 0 26667 0.3   # nach 13.350 Schritten von Hand beendet (gleich viel Lernrate mal Schritte wie 4.000 bei 10⁻³); ebenso _fb_lr3_D ohne SUB und STRAT über 13333 Schritte, nach 5.250 beendet; LR=3e-4 EPS=1e-5 CKPT=2500 als _fb_lr3e5_U und _D über 5000"
+    },
+    {
+     "location": "9.5, \"42 der 60 Neuronen seiner letzten Schicht, die überhaupt variieren, sind zu über 90 % Funktion einer einzigen Kombination (Median 0,32)\"",
+     "problem": "The 60 neurons are pooled over five networks (5 seeds × 15 = 75 neurons in the last hidden layer, of which 60 vary). The sentence says one last layer, which has only 15 neurons. The numbers are right; the attribution is not.",
+     "evidence": "poly_C.json nets (arch \"64-64-64-15 relu\", seeds 0–4): units with R² > 0.9 per network 11/14, 9/13, 5/10, 8/10, 9/13 = 42 of 60. The median angle of the 42 is 18°, slope 0.325, so 0,32 is correct.",
+     "severity": "imprecise",
+     "fix": "In den fünf Netzen variieren 60 der 75 Neuronen der letzten Schicht; 42 davon sind zu über 90 % Funktion einer einzigen Kombination (Median 0,32), wie im Beitrag (0,175 bis 0,35, Median 0,30)."
+    },
+    {
+     "location": "9.5, \"In verallgemeinernden Ständen nicht: In Block 1 erklären die beiden Operanden getrennt 0,38 bis 0,44 und 0,35 bis 0,49 der Streuung eines Neurons … und kein Neuron erreicht 0,9 durch die Antwort allein.\"",
+     "problem": "The general answer \"nicht\" is shown only for Block 1. In Block 0 of one ReLU network, neurons explained above 0.9 by the answer alone carry 14 % (step 13,000) and 3 % (step 13,500) of the write weight. Also, the shares are weighted means over the neurons, not the variance of one neuron. The E8 threshold (difference ≥ 0.20) is still not reached (largest is 0.136), so the verdict stands.",
+     "evidence": "act_units_relu.json kv_base_s0 step 13000 blocks[0].weight_of_units_answer_0_9 = 0.1364 (number_of_units_answer_0_5 = 40 of 512); step 13500: 0.0263. All other generalising states: ≤ 0.0015 (ReLU) and 0 (SwiGLU, bilinear). Block 1: 0 everywhere. act_units.py pools split() with wv = Var(h)·|W_out|².",
+     "severity": "imprecise",
+     "fix": "In verallgemeinernden Ständen kaum: In Block 1 erklären die beiden Operanden getrennt 0,38 bis 0,44 und 0,35 bis 0,49 der Streuung der Neuronen (gewichtet wie in 9.4), die Antwort über beide hinaus nur 0,04 bis 0,11, und kein Neuron erreicht 0,9 durch die Antwort allein. Solche Neuronen gibt es nur in Block 0 eines ReLU-Netzes (Startwert 0), mit 14 % und 3 % des Gewichts im Ausgang (Schritt 13.000 und 13.500)."
+    },
+    {
+     "location": "9.4, \"Block 0 wirkt am `=` auf diesen Daten linear.\"",
+     "problem": "For ReLU, the table right above shows Block 0 explained only to 0.79 by degree 1, with a quadratic share of up to 0.22. What holds in every state is that the network stays correct with Block 0 linearised.",
+     "evidence": "act_quad_relu.json kv_base_s0 step 13000 blocks[0]: r2_1 = 0.7947, write_quadratic = 0.2229, affine = 0.9725; linearised_b0.acc_held = 1.000. Across all 8 ReLU states linearised_b0.acc_held is 0.9946 to 1.000.",
+     "severity": "imprecise",
+     "fix": "Block 0 wirkt am `=` auf diesen Daten fast linear: Mit linear genähertem Block 0 rechnet das Netz weiter 0,99 bis 1,00 richtig, auch in dem ReLU-Stand, in dem Block 0 nur zu 0,79 linear erklärt ist (quadratisches Glied 0,22)."
+    },
+    {
+     "location": "9.4 (Qwen), \"Die SiLU-Kurve hat bei g = −1,28 ihr Minimum; liegen die Gate-Eingänge um diesen Punkt, ist ihre mittlere Steigung null\"",
+     "problem": "The mean slope is not zero for inputs around −1.28. It is zero for means of −1.44 / −1.90 / −3.57, which lie further and further left of the minimum as the spread grows (the parenthesis itself gives these values). In Blocks 1 to 4, 56 % of the gate inputs lie below −3 (7.4), not around −1.28.",
+     "evidence": "math.json checks M8(b): \"beta = 0 at mu = -1.44, -1.90, -3.57 for sigma = 0.5, 1, 2\". I recomputed this by Gauss–Hermite quadrature: −1.4425 / −1.9013 / −3.5663. SiLU minimum at −1.2785. README 7.4 table, Block 1–4: \"Anteil der Neuronen in diesen drei Bereichen 56 / 30 / 10 %\" (below −3 / −3 to −1 / −1 to 0).",
+     "severity": "imprecise",
+     "fix": "Die SiLU-Kurve hat bei g = −1,28 ihr Minimum und fällt links davon. Liegen die Gate-Eingänge einer Einheit so weit links, dass ihre mittlere Steigung null ist, verschwindet der bilineare Anteil (Rechnung in `act_math_review.json`, M8: bei einem Mittelwert von −1,44 / −1,90 / −3,57 für eine Streuung von 0,5 / 1 / 2)."
+    },
+    {
+     "location": "9.4 (Qwen), \"blockweise kommt Grad 2 näher heran als Grad 1.\"",
+     "problem": "For Blocks 10 to 18, degree 2 is better than degree 1 only in the median KL. In mean KL and in cross-entropy it is clearly worse. The sentence before says this, but the summary sentence generalises.",
+     "evidence": "act_qwen_surrogates.json blocks_10_18: quadratised kl 3.711, cross_entropy 6.869; linearised kl 1.671, cross_entropy 4.542; medians 0.166 vs 1.117.",
+     "severity": "imprecise",
+     "fix": "Als Ganzes ist SwiGLU in Qwen also kein Polynom vom Grad 2, das man ohne Verlust einsetzen könnte; in den Blöcken 0 bis 9 und 19 bis 27 kommt Grad 2 näher heran als Grad 1, in den Blöcken 10 bis 18 nur im Median (Kreuzentropie mit Grad 2 6,87, mit Grad 1 4,54)."
+    },
+    {
+     "location": "9.4 (Qwen), \"Angepasst an 4.082 Positionen aus 24 Texten, gelesen an 902 Positionen aus 16 anderen\"",
+     "problem": "All 24 fit texts are Wikipedia passages. The 16 read texts are 8 Wikipedia passages and 8 chats. So the fits are read partly on a kind of text they were not fitted on, and the text does not say so.",
+     "evidence": "ufo_common.texts: main = 8 wikitext + 8 chats; pool = wiki[8:] + chats. ju_out/corpus_wikitext.json has 40 passages, so pool[:24] is wikitext only. act_qwen.py: fitset = pool[:NFIT] with NFIT = 24.",
+     "severity": "imprecise",
+     "fix": "Angepasst an 4.082 Positionen aus 24 Wikipedia-Absätzen, gelesen an 902 Positionen aus 16 anderen Texten, 8 Wikipedia-Absätzen und 8 Chats (dieselbe Textauswahl wie in Abschnitt 7):"
+    },
+    {
+     "location": "9.6, \"Polynome vom Grad 2, 4 und 8 in cos C haben dort den größten Fehler 0,073 / 0,041 / 0,022, in der Halbwinkel-Variablen cos(C/2) nur 0,0015 / 2·10⁻⁵ / 10⁻⁸\"",
+     "problem": "These numbers hold for least-squares fits on equally spaced angles C. They are not a property of every polynomial of that degree. The math review that 9.6 cites gives different numbers for least squares uniform in cos C (0.098 / 0.058 / 0.032) and for the best uniform approximation (0.039 / 0.020 / 0.010).",
+     "evidence": "trisect_math.py part 9: Chebyshev.fit on Cg = linspace(0, π, 20001). trisect_math.json half_angle: 0.07298 / 0.04074 / 0.02160 and 0.00145 / 2.34e-5 / 1.06e-8. math.json M7(c): \"Least squares: maximum error 0.0982 …, 0.0581 …, 0.0321 … Best uniform approximation: 0.0387, 0.0200, 0.0101\"; in v: \"1.2e-3, 1.9e-5, 8.8e-9\". I recomputed both: the largest error is at C = 180° in every case.",
+     "severity": "imprecise",
+     "fix": "cos(C/3) als Funktion von cos C hat bei C = 180° eine Wurzel-Singularität: Polynome vom Grad 2, 4 und 8 in cos C, nach kleinsten Quadraten über gleich verteilte Winkel C angepasst, haben dort ihren größten Fehler, 0,073 / 0,041 / 0,022 (auch die bestmöglichen kommen nur auf 0,039 / 0,020 / 0,010), in der Halbwinkel-Variablen cos(C/2) nur 0,0015 / 2·10⁻⁵ / 10⁻⁸."
+    },
+    {
+     "location": "9.7, V1: \"Ursache ist sie nicht: ReLU, SwiGLU, die bilineare Einheit ohne Schwelle und das eine Netz ohne MLP-Nichtlinearität verlieren die Verallgemeinerung gleich. … Was sich vor dem Sprung zeigt, liegt in den Gewichten\"",
+     "problem": "The linear-MLP network is listed as equal evidence, but by the rule (c) cannot be decided (one network, unreadable drift control). The evidence before the jump comes from ReLU only (mask exchange, act_units_early_relu).",
+     "evidence": "act_verdicts.json E1.verdict_c = \"undecided or incomplete\", E1.linear = [0.0741, null]. 9.2 table: drift control \"nein (an 82 % der Messungen bei 99 %)\". The pre-jump evidence is in act_masks_relu_s{0,1,2}.json and act_units_early_relu.json (ReLU only).",
+     "severity": "imprecise",
+     "fix": "Ursache ist sie nicht: ReLU, SwiGLU und die bilineare Einheit ohne Schwelle verlieren die Verallgemeinerung gleich; das eine Netz ohne MLP-Nichtlinearität ebenso, dort ist die Driftkontrolle aber unruhig (nach der Regel nicht entscheidbar). … Was sich bei ReLU vor dem Sprung zeigt, liegt in den Gewichten: Sie passen nicht mehr zum alten Schaltmuster, und der Zustand trägt weniger von der Antwort."
+    },
+    {
+     "location": "9.4, \"so auch Nanda et al., arXiv 2301.05217: die meisten Neuronen sind gut durch Polynome vom Grad 2 beschrieben\"",
+     "problem": "In Nanda et al. the polynomials are of degree 2 in the sines and cosines of one frequency of the two inputs (Fourier features), not in the unit's own inputs as measured here. Without that qualifier it reads as the same measurement.",
+     "evidence": "lit_self_readable.txt, Q C2a: \"'Most neurons are also well-approximated by degree-2 polynomials': 433 of 512 neurons (84.6 %) have over 85 % of their variance explained by a single frequency\"; \"'… degree-2 polynomials of sines and cosines of a particular frequency.'\"",
+     "severity": "imprecise",
+     "fix": "so auch Nanda et al., arXiv 2301.05217: dort sind die meisten Neuronen gut durch Polynome vom Grad 2 in Sinus und Kosinus der beiden Operanden beschrieben"
+    },
+    {
+     "location": "9.4, \"Vorab gesetzte Regel: „ungefähr quadratisch“ heißt in einem Block R²(Grad 2) ≥ 0,90 und R²(Grad 2) − R²(Grad 1) ≥ 0,20; …\"",
+     "problem": "The quoted rule leaves out the accuracy conditions that E6 sets for the small experiment. Applying them changes no classification, but the rule is called pre-registered and should be quoted in full.",
+     "evidence": "crit.json rules E6 counts_for: \"in the toy also acc_2 within 0.01 of the unchanged network and acc_1 at least 0.10 below it\"; counts_against: \"or acc_2 more than 0.10 below\". I checked all 48 block-states: in every 'ungefähr' state quadratised_b1 is at most 0.0043 below and linearised_b1 at least 0.94 below the unchanged accuracy.",
+     "severity": "imprecise",
+     "fix": "Vorab gesetzte Regel: „ungefähr quadratisch“ heißt in einem Block R²(Grad 2) ≥ 0,90 und R²(Grad 2) − R²(Grad 1) ≥ 0,20, im Kleinversuch außerdem: mit Grad 2 ersetzt höchstens 0,01 weniger richtig, mit Grad 1 mindestens 0,10 weniger; „nicht quadratisch“ heißt R²(Grad 2) − R²(Grad 1) < 0,05 oder R²(Grad 2) < 0,70 (im Kleinversuch auch, wenn Grad 2 mehr als 0,10 verliert); dazwischen „teilweise“."
+    },
+    {
+     "location": "9.6, \"hat genau zwei von null verschiedene Eigenwerte\"",
+     "problem": "If g and u are parallel or antiparallel, one of the two eigenvalues is zero (rank 1). The next sentence says exactly this (\"das Quadrat einer einzigen Linearkombination\"). \"Genau zwei\" holds only for non-parallel g and u.",
+     "evidence": "At φ = 0 the formula gives −|g||u| sin²(φ/2) = 0. math.json M5: \"u = 1.7 g gives one non-zero eigenvalue … (rank 1)\".",
+     "severity": "imprecise",
+     "fix": "Die quadratische Form (g·x)(u·x), also eine bilineare Einheit, hat höchstens zwei von null verschiedene Eigenwerte, |g||u|(cos φ + 1)/2 = |g||u| cos²(φ/2) und |g||u|(cos φ − 1)/2 = −|g||u| sin²(φ/2), …"
+    },
+    {
+     "location": "9.4, Qwen table rows \"10 bis 19 | … / 0,71 bis 0,90 / … | teilweise\" and \"20 bis 26 | … / 0,56 bis 0,70 / … | nicht quadratisch\"",
+     "problem": "The rounded upper bounds equal the thresholds of the rule. At 0,90 (with a gap far above 0.20), Block 16 looks 'ungefähr'. At 0,70, Blocks 20 to 26 look 'teilweise'. The raw values lie just below the thresholds, so the classes are right, but the table looks as if it contradicts the rule stated a few lines above.",
+     "evidence": "act_qwen.json blocks[16]: r2_2 = 0.89781, r2_2 − r2_1 = 0.388. blocks[26]: r2_2 = 0.69723. Also blocks[9]: r2_2 = 0.69833, hidden in \"0,64 bis 0,72\" with \"6 bis 9 nicht\".",
+     "severity": "unclear",
+     "fix": "Satz unter der Tabelle: „R²(Grad 2) liegt in Block 16 bei 0,898 und in den Blöcken 9 und 26 bei 0,698 und 0,697, also knapp unter den Schwellen 0,90 und 0,70.“"
+    },
+    {
+     "location": "9.4, \"oder „teilweise“ (R²(2) − R²(1) = 0,13 bis 0,26 bei SwiGLU, 0,17 bis 0,23 bei ReLU)\"",
+     "problem": "The parenthesis follows \"teilweise\", but the ranges cover all eight states, including the 'ungefähr' ones (≥ 0.20). For the 'teilweise' states alone the ranges are 0.13 to 0.16 (SwiGLU) and 0.17 to 0.19 (ReLU).",
+     "evidence": "act_quad_swiglu.json block 1, R²(2) − R²(1): teilweise 0.1268, 0.1340, 0.1388, 0.1488, 0.1628; ungefähr 0.2273, 0.2371, 0.2615. act_quad_relu.json block 1: teilweise 0.1680 to 0.1895; ungefähr 0.2188, 0.2257.",
+     "severity": "unclear",
+     "fix": "Nach der Regel ist Block 1 je nach Stand „ungefähr quadratisch“ (SwiGLU 3, ReLU 2 der 8 Stände) oder „teilweise“: R²(2) liegt immer über 0,90, R²(2) − R²(1) bei 0,13 bis 0,26 (SwiGLU) und 0,17 bis 0,23 (ReLU), also um die Schwelle 0,20."
+    },
+    {
+     "location": "9.4, \"ihr Gewicht im Ausgang: 27 bis 53 % der Einheiten mit einer Korrelation über 0,9\"",
+     "problem": "This reads as if 27 to 53 % of the units had a correlation above 0.9. The number is the share of the output weight (variance × |down|²) that those units carry.",
+     "evidence": "act_quad_swiglu.json blocks[0].weight_of_units_with_abs_corr_above_0_9 = 0.2713 to 0.5295 over the 8 generalising states; act_quad.py defines it as wv[corr > 0.9].sum().",
+     "severity": "unclear",
+     "fix": "Viele Einheiten von Block 0 sind damit fast das Quadrat einer einzigen Linearkombination ihrer Eingabe, wie die Merkmale im Beitrag über kubische Polynome: Einheiten mit einer Korrelation über 0,9 tragen 27 bis 53 % des Gewichts im Ausgang."
+    },
+    {
+     "location": "NACHRECHNEN, header line \"# Abschnitt 9 (Aktivierungsfunktion); K, G und M wie oben\" and lines 56–61",
+     "problem": "\"G wie oben\" is the ReLU checkpoint of seed 0, but lines 56 and 57 need the G of SwiGLU, bilinear and linear, which only line 55's comment gives. It also does not say which lines were repeated for seeds 1 and 2. U/D, fine runs, frozen masks, small batches, AMSGrad and the mask exchange ran for seeds 0 to 2. The ε, float64 and lr 3e-4 screens and the linear U/D ran only for seed 0.",
+     "evidence": "jobs2.txt: base_s{1,2}_fzU/fzD, base_s{1,2}_b26U, ams_s{1,2}_U/D (TAG=_scr_ams_U/_D), swiglu_s{1,2}_U/D, bilinear_s{1,2}_U/D, masks_{relu,swiglu}_s{1,2}. scr_eps6, scr_eps5, scr_f64, fb_lr3, fb_lr3e5 and linear_s0_U/D for seed 0 only. README §8 Nachrechnen: G = $K/runs/kv_base_s0/ckpt_13500.pt.",
+     "severity": "unclear",
+     "fix": "# Abschnitt 9 (Aktivierungsfunktion); K und M wie oben; G ist der letzte Stand des Grundlaufs der jeweiligen Architektur (ReLU wie oben, die anderen in der übernächsten Zeile). Die Zeilen mit Startwert 0 gelten ebenso für 1 und 2 (G und M des jeweiligen Laufs), außer der Vorprüfung mit ε, float64 und kleinerer Lernrate und dem linearen Netz (nur Startwert 0); AMSGRAD=1 lief auch an Startwert 1 und 2."
+    },
+    {
+     "location": "DATEIEN, row \"| `review_act.json` | Prüfberichte zum fertigen Abschnitt 9 |\"",
+     "problem": "review_act.json does not exist yet. act_to_repo.py writes it only if act_out/review/final_numbers.json, final_critic.json or note.json exist, and none of them does. All other listed files exist in act_out/res or are built by act_to_repo.py (act_plan_review.json from plan.md and crit.json, act_literature.json from lit_*.json, act_math_review.json from math.json, act_logs.json from runs/*/log.json).",
+     "evidence": "ls act_out/review: crit.json, lit_act.json, lit_act_readable.txt, lit_self.json, lit_self_readable.txt, math.json. act_to_repo.py: fin = {} …; if fin: open(f\"{R}/review_act.json\", \"w\"). The HEADER still holds the placeholder ⟦FINAL_REVIEW⟧.",
+     "severity": "unclear",
+     "fix": "Vor dem Kopieren die Prüfberichte als act_out/review/final_numbers.json und final_critic.json ablegen (sonst schreibt act_to_repo.py keine review_act.json), oder die Zeile „| `review_act.json` | Prüfberichte zum fertigen Abschnitt 9 |“ streichen."
+    },
+    {
+     "location": "FIX87A (new text), \"hier stand zuerst „vier Schichten zu 15 Neuronen“ und, die Aktivierungsfunktion sei nicht genannt\"",
+     "problem": "The comma after \"und\" is ungrammatical. The correction note also silently drops the old claim \"der Code des Notebooks lag nicht vor\", which the literature review found wrong (the post links the notebook with all code).",
+     "evidence": "lit_self_readable.txt, B item on README 8.7: \"(3) 'der Code des Notebooks lag nicht vor': not supported; the post links the notebook with all code\". The old text of FIX87A contains \"der Code des Notebooks lag nicht vor\". Both old texts occur exactly once in README.md.",
+     "severity": "style",
+     "fix": "* **Der Beitrag über kubische Polynome.** Ein MLP mit vier verdeckten Schichten (64, 64, 64 und 15 Neuronen, ReLU; nach 9.1 berichtigt: hier stand zuerst „vier Schichten zu 15 Neuronen“, die Aktivierungsfunktion sei nicht genannt und der Code liege nicht vor) lernt …"
+    }
+   ],
+   "checked": "9.4 small experiment: checked 22 table ranges and 14 text numbers against act_quad_{swiglu,relu,bilinear}.json. Each architecture has 8 generalising states (acc_held ≥ 0.99, the last two stored states of seeds 0–3). All rounding is correct, including the borderline values 0.73498, 0.98546, 0.09743, 0.38525 and 0.50053. The E6 classes, recomputed for all 48 block-states, match the text: SwiGLU Block 1 has 3 'ungefähr' and 5 'teilweise', ReLU Block 1 has 2 and 6, SwiGLU Block 0 has 8 'nicht', ReLU Block 0 has 6 'nicht' and 2 'teilweise'. They stay the same with the accuracy conditions the text leaves out.\n\n9.4 Qwen: checked 30 table values and 28 block classes against act_qwen.json, and 21 text numbers against act_qwen.json and act_qwen_surrogates.json (3.63 / 5.80 / 8.06 / 9.84, 35 %, 0.44 / 58 %, 0.35 / 61 %, 0.17 vs 1.12, KL > 19, 0.06–0.19, 0.03–0.10, 0.018, 4 %). All correct. I recomputed the M8 means (−1.44 / −1.90 / −3.57) and the SiLU minimum (−1.278). The 84–98 % matches README 7.4.\n\n9.5: checked 5 gradient slopes, 8 network ranges and 10 counts against poly_targets.json, poly_A/B/C/D2/D3.json and cubic_direction.json. All correct. The E7 counts hold:\n- Within 0.05 of the gradient direction: 14/15, 14/15 and 15/15.\n- In the bands for the doubled range of a: 13/15 and 14/15, with 0 in the algebra bands.\n- Product and SwiGLU targets: 14/15 networks with fewer than 10 % of units; 3 of 210 and 3 of 207 units in total.\n- Post-size network: 1/5 within 0.05, 4/5 and 4/5 in the bands. poly_D3 seed 2 has slope 0.249995, just inside the band.\n- R² ≥ 0.9996 holds (minimum 0.99963).\nThe paragraph on the post's network and the act_units paragraph are also correct in their numbers: 0.29–0.33, median 0.32, 0.19–0.25, 0.02–0.08, 0.50 / 0.54, eigenvalue ratios 1.00 / 1.19, R² 0.55 at 45° and 0.36 at 44°, −53° to 79°, ratio 1.0–2.4, 0.38–0.44, 0.35–0.49, 0.04–0.11, 0.71–0.89, and 0.61–0.65 vs 0.88–0.90 with 0.96–0.98 at step 550.\n\n9.6: checked 17 numbers against trisect_math.json, math.json and poly_C.json \"depth\": n = 2 to 5 on 5,000 triangles with errors below 4·10⁻¹³; 6.4x + 3a + b with R² = 0.7998; widths 3 and 2 and five products; 0.799–0.804, 1.000 and 0.9999; the half-angle values match trisect_math.json. E9 holds: one bilinear layer stays ≤ 0.81 (maximum 0.8036), two layers reach 1.000 in 5 of 5 seeds, and every identity was checked on more than 1,000 instances in the math review (for example 200,000 for the circle identities and 20,000 for M5).\n\n9.7: 8 statements are consistent with 9.2–9.6 and act_verdicts.json, apart from the V1 finding.\n\nNAECHSTER: 3 statements are correct; Thilak et al. saw no slingshots with SGD or Adagrad (lit_act).\n\nDATEIEN: of 20 listed files, 15 exist in act_out/res. act_plan_review.json, act_literature.json, act_math_review.json and act_logs.json are built by act_to_repo.py. Only review_act.json is missing.\n\nSIZE: act_out/runs is 1.18 GB and the coefficient file is 16.5 MB (15.8 MiB), so both values are fine.\n\nNACHRECHNEN: checked 18 lines against the usage lines and environment variables of kv_grok.py, act_masks.py, act_report.py, act_verdicts.py, act_selfprobe.py, act_quad.py, act_units.py, act_qwen.py, poly_direction.py and trisect_math.py, and against jobs/jobs2/jobs3.txt. Apart from the findings, everything matches. Actual run times: base runs 12.7–29 min (stated 13–30), continuations 2.5–15 min, Qwen 21.6 and 12.6 min (stated 'etwa 25 und 13').\n\nFIX87A and FIX87B: each old text occurs exactly once in README.md. The new text matches lit_self (64-64-64-15 ReLU, SAE with 64 units and 4 active, units chosen by eye, 88–98.5 %, b checked from two images) and cubic_direction.py (3-15-15-15-15-1)."
+  },
+  "counter-check of B": {
+   "verdicts": [
+    {
+     "index": 0,
+     "verdict": "confirmed",
+     "reason": "jobs.txt: swiglu_s{0,1,2}_driftfine have no SUB and no STRAT, while the _ungrok5fine runs have SUB=0.05 STRAT=1. kv_grok.py line 58 makes SUB alone decide between a subset run and a drift control. Copying draft line 57 and changing only the TAG therefore gives a second 5-% run named _driftfine. Line 56 of the draft and README section 8 ('ebenso TAG=_driftfine ohne SUB') both state the omission. The bilinear fine runs (jobs.txt; also in act_report.json) are missing from the line too, so I added them.",
+     "fix": "INIT=$G SUB=0.05 STRAT=1 EVAL=50 CKPT=50 TAG=_ungrok5fine python $S/kv_grok.py $A/runs swiglu 0 1500 0.3   # fein, für den Tausch; ebenso TAG=_driftfine ohne SUB und STRAT; beide ebenso bilinear"
+    },
+    {
+     "index": 1,
+     "verdict": "confirmed",
+     "reason": "Verified: kv_base_s0_fb_lr3_U/log.json ends at step 13350 with no 'steps' key and fb_lr3_U.log has no 'finished' line, so the run was killed. fb_lr3_D ends at step 5250. stop_fb.sh kills at D 5000 and U 13350. jobs2.txt runs fb_lr3_D and fb_lr3e5_D without SUB/STRAT, and fb_lr3e5 uses CKPT=2500. crit.json E3 prescribes D 13,333 and U 26,667. The LR warm-up depends only on the step, so the reported numbers would replicate. Still, 'ebenso _fb_lr3_D' literally makes D a 5-% run, and the line does not say the runs were stopped. CKPT does not change any result. I made explicit that _fb_lr3e5_D also has no SUB/STRAT.",
+     "fix": "INIT=$G SUB=0.05 STRAT=1 LR=3e-4 EVAL=150 CKPT=1500 TAG=_fb_lr3_U python $S/kv_grok.py $A/runs base 0 26667 0.3   # nach 13.350 Schritten von Hand beendet (gleich viel Lernrate mal Schritte wie 4.000 bei 10⁻³); ebenso _fb_lr3_D ohne SUB und STRAT über 13333 Schritte, nach 5.250 beendet; LR=3e-4 EPS=1e-5 CKPT=2500 als _fb_lr3e5_U und _fb_lr3e5_D (D ohne SUB und STRAT) über 5000"
+    },
+    {
+     "index": 2,
+     "verdict": "confirmed",
+     "reason": "poly_C.json has 5 nets '64-64-64-15 relu' (seeds 0-4). The listed units per net are 14/13/10/10/13 = 60; poly_direction.py line 93 skips units with variance < 1e-10. Units with r2 > 0.9 are 11/9/5/8/9 = 42. The median angle of the 42 is 18 deg, tan = 0.325, so 0,32. The numbers are right, but one last layer has only 15 neurons, so '60 Neuronen seiner letzten Schicht' is impossible as written: they are pooled over 5 seeds × 15 = 75.",
+     "fix": "In den fünf Netzen variieren 60 der 75 Neuronen der letzten Schicht; 42 davon sind zu über 90 % Funktion einer einzigen Kombination (Median 0,32), wie im Beitrag (0,175 bis 0,35, Median 0,30)."
+    },
+    {
+     "index": 3,
+     "verdict": "partly",
+     "reason": "Real part: act_units.py pools split() with wv = Var(h)·|W_out|², the same weighting as act_quad.py. So the 0,38-0,44 / 0,35-0,49 are weighted means over neurons, not 'der Streuung eines Neurons'. The other part is wrong in substance. I loaded kv_base_s0 ckpt_13000/13500 (helper review_tmp/units_b0_check2.py). All 32 and 14 Block-0 units with answer-alone eta² > 0.9 (weight 0.1364 and 0.0263) are x = 0 detectors: eta²(x==0) > 0.9, eta²_x ≥ 0.92 and ≥ eta²_z; for x = 0 the answer is always 0. The single such units in s2 (0.0001) and s3 (0.0015) are the same kind. No unit passes 0.9 for the answer while staying below 0.5 for x alone. So 'nicht' stands, and the proposed 'kaum … Solche Neuronen gibt es nur in Block 0 …' would present x-detectors as answer neurons.",
+     "fix": "In verallgemeinernden Ständen nicht: In Block 1 erklären die beiden Operanden getrennt 0,38 bis 0,44 und 0,35 bis 0,49 der Streuung der Neuronen (gewichtet wie in 9.4), die Antwort über beide hinaus nur 0,04 bis 0,11, und kein Neuron erreicht 0,9 durch die Antwort allein. In Block 0 der ReLU-Netze kommen einige Neuronen darüber (bei Startwert 0 mit 14 % des Gewichts im Ausgang), aber nur, weil sie fast nur bei x = 0 anschlagen, wo auch die Antwort 0 ist; durch x allein sind sie ebenso gut erklärt."
+    },
+    {
+     "index": 4,
+     "verdict": "confirmed",
+     "reason": "act_quad_relu.json kv_base_s0 step 13000 Block 0: r2_1 0.7947, write_quadratic 0.2229, which is larger than that state's Block-1 quadratic share (0.0974). linearised_b0.acc_held = 1.000. Over all 24 generalising states (3 architectures) linearised_b0 is 0.9929 to 1.000. 'wirkt … linear' contradicts the table directly above (0,79 bis 0,99; 0,00 bis 0,22). What holds everywhere is the functional statement.",
+     "fix": "Block 0 wirkt am `=` auf diesen Daten fast linear: Mit linear genähertem Block 0 rechnet das Netz weiter 0,99 bis 1,00 richtig, auch in dem ReLU-Stand, in dem Block 0 nur zu 0,79 linear erklärt ist (quadratisches Glied 0,22)."
+    },
+    {
+     "index": 5,
+     "verdict": "confirmed",
+     "reason": "Recomputed by Gauss-Hermite quadrature: the SiLU minimum is at −1.27846. E[silu'(g)] = 0 at mu = −1.4425 / −1.9013 / −3.5663 for sigma 0.5 / 1 / 2. At mu = −1.28 the mean slope is 0.034 / 0.109 / 0.245 (0.5 at mu = 0), so it is not zero 'um diesen Punkt'. The parenthesis itself contradicts the sentence. README 7.4: in Blocks 1-4, 56 % of the gate inputs lie below −3. The proposed 'fällt links davon' is ambiguous: SiLU rises back towards 0 as g goes to −∞. Disclosure: my check script review_tmp/silu_check.py overwrote an existing helper of the same name in that scratch folder.",
+     "fix": "Die SiLU-Kurve hat bei g = −1,28 ihr Minimum; links davon ist ihre Steigung negativ, rechts davon positiv. Liegt der Mittelwert der Gate-Eingänge einer Einheit so weit links vom Minimum, dass sich beides ausgleicht, ist die mittlere Steigung null, und der bilineare Anteil verschwindet (Rechnung in `act_math_review.json`, M8: bei einem Mittelwert von −1,44 / −1,90 / −3,57 für eine Streuung von 0,5 / 1 / 2)."
+    },
+    {
+     "index": 6,
+     "verdict": "partly",
+     "reason": "act_qwen_surrogates.json blocks_10_18: quadratised kl 3.711 and CE 6.869 against linearised 1.671 and 4.542, so the summary 'blockweise kommt Grad 2 näher heran' fails there on the mean and the cross-entropy. That part is real. But 'better only in the median' is wrong: same_top_token is also better with degree 2 (0.6552 against 0.4224, i.e. 66 against 42 %). Blocks 0-9 (CE 4.10 against 5.77) and 19-27 (4.60 against 5.50) favour degree 2.",
+     "fix": "Als Ganzes ist SwiGLU in Qwen also kein Polynom vom Grad 2, das man ohne Verlust einsetzen könnte; in den Blöcken 0 bis 9 und 19 bis 27 kommt Grad 2 näher heran als Grad 1, in den Blöcken 10 bis 18 nur im Median und beim wahrscheinlichsten Token (gleich an 66 gegen 42 % der Positionen), im Mittel nicht (Kreuzentropie mit Grad 2 6,87, mit Grad 1 4,54)."
+    },
+    {
+     "index": 7,
+     "verdict": "confirmed",
+     "reason": "In ufo_common.texts, main = wiki[:8] + 8 chats and pool = wiki[8:] + chats. ju_out/corpus_wikitext.json has 40 passages, so act_qwen.py's fitset = pool[:24] = wiki[8:32]: Wikitext only. qwen_surr.log: 'fit texts 24 with 4082 valid positions, main texts 16 with 902'. Half of the read texts are therefore of a kind never seen in the fit, and the draft does not say so. README section 7 calls them 'Wikitext-Absätze', so I used that term.",
+     "fix": "Angepasst an 4.082 Positionen aus 24 Wikitext-Absätzen, gelesen an 902 Positionen aus 16 anderen Texten, 8 Wikitext-Absätzen und 8 Chats (dieselbe Textauswahl wie in Abschnitt 7; beim Anpassen war kein Chat dabei):"
+    },
+    {
+     "index": 8,
+     "verdict": "confirmed",
+     "reason": "trisect_math.py part 9 uses Chebyshev.fit on Cg = linspace(0, pi, 20001). Recomputed (review_tmp/rv2_trisect_fit.py): least squares over equally spaced angles 0.07298 / 0.04074 / 0.02160, each at C = 180°. Least squares uniform in cos C: 0.0981 / 0.0581 / 0.0321. Best uniform approximation (LP): 0.03873 / 0.01998 / 0.01008. In cos(C/2): 0.00145 / 2.34e-5 / 1.06e-8. The numbers depend on the fitting rule, and the cited act_math_review.json (M7c) gives different ones. Without naming the rule, the text overstates the error achievable at degree 2/4/8 by about a factor 2.",
+     "fix": "cos(C/3) als Funktion von cos C hat bei C = 180° eine Wurzel-Singularität: Polynome vom Grad 2, 4 und 8 in cos C, nach kleinsten Quadraten über gleich verteilte Winkel C angepasst, haben dort ihren größten Fehler, 0,073 / 0,041 / 0,022 (auch die bestmöglichen kommen nur auf 0,039 / 0,020 / 0,010), in der Halbwinkel-Variablen cos(C/2) nur 0,0015 / 2·10⁻⁵ / 10⁻⁸."
+    },
+    {
+     "index": 9,
+     "verdict": "confirmed",
+     "reason": "act_verdicts.json: E1.linear = [0.0741, null], verdict_c = 'undecided or incomplete'; the 9.2 table shows the linear drift control unreadable (82 %). The pre-jump evidence is ReLU-only (act_masks_relu_s*, act_units_early_relu.json). The SwiGLU mask files even show the opposite: before the first collapse U with G's gate factors computes as well as or better than U alone (U_pattG − own_U from −0.0002 to +0.067, s0 to step 400, s1 to 550, s2 to 450). So 'bei ReLU' is required, not just cautious. The same generalisation is in the 9.2 summary ('wo er sich vorher zeigt, dann in den Gewichten').",
+     "fix": "Ursache ist sie nicht: ReLU, SwiGLU und die bilineare Einheit ohne Schwelle verlieren die Verallgemeinerung gleich; das eine Netz ohne MLP-Nichtlinearität ebenso, dort ist die Driftkontrolle aber unruhig (nach der Regel nicht entscheidbar). … Was sich bei ReLU vor dem Sprung zeigt, liegt in den Gewichten: Sie passen nicht mehr zum alten Schaltmuster, und der Zustand trägt weniger von der Antwort."
+    },
+    {
+     "index": 10,
+     "verdict": "confirmed",
+     "reason": "lit_self_readable.txt C2a quotes Nanda et al.: 'Two of the attention heads approximately compute degree-2 polynomials of sines and cosines of a particular frequency. Most neurons are also well-approximated by degree-2 polynomials'. The evidence is 84.6 % of neurons with > 85 % of their variance from a single frequency. In 9.4 'Polynom vom Grad 2' means degree 2 in the unit's own inputs (g, u); without the qualifier the citation reads as the same measurement. Fix refined with 'einer Frequenz'.",
+     "fix": "so auch Nanda et al., arXiv 2301.05217: dort sind die meisten Neuronen gut durch Polynome vom Grad 2 in Sinus und Kosinus einer Frequenz der beiden Operanden beschrieben"
+    },
+    {
+     "index": 11,
+     "verdict": "confirmed",
+     "reason": "crit.json E6 counts_for adds for the toy 'acc_2 within 0.01 of the unchanged network and acc_1 at least 0.10 below it'; counts_against adds 'or acc_2 more than 0.10 below'. I re-classified all 48 block-states (review_tmp/rv2_e6_classes.py), with per-block and whole-network replacement. No class changes: ReLU B1 2 ungefähr / 6 teilweise, B0 6 nicht / 2 teilweise; SwiGLU B1 3/5, B0 8 nicht; bilinear B1 4/4, B0 8 nicht. The draft says the rules are applied unchanged, so the quoted pre-registered rule should be complete.",
+     "fix": "Vorab gesetzte Regel: „ungefähr quadratisch“ heißt in einem Block R²(Grad 2) ≥ 0,90 und R²(Grad 2) − R²(Grad 1) ≥ 0,20, im Kleinversuch außerdem, dass das Netz mit Grad 2 höchstens 0,01 und mit Grad 1 mindestens 0,10 weniger richtig rechnet; „nicht quadratisch“ heißt R²(Grad 2) − R²(Grad 1) < 0,05 oder R²(Grad 2) < 0,70 oder, im Kleinversuch, mit Grad 2 mehr als 0,10 weniger richtig; dazwischen „teilweise“."
+    },
+    {
+     "index": 12,
+     "verdict": "confirmed",
+     "reason": "The eigenvalues are |g||u|(cos φ ± 1)/2. At φ = 0 the negative one is 0, and at φ = π the positive one is 0 (rank 1). math.json M5: 'u = 1.7 g gives one non-zero eigenvalue … (rank 1)'. The draft's own next sentence ('das Quadrat einer einzigen Linearkombination') is exactly this case, so 'genau zwei' is false in general and 'höchstens zwei' is correct.",
+     "fix": "Die quadratische Form (g·x)(u·x), also eine bilineare Einheit, hat höchstens zwei von null verschiedene Eigenwerte, |g||u|(cos φ + 1)/2 = |g||u| cos²(φ/2) und |g||u|(cos φ − 1)/2 = −|g||u| sin²(φ/2), …"
+    },
+    {
+     "index": 13,
+     "verdict": "confirmed",
+     "reason": "act_qwen.json: block 16 r2_2 = 0.89781 with r2_2 − r2_1 = 0.388; block 26 r2_2 = 0.69723; block 9 r2_2 = 0.69833. The classes are right on the raw values. But the rounded bounds 0,90 and 0,70 equal the thresholds stated a few lines above, so blocks 10-19 'teilweise' and 20-26 'nicht' look inconsistent with the rule. The rest of the table checks out, including the borderline 87 % (block 23: 0.8746).",
+     "fix": "Satz unter der Tabelle: „R²(Grad 2) liegt in Block 16 bei 0,898 und in den Blöcken 9 und 26 bei 0,698 und 0,697, also knapp unter den Schwellen 0,90 und 0,70.“"
+    },
+    {
+     "index": 14,
+     "verdict": "confirmed",
+     "reason": "act_quad_*.json, Block 1, R²(2) − R²(1) in the generalising states. SwiGLU: teilweise 0.1268 to 0.1628, ungefähr 0.2273 / 0.2371 / 0.2615. ReLU: teilweise 0.1680 to 0.1895, ungefähr 0.2188 / 0.2257. The ranges 0,13-0,26 and 0,17-0,23 cover all 8 states but sit right after 'teilweise', which suggests 'teilweise' states with ≥ 0,20. R²(2) in Block 1 is ≥ 0.978 everywhere. The proposed fix dropped the Block-0 clause, which I restored.",
+     "fix": "Nach der Regel ist Block 1 je nach Stand „ungefähr quadratisch“ (SwiGLU 3, ReLU 2 der 8 Stände) oder „teilweise“: R²(2) liegt immer über 0,90, R²(2) − R²(1) bei 0,13 bis 0,26 (SwiGLU) und 0,17 bis 0,23 (ReLU), also um die Schwelle 0,20. Block 0 ist „nicht“ quadratisch (bei ReLU in 2 der 8 Stände „teilweise“)."
+    },
+    {
+     "index": 15,
+     "verdict": "confirmed",
+     "reason": "act_quad_swiglu.json blocks[0].weight_of_units_with_abs_corr_above_0_9 over the 8 generalising states is 0.2713 to 0.5294. act_quad.py line 74 defines it as wv[corr > 0.9].sum() with wv = Var(z)·|down|². That is a share of the output weight, not of the units. The sentence as written says 27-53 % of the units have corr > 0.9. The Qwen bullet already uses the clear form ('tragen höchstens 4 % des Ausgangs').",
+     "fix": "Viele Einheiten von Block 0 sind damit fast das Quadrat einer einzigen Linearkombination ihrer Eingabe, wie die Merkmale im Beitrag über kubische Polynome: Einheiten mit einer Korrelation über 0,9 tragen 27 bis 53 % des Gewichts im Ausgang."
+    },
+    {
+     "index": 16,
+     "verdict": "partly",
+     "reason": "The problem is real. 'G wie oben' is ReLU seed 0 (README: $K/runs/kv_base_s0/ckpt_13500.pt), but lines 56-57 run SwiGLU. jobs2.txt has seeds 1-2 for fzU/fzD, b26U, scr_ams, swiglu/bilinear U/D and masks, while eps6/eps5/f64/fb_lr3/fb_lr3e5 and linear U/D are seed 0 only; the block does not say this. M also differs (swiglu ckpt_5000, s2 ckpt_2500). Two errors in the proposed fix: the 'G je Architektur' line is the third line after the header, not the 'übernächste'; and the fix drops the runtime note (one thread, 13-30 / 3-15 min).",
+     "fix": "# Abschnitt 9 (Aktivierungsfunktion); K wie oben; jeder Lauf mit einem Thread; Grundläufe 13 bis 30 min, Fortsetzungen 3 bis 15 min\n# G: letzter Stand des Grundlaufs der jeweiligen Architektur und des Startwerts (ReLU wie oben, die anderen in der Zeile „G je Architektur“); M: Stand bei Schritt 5.000 desselben Grundlaufs (SwiGLU Startwert 2: 2.500). Die Zeilen mit Startwert 0 gelten ebenso für 1 und 2, außer der Vorprüfung mit ε und float64, der kleineren Lernrate und dem linearen Netz (nur Startwert 0); AMSGRAD=1 lief auch an Startwert 1 und 2."
+    },
+    {
+     "index": 17,
+     "verdict": "refuted",
+     "reason": "True that review_act.json does not exist yet and that act_to_repo.py writes it only from act_out/review/final_numbers.json, final_critic.json or note.json. But the draft is visibly pre-final: the HEADER still holds the placeholder ⟦FINAL_REVIEW⟧, and act_to_repo.py already has the code to pick up the final reports. The row describes those reports, like review_kv.json in section 8. The text is not wrong. Deleting the row, the proposed alternative, would be wrong. What remains is a process step.",
+     "fix": "Keine Textänderung. Vor act_to_repo.py die Schlussprüfungen als act_out/review/final_numbers.json und final_critic.json (gegebenenfalls note.json) ablegen und ⟦FINAL_REVIEW⟧ im Kopf ersetzen; dann entsteht review_act.json."
+    },
+    {
+     "index": 18,
+     "verdict": "confirmed",
+     "reason": "The old 8.7 text (README line 1482-1483, verified to occur exactly once, as does the old FIX87B text) has three claims. The new note mentions only two and silently drops 'der Code des Notebooks lag nicht vor'. lit_self_readable.txt line 49, item (3), calls that claim 'not supported; the post links the notebook with all code'. A correction note that lists what stood there first should be complete. The 'und, die …' comma is awkward rather than strictly ungrammatical, but the proposed wording fixes both.",
+     "fix": "* **Der Beitrag über kubische Polynome.** Ein MLP mit vier verdeckten Schichten (64, 64, 64 und 15 Neuronen, ReLU; nach 9.1 berichtigt: hier stand zuerst „vier Schichten zu 15 Neuronen“, die Aktivierungsfunktion sei nicht genannt und der Code liege nicht vor) lernt …"
+    }
+   ]
+  }
+ },
+ "final: interpretation": {
+  "interpretation against the pre-set rules (reviewer C)": {
+   "findings": [
+    {
+     "location": "9.2, „Zusammengefasst für V1“: „Die Aktivierungsfunktion ist damit weder Ursache noch der Ort, an dem sich der Verlust festmachen lässt“; 9.7 V1: „Im Kleinversuch in keiner der beiden Lesarten. Ursache ist sie nicht: … und das eine Netz ohne MLP-Nichtlinearität … Der Ort, an dem sich der Verlust festmachen lässt, ist sie auch nicht“",
+     "problem": "The verdict is stronger than the pre-registered rules allow. E1 decides only two narrow statements against V1: (a) the kind of nonlinearity decides whether, and (b) a threshold or gate is needed. Statement (c), that any MLP nonlinearity is needed, is undecided. The one linear network is still listed as support („ebenso“), although its drift control is unreadable, which under the E1 rule means „instability of this training setup“. The critic's rule says E1 leaves the natural reading untouched. For the „Ort“ reading: E2b covers ReLU only and is another model class. E2 is a weak „against“ for ReLU and „undecided“ for SwiGLU, and the planned main reading of E2 (event-free runs) does not exist. „weder … noch“ and „in keiner der beiden Lesarten“ turn partial and partly undecided results into a full negative verdict.",
+     "evidence": "act_verdicts.json: E1.verdict_c = 'undecided or incomplete'; E2.swiglu.verdict = 'undecided'; E3.verdict = 'undecided: no setting qualified'. act_report.json runs.linear_s0_D.readable_as_drift = false (share_held_099 = 0.825). crit.json rules[E1].counts_against: 'In each case the user's sentence in its natural reading (where ungrokking acts) is not touched.' rules[E2].minimum_runs_and_conditions: 'If E3 finds no loss of generalisation without events, the main reading does not exist.' cannot_be_tested_here: 'E2 and E2b bound the statement from two sides; they do not isolate a cause.'",
+     "severity": "wrong",
+     "fix": "9.2: „**Zusammengefasst für V1:** In diesem Kleinversuch entscheidet die Art der Aktivierungsfunktion nicht, ob Ungrokking eintritt: ReLU, SwiGLU und eine Einheit ohne jede Schwelle verlieren alle die Verallgemeinerung. Ob es überhaupt eine MLP-Nichtlinearität braucht, bleibt nach der Regel offen. Das eine Netz ohne sie verliert die Verallgemeinerung zwar auch, seine Driftkontrolle ist aber unruhig. Ein verändertes Schaltmuster braucht der Verlust nicht: Mit eingefrorenen ReLU-Masken geht die Verallgemeinerung ebenfalls verloren. Ob der Verlust im Schaltmuster sitzt, entscheidet der Tausch nur schwach: Bei ReLU spricht er nach der Regel dagegen, ist aber nur an frühen Schritten lesbar; bei SwiGLU ist er unentschieden. Für V1 spricht damit nichts; widerlegt ist V1 nur in diesen engeren Formen.“ 9.7: „* **V1, Aktivierungsfunktion und Ungrokking:** Im Kleinversuch spricht nichts dafür, entschieden ist aber nur ein Teil. Die Art der Aktivierungsfunktion entscheidet nicht, ob Ungrokking eintritt, und eine Schwelle braucht es nicht. Ob es überhaupt eine MLP-Nichtlinearität braucht, ist offen. Ein verändertes Schaltmuster braucht der Verlust nicht (eingefrorene ReLU-Masken). Ob er im Schaltmuster sitzt, ist bei ReLU nur schwach (dagegen) und bei SwiGLU nicht entschieden.“"
+    },
+    {
+     "location": "9.2 / 9.7 / KURZ: „Der Verlust kommt mit Einbrüchen des Optimierers“; 9.2 heading „**Die Einbrüche lassen sich nicht abstellen, und der Verlust kommt mit ihnen.**“; „Der Verlust kommt in jeder Einstellung mit Instabilitäten des Optimierers, die auch die Driftkontrolle hat, die sich aber nur mit allen Aufgaben wieder erholt.“",
+     "problem": "Part of the loss happens without any event and without any jump in the weight norm. The draft does not mention this, and the summaries say the opposite. In SwiGLU (seeds 1 and 2) and in the frozen-mask runs, held-out accuracy falls smoothly by 0.14 to 0.19 before the first event. In the lr 3e-4 / eps 1e-5 run, 4 of 5 drops (down to 0.69) stay below the fixed event thresholds; „Instabilitäten“ there silently widens the pre-registered event definition. „lassen sich nicht abstellen“ also generalises beyond the 7 settings tried. The relative clause „die sich aber nur mit allen Aufgaben wieder erholt“ is ambiguous.",
+     "evidence": "Logs: act_out/runs/kv_swiglu_s1_U: val_acc 0.944 (step 200) to 0.767 (step 550), while the weight norm falls at every evaluation (62.26 to 58.21), train_acc 1.000 and task ≤ 0.0001; first event at 600. kv_swiglu_s2_U: 0.986 (100) to 0.795 (450); first event at 500. kv_base_s1_fzU: 0.986 to 0.843 (800); kv_base_s2_fzU: 0.967 to 0.809 (900). Standard ReLU runs lose only 0.04 to 0.06 before the first event. kv_base_s0_fb_lr3e5_U trace: weight-norm jumps +0.25 / +0.25 / +0.49 / +0.48 at 1100 / 2100 / 2850 / 3600, batch loss ≤ 0.071, train_acc 1.000; the only event is at 4400 (act_verdicts.json E3.screen.fb_lr3e5.events_U).",
+     "severity": "imprecise",
+     "fix": "Heading: „**Keine geprüfte Einstellung stellt die Einbrüche ab, und der größte Teil des Verlusts kommt mit ihnen.**“ New bullet: „* Ein Teil geht schon vorher verloren, ohne Ereignis und ohne Sprung der Gewichtsnorm. Bei SwiGLU (Startwerte 1 und 2) sinkt die Genauigkeit vor dem ersten Ereignis von 0,94 und 0,99 auf 0,77 und 0,79, mit eingefrorenen ReLU-Masken von 0,99 und 0,97 auf 0,84 und 0,81, bei ReLU um 0,04 bis 0,06. Bei Lernrate 3·10⁻⁴ und ε = 10⁻⁵ liegen vier der fünf Stufen unter der vorab gesetzten Ereignisschwelle.“ Replacement sentence: „Der größte Teil des Verlusts kommt in jeder Einstellung mit Einbrüchen oder kleineren Sprüngen der Gewichtsnorm. Die Driftkontrolle hat sie auch, erholt sich aber jedes Mal; der 5-%-Lauf erholt sich nicht. Ein kleinerer Teil geht schon vorher allmählich verloren.“ KURZ: „Der größte Teil des Verlusts kommt mit Einbrüchen des Trainings, die sich mit keiner geprüften Einstellung (…) abstellen ließen. Ob Ungrokking sie braucht, bleibt deshalb offen.“"
+    },
+    {
+     "location": "9.2 Zusammengefasst / 9.7 V1: „verlieren die Verallgemeinerung gleich“; KURZ: „geht die Verallgemeinerung mit 5 % der Aufgaben gleich verloren“",
+     "problem": "„gleich“ reads as „equally“ (or even „sofort“) and so implies no difference in course or speed. The rule allows no statement on speed without an event-free setting, and that bans a claim of sameness as much as a claim of difference. The data do differ: SwiGLU falls below 50 % earlier, and the ranges of t50 do not overlap with ReLU. The early levels differ too.",
+     "evidence": "act_report.json t50: ReLU (base_s*_U_standard_combined) 750 / 800 / 750; SwiGLU (swiglu_s*_U) 450 / 600 / 500; bilinear 700 / 500 / 700. early: 0.30 / 0.45 / 0.38 vs 0.16 / 0.04 / 0.16 vs 0.30 / 0.27 / 0.62. crit.json rules[E1].undecided: 'A difference in speed is named only if the ranges of t50 of two architectures do not overlap in the standard and in the event-free setting'.",
+     "severity": "imprecise",
+     "fix": "„verlieren alle die Verallgemeinerung“ instead of „verlieren die Verallgemeinerung gleich“ (9.2, 9.7). KURZ: „… geht die Verallgemeinerung mit 5 % der Aufgaben verloren (Endstand 0,02 bis 0,09 richtig), mit eingefrorenem ReLU-Schaltmuster ebenfalls (0,09 bis 0,11).“ After the table in 9.2: „Wie schnell, vergleicht der Versuch nach der Regel nicht. Zur Beschreibung: SwiGLU fällt früher unter 50 % (Schritt 450 bis 600, ReLU 750 bis 800, bilinear 500 bis 700).“"
+    },
+    {
+     "location": "9.2 Zusammengefasst: „Der Tausch der Schalter spricht bei SwiGLU in zwei von drei Netzen dagegen, dass der Verlust im Muster sitzt (das dritte ist unentschieden)“; 9.7: „der Tausch der Schalter gibt sie nicht zurück (SwiGLU in zwei von drei Netzen, das dritte unentschieden; ReLU nur schwach lesbar)“",
+     "problem": "The rule decides per architecture and needs all 3 networks. A count per network is not a verdict, and the rule verdict for SwiGLU is „unentschieden“. „gibt sie nicht zurück“ only describes r, which is low in all six networks; the undecided result comes from k. The text also hides two points that affect the reading. (1) The rule says that in the standard setting readable steps end with D's first event, which is step 500 for SwiGLU. Read that way, SwiGLU would be „against“ in all three networks at step 450; the draft counts all steps that meet the formal criterion. (2) The planned main reading on event-free runs does not exist.",
+     "evidence": "act_verdicts.json E2.swiglu.verdict = 'undecided'; networks[1]: step 600, k = 0.41524, k_ref = 0.0111. crit.json rules[E2].minimum_runs_and_conditions: 'Standard setting: readable steps end with D's first event …; Main reading: the event-free runs of E3 …'. act_report.json: swiglu_s*_driftfine first event [500,500] in all three. act_masks_swiglu_s0/s1/s2.json at step 450: r = 0.032 / 0.282 / 0.249, r_ref = 0.077 / 0.292 / 0.304, k = 0.001 / 0.000 / −0.001, which gives 'against' in all three. ReLU decisive steps: lost = 0.019 (s0, step 550), 0.105 and 0.094 (s1 and s2, step 50).",
+     "severity": "imprecise",
+     "fix": "9.2 (SwiGLU), after „Nach der Regel ist SwiGLU damit unentschieden.“: „Die Regel sagt auch, im üblichen Aufbau endeten die lesbaren Schritte mit dem ersten Ereignis der Driftkontrolle; bei SwiGLU ist das Schritt 500. So gelesen spräche der Tausch bei Schritt 450 in allen drei Netzen dagegen (r = 0,03 / 0,28 / 0,25 bei r_ref = 0,08 / 0,29 / 0,30, k = 0,00). Gezählt sind hier alle Schritte, an denen die Bedingungen erfüllt sind. Die vorgesehene Hauptlesung an Läufen ohne Einbrüche gibt es nicht, weil keine Einstellung solche Läufe lieferte.“ Zusammengefasst: „Der Tausch der Schalter ist nach der Regel bei SwiGLU unentschieden. Bei ReLU spricht er schwach dagegen; lesbar ist er dort nur an frühen Schritten, an denen U 0,02 bis 0,11 verloren hat.“ 9.7: „(nach der Regel bei ReLU schwach dagegen, bei SwiGLU unentschieden)“."
+    },
+    {
+     "location": "9.2: „Nachträglich ergänzt, ohne vorab gesetzte Regel: Die 233 Aufgaben des 5-%-Laufs passen in einen Stapel von 512 …“; GRENZEN: „Die kleinen Stapel und der Verlust in float64 kamen nach der Regel hinzu.“",
+     "problem": "The small-batch control was not a post-hoc addition. The plan critic added it before evaluation (without a decision rule), to close the gap that README 8.6 names: in the 5-% run every step sees the same full batch, in the drift control it does not. The draft calls it post-hoc, gives a different motive (arXiv 2605.06152) and does not report that it closes the 8.6 gap. Only the float64 loss is genuinely post-hoc.",
+     "evidence": "crit.json add[4]: 'Small-batch control for the 5 % run: the 233 problems in batches of 26 (about nine batches per pass, as the drift control has), to separate \"every step sees the same full batch\" from \"the other problems are missing\" (README 8.6 names this gap).' order_of_priority[7]: '8. Small-batch control and the second draw for E1.' README 8.6, lines 1303–1304: 'Mit 233 Aufgaben geht jeder Schritt über alle …'; line 1327–1328: 'Eine Kontrolle, die nur diesen Wechsel herstellt …, fehlt.'",
+     "severity": "wrong",
+     "fix": "9.2: „* Die Plankritik hatte eine Kontrolle mit kleinen Stapeln vorgesehen, ohne Entscheidungsregel. Die 233 Aufgaben passen in einen Stapel von 512, der 5-%-Lauf sieht also bei jedem Schritt dieselben Aufgaben, die Driftkontrolle nicht (die Lücke aus 8.6; nach arXiv 2605.06152 sind solche Einbrüche bei fast vollem Stapel zudem am stärksten). Mit Stapeln von 26 Aufgaben (sonst wie in 8.6, Startwerte 0 bis 2) bleiben Einbrüche und Verlust: erste Ereignisse bei Schritt 650 / 850 / 900, Endstand 0,05 / 0,05 / 0,04. Der Verlust hängt also nicht daran, dass jeder Schritt dieselben Aufgaben sieht.“ GRENZEN: „Der Verlust in float64 kam nach der Regel hinzu; die kleinen Stapel hatte die Plankritik vorgesehen, ohne Entscheidungsregel.“"
+    },
+    {
+     "location": "HEADER: „Plan, Plankritik und Literaturprüfung entstanden, bevor ein Lauf ausgewertet war (`act_plan_review.json`, `act_literature.json`)“",
+     "problem": "This is wrong for the literature review. It was finished after the E3 screen had been evaluated and after the first mask exchanges had been computed. 9.2 itself says that the literature review proposed the float64 loss after the rule had been set.",
+     "evidence": "File times (ls --full-time): review/crit.json 15:24:08; review/lit_self.json 16:20:41; review/lit_act.json 16:32:43. act_out/queue2.log: screen runs started 15:29–15:33, fallback '15:43:19 started fb_lr3_U' (needs an evaluated screen); res/act_masks_relu_s0.json 15:47:41; '16:34:56 started scr_f64_U'.",
+     "severity": "wrong",
+     "fix": "„Plan und Plankritik entstanden, bevor ein Lauf ausgewertet war (`act_plan_review.json`). Die Literaturprüfung (`act_literature.json`) lief parallel zu den ersten Läufen und wurde erst danach fertig; aus ihr kam der Verlust in float64.“"
+    },
+    {
+     "location": "Intro 9: „Seine Entscheidungsregeln sind hier unverändert angewandt (`act_verdicts.py`, `act_verdicts.json`)“; HEADER: „die Entscheidungsregeln des Prüfers sind unverändert angewandt“",
+     "problem": "There are three undisclosed departures from the rules. (1) E3 asks for full runs at lr 3e-4: D for 13,333 steps and U for 26,667. They ran 4,950 to 5,250 steps (fb_lr3_U to 13,350) and were treated as a screen, with events taken from the 50-step trace without the train_acc criterion. (2) The planned main reading of E2 on event-free runs does not exist. (3) The required DRAW=1 check per architecture did not run, and the draft does not mention it. None of these changes a verdict, but „unverändert“ is not accurate.",
+     "evidence": "crit.json rules[E3].minimum_runs_and_conditions: 'If nothing qualifies: lr 3e-4 with eps 1e-8, then with eps 1e-5, D 13,333 and U 26,667 steps'. act_report.json: base_s0_fb_lr3_D steps 5250, fb_lr3e5_U/D 4950. act_verdicts.py lines 21–25 (screen of 5000 steps, trace_events); act_defs.trace_events has no train_acc criterion. crit.json rules[E1].minimum_runs_and_conditions: 'One U run with DRAW=1 on seed 0 per architecture'. No DRAW run exists in act_out/runs or jobs*.txt.",
+     "severity": "imprecise",
+     "fix": "„Seine Entscheidungsregeln sind hier angewandt (`act_verdicts.py`, `act_verdicts.json`), mit drei Abweichungen. Die Läufe mit kleinerer Lernrate endeten nach rund 5.000 Schritten statt nach 13.333 und 26.667, weil die Driftkontrolle schon vorher Ereignisse hatte; ihre Ereignisse sind aus der Aufzeichnung von Stapelverlust und Gewichtsnorm gezählt. Die vorgesehene Hauptlesung des Tauschs an Läufen ohne Einbrüche gibt es nicht. Der Prüflauf mit einer zweiten Ziehung der 233 Aufgaben je Architektur ist nicht gelaufen.“"
+    },
+    {
+     "location": "9.4 bullet: „Viele Einheiten von Block 0 sind damit fast das Quadrat einer einzigen Linearkombination ihrer Eingabe, wie die Merkmale im Beitrag über kubische Polynome“",
+     "problem": "This contradicts „Block 0 wirkt am `=` auf diesen Daten linear“ two bullets above (R²(Grad 1) 0,99 bis 1,00). On the data the gate input of Block 0 barely varies, so silu(g) is nearly constant and the unit acts as a constant times u, which is linear. A high correlation of g and u shows dependence on one combination, not a square. For SwiGLU, g ≈ u gives silu(g)·g, not g².",
+     "evidence": "act_quad_swiglu.json runs, the 8 generalising states: blocks[0].spread_of_gate_input_over_problems_median 0.0031–0.0071 (abs_mean_gate_input_median 0.03–0.09) against blocks[1] 0.27–0.40. blocks[0].r2_1 0.991–0.999, write_quadratic 0.000–0.013. weight_of_units_with_abs_corr_above_0_9 = 0.27–0.53.",
+     "severity": "imprecise",
+     "fix": "„Viele Einheiten von Block 0 hängen damit fast nur von einer einzigen Linearkombination ihrer Eingabe ab, wie die Merkmale im Beitrag über kubische Polynome (Gewicht im Ausgang: 27 bis 53 % der Einheiten mit einer Korrelation über 0,9). Ihr Gate-Eingang ändert sich am `=` über die Aufgaben aber kaum (Streuung im Median 0,003 bis 0,007, in Block 1 0,27 bis 0,40). Deshalb wirken sie dort linear und nicht als Quadrat.“"
+    },
+    {
+     "location": "9.4 heading „**In Qwen3-1.7B ist SwiGLU nur in Block 0 ungefähr quadratisch.**“; table row „10 bis 19 | … / 0,71 bis 0,90 / … | teilweise“; same in 9.7 V3 and KURZ",
+     "problem": "The categorical „nur in Block 0“ hides two narrow margins on 902 positions. Block 0 passes the 0.90 threshold by 0.008. Block 16 misses it by only 0.002, with R²(2) − R²(1) = 0.39, well above 0.20. Because the table rounds 0.898 to „0,90“ and still says „teilweise“, it looks inconsistent with the threshold.",
+     "evidence": "act_qwen.json blocks[0].r2_2 = 0.9084, r2_1 = 0.1422; blocks[16].r2_2 = 0.8978, r2_1 = 0.5099. Rule (crit.json rules[E6]): R²(2) ≥ 0.90 and R²(2) − R²(1) ≥ 0.20.",
+     "severity": "imprecise",
+     "fix": "Heading: „**In Qwen3-1.7B erreicht SwiGLU die Schwelle für „ungefähr quadratisch“ nur in Block 0, und dort knapp (R²(Grad 2) = 0,908). Block 16 verfehlt sie ebenso knapp (0,898).**“ Table: „0,71 bis 0,898“. 9.7 and KURZ: „in Qwen3-1.7B nur in Block 0 ungefähr quadratisch, und das knapp“."
+    },
+    {
+     "location": "9.4 „Ganz ersetzt“: „blockweise kommt Grad 2 näher heran als Grad 1“",
+     "problem": "This is not true for blocks 10 to 18 by mean KL or by cross-entropy, which is the measure used for the whole-model comparison. Degree 2 is better there only in the median and in the share of identical top tokens. The summary switches measures and drops the counter-result.",
+     "evidence": "act_qwen_surrogates.json: blocks_10_18:quadratised kl = 3.71, cross_entropy = 6.87, median kl = 0.166, 90 % quantile 19.45, same_top_token 0.655; blocks_10_18:linearised kl = 1.67, cross_entropy = 4.54, median 1.117, same_top_token 0.422. Blocks 0–9 and 19–27: degree 2 is better on every measure (CE 4.10 vs 5.77; 4.60 vs 5.50).",
+     "severity": "imprecise",
+     "fix": "„In den Blöcken 10 bis 18 ist Grad 2 nur im Median besser als Grad 1 (KL 0,17 gegen 1,12, gleiches Token an 66 gegen 42 %). An mindestens einem Zehntel der Positionen liegt Grad 2 weit daneben (KL über 19), und die Kreuzentropie ist mit Grad 2 höher (6,87 gegen 4,54). Als Ganzes ist SwiGLU in Qwen also kein Polynom vom Grad 2, das man ohne Verlust einsetzen könnte. In den Blöcken 0 bis 9 und 19 bis 27 kommt Grad 2 näher heran als Grad 1, in den Blöcken 10 bis 18 nur an den meisten Positionen.“"
+    },
+    {
+     "location": "9.5: „dass es im Bereich des Beitrags nahe 1/3 landet, ist kein Cardano-Schritt“; „Das Netz des Beitrags …“; „42 der 60 Neuronen seiner letzten Schicht“; KURZ: „kein einziges von 15 Netzen bleibt bei Cardanos 1/3“",
+     "problem": "„ist kein Cardano-Schritt“ is a categorical claim about mechanism from 5 networks outside any rule. Within the post's range, the post-size networks do not meet the task criterion (1 of 5 within 0.05) and lie closer to 1/3. The networks move with the input distribution, but stay 0.02 to 0.08 above the gradient direction in both ranges, which is also towards 1/3 in both. „Das Netz des Beitrags“ suggests the post's own trained network, but these are re-trained networks of the same size (own recipe, no SAE). The 42 of 60 neurons are pooled over five networks. KURZ leaves out the post-size result.",
+     "evidence": "poly_C.json (deg3, 64-64-64-15): layer_slope 0.293–0.333, 1 of 5 within 0.05 of 0.2606. poly_D3.json (deg3w): 0.193–0.251, 4 of 5 in [0.10, 0.25], 2 of 5 within 0.05 of 0.1712. Offsets above the gradient: 0.032–0.072 and 0.022–0.080, while 1/3 lies 0.072 and 0.162 above it. poly_direction.py train() uses its own Adam/cosine recipe. crit.json rules[E7]: rule only for 15-15-15-15 networks. Post units: 42 of 60 across 5 networks.",
+     "severity": "imprecise",
+     "fix": "„Netze in der Größe des Beitrags (64-64-64-15, ReLU, nach seiner LessWrong-Fassung; hier eigenes Training, ohne SAE; von der Regel nicht erfasst) liegen im Bereich des Beitrags bei 0,29 bis 0,33, näher an 1/3 als an der Hauptrichtung (nur 1 von 5 innerhalb von 0,05). In den fünf Netzen sind 42 der 60 Neuronen der letzten Schicht, die überhaupt variieren, zu über 90 % Funktion einer einzigen Kombination (Median 0,32). Bei doppeltem Bereich von a fällt die Richtung auf 0,19 bis 0,25: Sie wandert mit und bleibt nicht bei 1/3. In beiden Bereichen liegt sie 0,02 bis 0,08 über der Hauptrichtung. Dieser Abstand wird bei doppeltem Bereich nicht größer, obwohl 1/3 dort mehr als doppelt so weit entfernt ist. Die Nähe zu 1/3 spricht deshalb nicht für Cardanos Verschiebung; woher der Abstand kommt, ist offen (fünf Netze).“ KURZ: „… wenn sich beides trennen lässt; Netze in der Größe des Beitrags wandern ebenfalls mit, liegen aber 0,02 bis 0,08 darüber“."
+    },
+    {
+     "location": "9.7 V3: „Die Folgerung trägt nicht, weil die Beobachtung des Beitrags keine Eigenschaft quadratischer Einheiten ist, sondern eine der Zielfunktion und ihrer Eingabeverteilung.“",
+     "problem": "This is ambiguous. It can be read as „the post's observation does not hold for SwiGLU“. What is shown is that the step from „roughly quadratic“ to „the post applies“ does not hold, because the observation appears in networks without quadratic units (ReLU, tanh, SiLU). No network made of SwiGLU or bilinear units was examined for this direction; the small fits in 9.6 report only R². If anything, the task reading predicts that SwiGLU networks show it too.",
+     "evidence": "poly_direction.py: Part 2 trains only ACT = relu/tanh/silu MLPs. Part 3 (bilinear/SwiGLU layers on deg3) stores only fit_r2 (poly_C.json depth.nets); there is no layer_angle for these networks.",
+     "severity": "unclear",
+     "fix": "„Der Schluss von „ungefähr quadratisch“ auf „die Beobachtung des Beitrags gilt“ trägt nicht: Die Beobachtung zeigt sich auch in Netzen ohne quadratische Einheiten (ReLU, tanh, SiLU) und folgt der Zielfunktion und der Verteilung ihrer Eingaben. Netze aus SwiGLU-Einheiten sind auf diese Richtung nicht geprüft. Zeigen sie sie, dann nach diesem Befund wegen der Aufgabe, nicht wegen ihrer quadratischen Form.“"
+    },
+    {
+     "location": "9.7 V3: „Ist die Zielfunktion selbst ein Produkt, gibt es keine einzelne Richtung, nur die beiden Winkelhalbierenden.“",
+     "problem": "The bisectors are the axes of the target's quadratic form; the networks do not pick them. Trained networks spread over −53° to 79°. The plan critic also noted that the pair g ± u is one member of a family of ways to write the product as a difference of squares. The sentence suggests a network-level result that the data do not show.",
+     "evidence": "poly_B.json nets with target prod: layer_angle −53.0° to 78.9°, eigenvalue share 0.503–0.708. poly_*.json targets.prod.gradient_share = 0.500. crit.json points[P14]: 'The natural pair g + u, g − u is one member of a family'.",
+     "severity": "imprecise",
+     "fix": "„Ist die Zielfunktion selbst ein Produkt, hat schon sie keine Hauptrichtung. Ihre quadratische Form hat die beiden Winkelhalbierenden als Achsen; die Netze legen sich auf keine Richtung fest (−53° bis 79°).“"
+    },
+    {
+     "location": "9.2: „Die Gewichte des weitertrainierten Netzes passen sich also an ein verändertes Muster an; das Muster selbst nimmt G nichts.“; 9.7: „Was sich vor dem Sprung zeigt, liegt in den Gewichten“",
+     "problem": "This is agentive and causal wording that the data do not support, and the contrast „Gewichte vs. Muster“ is false, since the pattern is a function of the weights. What is measured is this: U's weights no longer work with G's masks, while D's weights still do, although by the rule U's pattern does not change detectably more than D's. „nimmt G nichts“ is slightly too strong: G with U's masks loses up to 0.005.",
+     "evidence": "act_masks_relu_s*.json at step 550: U_pattG 0.586 / 0.240 / 0.445 against D_pattG 1.000 / 0.9998 / 1.000. flip_U 0.050/0.114, 0.152/0.107, 0.113/0.132 against flip_D 0.056/0.095, 0.124/0.069, 0.041/0.091 (the 1.5-fold rule is not met in seed 0). Minimum G_pattU over steps 50–550: 0.9953.",
+     "severity": "imprecise",
+     "fix": "9.2: „Die Gewichte von U arbeiten also schon vor dem Sprung nicht mehr mit dem alten Muster zusammen, die der Driftkontrolle schon. Dabei ändert sich das Muster von U nach der Regel nicht nachweisbar stärker. Das Muster von U allein kostet G höchstens 0,005.“ 9.7: „Vor dem Sprung arbeiten die Gewichte nicht mehr mit dem alten Schaltmuster zusammen.“"
+    },
+    {
+     "location": "9.5: „Die Antwort steckt also in der Mischung der Neuronen, nicht in einzelnen.“ and „trägt der Zustand schon vor dem Sprung weniger von der Antwort als in der Driftkontrolle (Schritt 550: …)“; 9.7: „und der Zustand trägt weniger von der Antwort“",
+     "problem": "(1) The inference goes beyond what was measured. The measurement is on the whole '=' state after block 1, which includes the residual stream and the attention output. The MLP output was not measured separately. „Mischung“ is also used in 9.2 for the hybrids G/D, so the word means two things in one section. (2) The lower answer share in U is not a build-up before the jump. It is there at the first measurement after the switch to 5 %, and the gap grows clearly only in seed 0. Presenting it as a sign before the jump in 9.7 overstates it.",
+     "evidence": "act_units.py: state = rec[l]['x'][:, 4] (whole state); MLP write not split. act_units_relu/swiglu/bilinear.json, generalising states: units z_beyond 0.044–0.110, state 0.711–0.893. act_units_early_relu.json, state z_beyond at step 50: U 0.637 / 0.504 / 0.527 against D 0.737 / 0.791 / 0.803; at step 550: 0.647 / 0.620 / 0.605 against 0.902 / 0.878 / 0.905. Gap 0.10 to 0.26 (seed 0), 0.29 to 0.26, 0.28 to 0.30.",
+     "severity": "imprecise",
+     "fix": "„Einzelne Neuronen hängen also kaum von der Antwort allein ab; der Zustand nach dem Block tut es. Gemessen ist das am ganzen Zustand, nicht am Ausgang des MLP allein. Dass die Antwort erst in der Summe der Neuronen entsteht, liegt nahe (ohne das quadratische Glied von Block 1 geht fast alles verloren, 9.4), ist hier aber nicht getrennt gezeigt. Entlang des 5-%-Laufs (ReLU) trägt der Zustand weniger von der Antwort als in der Driftkontrolle, und zwar schon bei der ersten Messung nach dem Wechsel auf 5 % (Schritt 50: 0,50 bis 0,64 gegen 0,74 bis 0,80; Schritt 550: 0,61 bis 0,65 gegen 0,88 bis 0,90). Deutlich wächst der Abstand nur bei Startwert 0.“ In 9.7, drop „und der Zustand trägt weniger von der Antwort“."
+    },
+    {
+     "location": "9.7 V2: „Kein Hinweis.“; 9.3: „Bei SwiGLU ist der Gate-Eingang vor der SiLU mindestens so gut lesbar wie der Gate-Wert danach (Unterschied −0,001 bis +0,05)“; table „−0,06 bis +0,10“",
+     "problem": "(1) Leading with „Kein Hinweis“ suggests that evidence was sought and not found. By the E4 rule nothing can count for V2, so the honest headline is „hier nicht prüfbar“. (2) The critic required the untrained-network control and the draft leaves it out. It is the strongest point against reading readability as self-representation: own gates are best readable before any training. (3) „mindestens so gut“ contradicts the quoted −0,001; in 7 of 42 states the gate input is slightly less readable. (4) „+0,10“ in the table is 0.097, under the threshold but displayed as if at it.",
+     "evidence": "crit.json rules[E4].counts_for: 'Nothing counts for S2'; minimum_runs_and_conditions: 'untrained network (0.97 there)'. act_selfprobe_swiglu.json step 0: own 0.990 / 0.999; bilinear 0.989–1.000; ReLU 0.548–0.582; trained SwiGLU 0.27–0.89. pre − own < 0 in 7 of 42 SwiGLU states (minimum −0.0012, kv_swiglu_s1 step 10000 block 0). own_minus_random maximum 0.0972.",
+     "severity": "unclear",
+     "fix": "9.7: „* **V2, Selbstüberwachung und eine Repräsentation von SwiGLU:** Hier nicht prüfbar. Gemessen ist nur: Der Endzustand trägt über die eigenen Gates nicht mehr als über zufällige Gates auf denselben Eingängen und fast immer weniger als die Eingabe selbst. Im untrainierten Netz sind die eigenen Gate-Werte sogar am besten lesbar (SwiGLU und bilinear 0,99). …“ 9.3: „praktisch gleich gut oder besser lesbar (Unterschied −0,001 bis +0,05)“. Table: „−0,06 bis +0,097“."
+    },
+    {
+     "location": "Intro 9: „Alles gilt für das kleine Netz aus Abschnitt 8 und, wo genannt, für Qwen3-1.7B.“; GRENZEN (section 9 bullet)",
+     "problem": "(1) The scope sentence is wrong for 9.5 and 9.6, which use other networks (15-15-15-15 and 64-64-64-15 regressors, width-16 bilinear and SwiGLU fits). (2) Section 8 states plainly that the toy says nothing about language models; section 9 lacks this caveat, although V1 and V3 are about the activation of LLMs. The critic listed „S1 for a language model“ as not testable here. (3) GRENZEN leaves out three things a careful reader needs: all 5-% runs use one draw of 233 problems, and the planned second draw per architecture was not run; the main E2 reading on event-free runs does not exist; the frozen pattern makes another model.",
+     "evidence": "README lines 1003–1004 (section 8): 'Alles hier gilt für dieses eine kleine Netz und eine Aufgabe. Über Qwen oder ein anderes Sprachmodell sagt es nichts.' crit.json cannot_be_tested_here: 'S1 for a language model. No run changes the training data of Qwen3-1.7B …'. crit.json points[P3]: 'All networks use one draw of 233 problems'. No DRAW=1 runs in act_out/runs.",
+     "severity": "imprecise",
+     "fix": "Intro: „Alles gilt für das kleine Netz aus Abschnitt 8, in 9.5 und 9.6 für kleine Netze, die Polynome lernen, und, wo genannt, für Qwen3-1.7B. Über Ungrokking in Sprachmodellen sagt der Kleinversuch nichts; Qwen3-1.7B wurde nicht weitertrainiert.“ GRENZEN, add: „Alle 5-%-Läufe benutzen dieselbe Ziehung der 233 Aufgaben; die vorgesehene zweite Ziehung je Architektur ist nicht gelaufen. Die vorgesehene Hauptlesung des Tauschs an Läufen ohne Einbrüche gibt es nicht. Das eingefrorene Schaltmuster macht ein anderes Modell. Über Ungrokking in Sprachmodellen sagt der Kleinversuch nichts.“"
+    },
+    {
+     "location": "9.2: „**Der Verlust braucht kein verändertes Schaltmuster.**“ and „*Eingefrorenes Schaltmuster (ReLU).* Das weitertrainierte Netz rechnet mit den Masken einer eingefrorenen Kopie von G …“",
+     "problem": "Two caveats are missing. The bold heading generalises from ReLU alone (SwiGLU was not frozen). The pre-registered E2b text says the frozen-pattern network is another model class, like the untied network in 8.6. Section 8.6 says so explicitly; 9.2 does not.",
+     "evidence": "crit.json rules[E2b].statement_tested: 'This is another model class, like the untied network of README 8.6.' README line 1394: 'das ist ein anderes Modell'. act_verdicts.json E2b: ReLU only.",
+     "severity": "imprecise",
+     "fix": "„**Ein verändertes Schaltmuster braucht der Verlust nicht (ReLU).**“ and „*Eingefrorenes Schaltmuster (ReLU; ein anderes Modell, wie das entkoppelte Netz in 8.6).*“"
+    },
+    {
+     "location": "9.4: „Die SiLU-Kurve hat bei g = −1,28 ihr Minimum; liegen die Gate-Eingänge um diesen Punkt, ist ihre mittlere Steigung null, und der bilineare Anteil verschwindet (… M8: bei einem Mittelwert von −1,44 / −1,90 / −3,57 …). Das passt zu 7.4“",
+     "problem": "This is internally inconsistent. The mean slope is zero at −1.44 / −1.90 / −3.57, not around −1.28, and the larger the spread, the further left. Whether the gate inputs of Qwen's blocks 1 to 9 sit there is not measured; 7.4 gives only the sign and coarse bins. „Das passt zu 7.4“ suggests a match that was not checked.",
+     "evidence": "review/math.json checks M8(b): 'beta = E[silu'(g)] passes through zero near the minimum of SiLU (at g = -1.278): beta = 0 at mu = -1.44, -1.90, -3.57 for sigma = 0.5, 1, 2'. README 7.4 table: blocks 1–4, 56 % below −3, 30 % from −3 to −1.",
+     "severity": "imprecise",
+     "fix": "„Die SiLU-Kurve hat bei g = −1,28 ihr Minimum. Im Mittel über die Gate-Eingänge ist ihre Steigung null, wenn diese bei −1,44 / −1,90 / −3,57 liegen (Streuung 0,5 / 1 / 2; Rechnung in `act_math_review.json`, M8). Dort verschwindet der bilineare Anteil. In den Blöcken 1 bis 9 sind 84 bis 98 % der Gate-Eingänge negativ (wie in 7.4); ob sie gerade dort liegen, ist nicht gemessen.“"
+    },
+    {
+     "location": "9.5: „der Fächertest des Beitrags gelingt am besten entlang der Winkelhalbierenden (R² 0,55 bei 45°, 0,36 bei 44°)“",
+     "problem": "The two values belong to two different targets (product and SwiGLU unit), but the text does not say which is which; it reads as if one target gave 0.55 at 45° and 0.36 at 44°. „gelingt“ also overstates a test that reaches only 0.55 and 0.36.",
+     "evidence": "poly targets: prod bucket_best_angle 45, bucket_best_r2 0.547; swiglu bucket_best_angle 44, bucket_best_r2 0.364.",
+     "severity": "unclear",
+     "fix": "„… und der Fächertest des Beitrags erreicht schon an der Zielfunktion selbst höchstens R² 0,55 (Produkt, bei 45°) und 0,36 (SwiGLU-Einheit, bei 44°), also entlang der Winkelhalbierenden, und auch dort wenig.“"
+    },
+    {
+     "location": "NAECHSTER (1): „(nach Thilak et al. etwa SGD oder Adagrad, mit Gewichtsabnahme), und derselben Driftkontrolle; erst dann ist lesbar, ob der Verlust die Einbrüche braucht.“",
+     "problem": "„erst dann ist lesbar“ overstates what such a run could show. The critic ruled that any stabilised optimiser speaks only about that optimiser, and advised against SGD. arXiv 2605.06152 also reports that plain gradient descent with a large step spikes too.",
+     "evidence": "crit.json points[P6].fix: 'Not recommended: … SGD (one rate for parameters whose gradients differ by a factor of 1,000 is another optimisation problem)'. cannot_be_tested_here: 'E3 can speak about the stabilised setup only'. review/lit_act_readable.txt (2605.06152): 'Plain GD with lr 1e5 … spiked at about the same epoch'.",
+     "severity": "imprecise",
+     "fix": "„(1) Ungrokking mit einem Optimierer, der diese Einbrüche nicht hat (nach Thilak et al. etwa SGD oder Adagrad, mit Gewichtsabnahme), und derselben Driftkontrolle. Die Antwort gilt dann für diesen Optimierer. Mit SGD lernen Parameter, deren Gradienten sich um das Tausendfache unterscheiden, auch verschieden schnell (Einwand der Plankritik).“"
+    },
+    {
+     "location": "9.5: „8.7 ist an zwei Stellen berichtigt: Das Netz des Beitrags hat 64, 64, 64 und 15 Neuronen und ReLU, und die eigenen Netze dort sind kleiner“; README 8.7 „Eine rein bilineare Einheit ohne SiLU ist im Skript vorhanden, aber nicht gelaufen.“ and Grenzen §8 „Nicht geprüft: … eine rein bilineare Einheit“",
+     "problem": "FIX87A changes more than two points: it adds that the features were chosen by eye, that the test explains 88 to 98.5 %, and that independence of b rests on two pictures. 9.1 says „entsprechend korrigiert“, 9.5 says „an zwei Stellen“, so the two disagree. Section 8 still says the bilinear unit was not run or tested, which section 9 contradicts, and the FIX blocks do not update this.",
+     "evidence": "other_parts9.md @@FIX87A@@ (new text: 'wählt der Autor nach Augenschein neun Einheiten aus … (sein Test erklärt 88 bis 98,5 % …); dass sie nicht von b abhängen, beruht auf dem Vergleich zweier Bilder'). README lines 1480–1481 and 1614.",
+     "severity": "imprecise",
+     "fix": "9.5: „8.7 ist entsprechend berichtigt: Das Netz des Beitrags hat 64, 64, 64 und 15 Neuronen und ReLU, seine neun Merkmale sind nach Augenschein gewählt, und die eigenen Netze dort sind kleiner, nicht „derselben Größe“.“ In 8.7 and Grenzen §8 add after the bilinear unit: „(in Abschnitt 9 nachgeholt)“."
+    },
+    {
+     "location": "9.2: „verliert G mit den Gate-Faktoren von U 0,41 des Verlusts“; table: „nein (an 82 % der Messungen bei 99 %)“",
+     "problem": "Two rounding errors (round half up) in numbers that a verdict rests on: the SwiGLU „undecided“ and the unreadable linear drift control.",
+     "evidence": "act_masks_swiglu_s1.json steps[step=600].k = 0.41524, which rounds to 0,42. act_report.json runs.linear_s0_D.share_held_099 = 0.825 = 66/80, which rounds to 83 %.",
+     "severity": "wrong",
+     "fix": "„verliert G mit den Gate-Faktoren von U 0,42 des Verlusts“; „nein (an 83 % der Messungen bei 99 %)“."
+    },
+    {
+     "location": "9.3: „(`act_selfprobe.py`, Ridge-Regression vom Zustand des `=` …)“",
+     "problem": "„Ridge-Regression“ appears nowhere earlier in the README and is not explained.",
+     "evidence": "grep -n 'Ridge\\|Regression' README.md finds no match in sections 1–8.",
+     "severity": "unclear",
+     "fix": "„(`act_selfprobe.py`: eine lineare Abbildung, angepasst mit einer kleinen Strafe auf große Gewichte (Ridge-Regression), vom Zustand des `=` nach dem letzten Block …)“"
+    },
+    {
+     "location": "9.6: „dieselbe Aussage für zwei Tschebyschow-Polynome“, „n = 2 ist die Winkelhalbierende: 2(h/l)² − 1 = cos(A − B)“, „eine zweite Harmonische“; KURZ: „Halbieren und Dritteln entsprechen zwei und drei Faktoren (T₂ und T₃)“",
+     "problem": "Tₙ is used but never defined, „l“ is undefined (it should be s₂), and „Harmonische“ is not explained. In the summary, T₂ and T₃ mean nothing to a reader who has not read 9.6.",
+     "evidence": "sec9_full.md lines 332–336; other_parts9.md @@KURZ@@ line 19.",
+     "severity": "unclear",
+     "fix": "9.6: „Tₙ ist das Polynom mit Tₙ(cos θ) = cos(nθ), also T₂(X) = 2X² − 1 und T₃(X) = 4X³ − 3X.“ and „n = 2 ist die Winkelhalbierende (Länge s₂): 2(h/s₂)² − 1 = cos(A − B)“. At first use: „(eine zweite Harmonische: ein Anteil, der sich je Umlauf zweimal wiederholt)“. KURZ: „Halbieren gehört rechnerisch zu Produkten aus zwei Faktoren, Dritteln zu Produkten aus drei; über trainierte Netze folgt daraus nichts Prüfbares.“"
+    },
+    {
+     "location": "9.2: „(a) … widerlegt: Alle drei Arten liegen in allen drei Netzen unter 50 %. (b) … ist ebenfalls widerlegt“",
+     "problem": "„widerlegt“ is inflated for three networks per architecture on a single task, and it is inconsistent with „spricht … dagegen“, which the draft uses for the same rule outcome in E2 and E2b. The rule says „counts against“.",
+     "evidence": "crit.json rules[E1].counts_against; 9.2 uses „spricht … gegen“ for E2b and E2.",
+     "severity": "style",
+     "fix": "„Nach der vorab gesetzten Regel spricht das gegen (a) … Alle drei Arten liegen in allen drei Netzen unter 50 %. Ebenso spricht es gegen (b) …“"
+    },
+    {
+     "location": "9.2: „bei Schritt 1.000 noch 0,97 und 0,94 richtig (wie in 8.6: 0,35 und 0,29)“; „Die Driftkontrolle hat dieselben Sprünge und bleibt bei 1,00.“",
+     "problem": "„wie in 8.6“ reads as „the same as in 8.6“, but the numbers are the standard runs without AMSGrad, given for contrast. „dieselben Sprünge“ suggests the same steps; the drift control jumps at other steps.",
+     "evidence": "act_out/runs/kv_base_s0_fb_lr3e5_D trace: jumps at 2200–2250 (batch loss 0.31, then +0.39), 3700 (+0.44), 4900 (+0.81); U at 1100, 2100, 2850, 3600, 4400.",
+     "severity": "unclear",
+     "fix": "„(ohne AMSGrad, 8.6: 0,35 und 0,29)“; „Die Driftkontrolle hat ähnliche Sprünge (bei Schritt 2.200 bis 2.250, 3.700 und 4.900) und bleibt bei 1,00.“"
+    },
+    {
+     "location": "9.2: „Die Einbrüche sind hier also kein Rundungsfehler der Verlustfunktion.“",
+     "problem": "The float64 check was run on one starting value only (seed 0, 1,500 steps). „hier“ does not make that scope clear.",
+     "evidence": "act_report.json: only base_s0_scr_f64_U and base_s0_scr_f64_D, 1500 steps each.",
+     "severity": "style",
+     "fix": "„An Startwert 0 sind die Einbrüche also kein Rundungsfehler der Verlustfunktion.“"
+    },
+    {
+     "location": "9.7 V4: „Die Mathematik stimmt und hängt sauber zusammen“",
+     "problem": "„sauber“ is an evaluative overstatement. 9.6 itself calls the bridge „eine Gradzählung“, and the maths review notes that the three-factor analogy has no exact counterpart for the cubic.",
+     "evidence": "sec9_full.md line 359–360: 'Die Brücke … ist eine Gradzählung'. review/math.json further_remarks: 'For degree 3 there is no exact counterpart'.",
+     "severity": "style",
+     "fix": "„Die Mathematik stimmt. Verbunden sind beide Seiten über die Zahl der Faktoren: zwei Faktoren, Winkelhalbierende, Halbwinkel und T₂; drei Faktoren, Dreiteilende, gedrückte Kubik, Cardano und T₃.“"
+    }
+   ],
+   "checked": "I recomputed the rule outcomes from the raw files and they match the draft and act_verdicts.json, except where listed above. That covers E1 a/b/c, E2 per network, E2b, the E3 screen, E4, E6 (toy and Qwen, classified again from act_quad_*.json and act_qwen.json), E7 counts and bands (poly_*.json and cubic_direction.json), E8 (0.20 difference not reached) and E9 small fits (poly_C.json).\n\nNumbers a conclusion rests on, with borderline values checked against raw data using round half up:\n- 9.2: about 110 values checked (E1 table, G statistics, E2b, E2 r/k/r_ref for 6 networks, the „Vorzeichen“ values, flip ratios, the E3 table rows, lr 3e-4/ε 1e-5 steps, AMSGrad seeds 1–2, small batches, float64). All match except 0,41 (0,42) and 82 % (83 %).\n- 9.3: all 12 table ranges, 0,097, −0,001 to +0,05, 41 of 42, the bilinear +0,13: match.\n- 9.4: about 85 values checked (toy table, rule counts 3/2 of 8, correlations, bilinear values, Qwen table and bullets, surrogates). All match; the displayed 0,90 for blocks 10 to 19 is 0.898.\n- 9.5: about 45 values checked (table, the five post-size networks, product and SwiGLU target, units). All match.\n- 9.6: small fits and best polynomial: match.\n\nThe literature points used in conclusions also match lit_act_readable.txt: no SGD or Adagrad slingshots in Thilak et al., full-batch strongest and loss-only float64 in 2605.06152.\n\nHelper scripts are in <root>/review_tmp/ (logs1.py, pre_event.py, selfprobe.py, quad.py, units.py, units_early.py, poly.py)."
+  },
+  "counter-check of C": {
+   "verdicts": [
+    {
+     "index": 0,
+     "verdict": "confirmed",
+     "reason": "act_verdicts.json: E1.verdict_c = 'undecided or incomplete'; E2.swiglu.verdict = 'undecided'; E2.relu = 'against' only at steps where lost = 0.019 / 0.105 / 0.095; E3.verdict = 'undecided: no setting qualified'. act_report.json runs.linear_s0_D.readable_as_drift = false (66 of 80 evaluations >= 0.99). crit.json rules[E1].undecided reads an unreadable drift control as 'instability of this training setup'. rules[E1].counts_against says the natural reading is 'not touched'. rules[E2] says the main reading does not exist without event-free runs. cannot_be_tested_here[4] says E2/E2b 'do not isolate a cause'. So 'weder Ursache noch Ort', 'in keiner der beiden Lesarten' and the linear net listed with 'ebenso' go beyond the rule outcomes. The proposed fix is right in substance. Improved: it uses the rule wording 'spricht dagegen' (not 'widerlegt') and 'Schwelle oder Gate'. It also already contains the corrections of [1], [2], [3], [13], [14] and [17] for these two passages, so they do not have to be applied there a second time.",
+     "fix": "9.2, replace the whole paragraph „Zusammengefasst für V1“: „**Zusammengefasst für V1:** In diesem Kleinversuch entscheidet die Art der Aktivierungsfunktion nicht, ob Ungrokking eintritt: ReLU, SwiGLU und eine Einheit ohne jede Schwelle verlieren alle die Verallgemeinerung. Ob es überhaupt eine MLP-Nichtlinearität braucht, bleibt nach der Regel offen; das eine Netz ohne sie verliert die Verallgemeinerung zwar auch, seine Driftkontrolle ist aber unruhig. Ein verändertes Schaltmuster braucht der Verlust nicht: Mit eingefrorenen ReLU-Masken (ein anderes Modell) geht die Verallgemeinerung ebenfalls verloren. Ob der Verlust im Schaltmuster sitzt, beantwortet der Tausch nur schwach: Bei ReLU spricht er nach der Regel dagegen, ist aber nur an frühen Schritten lesbar, an denen U 0,02 bis 0,11 verloren hat; bei SwiGLU ist er unentschieden. Bei ReLU arbeiten die Gewichte von U vor dem Sprung nicht mehr mit dem alten Muster zusammen. Der größte Teil des Verlusts kommt in jeder Einstellung mit Einbrüchen oder kleineren Sprüngen der Gewichtsnorm; die Driftkontrolle hat sie auch, erholt sich aber jedes Mal ganz, der 5-%-Lauf nur teilweise. Ein kleinerer Teil geht schon vorher allmählich verloren. Ob Ungrokking ohne die Einbrüche einträte, bleibt offen, weil keine geprüfte Einstellung sie beseitigt. Für V1 spricht damit nichts; dagegen spricht die Regel nur in diesen engeren Formen.“ 9.7, replace the whole bullet V1: „* **V1, Aktivierungsfunktion und Ungrokking:** Im Kleinversuch spricht nichts dafür, entschieden ist aber nur ein Teil. Die Art der Aktivierungsfunktion entscheidet nicht, ob Ungrokking eintritt, und eine Schwelle oder ein Gate braucht es nicht. Ob es überhaupt eine MLP-Nichtlinearität braucht, ist offen. Ein verändertes Schaltmuster braucht der Verlust nicht (eingefrorene ReLU-Masken, ein anderes Modell). Ob er im Schaltmuster sitzt, entscheidet der Tausch der Schalter bei ReLU nur schwach (dagegen), bei SwiGLU nicht. Bei ReLU arbeiten die Gewichte vor dem Sprung nicht mehr mit dem alten Schaltmuster zusammen, und der Zustand trägt von der ersten Messung an weniger von der Antwort. Der größte Teil des Verlusts kommt mit Einbrüchen des Trainings, die auch die Driftkontrolle hat; keine geprüfte Einstellung hat sie beseitigt. Ob Ungrokking ohne sie einträte, bleibt offen.“"
+    },
+    {
+     "index": 1,
+     "verdict": "partly",
+     "reason": "The core of the finding holds. Logs, the last value before the first event: kv_swiglu_s1_U val_acc 0.9435 (step 200) to 0.7668 (550); the weight norm falls at every evaluation (64.66 to 58.21), task <= 5e-4, train_acc 1.0, first event at 600. kv_swiglu_s2_U 0.9860 (100) to 0.7949 (450), event at 500. fzU s0/s1/s2 0.988/0.986/0.967 to 0.889/0.843/0.809. ReLU fine runs only 0.040/0.059/0.040. Bilinear 0.028/0.105/0.042. Per run this is at most 0.20 of the whole loss (SwiGLU s2: 0.191 of 0.944). Every 5-% run falls below 50 % only at an event. So 'Der Verlust kommt mit Einbrüchen' (KURZ, 9.7, Zusammengefasst) leaves out a real gradual part. The heading 'lassen sich nicht abstellen' is also unscoped. Two parts are wrong, though. (1) The body already states of the lr 3e-4 / ε 1e-5 run 'von denen nur der letzte die Ereignisschwelle 0,5 überschreitet', so the event threshold is not widened silently (trace jumps +0.251/+0.247/+0.490/+0.475/+0.651). (2) The proposed 'der 5-%-Lauf erholt sich nicht' is false: fb_lr3e5_U climbs back between steps, 0.939 to 0.993, 0.926 to 0.985, 0.843 to 0.949 and 0.703 to 0.917, and the standard runs climb back to 0.46-0.61 (README 8.6). Corrected fix below; the corrected versions of 'Zusammengefasst' and 9.7 are in [0].",
+     "fix": "Heading in 9.2: „**Keine geprüfte Einstellung stellt die Einbrüche ab, und der größte Teil des Verlusts kommt mit ihnen.**“ New bullet after „In jeder Einstellung fällt die Genauigkeit …“: „* Ein kleinerer Teil geht schon vorher verloren, ohne Ereignis und während die Gewichtsnorm gleichmäßig fällt. Bis zum ersten Ereignis sinkt die Genauigkeit auf ungesehenen Aufgaben bei ReLU um 0,04 bis 0,06, bei SwiGLU um 0,06 bis 0,19 (Startwerte 1 und 2: von 0,94 und 0,99 auf 0,77 und 0,79), bilinear um 0,03 bis 0,11 und mit eingefrorenen ReLU-Masken um 0,10 bis 0,16, bis zu etwa einem Fünftel des ganzen Verlusts. Unter 50 % fällt jeder 5-%-Lauf erst an einem Ereignis.“ KURZ: „Der größte Teil des Verlusts kommt mit Einbrüchen des Trainings, die sich mit keiner geprüften Einstellung (größeres ε, AMSGrad, kleinere Lernrate, Verlust in float64, kleine Stapel) abstellen ließen; ein kleinerer Teil geht schon vorher allmählich verloren. Ob Ungrokking die Einbrüche braucht, bleibt deshalb offen.“ (Zusammengefasst und 9.7: Fassung aus [0].)"
+    },
+    {
+     "index": 2,
+     "verdict": "partly",
+     "reason": "The values in act_report.json are as stated: t50 for ReLU 750/800/750, SwiGLU 450/600/500, bilinear 700/500/700; early level 0.30/0.45/0.38, 0.16/0.04/0.16 and 0.30/0.27/0.62. In all nine runs t50 is the step of the first event. 'gleich' can be read as 'equally' or as 'at once'. Either way it suggests the same course, which the data do not show and the rule does not allow, so it should go. The proposed added sentence 'SwiGLU fällt früher unter 50 %' is wrong under the rule: it names a direction of speed. crit.json rules[E1].undecided allows that only if the t50 ranges do not overlap in the standard AND in the event-free setting, and the event-free setting does not exist. The numbers may be given as description, without a direction.",
+     "fix": "„verlieren alle die Verallgemeinerung“ instead of „verlieren die Verallgemeinerung gleich“ (9.2 and 9.7; already in the version of [0]). KURZ: „… geht die Verallgemeinerung mit 5 % der Aufgaben in allen Netzen verloren (Endstand 0,02 bis 0,09 richtig), mit eingefrorenem ReLU-Schaltmuster ebenso (0,09 bis 0,11).“ Optionally, after the bullet „Die Ausgangsnetze unterscheiden sich …“: „Zur Beschreibung: Unter 50 % fällt jeder 5-%-Lauf an seinem ersten Ereignis, bei ReLU bei Schritt 750 / 800 / 750, bei SwiGLU 450 / 600 / 500, bilinear 700 / 500 / 700. Einen Unterschied in der Geschwindigkeit benennt die Regel ohne Läufe ohne Einbrüche nicht.“"
+    },
+    {
+     "index": 3,
+     "verdict": "confirmed",
+     "reason": "act_verdicts.json E2.swiglu.verdict = 'undecided' (networks[1]: step 600, k = 0.41524, k_ref = 0.0111). The rule decides per architecture with all 3 networks, so 'in zwei von drei Netzen dagegen' is not a rule outcome. r is low in all six networks (SwiGLU 0.032/0.0009/0.060, ReLU negative), so 'gibt sie nicht zurück' says nothing about the undecided part, which comes from k. Alternative reading checked in act_masks_swiglu_s{0,1,2}.json at step 450: r 0.0320/0.2822/0.2489, r_ref 0.0770/0.2919/0.3044, k 0.0005/0.0/-0.0011. Step 450 is the readable step with the largest loss up to that point in each network, so all three would be 'against'. swiglu_s*_driftfine have their first event at 500 in all three, and at step 500 s1 and s2 are already unreadable (own_D 0.935/0.913). rules[E2] also says the main reading does not exist without event-free runs; the draft does not say this. ReLU decisive lost: 0.0189 / 0.1050 / 0.0945, which gives 0,02 bis 0,11.",
+     "fix": "9.2, after „Nach der Regel ist SwiGLU damit unentschieden.“: „Die Regel nennt für den üblichen Aufbau außerdem: Die lesbaren Schritte enden mit dem ersten Ereignis der Driftkontrolle, bei SwiGLU in allen drei Netzen Schritt 500. So gelesen spräche der Tausch bei Schritt 450 in allen drei Netzen dagegen (r = 0,03 / 0,28 / 0,25 bei r_ref = 0,08 / 0,29 / 0,30, k = 0,00), und SwiGLU wäre „dagegen“. Gezählt sind hier alle Schritte, die die Bedingungen erfüllen. Die vorgesehene Hauptlesung an Läufen ohne Einbrüche gibt es nicht, weil keine Einstellung solche Läufe lieferte.“ Zusammengefasst: „Der Tausch der Schalter ist nach der Regel bei SwiGLU unentschieden. Bei ReLU spricht er schwach dagegen; lesbar ist er dort nur an frühen Schritten, an denen U 0,02 bis 0,11 verloren hat.“ 9.7: „(nach der Regel bei ReLU schwach dagegen, bei SwiGLU unentschieden)“ (both already in the version of [0])."
+    },
+    {
+     "index": 4,
+     "verdict": "confirmed",
+     "reason": "crit.json (mtime 15:24:08, before any run of the new design was evaluated) add[4] specifies exactly this control: 'the 233 problems in batches of 26 … (README 8.6 names this gap)'. It has no decision rule and is listed in order_of_priority[7]. jobs2.txt runs it with BATCH=26 (started 17:24, queue2.log). README lines 1302-1304 and 1326-1328 name the gap. So 'Nachträglich ergänzt' (9.2) and 'Die kleinen Stapel … kamen nach der Regel hinzu' (GRENZEN) are wrong for the small batches; only 'ohne vorab gesetzte Regel' is right. Only the float64 loss is post hoc (lit_act.json 16:32, scr_f64_U started 16:34). The motive from arXiv 2605.06152 is quoted correctly (lit_act_readable.txt line 105) and may stay as a second reason. Run numbers confirmed: b26U first events 650/850/900, late 0.0513/0.0453/0.0408.",
+     "fix": "9.2: „* Die Plankritik hatte eine Kontrolle mit kleinen Stapeln vorgesehen, ohne Entscheidungsregel: Die 233 Aufgaben passen in einen Stapel von 512, der 5-%-Lauf sieht also bei jedem Schritt dieselben Aufgaben, die Driftkontrolle nicht (die Lücke aus 8.6; nach arXiv 2605.06152 sind solche Einbrüche bei fast vollem Stapel zudem am stärksten). Mit Stapeln von 26 Aufgaben (sonst wie in 8.6, Startwerte 0 bis 2) bleiben Einbrüche und Verlust: erste Ereignisse bei Schritt 650 / 850 / 900, Endstand 0,05 / 0,05 / 0,04. Der Verlust tritt also auch ein, wenn nicht jeder Schritt dieselben Aufgaben sieht.“ GRENZEN: „Der Verlust in float64 kam nach der Regel hinzu; die kleinen Stapel hatte die Plankritik vorgesehen, ohne Entscheidungsregel.“"
+    },
+    {
+     "index": 5,
+     "verdict": "confirmed",
+     "reason": "ls --full-time: review/crit.json 15:24:08, math.json 15:33:30, lit_self.json 16:20:41, lit_act.json 16:32:43. queue2.log: screen runs started 15:29-15:33. '15:43:19 started fb_lr3_U' is the fallback, which is only started once the screen has been read (all scr_* have qualifies = false). res/act_masks_relu_s0.json was written at 15:47:41. '16:34:56 started scr_f64_U' came right after lit_act.json. The draft itself says in 9.2 that the float64 loss came from the literature review after the rule was set. So the HEADER claim is false for the literature review.",
+     "fix": "HEADER: „Plan und Plankritik entstanden, bevor ein Lauf ausgewertet war (`act_plan_review.json`); die Literaturprüfung (`act_literature.json`) wurde erst fertig, als die ersten Läufe schon ausgewertet waren, und aus ihr kam nachträglich der Verlust in float64.“"
+    },
+    {
+     "index": 6,
+     "verdict": "partly",
+     "reason": "(1) is a real departure. crit.json rules[E3] asks for lr 3e-4 runs of 'D 13,333 and U 26,667 steps'. act_report.json: fb_lr3_D 5,250 steps, fb_lr3_U 13,350, fb_lr3e5_U/D 4,950. stop_fb.sh killed the fb_lr3 runs at 5,000 / 13,350. act_verdicts.py reads them as a 5,000-step screen with act_defs.trace_events, which has no train_acc criterion. 9.2 mentions the 5,000 steps but not the departure, so 'unverändert' (intro, HEADER) is wrong. The verdict does not change: the drift controls had events at 1,700 / 2,200. (3) is also real: there is no DRAW run in act_out/runs or jobs*.txt. But rules[E1] calls it 'a check outside the rule', so it is an unmentioned missing run, not a change to a decision rule. (2) is not a departure. rules[E2] itself says 'If E3 finds no loss of generalisation without events, the main reading does not exist', so applying the rule gives exactly this. It belongs in 9.2 and GRENZEN ([3], [16]), not in a list of departures.",
+     "fix": "Introduction: „Seine Entscheidungsregeln sind hier angewandt (`act_verdicts.py`, `act_verdicts.json`). Abweichend vom Plan endeten die Läufe mit kleinerer Lernrate nach rund 5.000 Schritten (der 5-%-Lauf mit ε = 10⁻⁸ nach 13.350) statt nach 13.333 und 26.667 und sind wie eine Vorprüfung gelesen; ihre Driftkontrollen hatten da schon Ereignisse, das Ergebnis bleibt damit nach der Regel unentschieden. Ihre Ereignisse sind aus der Aufzeichnung von Stapelverlust und Gewichtsnorm gezählt, ohne die Genauigkeit auf den Trainingsaufgaben. Der vorgesehene Prüflauf mit einer zweiten Ziehung der 233 Aufgaben je Architektur (außerhalb der Regel) ist nicht gelaufen.“ HEADER: „… die Entscheidungsregeln des Prüfers sind angewandt (`act_verdicts.json`; die Abweichungen nennt Abschnitt 9) …“"
+    },
+    {
+     "index": 7,
+     "verdict": "confirmed",
+     "reason": "act_quad_swiglu.json, the 8 generalising states. blocks[0]: spread_of_gate_input_over_problems_median 0.0031-0.0071 at abs_mean_gate_input_median 0.028-0.093, against blocks[1] spread 0.27-0.40. blocks[0]: r2_1 0.9906-0.9993 and write_quadratic 0.0005-0.0126. weight_of_units_with_abs_corr_above_0_9 = 0.27-0.53. A high correlation of g and u over the problems shows that the unit depends on one combination. Because the gate input hardly varies, silu(g) is almost constant on these data and the unit acts as a constant times u, which is linear (consistent with R²(1) ≈ 1). 'fast das Quadrat … damit' is therefore a non sequitur and clashes with 'Block 0 wirkt … linear'. The proposed fix is correct.",
+     "fix": "„Viele Einheiten von Block 0 hängen damit fast nur von einer einzigen Linearkombination ihrer Eingabe ab, wie die Merkmale im Beitrag über kubische Polynome (Gewicht im Ausgang: 27 bis 53 % der Einheiten mit einer Korrelation über 0,9). Ihr Gate-Eingang ändert sich am `=` über die Aufgaben aber kaum (Streuung im Median 0,003 bis 0,007, in Block 1 0,27 bis 0,40). Deshalb wirken sie dort linear und nicht als Quadrat.“"
+    },
+    {
+     "index": 8,
+     "verdict": "confirmed",
+     "reason": "act_qwen.json: blocks[0].r2_2 = 0.9084 (r2_1 0.1422), so it passes the 0.90 threshold by 0.008. blocks[16].r2_2 = 0.8978 (r2_1 0.5099), so it misses by 0.002, with R²(2) - R²(1) = 0.388. The table row 10-19 shows the maximum as „0,90“ next to „teilweise“, although the rule (crit.json rules[E6]) is R²(2) >= 0.90. That looks like a misclassification. The same display problem, not named in the finding, is in row 20-26: blocks[26].r2_2 = 0.6972 is shown as „0,70“ next to „nicht quadratisch“ (threshold < 0.70).",
+     "fix": "Heading: „**In Qwen3-1.7B ist SwiGLU nur in Block 0 ungefähr quadratisch, und das knapp (R²(Grad 2) = 0,908; Block 16 verfehlt die Schwelle 0,90 mit 0,898).**“ Table: row 10 bis 19 „0,23 bis 0,51 / 0,71 bis 0,898 / 0,92 bis 0,99“, row 20 bis 26 „0,08 bis 0,18 / 0,56 bis 0,697 / 0,86 bis 0,92“. 9.7 and KURZ: „in Qwen3-1.7B nur in Block 0 ungefähr quadratisch, und das knapp“."
+    },
+    {
+     "index": 9,
+     "verdict": "confirmed",
+     "reason": "act_qwen_surrogates.json blocks_10_18. Quadratised: kl 3.711, cross_entropy 6.869, quantiles 0.057/0.166/0.562/19.45/31.0, same_top_token 0.655. Linearised: kl 1.671, cross_entropy 4.542, median 1.117, same_top_token 0.422. Blocks 0-9 and 19-27: degree 2 is better on every measure (CE 4.104 vs 5.766 and 4.600 vs 5.502; 99 % quantile 6.70 vs 10.28 and 10.06 vs 17.55). So 'blockweise kommt Grad 2 näher heran' is wrong for blocks 10-18 by mean KL and by cross-entropy, the measure used for the whole model. The proposed fix contradicts itself ('nur im Median besser' while it also gives same token 66 vs 42 %) and makes a paired claim ('an den meisten Positionen') from unpaired quantiles. Corrected below.",
+     "fix": "„In den Blöcken 10 bis 18 ist Grad 2 nur im Median und beim gleichen Token besser als Grad 1 (KL im Median 0,17 gegen 1,12, gleiches Token an 66 gegen 42 %). An mindestens einem Zehntel der Positionen liegt Grad 2 weit daneben (KL über 19), und im Mittel ist es schlechter (KL 3,71 gegen 1,67, Kreuzentropie 6,87 gegen 4,54). Als Ganzes ist SwiGLU in Qwen also kein Polynom vom Grad 2, das man ohne Verlust einsetzen könnte; in den Blöcken 0 bis 9 und 19 bis 27 kommt Grad 2 näher heran als Grad 1, in den Blöcken 10 bis 18 nur im Median.“"
+    },
+    {
+     "index": 10,
+     "verdict": "partly",
+     "reason": "The core holds. poly_C.json (deg3, 64-64-64-15): layer_slope 0.3228/0.2928/0.3330/0.3133/0.3229, gradient_slope 0.2606, so only 1 of 5 is within 0.05. poly_D3.json (deg3w): 0.2177/0.1928/0.2500/0.2271/0.2508, gradient 0.1712. Offsets are 0.032-0.072 and 0.022-0.080, with mean offset 0.0564 vs 0.0565, while 1/3 lies 0.073 and 0.162 above the gradient direction. Units: 11+9+5+8+9 = 42 of 14+13+10+10+13 = 60, pooled over five nets, pooled median c 0.325. A single last layer has 15 neurons, so '42 der 60 Neuronen seiner letzten Schicht' is wrong. poly_direction.py trains with its own recipe (Adam, cosine, batch 1024), so 'Das Netz des Beitrags' is misleading. 'ist kein Cardano-Schritt' is a categorical claim from five nets outside the rule. One error in the proposed fix: 'näher an 1/3 als an der Hauptrichtung' is false for seed 1 (0.2928 is 0.032 from 0.2606 and 0.041 from 1/3); 4 of 5 are closer to 1/3.",
+     "fix": "9.5: „* Netze in der Größe des Beitrags (64-64-64-15, ReLU, nach seiner LessWrong-Fassung; hier eigenes Training, ohne SAE, an den Neuronen der letzten verdeckten Schicht; von der Regel nicht erfasst) liegen im Bereich des Beitrags bei 0,29 bis 0,33; nur eines liegt innerhalb von 0,05 bei der Hauptrichtung 0,26, vier liegen näher an 1/3. In den fünf Netzen sind 42 der 60 Neuronen der letzten Schicht, die überhaupt variieren, zu über 90 % Funktion einer einzigen Kombination (Median 0,32), wie im Beitrag (0,175 bis 0,35, Median 0,30). Bei doppeltem Bereich von a fällt die Richtung auf 0,19 bis 0,25: Sie wandert mit und bleibt nicht bei 1/3. In beiden Bereichen liegt sie 0,02 bis 0,08 über der Hauptrichtung; dieser Abstand wird bei doppeltem Bereich nicht größer, obwohl 1/3 dort mehr als doppelt so weit entfernt ist (0,16 statt 0,07). Die Nähe zu 1/3 im Bereich des Beitrags spricht deshalb nicht für Cardanos Verschiebung; woher der Abstand kommt, ist offen (fünf Netze).“ Table header: „Netze in der Größe des Beitrags, 64-64-64-15, ReLU (5 Startwerte)“. KURZ: „(kein einziges von 15 Netzen bleibt bei Cardanos 1/3, wenn sich beides trennen lässt; fünf Netze in der Größe des Beitrags wandern ebenfalls mit, liegen aber 0,02 bis 0,08 darüber)“."
+    },
+    {
+     "index": 11,
+     "verdict": "confirmed",
+     "reason": "poly_direction.py Part 2 trains only ReLU, tanh and SiLU MLPs (plus the post-size ReLU nets). Part 3 (bilinear and SwiGLU layers) stores only fit_r2 (poly_C.json depth.nets: kind, layers, seed, fit_r2). No direction was measured for networks made of SwiGLU or bilinear units. The 9.7 sentence can be read as 'the observation does not hold for SwiGLU', which nothing tested. What is shown is that the step from 'quadratic' to 'the post applies' carries no weight. The proposed fix is right; its last conditional sentence is speculation and is dropped.",
+     "fix": "9.7: „Der Schluss von „ungefähr quadratisch“ auf „die Beobachtung des Beitrags gilt“ trägt nicht: Die Beobachtung zeigt sich auch in Netzen ohne quadratische Einheiten (ReLU, tanh, SiLU) und folgt der Zielfunktion und der Verteilung ihrer Eingaben. Netze aus SwiGLU- oder bilinearen Einheiten sind auf diese Richtung nicht geprüft.“"
+    },
+    {
+     "index": 12,
+     "verdict": "confirmed",
+     "reason": "poly_B.json targets.prod: gradient_share 0.5004 (isotropic), bucket_best_angle 45 with R² 0.547 (at -45°: 0.532). The 15 product nets have layer_angle -53.0° to 78.9° and layer_share 0.503-0.708. crit.json points[P14] says g ± u is one member of a family. The bisectors are the axes of the target's quadratic form. The networks do not take them as their direction. 9.7 drops the spread that 9.5 reports and can be read as a result about the networks.",
+     "fix": "9.7: „Ist die Zielfunktion selbst ein Produkt, hat schon sie keine Hauptrichtung. Ihre quadratische Form hat die beiden Winkelhalbierenden als Achsen; die Netze finden keine gemeinsame Richtung (−53° bis 79°).“"
+    },
+    {
+     "index": 13,
+     "verdict": "confirmed",
+     "reason": "act_masks_relu_s{0,1,2}.json at step 550: U_pattG 0.586/0.240/0.445, D_pattG 1.000/0.9998/1.000. flip_U differ [0.050, 0.114] / [0.152, 0.107] / [0.113, 0.132]; flip_D [0.056, 0.095] / [0.124, 0.069] / [0.041, 0.091]. Seed 0 misses the 1.5-fold rule. Minimum G_pattU over steps 50-550 is 0.9953. Measured is only that U's weights no longer work with G's masks while D's do. 'passen sich an ein verändertes Muster an' implies that the pattern changed first or more, which the rule does not allow to say. 'nimmt G nichts' overstates a loss of up to 0.005. The contrast in the exchange itself (weights from one net, masks from the other) is legitimate; the causal wording is not. All of this is measured for ReLU only, so the 9.7 sentence must say ReLU.",
+     "fix": "9.2: „Die Gewichte von U arbeiten also schon vor dem Sprung nicht mehr mit dem alten Muster zusammen, die der Driftkontrolle schon; das Muster von U allein kostet G höchstens 0,005.“ (the following sentence „Mehr Umschalten als in der Drift …“ stays). 9.7: „Bei ReLU arbeiten die Gewichte vor dem Sprung nicht mehr mit dem alten Schaltmuster zusammen“ (already in the version of [0])."
+    },
+    {
+     "index": 14,
+     "verdict": "partly",
+     "reason": "Point (1) is right. act_units.py reads the state as rec[l]['x'][:, 4], which kv_common.fwd sets to ln2(xm + w): the whole state with residual and attention. The MLP write is not split off, so 'Die Antwort steckt also in der Mischung der Neuronen' goes beyond the measurement. 'Mischung' also names the G/D hybrids in 9.2. Point (2): the data are as stated (act_units_early_relu.json, blocks[1].state.z_beyond). Step 50: U 0.637/0.504/0.527 vs D 0.737/0.791/0.803. Step 550: U 0.647/0.620/0.605 vs D 0.902/0.878/0.905. The gap grows clearly only for seed 0. But the critic's own descriptive criterion for an early sign is met (crit.json add[8]: 'called an early sign only if U lies outside the range of D at every such step in all 3 networks'): U maximum over steps 50-550 is 0.716/0.648/0.637, below D minimum 0.737/0.791/0.803. So dropping the clause from 9.7 is not warranted; it should say that the gap is there from the first measurement.",
+     "fix": "9.5: „Einzelne Neuronen hängen also kaum von der Antwort allein ab, der Zustand nach dem Block sehr wohl. Gemessen ist das am ganzen Zustand (mit Residualstrom und Aufmerksamkeit), nicht am Ausgang des MLP allein; dass die Antwort erst in der Summe der Neuronen entsteht, liegt nahe (ohne das quadratische Glied von Block 1 geht fast alles verloren, 9.4), ist hier aber nicht getrennt gemessen. Entlang des 5-%-Laufs (ReLU) trägt der Zustand weniger von der Antwort als in der Driftkontrolle, und zwar von der ersten Messung nach dem Wechsel auf 5 % an (Schritt 50: 0,50 bis 0,64 gegen 0,74 bis 0,80; Schritt 550: 0,61 bis 0,65 gegen 0,88 bis 0,90), an jeder Messung bis Schritt 550 in allen drei Netzen unter dem Bereich der Driftkontrolle, während U noch 0,96 bis 0,98 richtig rechnet. Deutlich wächst der Abstand nur bei Startwert 0.“ 9.7: „… und der Zustand trägt von der ersten Messung an weniger von der Antwort“ (already in the version of [0])."
+    },
+    {
+     "index": 15,
+     "verdict": "confirmed",
+     "reason": "act_selfprobe_swiglu.json, the 42 trained (state, block) cases. pre - own < 0 in 7 cases, minimum -0.00117 (kv_swiglu_s1, step 10000, block 0), so 'mindestens so gut lesbar' contradicts the draft's own '−0,001'. own_minus_random has maximum 0.0972 (ReLU 0.0966), shown as '+0,10' next to the threshold 'below 0.10'. The untrained-network control required by crit.json rules[E4].minimum_runs_and_conditions is missing. Its values: SwiGLU own 0.9901-0.9990, bilinear 0.9891-0.9996, ReLU 0.548-0.582, against trained SwiGLU 0.27-0.89. rules[E4].counts_for: 'Nothing counts for S2', so 'Kein Hinweis' implies a search that could not have found anything. One correction to the proposed fix: the untrained values are 0,99 bis 1,00, not 0,99.",
+     "fix": "9.7: „* **V2, Selbstüberwachung und eine Repräsentation von SwiGLU:** Hier nicht prüfbar. Gemessen ist nur: Der Endzustand trägt über die eigenen Gates nicht mehr als über zufällige Gates auf denselben Eingängen und fast immer weniger als die Eingabe selbst. Im untrainierten Netz sind die eigenen Gate-Werte am besten lesbar (SwiGLU und bilinear 0,99 bis 1,00, ReLU 0,55 bis 0,58). Eine Repräsentation …“ (rest unchanged). 9.3: „Bei SwiGLU ist der Gate-Eingang vor der SiLU praktisch gleich gut oder besser lesbar als der Gate-Wert danach (Unterschied −0,001 bis +0,05).“ Table: new row „eigene Gate-Werte, untrainiertes Netz | 0,99 bis 1,00 | 0,55 bis 0,58 | 0,99 bis 1,00“; row „eigene minus zufällige …“: „−0,06 bis +0,097 | −0,06 bis +0,097 | −0,05 bis +0,13“."
+    },
+    {
+     "index": 16,
+     "verdict": "confirmed",
+     "reason": "(1) 9.5 and 9.6 use the networks of poly_direction.py (15-15-15-15, 64-64-64-15, width-16 bilinear and SwiGLU fits), not the toy network, so the scope sentence is wrong. (2) README lines 1003-1004 say plainly that section 8 says nothing about Qwen or another language model, and crit.json cannot_be_tested_here[2] lists 'S1 for a language model'. Section 9 has no such sentence, although V1 and V3 are about LLM activations. (3) kv_common.subset uses seed 4242 + draw on a fixed split (seed 12345), so all 5-% runs use the same 233 problems. No DRAW run exists. The main E2 reading does not exist (rules[E2]). E2b is 'another model class' (rules[E2b]). GRENZEN names none of these.",
+     "fix": "Introduction: „Alles gilt für das kleine Netz aus Abschnitt 8, in 9.5 und 9.6 zum Teil für kleine Netze, die Polynome lernen, und, wo genannt, für Qwen3-1.7B. Über Ungrokking in Sprachmodellen sagt der Kleinversuch nichts; Qwen3-1.7B wurde nicht weitertrainiert.“ GRENZEN, add: „Alle 5-%-Läufe benutzen dieselbe Ziehung der 233 Aufgaben; die vorgesehene zweite Ziehung je Architektur ist nicht gelaufen. Die vorgesehene Hauptlesung des Tauschs an Läufen ohne Einbrüche gibt es nicht. Das eingefrorene Schaltmuster macht ein anderes Modell. Über Ungrokking in Sprachmodellen sagt der Kleinversuch nichts.“"
+    },
+    {
+     "index": 17,
+     "verdict": "confirmed",
+     "reason": "Frozen runs exist only as kv_base_s*_fzU/fzD (ReLU), and act_verdicts.json E2b covers ReLU only. crit.json rules[E2b].statement_tested: 'This is another model class, like the untied network of README 8.6.' README line 1394 says this for 8.6 ('das ist ein anderes Modell'). The bold heading generalises beyond ReLU, and 9.2 never says that the model is a different one.",
+     "fix": "„**Ein verändertes Schaltmuster braucht der Verlust nicht (ReLU).**“ and „*Eingefrorenes Schaltmuster (ReLU; ein anderes Modell, wie das entkoppelte Netz in 8.6).*“"
+    },
+    {
+     "index": 18,
+     "verdict": "confirmed",
+     "reason": "review/math.json checks[19] (M8 b): 'beta = E[silu'(g)] passes through zero near the minimum of SiLU (at g = -1.278): beta = 0 at mu = -1.44, -1.90, -3.57 for sigma = 0.5, 1, 2'. With any spread above zero, the mean slope at a mean of -1.28 is not zero, so 'liegen die Gate-Eingänge um diesen Punkt, ist ihre mittlere Steigung null' contradicts the numbers in its own parenthesis. README 7.4 (line 558) gives only coarse bins (blocks 1-4: 56 % below -3, 30 % from -3 to -1). Where the gate means of Qwen's units lie is not measured, so 'Das passt zu 7.4' claims a match that was not checked. act_qwen.json negative share for blocks 1-9: 0.837-0.975.",
+     "fix": "„Die SiLU-Kurve hat bei g = −1,28 ihr Minimum. Gemittelt über normalverteilte Gate-Eingänge mit einer Streuung von 0,5 / 1 / 2 ist ihre Steigung null, wenn deren Mittelwert bei −1,44 / −1,90 / −3,57 liegt (Rechnung in `act_math_review.json`, M8); dort verschwindet der bilineare Anteil. In den Blöcken 1 bis 9 sind 84 bis 98 % der Gate-Eingänge negativ (wie in 7.4); ob ihre Mittelwerte gerade dort liegen, ist nicht gemessen.“"
+    },
+    {
+     "index": 19,
+     "verdict": "confirmed",
+     "reason": "poly_targets.json: prod bucket_best_angle 45, bucket_best_r2 0.5468; swiglu bucket_best_angle 44, bucket_best_r2 0.3637. The two values belong to two targets and are not labelled. 'gelingt am besten' for R² 0.36 to 0.55 suggests success, while the point of the sentence is that the test fails even on the target itself.",
+     "fix": "„… und der Fächertest des Beitrags erreicht schon an der Zielfunktion selbst höchstens R² 0,55 (Produkt, bei 45°) und 0,36 (SwiGLU-Einheit, bei 44°), also entlang der Winkelhalbierenden, und auch dort wenig.“"
+    },
+    {
+     "index": 20,
+     "verdict": "partly",
+     "reason": "The problem is real. crit.json points[P6].fix advises against SGD ('one rate for parameters whose gradients differ by a factor of 1,000 is another optimisation problem'). rules[E3]: 'No outcome may be worded as a statement about the original optimiser'. cannot_be_tested_here[3] says E3 'can speak about the stabilised setup only'. So 'erst dann ist lesbar, ob der Verlust die Einbrüche braucht' claims too much. One piece of evidence is misapplied, though. The plain-GD spike in arXiv 2605.06152 (lit_act_readable.txt line 105) is GD with lr 1e5 after the loss reached zero, emulating Adam's maximal step η/ε, not ordinary SGD. Thilak et al. (line 91) see no slingshots with SGD, SGD with momentum or Adagrad, so the suggestion of SGD/Adagrad itself is supported.",
+     "fix": "NAECHSTER: „(1) Ungrokking mit einem Optimierer, der diese Einbrüche nicht hat (nach Thilak et al. etwa SGD oder Adagrad, mit Gewichtsabnahme), und derselben Driftkontrolle; lesbar ist dann, ob der Verlust mit diesem Optimierer die Einbrüche braucht, nicht mit dem ursprünglichen. Von SGD rät die Plankritik ab: Eine einzige Lernrate für Parameter, deren Gradienten sich um das Tausendfache unterscheiden, macht daraus ein anderes Optimierungsproblem.“"
+    },
+    {
+     "index": 21,
+     "verdict": "confirmed",
+     "reason": "other_parts9.md @@FIX87A@@ also adds 'wählt der Autor nach Augenschein', 'sein Test erklärt 88 bis 98,5 %' and 'beruht auf dem Vergleich zweier Bilder'. 9.5 lists only the architecture and the smaller own nets, while 9.1 says 'entsprechend korrigiert'. These are two literal places, but the 9.5 list is incomplete. More important: README line 1480-1481 ('Eine rein bilineare Einheit ohne SiLU ist im Skript vorhanden, aber nicht gelaufen.') and line 1614 (Grenzen: 'Nicht geprüft: … eine rein bilineare Einheit') contradict 9.2 and 9.4 once section 9 is added, and FIX87A/B do not touch them.",
+     "fix": "9.5: „8.7 ist entsprechend berichtigt: Das Netz des Beitrags hat 64, 64, 64 und 15 Neuronen und ReLU, seine neun Merkmale sind nach Augenschein gewählt, und die eigenen Netze dort sind kleiner, nicht „derselben Größe“.“ In 8.7 after „… ist im Skript vorhanden, aber nicht gelaufen“ and in the Grenzen of section 8 after „eine rein bilineare Einheit“, add in each case: „(in Abschnitt 9 nachgeholt)“."
+    },
+    {
+     "index": 22,
+     "verdict": "confirmed",
+     "reason": "act_masks_swiglu_s1.json, steps[step=600].k = 0.41524308… rounds to 0,42 (half up; the raw value is above 0.415 anyway). runs/kv_linear_s0_D/log.json: 66 of 80 evaluations >= 0.99 = 0.825 = 82.5 %, which rounds half up to 83 % (act_report.json share_held_099 = 0.825).",
+     "fix": "„verliert G mit den Gate-Faktoren von U 0,42 des Verlusts“; table: „nein (an 83 % der Messungen bei 99 %)“."
+    },
+    {
+     "index": 23,
+     "verdict": "refuted",
+     "reason": "It is true that 'Ridge-Regression' appears nowhere else in the README. But the parenthesis states what is fitted to what: from the '=' state after the last block to the gate values of both blocks, fitted on the training problems and read on the held-out ones. That is what a reader needs. The section and the README use terms of the same kind without explanation (KL, Kreuzentropie, Eigenwerte, Jacobi-Matrix, SAE, 'lineare Auslesung'). This is a style point and not really unclear.",
+     "fix": ""
+    },
+    {
+     "index": 24,
+     "verdict": "confirmed",
+     "reason": "sec9_full.md line 335: '2(h/l)² − 1 = cos(A − B)'. l is defined nowhere; it should be s₂ (the math review uses l for the bisector length). The same line has 'X = h/s', which should be s₃. Tₙ is used in line 333 without a definition. 'zweite Harmonische' is not explained. In KURZ (other_parts9.md line 19), '(T₂ und T₃)' carries no meaning for a reader of the summary. The proposed definitions are mathematically right: Tₙ(cos θ) = cos nθ, and T₂(h/s₂) = −cos(2A + C) = cos(A − B).",
+     "fix": "9.6: after „… für zwei Tschebyschow-Polynome.“ insert „Tₙ ist das Polynom mit Tₙ(cos θ) = cos(nθ), also T₂(X) = 2X² − 1 und T₃(X) = 4X³ − 3X.“ Then: „n = 2 ist die Winkelhalbierende (Länge s₂): 2(h/s₂)² − 1 = cos(A − B), eine Quadratwurzel. n = 3 ist die Dreiteilende: 4X³ − 3X = sin(2A − B) mit X = h/s₃.“ At the first occurrence: „eine zweite Harmonische (ein Anteil, der sich bei einem Umlauf um den Kreis zweimal wiederholt)“. KURZ: „Halbieren gehört rechnerisch zu Produkten aus zwei Faktoren, Dritteln zu Produkten aus drei; über trainierte Netze folgt daraus nichts Prüfbares.“"
+    },
+    {
+     "index": 25,
+     "verdict": "refuted",
+     "reason": "README section 8 uses 'gestützt / widerlegt' as the two rule outcomes (lines 1144-1145, 1528, 1535), and also 'spricht dagegen' (line 1157). In 9.2 'widerlegt' is tied to 'Nach der vorab gesetzten Regel' and applies only to the narrow statements (a) and (b). All 9 and all 3 networks lie far below the threshold (late 0.017 to 0.092). Mixing the two words inside 9.2 is a small style point and not misleading. The broader overstatement in the summary is handled in [0].",
+     "fix": ""
+    },
+    {
+     "index": 26,
+     "verdict": "confirmed",
+     "reason": "The README 8.6 table gives, at step 1.000, 1,00 / 0,35 (seed 1) and 1,00 / 0,29 (seed 2). These are the runs without AMSGrad, given for contrast, but 'wie in 8.6' reads as 'the same as'. runs/kv_base_s0_fb_lr3e5_D trace: batch loss 0.313 at 2200, then +0.393 in the weight norm at 2250, +0.444 at 3700 and +0.814 at 4900. The U jumps are at 1100, 2100, 2850, 3600 and 4400. So D has three similar jumps at other steps, not 'dieselben Sprünge'.",
+     "fix": "„bei Schritt 1.000 noch 0,97 und 0,94 richtig (ohne AMSGrad, 8.6: 0,35 und 0,29)“; „Die Driftkontrolle hat ähnliche Sprünge, aber an anderen Schritten (2.200 bis 2.250, 3.700 und 4.900), und bleibt bei 1,00.“"
+    },
+    {
+     "index": 27,
+     "verdict": "refuted",
+     "reason": "The float64 runs are a row of the table that the paragraph introduces with 'Vorprüfung an Startwert 0, 5-%-Lauf und Driftkontrolle, 1.500 Schritte', and the bullet speaks of 'dieselben Schritte bis auf 50' in that table. 'hier' clearly refers to this setting. The test is also aimed at exactly the mechanism of arXiv 2605.06152 (only the loss in float64). This is a style point; the scope is not unclear.",
+     "fix": ""
+    },
+    {
+     "index": 28,
+     "verdict": "refuted",
+     "reason": "review/math.json further_remarks[0]-[2] confirm the chain listed in V4 as exact: T₂/T₃ for bisector and trisector, a product of two forms as a second harmonic with its phase on the bisector, three forms as a third harmonic at the mean angle, and Fourier over Z/2 and Z/3. The 'no exact counterpart' in further_remarks[3] is about the gradient direction of the target compared with the mean factor direction, not about this mathematical chain. 9.7 itself adds that no testable statement about trained networks follows. 'sauber' is not misleading.",
+     "fix": ""
+    }
+   ]
+  }
+ }
+}
