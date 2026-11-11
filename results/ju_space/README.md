@@ -11,7 +11,9 @@ gegen dieses README und die Ergebnisdateien abgeglichen worden. Abschnitt 7 ist 
 Versuchsplan wurde vor den Läufen von zwei Prüfern kritisiert (`ufo_plan_review.json`); nur die beiden Trainingsläufe
 des Kleinversuchs (nur Gewichtsabnahme, mit UFO) lagen da schon vor und wurden nicht wiederholt. Die Zahlen von 7.1 bis
 7.8 wurden zweimal, die von 7.9 und 7.10 einmal unabhängig aus den Ergebnisdateien nachgerechnet. Die Deutung wurde
-gegengelesen und danach in vielen Punkten zurückgenommen (`review_ufo.json`).
+gegengelesen und danach in vielen Punkten zurückgenommen (`review_ufo.json`). Ein letztes Gegenlesen des fertigen Textes
+fand nicht mehr statt; die nach der zweiten Prüfung neu geschriebenen Teile von 7.9 bis 7.11 stützen sich auf Zahlen,
+die Prüfer und eigene Nachrechnung übereinstimmend ergaben.
 
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
 (Chat-Vorlage, Denken aus). Die 18 DSSE-Kategorien sind an dieser Stelle 18 Familien von Testfragen (Thema, Ton, Form),
@@ -868,7 +870,7 @@ Trainingsaufgaben angepasst, `ufo_grok_split.py`; zweite Schicht: an allen Train
 * **Ein Unterschied zwischen gesehenen und ungesehenen Aufgaben ist das nicht.** Ohne Kappen passt der Flaschenhals auf
   die Aufgaben, an denen er angepasst wurde, mäßig und auf alle anderen schlecht, auch auf auswendig gelernte
   (Schritt 5.000: 0,27 / 0,05 / 0,03). Ursache sind Neuronen, die nur auf eine Handvoll Aufgaben ansprechen und nach dem
-  z-Standardisieren außerhalb der Anpassung riesige Werte bekommen (zehn Neuronen tragen dort 84 bis 99 % der Summe,
+  z-Standardisieren außerhalb der Anpassung riesige Werte bekommen (zehn Neuronen tragen dort 53 bis 99 % der Summe,
   solange das Netz auswendig lernt). Mit gekappten z-Werten liegen alle drei Gruppen zu jeder Zeit gleichauf (Schritt
   5.000: 0,39 / 0,38 / 0,39; Schritt 15.000: 0,82 / 0,81 / 0,81).
 * Die Dimension fällt schon vor dem Sprung der Genauigkeit (Achsen für 99 % der Streuung des Zustands am `=`: 72, 53, 44,
