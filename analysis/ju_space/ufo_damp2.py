@@ -25,13 +25,15 @@ At the output per position: KL(clean || row) in float64, entropy, loss, same top
 entropy with the clean scale of the final norm; and computed without the network: a random vector of the same final size
 added after the last block (late), the added vector riding along untouched (frozen), isotropic noise after the last block.
 Usage: python ufo_damp2.py <scratch_root> <out_dir>    env: NT, NTEXT, MAXT, NMAIN, RANDINIT=1 (untrained network), CONDSET=small
-       (fewer rows), TOPK=0.5 (keep only the strongest half of the neuron activations per position in every block), TAG"""
+       (fewer rows), TOPK=0.5 (keep only the strongest half of the neuron activations per position in every block),
+       NONEG=1-9 (in these blocks neurons with negative gate input write nothing), TAG"""
 import json, os, sys, time
 import numpy as np, torch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ufo_common import load_model, texts, Pool, unit, FIRST, MAXT
 
-root, out = sys.argv[1], sys.argv[2]; RANDINIT = os.environ.get("RANDINIT") == "1"; SMALL = os.environ.get("CONDSET") == "small"; TOPK = float(os.environ.get("TOPK", "0")); TAG = os.environ.get("TAG", ("_randinit" if RANDINIT else "") + (f"_top{TOPK:g}" if TOPK else ""))
+root, out = sys.argv[1], sys.argv[2]; RANDINIT = os.environ.get("RANDINIT") == "1"; SMALL = os.environ.get("CONDSET") == "small"; TOPK = float(os.environ.get("TOPK", "0")); NONEG = list(range(int(os.environ["NONEG"].split("-")[0]), int(os.environ["NONEG"].split("-")[1]) + 1)) if os.environ.get("NONEG") else []
+TAG = os.environ.get("TAG", ("_randinit" if RANDINIT else "") + (f"_top{TOPK:g}" if TOPK else "") + ("_noneg" if NONEG else ""))
 torch.set_grad_enabled(False); torch.set_num_threads(int(os.environ.get("NT", "4"))); tok, model = load_model(root, RANDINIT); LAYERS = model.model.layers; L = len(LAYERS); D = model.config.hidden_size
 main, _ = texts(root, tok); main = main[:int(os.environ.get("NTEXT", len(main)))] if "NTEXT" in os.environ else main; P = Pool(f"{out}/ufo_pool{'_randinit' if RANDINIT else ''}.pt")
 
@@ -116,6 +118,10 @@ def write_hook(m, key):
 
 for m in range(L):
     LAYERS[m].register_forward_hook(block_hook(m)); LAYERS[m].self_attn.register_forward_hook(write_hook(m, "ka")); LAYERS[m].mlp.register_forward_hook(write_hook(m, "km"))
+if NONEG:                                                                                  # in these blocks a neuron with negative gate input writes nothing (gate value max(silu, 0)), in all rows
+    gs = {}
+    for m in NONEG:
+        LAYERS[m].mlp.gate_proj.register_forward_hook(lambda mod, inp, o, m=m: gs.__setitem__(m, o >= 0)); LAYERS[m].mlp.down_proj.register_forward_pre_hook(lambda mod, inp, m=m: (inp[0] * gs[m],))
 if TOPK:                                                                                   # in every block only the strongest share TOPK of the neuron activations of a position is kept, in all rows (the clean row included)
     def keep_top(mod, inp):
         a = inp[0]; thr = a.abs().topk(max(1, int(round(TOPK * a.shape[-1]))), -1).values[..., -1:]; return (a * (a.abs() >= thr),)
@@ -149,5 +155,5 @@ for k, (src, ids, valid) in enumerate(main):
     print(f"  text {k + 1}/{len(main)} {src} T={T}: forward {tf:.0f}s, total {time.time() - t0:.0f}s | clean loss {meta[-1]['clean_loss']:.2f} | null KL {np.nanmax(pp['kl'][1]):.1e} | "
           + " ".join(f"{CONDS[c]['name']} KL {np.nanmean(pp['kl'][c, sl][v]):.3f}" for c in FREE[:3]), flush=True)
     np.savez(f"{out}/ufo_damp2{TAG}.npz", **{n: np.array(RES[n]) for n in NAMES}, **{"pp_" + n: np.array(PP[n]) for n in PP}, **{n: np.array(EX[n]) for n in EX})
-    json.dump(dict(conds=CONDS, meta=meta, latef=LATEF, late=LATE, stats={str(m): P.stats[m] for m in P.stats}, randinit=RANDINIT, topk=TOPK), open(f"{out}/ufo_damp2{TAG}_meta.json", "w"))
+    json.dump(dict(conds=CONDS, meta=meta, latef=LATEF, late=LATE, stats={str(m): P.stats[m] for m in P.stats}, randinit=RANDINIT, topk=TOPK, noneg=NONEG), open(f"{out}/ufo_damp2{TAG}_meta.json", "w"))
 print(f"done ({time.time() - t0:.0f}s)")

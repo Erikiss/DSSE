@@ -1,5 +1,6 @@
 """A loop in real time: Qwen3-1.7B writes an answer token by token (greedy) while, at EVERY token, its state after one block is
 disturbed or passed through an SAE. Each generated token is fed back, so a disturbance can add up over the text.
+In the prompt the tokens of the chat template are left alone, as in the single-pass runs; every generated token is treated.
 Rows per prompt (all start from the same chat prompt and then write their own text):
   clean                               nothing is changed
   cov2 x 3 seeds, irr2 x 3 seeds      noise of size 0.3 |h| after block 2, fresh at every token (inside / outside the data subspace)
@@ -18,12 +19,11 @@ Usage: python ufo_loop.py <scratch_root> <out_dir>      env: NT, NPROMPT (defaul
 import json, os, sys, time
 import numpy as np, torch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ufo_common import load_model, Pool, unit, FIRST
+from ufo_common import load_model, Pool, unit, FIRST, template_mask
 
 root, out = sys.argv[1], sys.argv[2]; torch.set_grad_enabled(False); torch.set_num_threads(int(os.environ.get("NT", "3"))); tok, model = load_model(root); LAYERS = model.model.layers; D = model.config.hidden_size
-NP_ = int(os.environ.get("NPROMPT", "12")); NEW = int(os.environ.get("NEW", "24")); pairs = json.load(open(f"{root}/ju_out/axes_pairs.json")); pick = np.random.default_rng(0).permutation(len(pairs)); P = Pool(f"{out}/ufo_pool.pt", blocks=[0, 2, 14])
+TAG = os.environ.get("TAG", ""); NP_ = int(os.environ.get("NPROMPT", "12")); NEW = int(os.environ.get("NEW", "24")); pairs = json.load(open(f"{root}/ju_out/axes_pairs.json")); pick = np.random.default_rng(0).permutation(len(pairs)); P = Pool(f"{out}/ufo_pool.pt", blocks=[0, 2, 14])
 sel = list(pick[:8]) + list(pick[168:168 + max(0, NP_ - 8)]); sel = sel[:NP_]                 # the 8 chats of the main runs, then chats that are in no pool
-special = set(tok.all_special_ids) | set(tok.get_added_vocab().values())
 
 
 class TopK:
@@ -59,7 +59,7 @@ for m in (0, 2, 14): LAYERS[m].register_forward_hook(hook(m))
 res = dict(kl=[], same=[], nll=[], ident=[]); meta = []; t0 = time.time()
 for k, i in enumerate(sel):
     ids = tok(tok.apply_chat_template([{"role": "user", "content": pairs[i]["prompt"]}], tokenize=False, add_generation_prompt=True, enable_thinking=False), return_tensors="pt", add_special_tokens=False)["input_ids"][:, -96:]; T = ids.shape[1]
-    valid = torch.tensor([int(t) not in special for t in ids[0]]); valid[:FIRST] = False; st.update(on=True, valid=valid, G={c: torch.Generator().manual_seed(5000 + 100 * k + c) for c in range(C)})
+    valid = ~template_mask(tok, ids); valid[:FIRST] = False; st.update(on=True, valid=valid, G={c: torch.Generator().manual_seed(5000 + 100 * k + c) for c in range(C)})
     o = model(input_ids=ids.repeat(C, 1), use_cache=True); pkv = o.past_key_values; last = o.logits[:, -1]; Q, gen = [], []; st["valid"] = torch.ones(1, dtype=torch.bool)
     for t in range(NEW):
         lq = torch.log_softmax(last.double(), -1); Q.append(lq); nxt = lq.argmax(-1); gen.append(nxt); o = model(input_ids=nxt[:, None], past_key_values=pkv, use_cache=True); pkv = o.past_key_values; last = o.logits[:, -1]
@@ -71,7 +71,7 @@ for k, i in enumerate(sel):
     ident = (torch.cumprod((gen == gen[0]).long(), 1)).double().numpy(); res["kl"].append(kl); res["same"].append(same); res["nll"].append(nll); res["ident"].append(ident)
     meta.append(dict(prompt=int(i), tokens=int(T), texts={ROWS[c][0]: tok.decode(gen[c]) for c in (0, 1, 4, 7, 9, 10, 11)}))
     print(f"  prompt {k + 1}/{len(sel)} T={T} ({time.time() - t0:.0f}s) | clean-row KL {kl[0].max():.1e} | " + " ".join(f"{ROWS[c][0]} {kl[c].mean():.3f}" for c in (1, 4, 7, 8, 9, 10, 11, 12)), flush=True)
-    np.savez(f"{out}/ufo_loop.npz", **{n: np.array(v) for n, v in res.items()}); json.dump(dict(rows=ROWS, meta=meta, new=NEW), open(f"{out}/ufo_loop_meta.json", "w"), indent=1)
+    np.savez(f"{out}/ufo_loop{TAG}.npz", **{n: np.array(v) for n, v in res.items()}); json.dump(dict(rows=ROWS, meta=meta, new=NEW), open(f"{out}/ufo_loop{TAG}_meta.json", "w"), indent=1)
 K = np.array(res["kl"]); S_ = np.array(res["same"]); I = np.array(res["ident"]); N = np.array(res["nll"]); th = NEW // 3
 print(f"{'row':12s} {'KL tokens 1-' + str(th):>14s} {'KL middle':>10s} {'KL last third':>14s} {'same choice':>12s} {'identical to clean text at the end':>36s} {'nll under clean model':>22s}")
 for c, r in enumerate(ROWS): print(f"{r[0]:12s} {K[:, c, :th].mean():14.3f} {K[:, c, th:2 * th].mean():10.3f} {K[:, c, 2 * th:].mean():14.3f} {S_[:, c].mean():12.2f} {I[:, c, -1].mean():36.2f} {N[:, c].mean():22.2f}")

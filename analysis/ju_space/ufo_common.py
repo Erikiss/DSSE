@@ -20,20 +20,24 @@ def texts(root, tok):
     """Returns (main, pool): lists of (source, token ids [1, T], valid mask [T])."""
     wiki = json.load(open(f"{root}/ju_out/corpus_wikitext.json")); pairs = json.load(open(f"{root}/ju_out/axes_pairs.json")); pick = np.random.default_rng(0).permutation(len(pairs))
     chat = lambda i: tok.apply_chat_template([{"role": "user", "content": pairs[i]["prompt"]}], tokenize=False, add_generation_prompt=True, enable_thinking=False) + pairs[i]["not_shown"]
-    special = set(tok.all_special_ids) | {i for t, i in tok.get_added_vocab().items()}; role = {tok.encode(w, add_special_tokens=False)[0] for w in ("user", "assistant", "system")}
 
     def prep(src, t, maxt):
-        ids = tok(t, return_tensors="pt", add_special_tokens=False)["input_ids"][:, :maxt]; T = ids.shape[1]; tmpl = torch.zeros(T, dtype=torch.bool)
-        if src == "chat":
-            for p in range(T):
-                if int(ids[0, p]) in special:
-                    tmpl[p] = True
-                    for q in (p + 1, p + 2):                                              # role name and line break after a marker
-                        if q < T and (int(ids[0, q]) in role or tok.decode(ids[0, q]).strip() == ""): tmpl[q] = True
-        valid = ~tmpl; valid[:FIRST] = False; return (src, ids, valid)
+        ids = tok(t, return_tensors="pt", add_special_tokens=False)["input_ids"][:, :maxt]; valid = ~template_mask(tok, ids) if src == "chat" else torch.ones(ids.shape[1], dtype=torch.bool)
+        valid[:FIRST] = False; return (src, ids, valid)
     main = [prep("wiki", t, MAXT) for t in wiki[:NMAIN]] + [prep("chat", chat(i), MAXT) for i in pick[:NMAIN]]
     pool = [prep("wiki", t, POOLWIKIT) for t in wiki[NMAIN:]] + [prep("chat", chat(i), MAXT) for i in pick[NMAIN:NMAIN + NPOOLCHAT]]
     return main, pool
+
+
+def template_mask(tok, ids):
+    """True for the tokens of the chat template: special tokens and, after each of them, the role name and line breaks."""
+    special = set(tok.all_special_ids) | {i for t, i in tok.get_added_vocab().items()}; role = {tok.encode(w, add_special_tokens=False)[0] for w in ("user", "assistant", "system")}; T = ids.shape[1]; tmpl = torch.zeros(T, dtype=torch.bool)
+    for p in range(T):
+        if int(ids[0, p]) in special:
+            tmpl[p] = True
+            for q in (p + 1, p + 2):
+                if q < T and (int(ids[0, q]) in role or tok.decode(ids[0, q]).strip() == ""): tmpl[q] = True
+    return tmpl
 
 
 unit = lambda v: v / (v.norm(dim=-1, keepdim=True) + 1e-9)

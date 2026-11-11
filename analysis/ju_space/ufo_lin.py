@@ -7,6 +7,8 @@ a_n = silu(u_n) v_n (u = gate_proj(x), v = up_proj(x), x = RMSNorm(h)). Its cont
 and its expectation over a class of directions with E[delta delta^T] / E|delta|^2 = M is  E[c_n] = -g_n^T M w_n:
     rand  M = I / D                 irr  M = projector on the 'irregular' subspace / its dimension (mean direction removed)
     cov   M = covariance of real states / its trace
+    pc1_8, pc9_64, pc65_256, pc257_1024, pc1025_k   M = projector on a band of principal axes of real states / its size
+          (axes ordered by variance; the last band ends where the 'irregular' subspace begins)
 The classes are those of ufo_damp2.py (statistics of block m - 1, i.e. of the state the block receives; the write of the
 block's own attention in between is ignored). Controls: the same sum with the output weights assigned to the wrong neurons
 (permuted), which removes any alignment of what a neuron reads with what it writes; and RANDINIT=1 (untrained network).
@@ -22,7 +24,7 @@ from ufo_common import load_model, texts, Pool, unit
 
 root, out = sys.argv[1], sys.argv[2]; RANDINIT = os.environ.get("RANDINIT") == "1"; TAG = "_randinit" if RANDINIT else ""; torch.set_grad_enabled(False); torch.set_num_threads(int(os.environ.get("NT", "4")))
 tok, model = load_model(root, RANDINIT); LAYERS = model.model.layers; L = len(LAYERS); D = model.config.hidden_size; NI = model.config.intermediate_size; main, _ = texts(root, tok); main = main[:int(os.environ["NTEXT"])] if "NTEXT" in os.environ else main
-P = Pool(f"{out}/ufo_pool{TAG}.pt"); CLS = ["rand", "irr", "cov"]; t0 = time.time(); cap = {}
+P = Pool(f"{out}/ufo_pool{TAG}.pt"); BANDS = {"pc1_8": (0, 8), "pc9_64": (8, 64), "pc65_256": (64, 256), "pc257_1024": (256, 1024), "pc1025_k": (1024, None)}; CLS = ["rand", "irr", "cov"] + list(BANDS); t0 = time.time(); cap = {}
 for m in range(L):
     LAYERS[m].mlp.gate_proj.register_forward_hook(lambda mod, i, o, m=m: cap.__setitem__(("u", m), o[0])); LAYERS[m].mlp.up_proj.register_forward_hook(lambda mod, i, o, m=m: cap.__setitem__(("v", m), o[0]))
     LAYERS[m].post_attention_layernorm.register_forward_pre_hook(lambda mod, i, m=m: cap.__setitem__(("h", m), i[0][0]))
@@ -35,10 +37,12 @@ for m in range(L):
                     share_up_down_below_m01=float((cosu < -0.1).float().mean()), share_up_down_above_p01=float((cosu > 0.1).float().mean()), chance_sd=float(1 / np.sqrt(D)))
     if m == 0: continue                                                                    # block 0 receives the embeddings: no pool statistics for that state
     b = P.b[m - 1]; k = int(b["k_irr"]); U = b["U"]; mh = unit(b["mu"]); Q = U[:, k:] - torch.outer(mh, mh @ U[:, k:]); Q = torch.linalg.qr(Q)[0]; kc = Q.shape[1]; var = b["sd"] ** 2
-    Ms = {"rand": None, "irr": (Q @ Q.T) / kc, "cov": (U * var) @ U.T / var.sum()}; WdT = Wd.T.contiguous(); pre[m] = {}             # M of every class
+    Fs = {"rand": None, "irr": Q / np.sqrt(kc), "cov": U * (b["sd"] / var.sum().sqrt())}                                              # M = F F^T for every class
+    for nm_, (a_, b_) in BANDS.items(): b2 = k if b_ is None else b_; Fs[nm_] = U[:, a_:b2] / np.sqrt(b2 - a_)                     # bands of principal axes of real states, strongest first
+    WdT = Wd.T.contiguous(); pre[m] = {}
     for c in CLS:
-        M = Ms[c]; A = Wg / D if M is None else Wg @ M; B = Wu / D if M is None else Wu @ M
-        pre[m][c] = dict(alpha=(A * WdT).sum(1), beta=(B * WdT).sum(1), alpha_p=(A * WdT[gperm]).sum(1), beta_p=(B * WdT[gperm]).sum(1), M=M)
+        F = Fs[c]; GF, UF, DF = (Wg / np.sqrt(D), Wu / np.sqrt(D), WdT / np.sqrt(D)) if F is None else (Wg @ F, Wu @ F, WdT @ F)
+        pre[m][c] = dict(alpha=(GF * DF).sum(1), beta=(UF * DF).sum(1), alpha_p=(GF * DF[gperm]).sum(1), beta_p=(UF * DF[gperm]).sum(1), F=F)
     if m % 7 == 0: print(f"  prepared block {m} ({time.time() - t0:.0f}s)", flush=True)
 silu = torch.nn.functional.silu; dsilu = lambda u: torch.sigmoid(u) * (1 + u * (1 - torch.sigmoid(u)))
 SPLIT = np.full((len(main), L, len(CLS), 7), np.nan)        # erasure by path (gate, up), by sign of the gate input (negative, positive), by activation (strongest quarter, rest); share of neurons with negative gate input
@@ -50,7 +54,7 @@ for k_, (src, ids, valid) in enumerate(main):
     for m in range(1, L):
         u = cap[("u", m)][valid]; v = cap[("v", m)][valid]; h = cap[("h", m)][valid]; rms = h.norm(dim=-1, keepdim=True) / np.sqrt(D); hh = unit(h); a1 = dsilu(u) * v; a2 = silu(u)          # [n, NI]
         for j, c in enumerate(CLS):
-            q = pre[m][c]; Wd = LAYERS[m].mlp.down_proj.weight; Mw = (hh @ Wd) / D if q["M"] is None else (hh @ q["M"]) @ Wd                # hh^T M w_n  [n, NI]
+            q = pre[m][c]; Wd = LAYERS[m].mlp.down_proj.weight; Mw = (hh @ Wd) / D if q["F"] is None else ((hh @ q["F"]) @ q["F"].T) @ Wd                # hh^T M w_n  [n, NI]
             cg = -(a1 * q["alpha"] - a1 * u / np.sqrt(D) * Mw) / rms; cu = -(a2 * q["beta"] - a2 * v / np.sqrt(D) * Mw) / rms; cn = cg + cu; cp = -(a1 * q["alpha_p"] + a2 * q["beta_p"]) / rms     # gate path, up path
             neg = u < 0; act = (a2 * v).abs(); top = act >= torch.quantile(act, 0.75, dim=1, keepdim=True); SPLIT[k_, m, j] = [float(cg.sum(1).mean()), float(cu.sum(1).mean()), float((cn * neg).sum(1).mean()), float((cn * ~neg).sum(1).mean()), float((cn * top).sum(1).mean()), float((cn * ~top).sum(1).mean()), float(neg.float().mean())]
             CELL[k_, m, j] = [float((cg * neg).sum(1).mean()), float((cg * ~neg).sum(1).mean()), float((cu * neg).sum(1).mean()), float((cu * ~neg).sum(1).mean())]      # gate path / up path x negative / positive gate input
@@ -75,6 +79,8 @@ for m in range(1, L):
 print("block:  erasure of irr by path: gate / up | by gate input: negative / positive | by activation: strongest quarter / rest | share of neurons with negative gate input || the same for cov: negative / positive, strongest quarter / rest")
 for m in range(1, L):
     s = np.nanmean(SPLIT[:, m], 0); print(f"{m:3d}:  {s[1, 0]:+.3f} / {s[1, 1]:+.3f} | {s[1, 2]:+.3f} / {s[1, 3]:+.3f} | {s[1, 4]:+.3f} / {s[1, 5]:+.3f} | {s[1, 6]:.2f} || {s[2, 2]:+.3f} / {s[2, 3]:+.3f}, {s[2, 4]:+.3f} / {s[2, 5]:+.3f}")
+print("block:  erasure by band of principal axes of real states: axes 1-8 / 9-64 / 65-256 / 257-1024 / 1025 up to the limit of the data subspace / outside (irr)")
+for m in range(1, L): print(f"{m:3d}:  " + " / ".join(f"{np.nanmean(KM[:, m, CLS.index(c)]):+.3f}" for c in list(BANDS) + ["irr"]))
 print("block:  erasure of irr: up path with negative gate input / up path with positive / gate path negative / gate path positive | mean gate value silu(u) of neurons with negative / positive gate input")
 for m in range(1, L):
     c_ = np.nanmean(CELL[:, m, 1], 0); s_ = np.nanmean(SILU[:, m], 0); print(f"{m:3d}:  {c_[2]:+.3f} / {c_[3]:+.3f} / {c_[0]:+.3f} / {c_[1]:+.3f} | {s_[0]:+.3f} / {s_[1]:+.3f}")
