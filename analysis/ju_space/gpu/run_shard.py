@@ -23,8 +23,26 @@ RUN_DEVICE = os.environ.get("RUN_DEVICE", "cuda")                               
 
 
 def sync():
-    if drive:
-        os.makedirs(drive, exist_ok=True); shutil.copytree(work, drive, dirs_exist_ok=True)
+    """Copy new or changed files of the work directory to Drive. A Drive error is reported and skipped, never fatal."""
+    if not drive: return
+    n = 0
+    try:
+        for d, _, files in os.walk(work):
+            rel = os.path.relpath(d, work); dd = os.path.join(drive, rel); os.makedirs(dd, exist_ok=True)
+            for f in files:
+                if f.endswith(".tmp"): continue
+                src, dst = os.path.join(d, f), os.path.join(dd, f); st = os.stat(src)
+                if os.path.exists(dst):
+                    dt = os.stat(dst)
+                    if dt.st_size == st.st_size and dt.st_mtime >= st.st_mtime - 1: continue
+                shutil.copy2(src, dst); n += 1
+    except OSError as e: print(f"[sync] Drive error, continuing without this copy: {e}", flush=True)
+    return n
+
+
+def code_commit():
+    try: return subprocess.check_output(["git", "-C", HERE, "rev-parse", "HEAD"], text=True).strip()
+    except Exception: return "unknown"
 
 
 def run(name, args, env=None, out=None):
@@ -115,6 +133,14 @@ def k1_expected(o, j):
 
 def pc_pool(o, todo):
     running = []; done = 0; synced = 0; t = time.time()
+    try:
+        _pc_pool(o, todo, running, done, synced, t)
+    finally:                                                          # never leave orphaned pc_meta processes behind
+        for r in running:
+            if r[0].poll() is None: r[0].terminate()
+
+
+def _pc_pool(o, todo, running, done, synced, t):
     while todo or running:
         while todo and len(running) < NPAR:
             j = todo.pop(0); lg = open(f"{work}/logs/pc_{job_name(j)}.log", "a")
@@ -148,7 +174,14 @@ def pc(which):
 
 def main():
     import torch, transformers
-    info = dict(shard=shard, gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else None, torch=torch.__version__, transformers=transformers.__version__)
+    info = dict(shard=shard, gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else None, torch=torch.__version__, transformers=transformers.__version__,
+                code_commit=code_commit())
+    prev = f"{work}/code_commits.txt"; seen = open(prev).read().split() if os.path.exists(prev) else []
+    if seen and seen[-1] != info["code_commit"]:
+        print(f"WARNING: this work directory was started with code {seen[-1][:10]}, now {info['code_commit'][:10]}; finished steps are kept "
+              f"(their outputs come from the earlier code). Delete dsse_runs/{shard} in Drive to start this part from scratch.", flush=True)
+    if not seen or seen[-1] != info["code_commit"]: open(prev, "a").write(info["code_commit"] + "\n")
+    info["code_commits_used"] = open(prev).read().split()
     print(json.dumps(info), flush=True)
     if shard == "gpu1": rk(14, k6=True)
     elif shard in ("gpu2", "gpu3"):
