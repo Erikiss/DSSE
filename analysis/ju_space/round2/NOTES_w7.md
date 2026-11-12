@@ -36,8 +36,9 @@ Code tests (CPU, one thread, QUICK): `QUICK=1 NT=1 OMP_NUM_THREADS=1 DEVICE=cpu 
 
 ## 2 Output contents (what r2_unlearn_verdict.py / r2_report.py read)
 
-Every stage JSON has `meta` (plan sha256, QUICK, device, seeds, budgets, FT_EVAL, NDRAW, the RNG seeds of OD-G6, sha256 of
-r2_toy_common.py and the script, seconds) and `rule_preview` (section 4). Arrays are per seed in the order of `meta.seeds` (worlds
+Every stage JSON (and every cross_pc file) has `meta` (plan sha256, QUICK, device, seeds, budgets, FT_EVAL, NDRAW, the RNG seeds of
+OD-G6, sha256 of r2_toy_common.py, r2_unlearn_toy.py and r2_pc_toy.py, seconds; r2_pc: the R1PC / R2T1 folders) and, except cross_pc,
+`rule_preview` (section 4). Arrays are per seed in the order of `meta.seeds` (worlds
 0-4; one init per world, init 0 = torch.manual_seed(ws)); every net's training row (first95, checkpoint, level1, eval_point
 'checkpoint' / 'maxsteps', level_acc, checksum) is stored next to its measures (W0).
 - t0: `cells[<arm>_W<W>].seeds[i] = {ws, tests (TC.structure_tests: a_taskcols, b_h1, b_h2, c_loo_ring_R2 K1-K3, d_h2_answer, d_W3,
@@ -149,8 +150,9 @@ gates
 
 ## 4 Rules (for r2_unlearn_verdict.py)
 
-`r2_unlearn_toy.rules_t0 ... rules_t6(stage_json)` evaluate the frozen 5.1 rules on a stage JSON (they read only the JSON) and are
-stored as `rule_preview`. `r2_pc_toy.ct7_family(t7_json, widths=<G-PC widths>)` gives C-T7's Holm family (two-sided paired t tests,
+`r2_unlearn_toy.rules_t0 ... rules_t6(stage_json)` evaluate the frozen 5.1 rules on a stage JSON (they read only the JSON, including
+its stored budgets, so any process evaluates QUICK and full outputs alike; a recomputation reproduces the stored preview exactly) and
+are stored as `rule_preview`. `r2_pc_toy.ct7_family(t7_json, widths=<G-PC widths>)` gives C-T7's Holm family (two-sided paired t tests,
 Holm over the whole family, claim = Holm p <= 0.05 and |mean| >= 0.10); the preview uses every width that ran.
 `r2_pc_toy.gates_from_rows(rows)` and `r2_pc_toy.g_meta_fallback(unlearn_toy_t1_json)` give G-meta / G-PC and G35's fallback ('gate from
 round 2'). C-T3's gate result (G41) is `rules_t3(...)['gate']`.
@@ -206,9 +208,8 @@ L 1; about 8 min CPU). The pilot facts the plan lists in 5.1 reappear:
   r2_unlearn_verdict.py to decide.
 - CUDA not testable here (CPU-only torch). Memory is bounded by chunked evaluations (TC.CHUNK), search calls of at most R2_MAXC chains,
   and C-T1's keep-r ops built per (layer, r) (largest: [55 variants x 12 tasks, W, W - r] floats at W 256 ~ 170 MB plus one regrouped
-  copy). Expected GPU time
-  per session within the plan's estimates (one batched search per round / per cell; C-T7 PC side: one 3,000-step relearning search of
-  240 chains and 25 x 300 + 3,000 PC steps per width).
+  copy). Expected GPU time per session within the plan's estimates (one batched search per round / per cell; C-T7 PC side: one
+  3,000-step relearning search of 240 chains and 25 x 300 + 3,000 PC steps per width).
 - Runner (implementer 9): r2_t3 / r2_t4 / r2_pc steps and file names match (`{work} <stage>`, `unlearn_toy/<stage>.json`,
   `pc_toy/t7.json`, `pc_toy/cross_pc/w<ws>.json`; env R1PC, R2T1). The current runner does not call `gates` in r2_pc (pc_toy/gates.json
   comes from r2_report in r2_ana, plan 9.4); `r2_pc_toy.py <work> gates` and gates_from_rows / g_meta_fallback stay available.

@@ -1334,6 +1334,13 @@ def _a(x):
     return _arr(x)
 
 
+def stage_budgets(res):
+    """(short, long) best-of-budget keys as stored with the stage (meta.budgets; the module's BUDGETS for an in-process preview), so
+    the rules evaluate QUICK and full outputs alike in any process."""
+    b = (res.get("meta") or {}).get("budgets") or BUDGETS
+    return str(int(b[0])), str(int(b[1]))
+
+
 def ctrl_status(acc, base_mean):
     """A control 'does not unlearn' if the t(4) lower bound of its old-task accuracy is >= 0.9 x base (5.1, critique v2-5); NOTE: it
     'unlearns' if the upper bound is <= 0.11; otherwise 'neither'."""
@@ -1479,12 +1486,12 @@ def rules_t3(res):
 
 
 def rules_t4(res):
-    out = dict(cells={}, w4={})
+    out = dict(cells={}, w4={}); bs, bl = stage_budgets(res)
     for name, c in res["cells"].items():
         base = c["base"]; a0 = _mean(base["acc"]); sp0 = _mean(base["sp"]); n = len(base["acc"]); q = quorum(n); W = c["W"]; ops = {}
         for nm, o in c["ops"].items():
             op, dm = o["op"], o["dm"]; matched = bool(dm["match"]["matched"])
-            rl, an = _a(op["relearn"][str(B_SHORT)]), _a(op["A_new"][str(B_SHORT)]); d = rl - an
+            rl, an = _a(op["relearn"][bs]), _a(op["A_new"][bs]); d = rl - an
             depth = "shallow" if (_ge(_mean(d), 0.20) and _ge(_lo(d), 0.10 + 1e-12)) else ("deep" if _le(_mean(rl), _mean(an) + 0.05) else "partial")
             n_perm = sum(lb == "consistent permutation" for lb in op["label"])
             ops[nm] = dict(unlearns=unlearns(op["acc"], dm["acc"], a0),
@@ -1494,7 +1501,7 @@ def rules_t4(res):
                            inverted=_le(_hi(op["acc"]), CHANCE_A - 1e-12) and _ge(_mean(op["sp"]), 0.8 * sp0) and n_perm >= q,
                            iso_status=ctrl_status(o["iso"]["acc"], a0), span_status=ctrl_status(o["span"]["acc"], a0) if o.get("span") else None,
                            dm_status=ctrl_status(dm["acc"], a0), dm_matched=matched, acc=tci(op["acc"]), dm_acc=tci(dm["acc"]), sp=tci(op["sp"]),
-                           relearn_minus_new=summ(d), relearn_long=tci(op["relearn"][str(B_LONG)]), A_new_long=tci(op["A_new"][str(B_LONG)]),
+                           relearn_minus_new=summ(d), relearn_long=tci(op["relearn"][bl]), A_new_long=tci(op["A_new"][bl]),
                            B2_8=tci(op["B2"]["8"]), consistent_permutation_seeds=n_perm, modal_labels=op["label"])
         if ops["blk1"]["unlearns"]:
             lad = dict(rung="one direction", within_span_1dim_control=ops["blk1"]["span_status"])
@@ -1520,7 +1527,7 @@ def rules_t4(res):
                           specificity=("not testable (no damage-matched control within 0.02)" if not matched else
                                        ("specific" if _ge(_mean(op["sub"]), 0.9 * _mean(dm["sub"])) else "generic damage")),
                           add=tci(op["add"]), sub=tci(op["sub"]), dm_add=tci(dm["add"]), dm_sub=tci(dm["sub"]), sp=tci(op["sp"]),
-                          relearn_add_short=tci(op["relearn_add"][str(B_SHORT)]), relearn_add_long=tci(op["relearn_add"][str(B_LONG)]))
+                          relearn_add_short=tci(op["relearn_add"][bs]), relearn_add_long=tci(op["relearn_add"][bl]))
         out["w4"][name] = dict(base_add=a0, base_sub=s0, ops=o2)
     return out
 
@@ -1530,7 +1537,7 @@ def rules_t5(res):
     <= 0.11 (per task; per seed the median over its tasks, '> 24' counting as 25)."""
     out = {}
     for name, w in res["widths"].items():
-        A = np.array(w["A"][str(B_LONG)], dtype=float); R = A.shape[1]; ch = w["chains"]; seeds = w["seeds"]; n = len(seeds); q = quorum(n)
+        A = np.array(w["A"][str(int(max(w["budgets"])))], dtype=float); R = A.shape[1]; ch = w["chains"]; seeds = w["seeds"]; n = len(seeds); q = quorum(n)
         i4, last = min(4, R - 1), R - 1; arms = {}
         for arm in w["arms"]:
             idx = [i for i, (a, b, j) in enumerate(ch) if a == arm]; Aa = A[idx].reshape(n, NNEW, R)

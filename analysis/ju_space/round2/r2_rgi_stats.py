@@ -7,8 +7,9 @@ the g_SELF spillover, delta per block (A4) and the over-block relation to delta 
 
 Reads r2_rgi_geom.py's outputs of the model (local/geom_<m>.npz, local/delta_states_<m>.npz, local/pool_<m>.pt, rgi/causal_<m>.pt,
 rgi/geom_meta_<m>.json); writes rgi/geom_stats_<m>.json and rgi/geom_draws_<m>.npz (per-draw values), and a resumable per-block cache
-local/geom_stats_cache_<m>.pt. <root> and <r1_dir> are not read. Env: DEVICE, NT, MOCK (tests only: R2_NDRAW / R2_NDBOOT may lower the
-numbers of draws, default 64 and 20 under MOCK; a real run always uses the plan's 1,000 and 200).
+local/geom_stats_cache_<m>/b<b>.pt (reused when its fingerprint, incl. the inputs' sha256, matches). <root> and <r1_dir> are not
+read. Env: DEVICE, NT, MOCK (tests only: R2_NDRAW / R2_NDBOOT may lower the numbers of draws, default 64 and 20 under MOCK; a real
+run always uses the plan's 1,000 and 200).
 
 Estimator (A2, the RGI design's sim_tg.py extended to the owner x substrate factorial; frames pooled = mean of the F1 and F2 states):
   units x(F, l, o) per family F, lexeme l, object o; cells c = (owner, substrate) for the 48 model objects (12 cells x 4 paraphrases)

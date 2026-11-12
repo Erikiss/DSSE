@@ -272,12 +272,12 @@ def t7_width(r1, W):
     return info
 
 
-def _seed_vals(us, arm, r, budget):
-    """Per-seed (mean over the 4 tasks) accuracy of arm at round r: 300-step protocol value (budget B_SHORT) or the 3,000-step search
-    at that round (budget B_LONG; from 'long')."""
-    ch = us["chains"]; R = len(us["A"][str(B_SHORT)][0]); r = min(r, R - 1); seeds = sorted({b for _, b, _ in ch})
-    if budget == B_SHORT:
-        A = np.array(us["A"][str(B_SHORT)], float)
+def _seed_vals(us, arm, r, which):
+    """Per-seed (mean over the 4 tasks) accuracy of arm at round r: which 'short' = the 300-step protocol value A_300(s_r), 'long' =
+    the 3,000-step search at that round (from 'long')."""
+    ks = str(int(us["budgets"][0])); ch = us["chains"]; R = len(us["A"][ks][0]); r = min(r, R - 1); seeds = sorted({b for _, b, _ in ch})
+    if which == "short":
+        A = np.array(us["A"][ks], float)
         return np.array([np.mean([A[i, r] for i, (a, b, j) in enumerate(ch) if a == arm and b == s]) for s in seeds])
     L = us["long"]; vals = {}
     for k, (i, rr) in enumerate(zip(L["chain"], L["round"])):
@@ -291,17 +291,17 @@ def ct7_items(t7, widths=None):
     """The C-T7 family (critique v2-12h) per width: per-seed paired PC - BP differences of forward accuracy after erasure (h1, h2),
     relearn_300 and relearn_3000 under erasure (h1, h2), A_300 at s_4, s_12, s_24 and A_3000 at s_24 (col arm), and the PC-only contrast
     Delta_relax - Delta_rand (task-identity probe, T 20 and T 100; NOTE: both erasure layers enter). Returns [(W, item, values)]."""
-    items = []
+    items = []; bs, bl = UT.stage_budgets(t7)
     for w in t7["widths"].values():
         if "pc" not in w or (widths is not None and w["W"] not in widths):
             continue
         W, pc, bp = w["W"], w["pc"], w["bp"]
         for L in ("h1", "h2"):
             items.append((W, f"fwd_acc_{L}", np.asarray(pc["t4b"][L]["acc"], float) - np.asarray(bp["t4b"][L]["acc"], float)))
-            for b_ in (B_SHORT, B_LONG):
-                items.append((W, f"relearn_{b_}_{L}", np.asarray(pc["t4b"][L]["relearn"][str(b_)], float) - np.asarray(bp["t4b"][L]["relearn"][str(b_)], float)))
-        for r, b_ in ((4, B_SHORT), (12, B_SHORT), (24, B_SHORT), (24, B_LONG)):
-            items.append((W, f"A{b_}_s{r}_col", _seed_vals(pc["unsearch"], "col", r, b_) - _seed_vals(bp["unsearch"], "col", r, b_)))
+            for b_ in (bs, bl):
+                items.append((W, f"relearn_{b_}_{L}", np.asarray(pc["t4b"][L]["relearn"][b_], float) - np.asarray(bp["t4b"][L]["relearn"][b_], float)))
+        for r, b_, wh in ((4, bs, "short"), (12, bs, "short"), (24, bs, "short"), (24, bl, "long")):
+            items.append((W, f"A{b_}_s{r}_col", _seed_vals(pc["unsearch"], "col", r, wh) - _seed_vals(bp["unsearch"], "col", r, wh)))
         for L in ("h1", "h2"):
             for T in RELAX_T:
                 items.append((W, f"relax_contrast_T{T}_{L}", np.asarray(pc["relax"][L][str(T)]["contrast"], float)))
