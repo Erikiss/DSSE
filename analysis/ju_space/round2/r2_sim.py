@@ -1,5 +1,7 @@
-"""Round 2 simulation ports (plan v2, 9.1; implementer 5). Import only; `python r2_sim.py selftest` checks the ports against the
-reference scripts on their own small examples (refs looked up as in r2_toy_common.ref_path: round2/ref/, $R2REF, design scratchpad).
+"""Round 2 simulation ports (implementer 5; final plan results/ju_space/plans/abschnitt11_12_runde2_plan.md, 9.1, AT7, OD-B14).
+Import only; `python r2_sim.py selftest` checks the ports against the reference files of Appendix E on their own small examples (the
+references are looked up in round2/ref/<relative path>, then $R2REF, then the design scratchpad; only their definitions are executed,
+so their absolute import paths do not matter). r2_toy_common's selftest runs these checks too and writes them into its comparison output.
 
 1. RGI toy rule (AT7 / AT8): reg2_verdict and reg2_simulate = rgi_design/crit/sim_reg2.py's verdict2 and run2 with crit/sim_reg.py's
    COND and ci (two-step sham-controlled rule; per world OLS of a line value on x- = min(x, 0), x+ = max(x, 0), p and k, full model with

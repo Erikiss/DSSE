@@ -1,43 +1,49 @@
-"""Round 2 toy library (plan v2: section 2.5 W0-W8, used by 3.2 AT0-AT6, 4.2 B-T1-B-T5, 5.1 C-T0-C-T7; script list 9.1).
+"""Round 2 toy library (implementer 5). Plan: results/ju_space/plans/abschnitt11_12_runde2_plan.md (final, sha256 5e476340...);
+section 2.5 W0-W8, used by 3.2 AT0-AT7, 4.2 B-T1-B-T5, 5.1 C-T0-C-T7; script list 9.1.
 
-Import only:  `import r2_toy_common as TC`.  Code test: `QUICK=1 NT=1 python r2_toy_common.py selftest [<work_dir>]` runs the W0
-equivalence tests against pc_meta.py (round-1 code, imported unchanged as M) and the checks of the ported functions against the
-reference scripts of Appendix E (looked up in round2/ref/, else $R2REF, else the design scratchpad; missing refs are reported).
+Import only:  `import r2_toy_common as TC`.  Code test: `QUICK=1 NT=1 python r2_toy_common.py selftest [<work_dir>]`: W0's equivalence
+tests against pc_meta.py (round-1 code, imported unchanged as M) and the comparison of the ported functions with the reference files of
+Appendix E in round2/ref/ (their definitions executed in a namespace with the repository's pc_meta / pc_common: the shim of 9.5); it
+writes <work_dir>/ref_comparison_w5.json (both sides and the largest differences of every check) and exits 1 if a check fails.
 
 Conventions (W0)
-- Before `import pc_meta` this module sets T=20, BETA=0.1, LR=1e-3, MAXSTEPS=6000 (round 1's PC-muP arm and the amended MAXSTEPS) and
-  asserts them on the imported module (M.T, pc_common.BETA[0], M.LR, M.MAXSTEPS unless QUICK). Device from env DEVICE, float32, TF32
-  off; every function is deterministic given its seeds; no global RNG state is left changed except where stated (net init seeds it,
-  exactly as pc_meta does).
-- Nets (the plan's 'BatchedMLP'): B nets of one architecture stacked along dim 0. kind 'mlp' (W1 one-hot worlds, any depth / activation
-  / coding, also the two-family world with 32 slots), 'bneck' (rank-dt task slot U E, ref rgi_bneck.py), 'circle' (W3, ref c3_angle.py),
-  'impose' (W5, ref impose2.py / c2_pring.py). Each net's first layer is z1 = W1 [fx(x), fy(y), ft(t)] + b1 with per-net tables fx, fy
-  (x / y codings) and ft (task features), so every net has x columns Ex = W1x fx^T, y columns Ey and task columns Wt ft^T, and
-  z1 = base_z1(x, y) + col(task) with base_z1 = Ex[:, x] + Ey[:, y] + b1.  Searches replace col(task) by a searched column v.
-- Spec (dict) of a net, defaults in SPEC_DEFAULTS: W, ws (world seed) required; init (0: torch.manual_seed(ws); i > 0: 10000 i + ws),
-  arm (bp_mup / bp_sp / pc_mup), kind, depth, act, lr, wd (wd_scale), gamma / reg ('task' | 'sham') / when ('early' | 'late'), data
-  ('w1' | 'w3' | 'w4' | 'w5'), K, shifts, split ('world' | 'other' | 'shared' | list), ky (task family x + ky y + c), coding (None |
-  'perm' (default_rng(6000 + ws)) | (px, py)), dt (bneck), circle arm / K, impose code / k, arc / spread (W3 word length).
-  net_name(spec) is deterministic; weight_checksum() is the sha256 of a net's float32 parameters.
+- Before `import pc_meta` this module sets T=20, BETA=0.1, LR=1e-3, MAXSTEPS=6000 (run_shard.PC_ENV and the round-1 MAXSTEPS), unsets
+  QUICK unless it is '1' (code tests), and asserts M.T == 20, pc_common.BETA[0] == 0.1, M.LR == 1e-3 and MAXSTEPS 6000 (QUICK: pc_meta's
+  QUICK values). Device from env DEVICE, float32, TF32 off; every function is deterministic given its seeds (net init seeds the global
+  RNG, as pc_meta does).
+- Nets (the plan's BatchedMLP): B nets of one architecture stacked along dim 0 (baddbmm layers). kind 'mlp' (W1 one-hot worlds, any depth
+  / activation / x-y coding, and the two-family world W4 with 32 slots), 'bneck' (rank-dt task slot U E, ref rgi_bneck.py), 'circle' (W3,
+  ref c3_angle.py), 'impose' (W5, ref impose2.py / c2_pring.py). Each net's first layer is z1 = W1 [fx(x), fy(y), ft(t)] + b1 with per-net
+  tables fx, fy (codings) and ft (task features), so every net has x columns Ex, y columns Ey and task columns (task_cols), and
+  z1 = base_z1(x, y) + col(task) with base_z1 = Ex[:, x] + Ey[:, y] + b1; searches replace col(task) by a searched column v.
+- Spec (dict) of a net, defaults SPEC_DEFAULTS: W and ws (world seed) required; init (0: torch.manual_seed(ws); i > 0: 10000 i + ws) or
+  seed; arm (bp_mup / bp_sp / pc_mup); kind; depth; act; lr; wd (wd_scale); gamma, reg ('task' | 'sham'), when ('early' | 'late'); data
+  ('w1' | 'w3' | 'w4' | 'w5'); K; shifts; split ('world' | 'other' | 'shared' | per-slot list); ky (task family x + ky y + c); coding
+  (None | 'perm' = default_rng(6000 + ws) | (px, py)); dt (bneck); circ / cK (W3 arm, frequencies); code / ck (W5 code, k); arc / spread
+  (W3 word length). net_name(spec) is deterministic; weight_checksum is the sha256 of a net's float32 parameters.
 
-Main API (details in the docstrings)
-- worlds:  world, spare_shift, init_seed, fresh_seed, other_splits, shared_split, coding_perms, taskset_from_spec (W1, W3, W4, W5),
-           new_task_sets, old_task_sets, code_table, four
-- nets:    Nets (from_specs, from_states, subset, cat, x_cols, y_cols, task_cols, logits, hidden), Ops (interventions), z1_ref
-- train:   train (checkpoint rule W0, fixed length, late / early regularisers, second checkpoint, snapshots, C-T6 task-update basis),
-           train_late (W2 late branches from the first95 state), AdamWB (batched AdamW = pc_meta.make_opt per net)
-- B2:      b2_A (column search part), fresh_F, b2 (A, F, B2 per net as pc_meta.main)
-- geometry: delta_stats (vectorised pc_meta.delta_stats), task_fisher_b (batched task_fisher), param_distance
-- W6:      self_train (+ w6_summary)
-- W7:      column_search (the one search function: free, anchored, coordinates, recipe, restricted, intervention, best-of-budget,
-           BP or PC local update, CE / KL / h2-MSE loss), cols_accuracy, anchored_param, coords_param, recipe evaluation
-- W8:      sum_probe, ridge_probe, mlp_probe, task_answer_probes, class_mean_eraser, random_subspaces, block_ops, damage_match (OD-C2),
-           modal_shift_map (OD-C16), hidden_states
-- RGI:     lambda_line, learn_alpha, s_line, f_line, recipe_depth, round_trip, pooling, warm_start, stitch_fit, t3_t4
-- C-T0/6:  structure_tests (ring_test, loo_ring, spec_rows, subspace_overlap), trajectory_modes, shuffled_increment_nulls
-- PC:      pc_relax (batched closed form, erasers inside the energy, soft targets), pc_eta (1 / pc_meta.lam_max), PC searches through
-           column_search(pc=...)
-- I/O:     net_name, weight_checksum, save_nets, load_nets, load_pc_state_dicts
+API (details in the docstrings; NOTES_w5.md has the list with the plan items each serves)
+- worlds:   world, spare_shift, init_seed, fresh_seed, other_splits, shared_split, coding_perms, four, code_table, circle_tables, w3_shifts,
+            w4_tasks, w4_split, taskset_w1 / _w3 / _w4 / _w5, taskset_from_spec, new_task_sets, old_task_sets, stack_sets, lambda_targets
+- nets:     Nets (from_specs, from_states, subset, cat, clone, x_cols, y_cols, task_cols, features, logits, hidden_acts, state, to_mlp),
+            Ops (z1 block / reflection / partial removal / push, h1 / h2 erasure; expand, regroup), z1_ref, block_ops, random_subspaces,
+            random_in_span, complement_basis
+- training: train (checkpoint rule, fixed length, early / late regulariser, second checkpoint, snapshots, C-T6 task-update basis,
+            first95 state), train_late (W2 branches), AdamWB, task_fisher_b, param_distance, snap_task_code, TrainResult
+- B2:       b2_A, fresh_F, b2_all, b2 (A, F, B2, all8 / retention as pc_meta.main)
+- geometry: delta_stats (vectorised pc_meta.delta_stats), mediators (AT3), task_accuracy, task_states, hidden_states, predictions,
+            cols_accuracy, zero_shot (W3 / W5)
+- W6:       self_train, w6_summary
+- W7:       column_search (free / anchored / coordinates / recipe / keep / remove / ops / best-of-budget / BP or PC / CE, KL, h2-MSE),
+            anchored_param, coords_param
+- W8:       sum_probe, ridge_probe, mlp_probe, heldout_halves, task_answer_features, task_answer_probes, class_mean_eraser,
+            damage_match (OD-C2), modal_shift_map (OD-C16)
+- RGI:      lambda_triples, lambda_line, learn_alpha, carry_alpha, s_perms, s_line, ridge_coef, t1_map, t1_choose_r, proj_linspan,
+            f_line, recipe_chains, recipe_depth, round_trip, pooling, warm_start, stitch_fit, all_h2, t3_t4
+- C-T0/C-T6: fourier_cols, share_by_k, ring_test, loo_ring, spec_rows, subspace_overlap, structure_tests, trajectory_modes,
+            trajectory_basis, shuffled_increment_nulls
+- PC:       pc_relax (chains), pc_relax_inputs (whole nets), pc_eta (1 / pc_meta.lam_max), PC searches via column_search(pc=...)
+- I/O:      net_name, weight_checksum, save_nets, load_nets, load_pc_state_dicts (round-1 PC-muP and BP-muP checkpoints), r1_training_batch
 """
 from __future__ import annotations
 
@@ -49,7 +55,6 @@ import math
 import os
 import subprocess
 import sys
-import tempfile
 import time
 
 import numpy as np
@@ -93,10 +98,6 @@ VAL_EVERY = 10
 SECOND_AFTER = 1000                                                        # AT2: natural runs continued to first95 + 1500
 CHUNK = int(os.environ.get("R2_CHUNK", str(2 ** 25)))                      # max floats per evaluation chunk
 PAIRS = np.array([(x, y) for x in range(P) for y in range(P)])            # pc_meta's pair order (x major)
-
-
-def _t(a, dtype=None, device=None):
-    return torch.as_tensor(np.asarray(a), dtype=dtype, device=DEV if device is None else device)
 
 
 # ====================================================================================================================== worlds
@@ -839,7 +840,7 @@ def _stack_data(nets, tss):
     d["K"] = int(max(ts["task"].max() for ts in tss)) + 1
     for key, src_, nk in (("task", "task", d["K"]), ("xlab", "x", P)):     # nets grouped by identical label rows (regulariser)
         rows = np.stack([ts[src_] for ts in tss]); uniq, inv = np.unique(rows, axis=0, return_inverse=True)
-        d[key + "_groups"] = [(torch.as_tensor(np.nonzero(inv.reshape(-1) == u)[0], device=nets.device),
+        d[key + "_groups"] = [(np.nonzero(inv.reshape(-1) == u)[0],
                                [torch.as_tensor(np.nonzero(uniq[u] == k)[0], device=nets.device) for k in range(nk) if (uniq[u] == k).any()])
                               for u in range(len(uniq))]
     return d
@@ -864,7 +865,8 @@ class TrainResult:
     """Result of train(): nets (state at each net's evaluation point), rows (per-net dicts: name, spec, first95, checkpoint, level1,
     eval_point 'checkpoint' | 'maxsteps' | 'fixed', updates, final_train, final_heldout, coord_check, checksum), nets2 / has2 (second
     checkpoint first95 + AFTER + extra_after; None if not requested), first95_state (params and AdamW state at first95 for train_late),
-    snapshots (list of (step, value, active mask))."""
+    snapshots (list of (step, value, active mask)), data (the stacked training data). first95 is recorded in every mode (pc_meta records
+    none for its K = 1 controls, and level1 False there); level1 of a fixed-length run = level-1 accuracy >= LEVEL1 at its end."""
 
     def __init__(self, **kw):
         self.__dict__.update(kw)
@@ -886,8 +888,9 @@ def train(specs, *, fixed_steps=None, init_state=None, nets=None, tasksets=None,
     protocol; both are the same updates).
     init_state: dict(params, opt) to continue from (late branches); nets: an initialised Nets to use instead of from_specs.
     snapshot_every / snapshot(step, nets) -> value: called at step 0 and every snapshot_every updates (values stored with the mask of
-    the nets that were active in that update). task_basis: [B, W * 12, L] orthonormal bases (zero tensor rows for free nets with
-    task_basis_mask) restricting the centred update of the 12 task columns after every step (C-T6 cap; the task-mean column stays free).
+    the nets that were active in that update). task_basis: [B, W * 12, L] orthonormal bases (an all-zero basis leaves that net free)
+    restricting the centred update of the 12 task columns (row-major [W, 12], as snap_task_code / trajectory_basis) after every step to
+    their span (C-T6 cap; the task-mean column stays free).
     save_first95: keep each net's parameters and AdamW state at first95 (for train_late).
     coord_check: pc_meta's G0 coordinate check at update 10 (mean |h - h_init| on 512 training examples, probe from the net's seed).
     fisher: how the regulariser's Fisher ratio is computed: 'auto' (pc_meta's op sequence, bitwise per net, when all nets of the batch
@@ -955,10 +958,10 @@ def train(specs, *, fixed_steps=None, init_state=None, nets=None, tasksets=None,
                 ii = torch.as_tensor(np.nonzero(sel)[0], device=nets.device); gg = torch.as_tensor(gam[sel], dtype=F32, device=nets.device)
                 loss = loss + (gg * torch.log(task_fisher_b(h2[ii], d[labk][ii], nk))).sum()
             else:                                           # pc_meta's op sequence per group of nets with identical labels
-                for nidx, cls in grp:
-                    nn_ = nidx.cpu().numpy(); s_ = sel[nn_]
+                for nn_, cls in grp:
+                    s_ = sel[nn_]
                     if s_.any():
-                        ii = nidx[torch.as_tensor(s_, device=nets.device)]; gg = torch.as_tensor(gam[nn_[s_]], dtype=F32, device=nets.device)
+                        ii = torch.as_tensor(nn_[s_], device=nets.device); gg = torch.as_tensor(gam[nn_[s_]], dtype=F32, device=nets.device)
                         loss = loss + (gg * torch.log(task_fisher_b(h2[ii], None, nk, cls))).sum()
         grads = torch.autograd.grad(loss, [nets.p[k] for k in pidx])
         for k in pidx:
@@ -1040,10 +1043,10 @@ def train(specs, *, fixed_steps=None, init_state=None, nets=None, tasksets=None,
     return TrainResult(nets=out, rows=rows, nets2=nets2, has2=has2, first95_state=f95, snapshots=snaps, data=d)
 
 
-def train_late(nat, idx, branch_specs, n_updates=None):
+def train_late(nat, idx, branch_specs, n_updates=None, level1=None):
     """W2 late branches: for each (natural net index i, spec) the branch starts from nat.first95_state of net i (parameters and AdamW
     state at first95; train(..., save_first95=True)) and runs n_updates (AFTER) updates with the spec's regulariser on; level 1 =
-    held-out >= LEVEL1 at the branch's end. Only nets with first95 can branch (others raise)."""
+    held-out >= level1 (default LEVEL1) at the branch's end. Only nets with first95 can branch (others raise)."""
     n_updates = AFTER if n_updates is None else n_updates
     if nat.first95_state is None:
         raise ValueError("train_late needs train(..., save_first95=True)")
@@ -1056,7 +1059,7 @@ def train_late(nat, idx, branch_specs, n_updates=None):
                        v={k: v[it].clone() for k, v in nat.first95_state["opt"]["v"].items()},
                        step=np.asarray(nat.first95_state["opt"]["step"])[np.asarray(idx)].copy()))
     specs = [dict(full_spec(s), when="early") for s in branch_specs]       # the regulariser is on for every branch update
-    res = train(specs, fixed_steps=n_updates, init_state=st, coord_check=False)
+    res = train(specs, fixed_steps=n_updates, init_state=st, coord_check=False, level1=level1)
     for r, s in zip(res.rows, branch_specs):
         r["spec"]["when"] = full_spec(s)["when"]; r["name"] = net_name(s)
     for b, s in enumerate(branch_specs):
@@ -1128,9 +1131,10 @@ def _acc_grouped(nets, gr, v, x, y, lab, ops):
     """Accuracies [G, kmax] of columns v [G, kmax, W] on sets x, y, lab [G, kmax, N] (ops regrouped)."""
     G, k, N = x.shape; out = []
     for a, b in _chunks(G, k, N, nets.W):
-        z = _base(nets, gr.gi[a:b], x[a:b], y[a:b]) + v[a:b].unsqueeze(2)
+        gi = gr.gi[a:b]
+        z = _base(nets, gi, x[a:b], y[a:b]) + v[a:b].unsqueeze(2)
         o = None if ops is None else _slice_ops(ops, a, b)
-        out.append((_rest(nets, gr.gi[a:b], z, o).argmax(-1) == lab[a:b]).float().mean(-1))
+        out.append((_rest(nets, gi, z, o).argmax(-1) == lab[a:b]).float().mean(-1))
     return torch.cat(out)
 
 
@@ -1184,6 +1188,26 @@ def task_accuracy(nets, ws_of, tasks=None, cols=None, ops=None, ky_of=None, ho=T
     return a.reshape(B, len(tasks))
 
 
+def zero_shot(nets, ws_of, shifts_of, mode="circle", ky=1):
+    """Zero-shot accuracy of a net's own task input for shift values it was not trained on (W3 / W5): the column of shift c is the net's
+    task column with task index c (circle: Ac f(c); impose: t0 + A phi(c)); held-out pairs: mode 'circle' = splits[c mod 16][8:] of
+    world(ws) (ref c3_angle), mode 'impose' = the new task j's split[8:] for c = new[j] (ref impose2). Returns per net a dict c ->
+    dict(acc, modal shift (pred - x - y) mod 17, modal share). Usable as a snapshot callback (C-T3 hatching)."""
+    T = nets.task_cols(); out = []
+    for b in range(nets.B):
+        pre, new, _, splits = M.world(ws_of[b]); cs = list(shifts_of[b]); xs, ys = [], []
+        for c in cs:
+            sp = splits[c % len(splits)] if mode == "circle" else splits[NPRE + list(new).index(c)]
+            x, y = _pairs_of(sp, NSHOT, P * P); xs.append(x); ys.append(y)
+        cols = T[b][:, torch.as_tensor(cs, device=nets.device)].T
+        pr = predictions(nets, np.full(len(cs), b), cols, (np.stack(xs), np.stack(ys))); d_ = {}
+        for i, c in enumerate(cs):
+            e = (pr[i] - xs[i] - ky * ys[i]) % P; cnt = np.bincount(e, minlength=P)
+            d_[int(c)] = dict(acc=float((e == c % P).mean()), modal=int(cnt.argmax()), share=float(cnt.max() / len(e)))
+        out.append(d_)
+    return out
+
+
 # ====================================================================================================================== W7 search
 def anchored_param(nets, net_of, anchor_idx=None):
     """W7 anchored search: v = mean(C) + (C - mean(C)) alpha over the net's anchor columns C = task_cols()[:, :, anchor_idx]
@@ -1230,6 +1254,7 @@ def column_search(nets, net_of, shots, heldout=None, *, steps=None, lr=FT_LR, ev
       step [C] (its step), heldout {name: [C]} (held-out accuracy there), col [C, W] (the column there; keep_cols=True))}, v [C, W] and
       q [C, r] at the end (numpy)."""
     C = len(net_of); gr = _Groups(net_of); G, k = gr.G, gr.kmax
+    nets = nets.subset(gr.gi.cpu().numpy()); gr.gi = torch.arange(G, device=DEV)      # weights gathered once per search
     if heldout is None:
         heldout = {}
     elif isinstance(heldout, tuple):
@@ -1300,9 +1325,9 @@ def column_search(nets, net_of, shots, heldout=None, *, steps=None, lr=FT_LR, ev
         if pc is None:
             qq = q.detach().requires_grad_(True); v = col(qq); z = base_s + v.unsqueeze(2)
             if loss == "mse":
-                _, _, h = _rest(nets, gr.gi, z, og, want=True); L = ((h - tgt) ** 2).sum(-1).mean(-1)
+                _, _, h = _rest(nets, None, z, og, want=True); L = ((h - tgt) ** 2).sum(-1).mean(-1)
             else:
-                lg = _rest(nets, gr.gi, z, og)
+                lg = _rest(nets, None, z, og)
                 if loss == "ce":
                     L = Fn.cross_entropy(lg.reshape(-1, P), sl.reshape(-1), reduction="none").view(G, k, -1).mean(-1)
                 else:
@@ -1310,7 +1335,7 @@ def column_search(nets, net_of, shots, heldout=None, *, steps=None, lr=FT_LR, ev
             g = torch.autograd.grad((L * vmask).sum(), qq)[0]
         else:
             with torch.no_grad():
-                gv, _ = _pc_col_grad(nets, gr.gi, base_s + col(q).unsqueeze(2), Y, eta, pc.get("T", T_PC), pc.get("beta", BETA_PC), og)
+                gv, _ = _pc_col_grad(nets, None, base_s + col(q).unsqueeze(2), Y, eta, pc.get("T", T_PC), pc.get("beta", BETA_PC), og)
                 gv = gv * vmask.unsqueeze(-1)
                 g = gv if v0 is None else (Bm.transpose(-1, -2) @ gv.unsqueeze(-1)).squeeze(-1)
         with torch.no_grad():
@@ -1334,7 +1359,8 @@ def _pc_col_grad(nets, gi, z1, Y, eta, T, beta, ops=None, return_states=False):
     E2(tanh(W2 h1 + b2))) and in the feedforward init. Returns (dE/dv [G, k, W] = mean over inputs of -(J1^T e1) (1 - a1^2), the
     end / start ratio of the relaxation gradient norm [G, k]) or, with return_states, (h1, h2, ratio)."""
     G, k, N, W = z1.shape
-    W2, b2, W3, b3 = nets.p["W2"][gi], nets.p["b2"][gi], nets.p["W3"][gi], nets.p["b3"][gi]
+    take = (lambda t: t) if gi is None else (lambda t: t[gi])
+    W2, b2, W3, b3 = take(nets.p["W2"]), take(nets.p["b2"]), take(nets.p["W3"]), take(nets.p["b3"])
     mult = nets.mult; et = eta.view(G, k, 1, 1)
     a1 = torch.tanh(z1); p1 = a1 if ops is None else ops.on_h1(a1)
     h1 = p1.clone()
@@ -1410,10 +1436,11 @@ def pc_eta(nets, i, X, y, seed=0, beta=BETA_PC):
 
 
 # ====================================================================================================================== B2
-def b2_A(nets, ws_of, nshots=(8, 4), tasks=range(NNEW), steps=None, eval_at=None, pc_eta_of=None, ky_of=None):
+def b2_A(nets, ws_of, nshots=(8, 4), tasks=range(NNEW), steps=None, eval_at=None, pc_eta_of=None, ky_of=None, ops=None, keep=None):
     """Column-search part of pc_meta's B2 for every net: per new task j and nshot the slot column from zero, Adam lr 1e-2, held-out =
-    split positions 8-288; accuracies at eval_at (FT_EVAL). pc_eta_of: per-net eta_x for PC nets (PC local update). Returns dict
-    nshot -> array [B, n_tasks, len(eval_at)]."""
+    split positions 8-288; accuracies at eval_at (FT_EVAL). pc_eta_of: per-net eta_x for PC nets (PC local update). ops: per-net Ops
+    (leading dim B) on during the search ('B2 with the operation on', C-T4); keep: per-net bases [B, W, r] of a kept column subspace
+    (C-T1 task-code cuts: the column projected after every step). Returns dict nshot -> array [B, n_tasks, len(eval_at)]."""
     eval_at = FT_EVAL if eval_at is None else tuple(eval_at); steps = max(eval_at) if steps is None else steps
     tasks = list(tasks); out = {}
     for ns in nshots:
@@ -1422,7 +1449,9 @@ def b2_A(nets, ws_of, nshots=(8, 4), tasks=range(NNEW), steps=None, eval_at=None
             for j in tasks:
                 net_of.append(b); sets.append(new_task_sets(ws_of[b], j, ky=1 if ky_of is None else ky_of[b], nshot=ns))
         pc = None if pc_eta_of is None else dict(eta=np.asarray(pc_eta_of)[np.asarray(net_of)])
-        r = column_search(nets, np.array(net_of), stack_sets(sets, "shot"), stack_sets(sets, "ho"), steps=steps, eval_at=eval_at, pc=pc)
+        no = np.array(net_of); kp = None if keep is None else torch.as_tensor(keep, dtype=F32, device=DEV)[torch.as_tensor(no, device=DEV)]
+        r = column_search(nets, no, stack_sets(sets, "shot"), stack_sets(sets, "ho"), steps=steps, eval_at=eval_at, pc=pc,
+                          ops=None if ops is None else ops.expand(no), keep=kp)
         out[ns] = r["acc"]["ho"].reshape(nets.B, len(tasks), len(eval_at))
     return out
 
@@ -1467,18 +1496,51 @@ def fresh_F(arm, W, seeds, nshots=(8, 4), tasks=range(NNEW), steps=None, eval_at
     return out
 
 
-def b2(nets, ws_of, arm=None, nshots=(8, 4), steps=None, eval_at=None, pc_eta_of=None):
+def b2_all(nets, ws_of, tasks=range(NNEW), steps=None, eval_at=None, nshot=NSHOT):
+    """pc_meta.finetune mode 'all' for BP nets: per net and new task j a copy of the pretrained net trained with all weights (make_opt:
+    fresh AdamW, lr 1e-3, decay 1e-3 per update whatever the run's wd_scale) on the nshot shots for FT_STEPS updates; held-out accuracy
+    at FT_EVAL and the retention = pooled held-out accuracy on the pretraining tasks afterwards. Returns dict(acc [B, n_tasks,
+    len(eval_at)], retention [B, n_tasks])."""
+    eval_at = FT_EVAL if eval_at is None else tuple(eval_at); steps = max(eval_at) if steps is None else steps; tasks = list(tasks)
+    idx = np.repeat(np.arange(nets.B), len(tasks)); cp = nets.subset(idx)
+    sets = [new_task_sets(ws_of[b], j, nshot=nshot) for b in range(nets.B) for j in tasks]
+    sx, sy, sl = (torch.as_tensor(a, device=DEV) for a in stack_sets(sets, "shot")); hx, hy, hl = (torch.as_tensor(a, device=DEV) for a in stack_sets(sets, "ho"))
+    slot = torch.as_tensor([[s["slot"]] * nshot for s in sets], device=DEV)
+    Xs = cp.features(sx, sy, slot); Xh = cp.features(hx, hy, slot[:, :1].expand(-1, hx.shape[1]))
+    tss = [taskset_w1(ws_of[b]) for b in idx]; vx, vy, vt, vl = (torch.as_tensor(np.stack([ts[k] for ts in tss]), device=DEV) for k in ("vx", "vy", "vt", "vlab"))
+    opt = AdamWB(cp.p, LR, 1.0, hidden=cp.hidden(), W=cp.W, mup=cp.param == "mup"); accs = []
+    for s in range(1, steps + 1):
+        for kk in cp.p:
+            cp.p[kk].requires_grad_(True)
+        L = Fn.cross_entropy(cp.logits(Xs).reshape(-1, P), sl.reshape(-1), reduction="none").view(cp.B, -1).mean(1).sum()
+        gr_ = torch.autograd.grad(L, list(cp.p.values()))
+        for kk in cp.p:
+            cp.p[kk].requires_grad_(False)
+        opt.step(dict(zip(cp.p.keys(), gr_)))
+        if s in eval_at:
+            with torch.no_grad():
+                accs.append((cp.logits(Xh).argmax(-1) == hl).float().mean(1))
+    with torch.no_grad():
+        ret = (cp.logits(cp.features(vx, vy, vt)).argmax(-1) == vl).float().mean(1)
+    return dict(acc=torch.stack(accs, 1).cpu().numpy().reshape(nets.B, len(tasks), len(eval_at)), retention=ret.cpu().numpy().reshape(nets.B, len(tasks)))
+
+
+def b2(nets, ws_of, arm=None, nshots=(8, 4), steps=None, eval_at=None, pc_eta_of=None, with_all=False):
     """pc_meta's B2 per net: dict nshot -> dict(A [B, 4, len(eval_at)], F [B, 4, len(eval_at)], B2 [B]) with B2 = mean over the 4 new
-    tasks of (mean A - mean F). F comes from fresh_F (BP arms; for PC nets pass F from the round-1 job files)."""
+    tasks of (mean A - mean F). F comes from fresh_F (BP arms; for PC nets pass F from the round-1 job files). with_all (BP): also
+    'all8' = dict(acc, retention, B2_all = mean over tasks of mean acc - mean F(8)) as pc_meta's ft['all8']."""
     A = b2_A(nets, ws_of, nshots, steps=steps, eval_at=eval_at, pc_eta_of=pc_eta_of)
     arm = arm or ("bp_sp" if nets.param == "sp" else "bp_mup")
-    F = fresh_F(arm, nets.W, ws_of, nshots, steps=steps, eval_at=eval_at) if arm != "pc_mup" else None
+    F = fresh_F(arm, nets.W, ws_of, tuple(sorted(set(nshots) | ({8} if with_all else set()), reverse=True)), steps=steps, eval_at=eval_at) if arm != "pc_mup" else None
     out = {}
     for ns in nshots:
         o = dict(A=A[ns])
         if F is not None:
             o["F"] = F[ns]; o["B2"] = (A[ns].mean(-1) - F[ns].mean(-1)).mean(-1)
         out[ns] = o
+    if with_all:
+        al = b2_all(nets, ws_of, steps=steps, eval_at=eval_at)
+        out["all8"] = dict(acc=al["acc"], retention=al["retention"], B2_all=(al["acc"].mean(-1) - F[8].mean(-1)).mean(-1) if F is not None else None)
     return out
 
 
@@ -1499,7 +1561,20 @@ def _fisher_perm(Hc, labs, K):
 
 
 @torch.no_grad()
-def delta_stats(nets, seeds, pres, task_idx=None, nperm=50):
+def delta_stats(nets, seeds, pres, task_idx=None, nperm=50, max_bytes=int(2e9)):
+    """Vectorised pc_meta.delta_stats in chunks of nets (activations of a chunk in float64 below max_bytes); see _delta_stats."""
+    per = max(1, int(max_bytes // (2 * NPRE * P * P * nets.W * 8 * 3)))
+    if nets.B <= per:
+        return _delta_stats(nets, seeds, pres, task_idx, nperm)
+    out = []
+    for a in range(0, nets.B, per):
+        ii = list(range(a, min(nets.B, a + per)))
+        out += _delta_stats(nets.subset(ii), [seeds[i] for i in ii], [pres[i] for i in ii], task_idx, nperm)
+    return out
+
+
+@torch.no_grad()
+def _delta_stats(nets, seeds, pres, task_idx=None, nperm=50):
     """Vectorised pc_meta.delta_stats for every net (W1 'toy delta'): h1, h2 over the 12 pretraining tasks x all 289 pairs; F = tr(S_b)
     / tr(S_w) (float64), floor = mean over 50 label permutations, delta = F - floor; the same after subtracting each pair's mean over
     tasks (ctrl); ring = Spearman correlation of centroid distances with the cyclic shift distance. Permutation stream exactly
@@ -1534,6 +1609,25 @@ def delta_stats(nets, seeds, pres, task_idx=None, nperm=50):
                 res[b][name] = dict(F=F_, floor=float(fl[ii]), delta=F_ - float(fl[ii]), F_ctrl=Fc_, floor_ctrl=float(flc[ii]),
                                     delta_ctrl=Fc_ - float(flc[ii]), ring=ring)
     return res
+
+
+@torch.no_grad()
+def mediators(nets, ws_of, sat=0.95):
+    """AT3 mediators per net (W1 one-hot nets): pooled held-out accuracy on the pretraining tasks, mean L2 norm of the 12 task columns,
+    saturation share = fraction of |h1| > 0.95 over all 12 x 289 inputs and units. Returns dict of numpy [B]."""
+    h1, _, _, _, _ = task_states(nets, ws_of, which="all")
+    ta = task_accuracy(nets, ws_of)
+    return dict(heldout=ta.mean(1), task_col_norm=nets.task_cols()[:, :, :NPRE].norm(dim=1).mean(1).cpu().numpy(),
+                saturation=(h1.abs() > sat).float().mean((1, 2, 3)).cpu().numpy())
+
+
+def complement_basis(Q):
+    """Orthonormal basis of the orthogonal complement of span(Q) (Q [..., W, r] orthonormal): [..., W, W - r]. Keeping a subspace S in an
+    activation (C-T1: z1 or h2 on its top-r PCs) is the removal of span(complement_basis(Q_S)) with Ops (mu = the activation mean)."""
+    Q = torch.as_tensor(Q).to(F64); W, r = Q.shape[-2], Q.shape[-1]
+    Pm = torch.eye(W, dtype=F64, device=Q.device) - Q @ Q.transpose(-1, -2)
+    U, S, _ = torch.linalg.svd(Pm)
+    return U[..., :W - r].to(F32)
 
 
 # ====================================================================================================================== W6
@@ -1803,12 +1897,13 @@ def lambda_targets(ws):
     return out
 
 
-def lambda_line(nets, ws_of, pre_of=None, anchor_idx=None, ky_of=None, nperm=10, nulls=True):
+def lambda_line(nets, ws_of, pre_of=None, anchor_idx=None, ky_of=None, nperm=10, nulls=True, targets_of=None):
     """AT1 Lambda (primary): for each of the 5 unseen shifts c_new every recipe triple gives v = C_a + C_b - C_c (no shots, no learning);
     held-out accuracy averaged over triples, then shifts. Nulls: 'wrong' = every triple aimed at a different shift (target != c_new)
     evaluated on c_new; 'perm' = recipes built with permuted anchor labels (nperm permutations of the anchors' shift labels from
     default_rng(4000 + ws)), evaluated on c_new. pre_of / anchor_idx: per-net anchor shifts and task indices (default world pre and
-    slots 0-11). Returns list per net: dict(Lambda, per_shift, wrong, perm)."""
+    slots 0-11); targets_of: per-net list of (c, x, y) target sets (default lambda_targets(ws); e.g. without the spare shift for a net
+    that pretrained on it). Returns list per net: dict(Lambda, per_shift, wrong, perm)."""
     out = []; T = nets.task_cols()
     for b in range(nets.B):
         ws = ws_of[b]; pre = list(M.world(ws)[0]) if pre_of is None else list(pre_of[b]); n = len(pre)
@@ -1822,7 +1917,7 @@ def lambda_line(nets, ws_of, pre_of=None, anchor_idx=None, ky_of=None, nperm=10,
             g = np.random.default_rng(4000 + ws); perms = [g.permutation(n) for _ in range(nperm)]
         ptarget = [aim(np.asarray(pre)[pm]) for pm in perms]
         per, wrong, perm = [], [], []
-        for cn, x, y in lambda_targets(ws):
+        for cn, x, y in (lambda_targets(ws) if targets_of is None else targets_of[b]):
             lab_ = _label(x, y, cn, ky); groups = [("main", np.nonzero(target == cn)[0])]
             if nulls:
                 groups += [("wrong", np.nonzero(target != cn)[0])] + [("perm", np.nonzero(pt == cn)[0]) for pt in ptarget]
@@ -1922,12 +2017,13 @@ def proj_linspan(C, v):
     return C @ a
 
 
-def f_line(netsA, iA, wsA, vfreeA, accfreeA, netsB=None, iB=None, nshuf=10, loo=True):
+def f_line(netsA, iA, wsA, vfreeA, accfreeA, netsB=None, iB=None, nshuf=10, loo=True, nshuf_loo=10):
     """AT1 F (forcing). Phi = acc_A(projection of A's free B2 columns on the linear span of its 12 anchor columns) / acc_A(free) (mean
     over the 4 new tasks of the projected accuracy, divided by the mean free accuracy); with a receiver B: the free-column T1 gain
     (t1_map with lambda by leave-one-anchor-out column error, minus the mean of nshuf shuffled maps from default_rng(123 + ws), identity
     excluded) and the LOO-anchor transfer (each anchor k carried by T1 fitted on the other 11 into B's slot k, on task k's 145 held-out
-    pairs; nshuf shuffled maps default_rng(k 1000 + q)). vfreeA [4, W] (numpy), accfreeA [4] (the free columns' accuracies)."""
+    pairs; nshuf_loo shuffled maps default_rng(k 1000 + q)). vfreeA [4, W] (numpy), accfreeA [4] (the free columns' accuracies). A and
+    B are nets of the same world (their anchors are the same 12 shifts). Phi uses the plan's linear span (the refs' affine hull differs)."""
     pre, new, pairs, splits = M.world(wsA)
     CA = netsA.task_cols()[iA][:, :NPRE].double().cpu().numpy(); sets = [new_task_sets(wsA, j) for j in range(NNEW)]
     proj = np.stack([proj_linspan(CA, np.asarray(v, np.float64)) for v in vfreeA])
@@ -1948,10 +2044,10 @@ def f_line(netsA, iA, wsA, vfreeA, accfreeA, netsB=None, iB=None, nshuf=10, loo=
         for k in range(NPRE):
             keep = [i for i in range(NPRE) if i != k]
             c_ = [t1_map(CA[:, keep], CB[:, keep], CA[:, k], r1)[0]]
-            c_ += [t1_map(CA[:, keep], CB[:, keep][:, np.random.default_rng(k * 1000 + q).permutation(NPRE - 1)], CA[:, k], r1)[0] for q in range(nshuf)]
+            c_ += [t1_map(CA[:, keep], CB[:, keep][:, np.random.default_rng(k * 1000 + q).permutation(NPRE - 1)], CA[:, k], r1)[0] for q in range(nshuf_loo)]
             x, y = _pairs_of(splits[k], 144, P * P); cands += c_
             xs += [x] * len(c_); ys += [y] * len(c_); ls += [_label(x, y, pre[k])] * len(c_)
-        a = cols_accuracy(netsB, np.full(len(cands), iB), np.stack(cands), (np.stack(xs), np.stack(ys), np.stack(ls))).reshape(NPRE, 1 + nshuf)
+        a = cols_accuracy(netsB, np.full(len(cands), iB), np.stack(cands), (np.stack(xs), np.stack(ys), np.stack(ls))).reshape(NPRE, 1 + nshuf_loo)
         out.update(loo=float(a[:, 0].mean()), loo_shuf=float(a[:, 1:].mean()))
     return out
 
@@ -2473,6 +2569,11 @@ def selftest(work=None):
     ck("B2 (A, F, B2) = pc_meta job's finetune", eA <= 1 / 281 + 1e-9 and eF <= 1 / 281 + 1e-9 and abs(bb[8]["B2"][0] - jm["finetune"]["8"]["B2"]) <= 1 / 281,
        f"max |dA| {eA:.4f} |dF| {eF:.4f}", mine=[float(bb[8]["B2"][0]), float(bb[4]["B2"][0])], ref=[jm["finetune"]["8"]["B2"], jm["finetune"]["4"]["B2"]], max_abs_diff=max(eA, eF))
 
+    ba = b2_all(rm.nets, [0], steps=20, eval_at=ftl)
+    eAll = float(np.abs(ba["acc"][0] - np.array(jm["finetune"]["all8"]["acc"])).max()); eR = float(np.abs(ba["retention"][0] - np.array(jm["finetune"]["all8"]["retention"])).max())
+    ck("B2_all and retention = pc_meta job's finetune all8", eAll <= 1 / 281 + 1e-9 and eR <= 1 / 1740 + 1e-9, f"max |d acc| {eAll:.4f} |d retention| {eR:.5f}",
+       mine=ba["retention"][0], ref=jm["finetune"]["all8"]["retention"], max_abs_diff=max(eAll, eR))
+
     # ---- (4) W0: batched column search and fresh nets against pc_meta.finetune (300 steps, FT_EVAL of the plan); delta_stats
     ev = (10, 20, 40, 80, 160, 300)
     nb = train([mup(ws=0), mup(ws=1)], fixed_steps=700, coord_check=False).nets; ns_sp = train([mup(ws=2, arm="bp_sp")], fixed_steps=700, coord_check=False).nets
@@ -2601,6 +2702,33 @@ def selftest(work=None):
             v3r, v4r = zip(*[nsl["t34_transfer"](A_, B_, 0, S_, j) for j in range(NNEW)])
             e3, e4 = _rel(out["v3"], np.stack(v3r)), _rel(out["v4"], np.stack(v4r))
             ck("T3 / T4 columns = rgi_lib.t34_transfer", e3 <= 1e-3 and e4 <= 1e-3, f"rel v3 {e3:.1e} v4 {e4:.1e}; T4 acc {np.round(out['t4_acc'], 3).tolist()}", max_rel_diff=[e3, e4])
+            nspt = ref_defs("rgi_lib", ["pair_transfer", "span_transfer", "learn_alpha"], dict(base_z1=ns["base_z1"], acc_cols=ns["acc_cols"], t1_choose_r=ns["t1_choose_r"],
+                            t1_map=ns["t1_map"], t2_choose_r=ref_defs("rgi_pilot", ["t2_choose_r", "t2_map", "ridge_coef"])["t2_choose_r"],
+                            t2_map=ref_defs("rgi_pilot", ["t2_map", "ridge_coef"])["t2_map"]))
+            accfree = cols_accuracy(net, no, vA, stack_sets([new_task_sets(0, j) for j in range(NNEW)], "ho"))
+            fl = f_line(net, 0, 0, vA, accfree, nb2, 0, nshuf=30, nshuf_loo=10)
+            Aall = lambda nn: np.concatenate([nn.p["W1"][0][:, :2 * P + NPRE].double().cpu().numpy(), nn.p["b1"][0].double().cpu().numpy()[:, None]], 1)
+            A2 = dict(m=net.to_mlp(0), C=g["C"], Aall=Aall(net), v=list(vA.astype(np.float64)), W=64, self=list(accfree))
+            B2_ = dict(m=nb2.to_mlp(0), C=nb2.task_cols()[0][:, :NPRE].double().cpu().numpy(), Aall=Aall(nb2), W=64, self=[0.0] * NNEW)
+            pt = nspt["pair_transfer"](A2, B2_, 0, nperm=30, nloo_perm=10)
+            keys = [("t1", "t1"), ("t1_shuf", "shuf"), ("loo", "loo"), ("loo_shuf", "loo_shuf")]
+            dmax = max(abs(fl[a] - pt[b]) for a, b in keys)
+            ck("F line (T1 gain, LOO-anchor) = rgi_lib.pair_transfer", dmax <= 1 / 281 + 1e-9 and fl["r1"] == pt["r1"], f"Phi {fl['Phi']:.3f}, T1 gain {fl['t1_gain']:+.3f}",
+               mine={a: fl[a] for a, _ in keys}, ref={b: pt[b] for _, b in keys}, max_abs_diff=dmax)
+            al4 = {j: al[j].astype(np.float64) for j in range(NNEW)}; A2["alpha"] = al4
+            sp = nspt["span_transfer"](A2, B2_, 0, nperm=30); rng_ = np.random.default_rng(321); acc_b, acc_s = [], []
+            for j in range(NNEW):
+                pm = [rng_.permutation(NPRE) for _ in range(30)]
+                a_, ap_ = carry_alpha(nb2, [0], al[j][None], [new_task_sets(0, j)], perms=pm); acc_b.append(a_[0]); acc_s.append(ap_[0].mean())
+            dmax = max(abs(np.mean(acc_b) - sp["spanB"]), abs(np.mean(acc_s) - sp["span_shuf"]))
+            ck("S line carriage (alpha into B, permuted correspondences) = rgi_lib.span_transfer", dmax <= 1 / 281 + 1e-9,
+               mine=[float(np.mean(acc_b)), float(np.mean(acc_s))], ref=[sp["spanB"], sp["span_shuf"]], max_abs_diff=dmax)
+            sl_ = s_line(net, 0, al, nb2, 0, [new_task_sets(0, j) for j in range(NNEW)], s_perms(0))
+            rt = round_trip(net, 0, nb2, 0, al, [new_task_sets(0, j) for j in range(NNEW)])
+            po = pooling(Nets.cat([net.subset([0]), nb2]), [0, 1], np.stack([al, learn_alpha(nb2, no, [new_task_sets(0, j) for j in range(NNEW)])[0]]), [new_task_sets(0, j) for j in range(NNEW)])
+            wst = warm_start(nb2, 0, al, [new_task_sets(0, j) for j in range(NNEW)])
+            ck("S-gain, round trip, pooling, warm start run", all(np.isfinite(v) for v in (sl_["S_gain"], rt["RG"], po["gain"], wst[10], wst[40])),
+               f"S-gain {sl_['S_gain']:+.3f} RG {rt['RG']:+.3f} pooling {po['gain']:+.3f} warm {wst}")
 
     # ---- (7) C-T0 / C-T6 ports
     nsc = ref_defs("c1_structure", ["orth", "fourier_cols", "share_by_k", "ring_test", "loo_ring", "spec_rows", "ridge_probe", "mlp_probe"])
@@ -2633,7 +2761,7 @@ def selftest(work=None):
             m_s, info = nss["train"](0, 0, "x_late", -0.01, W=64); m_n, _ = nss["train"](0, 0, "nat", 0.0, W=64)
         nat = train([mup(ws=0)], max_steps=500, after=100, level1=0.3, save_first95=True, coord_check=False)
         lt = train([mup(ws=0, gamma=-0.01, reg="sham", when="late")], max_steps=500, after=100, level1=0.3, coord_check=False)
-        br = train_late(nat, [0], [mup(ws=0, gamma=-0.01, reg="sham", when="late")], n_updates=100)
+        br = train_late(nat, [0], [mup(ws=0, gamma=-0.01, reg="sham", when="late")], n_updates=100, level1=0.3)
     if nss:
         e = _state_rel(lt.nets, 0, m_s.state_dict()); pdm, pdr = param_distance(lt.nets, 0, nat.nets, 0), nss["pdist"](m_s, m_n)
         ck("late sham regulariser = crit/sham.py train(x_late); param_distance = sham.pdist", info["first"] == lt.rows[0]["first95"] and e <= 1e-4 and abs(pdm - pdr) <= 1e-4,
@@ -2648,7 +2776,8 @@ def selftest(work=None):
     capped = train([mup(ws=1)], fixed_steps=60, task_basis=u, coord_check=False); n0 = Nets.from_specs([mup(ws=1)])
     dT = (capped.nets.task_cols()[0][:, :NPRE] - n0.task_cols()[0][:, :NPRE]).double(); dc = (dT - dT.mean(1, keepdim=True)).reshape(-1)
     ub = u.reshape(-1).double().to(dc.device)
-    ck("C-T6 cap: the centred task-column change lies in the basis", float((dc - ub * (ub @ dc)).norm() / dc.norm()) < 1e-5)
+    res_ = float((dc - ub * (ub @ dc)).norm() / dc.norm())          # float32 storage of the columns: about 4e-5 after 60 updates; uncapped about 1
+    ck("C-T6 cap: the centred task-column change lies in the basis", res_ < 1e-3, f"residual share {res_:.1e}")
 
     # ---- (10) W6, W8, OD-C2, OD-C16
     w6 = self_train(nb.subset([0]), [0], taus=(0.1, 2.0), rounds=2, tasks=[0], steps=20)
@@ -2656,7 +2785,7 @@ def selftest(work=None):
     ck("W6 self-training loop runs and is deterministic", w6["A"].shape == (4, 3) and np.array_equal(w6["A"], w6b["A"]) and len(w6_summary(w6)) == 2, f"A {np.round(w6['A'], 3).tolist()}")
     _, h2_, x_, y_, sh_ = task_states(nb, [0, 1])
     Q_, mu_ = class_mean_eraser(h2_.reshape(2, -1, 64), torch.arange(NPRE).repeat_interleave(P * P), NPRE)
-    He = Ops(h2_Q=Q_, h2_mu=mu_).on_h2(h2_.reshape(2, 1, -1, 64))[:, 0].reshape(2, NPRE, P * P, 64)
+    He = Ops(h2_Q=Q_, h2_mu=mu_).view_per_net(2).on_h2(h2_.reshape(2, 1, -1, 64))[:, 0].reshape(2, NPRE, P * P, 64)
     spread = float((He.mean(2) - He.mean((1, 2), keepdim=True)[:, :, 0]).abs().max())
     ck("class-mean eraser: all class means equal after the erasure", spread < 1e-5, f"max |class mean - mean| {spread:.1e}")
     sp0 = sum_probe(nb, [0, 1]); ref_ = z1_ref(nb); Ex_ = nb.x_cols(); Exc = Ex_ - Ex_.mean(-1, keepdim=True)
@@ -2665,11 +2794,52 @@ def selftest(work=None):
        f"base {np.round(sp0, 3).tolist()}, x-span block {np.round(spx, 3).tolist()}")
     pr = task_answer_probes(task_answer_features(nb, [0, 1]), mlp=True)
     ck("task-identity / pooled-answer probes run (linear, MLP)", all(np.all((v >= 0) & (v <= 1)) for v in pr.values()), {k: np.round(v, 2).tolist() for k, v in pr.items()})
-    dm = damage_match(0.37, lambda r_, lam: min(1.0, 0.1 * r_ * lam), 1, 64)
-    ck("OD-C2 damage_match (ladder; bisection at r0)", dm["matched"] and dm["r"] == 4 and abs(dm["drop"] - 0.37) <= 0.02 and damage_match(0.05, lambda r_, lam: 0.2 * r_ * lam, 1, 64)["note"] == "partial removal at r0", dm["ladder"])
+    f_ = lambda r_, lam: min(1.0, 0.1 * r_ * lam)
+    dm, dm2, dm3 = damage_match(0.39, f_, 1, 64), damage_match(0.37, f_, 1, 64), damage_match(0.05, lambda r_, lam: 0.2 * r_ * lam, 1, 64)
+    ok = dm["matched"] and dm["r"] == 4 and not dm2["matched"] and dm3["note"] == "partial removal at r0" and dm3["matched"] and dm3["r"] == 1
+    ck("OD-C2 damage_match (ladder; overshoot at r > r0 unmatched; bisection at r0)", ok, f"{dm['ladder']}; r0 bisection lam {dm3['lam']:.3f}")
     e_ = np.zeros((4, 10), int); xx = np.zeros((4, 10), int)
     perm_map = modal_shift_map(e_ + np.array([[1], [2], [3], [4]]), xx, xx, [0, 1, 2, 3]); conc = modal_shift_map(e_ + 5, xx, xx, [0, 1, 2, 3])
     ck("OD-C16 modal-shift map labels", perm_map["label"] == "consistent permutation" and conc["label"] == "concentrated")
+
+    # ---- (10b) further API checks: task accuracy, chain relaxation, PC alpha / T4 into a PC receiver, coordinate searches, helpers
+    ta = task_accuracy(nb, [0, 1]); ref_ta = []
+    for b, ws in enumerate((0, 1)):
+        pre, _, pairs, splits = M.world(ws); m = nb.to_mlp(b).to(DEV)
+        ref_ta.append([PCC.accuracy(m, *M.data(pre[k], k, pairs[splits[k][144:]])) for k in range(NPRE)])
+    ck("task_accuracy = pc_common.accuracy per old task", np.abs(ta - np.array(ref_ta)).max() <= 1 / 145 + 1e-9, mine=ta.mean(1), ref=np.mean(ref_ta, 1), max_abs_diff=float(np.abs(ta - np.array(ref_ta)).max()))
+    pre, _, pairs, splits = M.world(0); k_ = 3; xk, yk = _pairs_of(splits[k_], 0, 144)
+    hc1, hc2, _ = pc_relax(pcn, [0], pcn.task_cols()[0][:, k_][None], (xk, yk, _label(xk, yk, pre[k_])), eta)
+    with _BetaCtx(BETA_PC, T_PC):
+        Xk, yk_ = M.data(pre[k_], k_, pairs[splits[k_][:144]]); r1_, r2_, _, _ = M.pc_relax(pcn.to_mlp(0).to(DEV), Xk, yk_, eta, T_PC)
+    e = max(_rel(hc1[0], r1_), _rel(hc2[0], r2_))
+    ck("chain pc_relax (task column on its pairs) = pc_meta.pc_relax on the task's batch (1e-5)", e <= 1e-5, f"rel {e:.1e}", max_rel_diff=e)
+    sets0 = [new_task_sets(0, j) for j in range(NNEW)]; no1 = np.zeros(NNEW, np.int64)
+    alp, accp, _ = learn_alpha(pcn, no1, sets0, steps=20, pc_eta=np.full(NNEW, eta))
+    vA0 = column_search(nb, no1, stack_sets(sets0, "shot"), steps=20)["v"]
+    t4p = t3_t4(nb, 0, vA0, pcn, 0, sets0, steps=20, do_t3=False, pcB_eta=np.full(NNEW, eta))
+    ck("PC anchored search and T4 into a PC receiver (soft target) run", np.all(np.isfinite(alp)) and np.all(np.isfinite(t4p["v4"])), f"alpha acc {np.round(accp, 3).tolist()} T4 acc {np.round(t4p['t4_acc'], 3).tolist()}")
+    bn = train([dict(kind="bneck", W=64, ws=0, dt=4)], fixed_steps=200, coord_check=False).nets
+    rbn = column_search(bn, no1, stack_sets(sets0, "shot"), stack_sets(sets0, "ho"), steps=20, eval_at=(20,), param=coords_param(bn, no1, "bneck"))
+    vb = torch.as_tensor(rbn["v"], device=DEV); U_ = bn.p["U"][0]; inU = float(((U_ @ torch.linalg.lstsq(U_, vb.T).solution).T - vb).norm() / vb.norm())
+    im = train([dict(kind="impose", W=64, ws=0, code="ring", ck=2)], fixed_steps=200, coord_check=False).nets
+    rim = column_search(im, no1, stack_sets(sets0, "shot"), stack_sets(sets0, "ho"), steps=20, eval_at=(20,), param=coords_param(im, no1, "impose"), lr=np.array([1e-2, 1e-1, 1e-2, 1e-1]))
+    ck("coordinate searches (bneck: v in span U; impose code space with per-chain lr) run", inU < 1e-4 and rim["q"].shape == (NNEW, 4), f"bneck acc {np.round(rbn['acc']['ho'][:, 0], 3).tolist()}")
+    Xs_ = np.cumsum(np.random.default_rng(9).standard_normal((30, 20)), 0); Bs = trajectory_basis(Xs_, 3); nl = shuffled_increment_nulls(Xs_, 3, np.random.default_rng(1))
+    Qs = random_in_span(torch.linalg.qr(torch.randn(64, 11, dtype=F64, generator=torch.Generator().manual_seed(4)))[0].float(), 2, 5, 3)
+    ck("trajectory_basis / shuffled_increment_nulls / random_in_span shapes", Bs.shape == (20, 3) and len(nl) == 3 and Qs.shape == (5, 64, 2))
+    T0 = nb.task_cols()[:, :, :NPRE]; edit = T0.mean(-1, keepdim=True).expand_as(T0).transpose(1, 2)
+    acc_e = task_accuracy(nb, [0, 1], cols=edit); pr_ = predictions(nb, np.zeros(NPRE, np.int64), edit[0], (np.stack([_pairs_of(M.world(0)[3][k], 144, P * P)[0] for k in range(NPRE)]), np.stack([_pairs_of(M.world(0)[3][k], 144, P * P)[1] for k in range(NPRE)])))
+    xs_ = np.stack([_pairs_of(M.world(0)[3][k], 144, P * P)[0] for k in range(NPRE)]); ys_ = np.stack([_pairs_of(M.world(0)[3][k], 144, P * P)[1] for k in range(NPRE)])
+    msm = modal_shift_map(pr_, xs_, ys_, M.world(0)[0])
+    ck("edit (task columns collapsed to their mean) and the modal-shift map run", acc_e.mean() < ta.mean() and abs(msm["accuracy"] - acc_e[0].mean()) < 1e-6, f"edit acc {np.round(acc_e.mean(1), 3).tolist()} map {msm['label']}")
+
+    md = mediators(nb, [0, 1]); Qc = random_subspaces(64, 5, 1, 2)[0]; Qp = complement_basis(Qc)
+    okc = float((Qc.T @ Qp).abs().max()) < 1e-5 and float((Qp.T @ Qp - torch.eye(59)).abs().max()) < 1e-5
+    A_op = b2_A(nb, [0, 1], nshots=(8,), steps=20, eval_at=(20,), ops=block_ops(Qx, ref_)); A_no = b2_A(nb, [0, 1], nshots=(8,), steps=20, eval_at=(20,))
+    A_kp = b2_A(nb, [0, 1], nshots=(8,), steps=20, eval_at=(20,), keep=torch.stack([Qc, Qc]))
+    ck("mediators, complement_basis, B2 with an operation on and with a kept column subspace", okc and np.all(md["saturation"] >= 0) and A_op[8].mean() < A_no[8].mean(),
+       f"saturation {np.round(md['saturation'], 3).tolist()} col norm {np.round(md['task_col_norm'], 2).tolist()} A {A_no[8].mean():.3f} x-block {A_op[8].mean():.3f} kept-5 {A_kp[8].mean():.3f}")
 
     # ---- (11) I/O
     paths = save_nets(nb, [0, 1], os.path.join(work, "saved")); ld = load_nets(paths)
@@ -2732,7 +2902,7 @@ def _check_pc_autograd(nets, eta, T=5):
 def _check_worlds(ck, steps=30):
     """Training in the other worlds (W3 circle, W5 imposed codes, bottleneck, W4 two families) against the reference scripts' nets and
     optimiser groups, 30 updates."""
-    ns = ref_defs("c3_angle", ["Net", "four"], {"W": 64})
+    ns = ref_defs("c3_angle", ["Net", "four", "acc"], {"W": 64})
     if ns:
         ws = 1; pre, new, pairs, splits = M.world(ws); fx_ = ns["four"](1); torch.manual_seed(ws); net = ns["Net"](fx_, fx_)
         opt = torch.optim.AdamW(net.groups(M.LR), lr=M.LR, betas=M.BETAS); sp = lambda c: splits[c % len(splits)]
@@ -2742,7 +2912,10 @@ def _check_worlds(ck, steps=30):
         r = train([dict(kind="circle", W=64, ws=ws)], fixed_steps=steps, coord_check=False).nets
         e = max(_rel(r.p["W1"][0], torch.cat([net.Ax, net.Ay, net.Ac], 1)), _rel(r.p["W2"][0], net.l2.weight), _rel(r.p["W3"][0], net.l3.weight))
         ck("W3 circle training = c3_angle (30 updates)", e <= 1e-4, f"rel {e:.1e}")
-    ns = ref_defs("impose2", ["Net", "code_table"])
+        unt = w3_shifts(ws)[1]; zs = zero_shot(r, [ws], [unt])[0]; zr = {c: ns["acc"](net, torch.as_tensor(pairs[sp(c)[8:]]), c) for c in unt}
+        dz = max(abs(zs[c]["acc"] - zr[c]) for c in unt)
+        ck("W3 zero-shot accuracy on the untrained shifts = c3_angle's acc", dz <= 1 / 281 + 1e-9, mine=[zs[c]["acc"] for c in unt], ref=[zr[c] for c in unt], max_abs_diff=dz)
+    ns = ref_defs("impose2", ["Net", "code_table", "acc"])
     if ns:
         ws = 2; pre, new, pairs, splits = M.world(ws); torch.manual_seed(ws); net = ns["Net"](64, ns["code_table"]("ring", 2, ws))
         opt = torch.optim.AdamW(net.groups(M.LR), lr=M.LR, betas=M.BETAS)
@@ -2752,6 +2925,10 @@ def _check_worlds(ck, steps=30):
         r = train([dict(kind="impose", W=64, ws=ws, code="ring", ck=2)], fixed_steps=steps, coord_check=False).nets
         e = max(_rel(r.p["W1"][0], torch.cat([net.Ex, net.A, net.t0[:, None]], 1)), _rel(r.p["W2"][0], net.l2.weight), _rel(r.p["W3"][0], net.l3.weight))
         ck("W5 imposed-code training = impose2 (30 updates)", e <= 1e-4, f"rel {e:.1e}")
+        zs = zero_shot(r, [ws], [list(new)], mode="impose")[0]
+        zr = {c: ns["acc"](net, torch.as_tensor(pairs[splits[NPRE + j][8:]]), c, net.task(torch.tensor(c))) for j, c in enumerate(new)}
+        dz = max(abs(zs[c]["acc"] - zr[c]) for c in new)
+        ck("W5 zero-shot accuracy t0 + A phi(c_new) = impose2's acc", dz <= 1 / 281 + 1e-9, mine=[zs[c]["acc"] for c in new], ref=[zr[c] for c in new], max_abs_diff=dz)
     ns = ref_defs("rgi_bneck", ["MLPB"])
     if ns:
         ws = 0; X, y, _, _, lab, _ = _r1_batch(ws); torch.manual_seed(ws); net = ns["MLPB"](64, 4).to(DEV); opt = M.make_opt(net)

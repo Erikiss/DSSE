@@ -62,6 +62,9 @@ TEXT = {
                "zusammengeführten Manifest.", (7.9, 10.9, 14.8)),
 }
 NB_NAME = {s: "runde2_" + s[3:] + ".ipynb" for s in R.SESSIONS}        # r2_q1 -> runde2_q1.ipynb
+_LIB = {"stimuli": "r2_stimuli.py check", "rk": "r2_rk.py selftest", "axes": "r2_axes.py selftest", "gen14": "r2_gen_loop.py selftest an Block 14",
+        "gen8": "an Block 8", "toy": "r2_toy_common.py selftest mit den W0-Äquivalenztests und dem Referenzvergleich"}
+LIB_TEXT = {s: ", ".join(_LIB[t] for t in R.LIB_SELFTESTS.get(s, ())) or "keine" for s in R.SESSIONS}
 
 
 def de(x):
@@ -139,9 +142,10 @@ Fortsetzungssitzung (`{s}b`) weiter, fertige Schritte werden übersprungen. Eben
 
 {accounts}{final}
 
-**Selbsttest.** Vor dem Hauptlauf läuft die Sitzung einmal im MOCK/QUICK-Modus (winziges Zufallsmodell, Kurzläufe) auf einem
-Schein-`dsse_runs`, das die Runde-1-Skripte erzeugen – nur Code, keine Ergebnisse; einmal je Code-Stand. Er kostet einige Minuten der
-Zeitgrenze: am besten das Notebook zuerst einmal mit `NUR_SELBSTTEST = True` ausführen; der echte Lauf überspringt ihn dann.
+**Selbsttest.** Vor dem Hauptlauf laufen die eigenen Tests der Skripte ({LIB_TEXT[s]}) und dann die ganze Sitzung im
+MOCK/QUICK-Modus (winziges Zufallsmodell, Kurzläufe) auf einem Schein-`dsse_runs`, das die Runde-1-Skripte erzeugen – nur Code, keine
+Ergebnisse; einmal je Code-Stand. Er kostet einige Minuten der Zeitgrenze: am besten das Notebook zuerst einmal mit
+`NUR_SELBSTTEST = True` ausführen; der echte Lauf überspringt ihn dann.
 
 **Ergebnisse** in Google Drive unter `dsse_runs/{s}` (Manifest `manifest_{s}.json`, `session_done.json` mit den Schrittzeiten).
 
@@ -264,29 +268,29 @@ for src, dst in SUMS["inputs"].items():
 json.dump(VERIFIED, open(f"{ROOT}/models/verified.json", "w"), indent=1)
 print("Modelle und Eingaben geprüft:", ", ".join(VERIFIED) or "keine Modelle nötig")
 '''
-    selftest = '''# Selbsttest (nur Code): die Sitzung im MOCK/QUICK-Modus über denselben Runner, auf einem Schein-dsse_runs aus rk_loop.py MOCK=1
-# und pc_meta.py QUICK=1 (keine Runde-1-Ausgabe); einmal je Code-Stand (die Marke liegt in dsse_runs/<Sitzung>)
-MARKE = f"{WORK}/selftest_ok_{COMMIT[:12]}.json"
+    head = ("# Selbsttest (nur Code), einmal je Code-Stand (die Marke liegt danach in dsse_runs/<Sitzung>). Der Runner baut ein Schein-dsse_runs\n"
+            "# aus rk_loop.py MOCK=1 und pc_meta.py QUICK=1 (keine Runde-1-Ausgabe), führt die eigenen Tests der Skripte aus\n"
+            f"# ({LIB_TEXT[s]})\n"
+            "# und dann die ganze Sitzung im MOCK/QUICK-Modus über denselben Code wie der Hauptlauf.\n")
+    selftest = head + '''MARKE = f"{WORK}/selftest_ok_{COMMIT[:12]}.json"
 if not SELBSTTEST:
     print("Selbsttest ausgelassen (SELBSTTEST = False).")
 elif os.path.exists(MARKE):
     print("Selbsttest für diesen Code-Stand schon bestanden:", json.load(open(MARKE)))
 else:
     t = time.time(); ST = "/content/r2_selftest"; shutil.rmtree(ST, ignore_errors=True); os.makedirs(ST)
-    env = dict(os.environ, RUN_DEVICE="cuda", PYTHONUNBUFFERED="1")
-    def selbsttest(args, log):
-        with open(log, "w") as lg:
-            p = subprocess.Popen([sys.executable, "-u"] + args, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-            for line in p.stdout:
-                lg.write(line)
-                if any(k in line for k in ("[run]", "FAILED", "SELFTEST", "[mock]", "selftest]", "check")):
-                    print(line, end="")
-        if p.wait():
-            print("".join(open(log).readlines()[-60:]))
-            raise SystemExit(f"Selbsttest fehlgeschlagen: {os.path.basename(args[0])} (Protokoll {log})")
-    if KIND == "qwen":
-        selbsttest([f"{R2}/r2_stimuli.py", "check", f"{ROOT}/models/qwen3-1.7b"], f"{ST}/stimuli.log")
-    selbsttest([f"{R2}/r2_run_session.py", SESSION, ROOT, ST, "--selftest"], f"{ST}/selftest.log")
+    LOG = f"{ST}/selftest.log"
+    with open(LOG, "w") as lg:
+        p = subprocess.Popen([sys.executable, "-u", f"{R2}/r2_run_session.py", SESSION, ROOT, ST, "--selftest"],
+                             env=dict(os.environ, RUN_DEVICE="cuda", PYTHONUNBUFFERED="1"), stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, text=True)
+        for line in p.stdout:
+            lg.write(line)
+            if any(k in line for k in ("[selftest]", "[mock]", "[run]", "FAILED", "SELFTEST")):
+                print(line, end="")
+    if p.wait():
+        print("".join(open(LOG).readlines()[-60:]))
+        raise SystemExit(f"Selbsttest fehlgeschlagen (Protokoll {LOG}; die Protokolle der Schritte unter {ST}/work/*/logs).")
     json.dump(dict(commit=COMMIT, seconds=round(time.time() - t), time=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())), open(MARKE, "w"))
     print(f"Selbsttest bestanden ({time.time() - t:.0f}s).")
 '''

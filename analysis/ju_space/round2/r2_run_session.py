@@ -34,8 +34,11 @@ met (wait for round 1 or the wave-1 sessions).
 Env: RUN_DEVICE (cuda; 'cpu' only for local code tests: then G2 and the model checks are skipped and recorded as such), NT,
 R2_T0 (epoch seconds of the notebook's first cell; the time guard counts from it), R2_GUARD_S (1200), R2_STEP_TIMEOUT (3600),
 R2_DECLARED_NOT_RUN (wave-1 sessions declared 'not run' after two attempts, for r2_ana; the runner checks the two attempts),
-R1_SRC (round-1 source folder, default: the parent of <drive_dir>), R2_MOCK_NPAR (parallel pc_meta jobs of the mock tree);
-for code tests only: R2_REPO (checkout root), R2_SCRIPTS (folder of the round-2 scripts), R2_GIT (git executable).
+R1_SRC (round-1 source folder, default: the parent of <drive_dir>); self-test only: R2_MOCK_NPAR (parallel pc_meta jobs of the
+mock tree), R2_MOCK_FAST (blocks 8 and 20 of the mock as patched copies of block 14); for code tests only: R2_REPO (checkout root),
+R2_SCRIPTS (folder of the round-2 scripts), R2_GIT (git executable).
+--selftest runs the scripts' own code tests (LIB_SELFTESTS) on copies of a mock dsse_runs tree, then the session (and for wave 2 the
+sessions it reads) under MOCK=1 / QUICK=1 through this runner; nothing is synced to the real Drive.
 R1.final (2.1, critique v2-12j) is written by the operator, never by a script: dsse_runs/r1_finality.json =
   {"gpu4": {"runs": [{"start": "2026-11-12T15:02Z", "end": "2026-11-12T15:24Z"}, {"start": ..., "end": ...}], "final": true}, ...}
 A shard without shard_done.json (G5), or whose block summary is missing (G4), counts as final only with >= 2 runs and "final": true."""
@@ -530,7 +533,8 @@ def gate_G5(src, fin):
         if os.path.isfile(os.path.join(d, "shard_done.json")):
             rec["shards"][s] = "final (shard_done.json)"
         elif ok_rec and os.path.isdir(d):
-            rec["shards"][s] = f"final with missing jobs (R1.final: {n} runs" + (f"; pc_missing sha256 {sha256_file(pm)})" if os.path.isfile(pm) else ")")
+            pm_sha = f"; pc_missing sha256 {sha256_file(pm)}" if os.path.isfile(pm) else ""
+            rec["shards"][s] = f"final with missing jobs (R1.final: {n} runs{pm_sha})"
         else:
             rec["ok"] = False
             why = ("folder not found (other account: share it or copy it into this account's dsse_runs)" if not os.path.isdir(d) else
@@ -733,14 +737,17 @@ def gate_G2(test):
     """An A100 (code tests with RUN_DEVICE=cpu skip the check and are recorded as code tests)."""
     if test:
         return dict(ok=True, checked=False, gpu=None, note="RUN_DEVICE=cpu: code test, GPU not checked")
-    try:
-        import torch
-        if not torch.cuda.is_available():
-            return dict(ok=False, checked=True, gpu=None, note="no CUDA device")
-        name = torch.cuda.get_device_name(0)
-        return dict(ok="A100" in name, checked=True, gpu=name, cuda=torch.version.cuda)
-    except Exception as e:                                  # noqa: BLE001 - any failure to see the GPU fails the gate
+    probe = ("import json, torch; ok = torch.cuda.is_available(); "
+             "print(json.dumps(dict(gpu=torch.cuda.get_device_name(0) if ok else None, cuda=torch.version.cuda)))")
+    try:                                                    # a short child process: the runner itself never holds a CUDA context
+        r = subprocess.run([PY, "-c", probe], capture_output=True, text=True, timeout=300)
+        info = json.loads(r.stdout.strip().splitlines()[-1]) if r.returncode == 0 and r.stdout.strip() else {}
+    except (OSError, subprocess.TimeoutExpired, ValueError) as e:
         return dict(ok=False, checked=True, gpu=None, note=repr(e))
+    name = info.get("gpu")
+    if not name:
+        return dict(ok=False, checked=True, gpu=None, note="no CUDA device" + (f" ({r.stderr.strip()[-200:]})" if r.stderr.strip() else ""))
+    return dict(ok="A100" in name, checked=True, gpu=name, cuda=info.get("cuda"))
 
 
 _COMMIT_OK = {}
@@ -862,7 +869,7 @@ def references_record():
                   {p for p in rglob(r2, "*") if re.search(r"compar|refcheck", os.path.basename(p), re.I) and not p.endswith((".py", ".pyc"))})
     return dict(dir=os.path.relpath(REF_DIR, REPO), files=files, n_ok=sum(f["status"] == "ok" for f in files.values()),
                 n_missing=sum(f["status"] != "ok" for f in files.values()), not_in_appendix_E=extra,
-                missing_txt_sha256=sha256_file(os.path.join(REF_DIR, "MISSING.txt")) if os.path.isfile(os.path.join(REF_DIR, "MISSING.txt")) else None,
+                missing_txt_sha256=sha256_file(mt) if os.path.isfile(mt := os.path.join(REF_DIR, "MISSING.txt")) else None,
                 shim_modules=shim,
                 comparison={os.path.relpath(p, REPO): sha256_file(p) for p in comp} or
                 "not found (9.5: the committed output of the ref comparison is expected before the first session)")
@@ -1160,7 +1167,8 @@ def finalize(ctx, steps, st, ran, guard, attempts, copied, t_attempt):
         code, msg = EXIT_DONE, f"session {ctx.base} done"
     else:
         reason = "time guard (7.4)" if guard and pending else "steps failed"
-        nxt = ctx.base + "bcdefghijklmnopqrstuvwxyz"[sum(a.get("result") == "time guard" for a in attempts) - 1] if reason.startswith("time") else ctx.attempt
+        k_guard = sum(a.get("result") == "time guard" for a in attempts)
+        nxt = ctx.base + "bcdefghijklmnopqrstuvwxyz"[k_guard - 1] if reason.startswith("time") else ctx.attempt
         dump_json(dict(common, reason=reason, remaining=pending, failed=failed, next_attempt=nxt, written=iso()),
                   os.path.join(ctx.work, "session_partial.json"))
         code = EXIT_GUARD if reason.startswith("time") else EXIT_FAILED
@@ -1294,7 +1302,8 @@ def run_session(session, root, work, drive):
         freeze=dict(commit=g1["freeze_commit"], time=g1["freeze_time"], commit_constant=FREEZE_COMMIT, time_constant=FREEZE_TIME,
                     plan_sha256=g1["sha256"], amendments_sha256=g1["amendments"]["sha256"]),
         code=dict(commit=ctx.code_commit, commits_this_work_dir=(read_text(prev) or "").split(),
-                  runner_sha256=sha256_file(os.path.abspath(__file__)), scripts_dir=os.path.relpath(SCRIPTS, REPO) if SCRIPTS.startswith(REPO) else SCRIPTS),
+                  runner_sha256=sha256_file(os.path.abspath(__file__)),
+                  scripts_dir=os.path.relpath(SCRIPTS, REPO) if SCRIPTS.startswith(REPO) else SCRIPTS),
         runtime=dict(versions, platform=platform.platform(), cpus=os.cpu_count(), device=ctx.device, nt=ctx.nt), gates=dict(
             G1=dict(ok=g1["ok"]), G2=g2, G3=g3, G4=sc.get("G4"), G5=sc.get("G5"), upstream=sc.get("upstream"),
             G7=(ctx.blk or {}).get("G7"), G8=(ctx.blk or {}).get("G8"), G9=(ctx.blk or {}).get("G9"), G47=g47),
@@ -1352,8 +1361,8 @@ def dry_run(session, root, work, drive, verbose=False):
         full = lambda f: f"{f[0]}/{f[1]}" if f[0] else f[1]
         for pat in meta["r1"]:
             hits = [f for f in files if any(fnmatch_path(full(f), e) for e in expand([pat]))]
-            print(f"  {pat}: {len(hits)} files" + (f" ({', '.join(f'{s or 'dsse_runs'}: {sum(h[0] == s for h in hits)}' for s in sorted({h[0] for h in hits}))})"
-                                                  if hits else ""))
+            per = ", ".join("%s: %d" % (sh or "dsse_runs", sum(h[0] == sh for h in hits)) for sh in sorted({h[0] for h in hits}))
+            print(f"  {pat}: {len(hits)} files" + (f" ({per})" if hits else ""))
             if verbose:
                 for f in hits:
                     print(f"      {full(f)}")
@@ -1391,12 +1400,15 @@ def fnmatch_path(path, pattern):
 # Self-test (MOCK / QUICK) on a mock dsse_runs tree; the notebooks run it before the main run
 # ======================================================================================================================================
 def fake_delta():
-    """A smooth fake delta curve (mock only, not a round-1 output): rk_verdict.choose_blocks picks b_lo 8, b_hi 20 on it."""
-    blocks = {}
+    """The fake dn_delta.json of the code tests (the same values as r2_rk.fake_delta, so that every self-test can share one mock tree;
+    not a round-1 output): delta lowest at block 14 (0.09), b_lo = 8 (0.10), b_hi = 20 (0.20), so that rk_verdict.choose_blocks gives
+    (8, 20) while the delta order b(1) < b(2) < b(3) is (14, 8, 20) - the label-against-order case of 2.7 C5."""
+    bl = {}
     for l in range(28):
-        d = 0.15 - 0.04 * math.exp(-(l - 8) ** 2 / 6) + 0.06 * math.exp(-(l - 20) ** 2 / 6)
-        blocks[str(l)] = {k: dict(F=1 + d, floor=1.0, delta=d, delta_rel=1 + d, probe=0.5, chance=0.125) for k in ("last", "mean")}
-    return dict(model="MOCK (self-test of round 2; not a round-1 output)", topics=[], n_per_topic=0, blocks=blocks, mock=True)
+        d = {14: 0.09, 8: 0.10, 20: 0.20}.get(l, 0.12 + 0.004 * abs(l - 14))
+        bl[str(l)] = {r: dict(F=0.5 + f * d, floor=0.5, delta=f * d, delta_rel=(0.5 + f * d) / 0.5, probe=0.5, chance=0.125)
+                      for r, f in (("last", 1.0), ("mean", 0.9))}
+    return dict(model="MOCK (fake dn_delta.json for code tests; not a round-1 output)", blocks=bl, mock=True)
 
 
 def sh(cmd, env, log=None):
@@ -1413,7 +1425,7 @@ def sh(cmd, env, log=None):
 
 def mock_r1(root, dr, parts=("rk", "pc")):
     """A mock dsse_runs tree in the round-1 layout (code tests only, plan section 9): rk_loop.py MOCK=1 at block 14 (pilot and all;
-    blocks 8 and 20 are copies with their block number patched, or real MOCK runs with R2_MOCK_FULL=1), rk_verdict.py summaries,
+    the same at blocks 8 and 20 (R2_MOCK_FAST=1: copies of block 14 with the block patched, for stub tests only), rk_verdict.py summaries,
     a fake dn_delta.json and blocks_chosen.json (b_lo 8, b_hi 20) in gpu2 and gpu3; pc_meta.py QUICK=1 jobs (bp_mup W 128 and 256 in
     gpu5, pc_mup W 256 in gpu2 and W 128 in gpu3, seeds 0-4, renamed without '_quick'), pc_expected / pc_summary files; shard_done.json
     and code_commits.txt in every shard (no r1_finality.json: every mock shard is final by its shard_done.json)."""
@@ -1426,10 +1438,10 @@ def mock_r1(root, dr, parts=("rk", "pc")):
     log = os.path.join(dr, "mock_build.log")
     if "rk" in parts and not os.path.exists(os.path.join(dr, ".mock_rk_ok")):
         t = time.time()
-        full = os.environ.get("R2_MOCK_FULL") == "1"
+        fast = os.environ.get("R2_MOCK_FAST") == "1"
         for shard, b in (("gpu1", 14), ("gpu2", 8), ("gpu3", 20)):
             out = os.path.join(dr, shard, "rk")
-            if b == 14 or full:
+            if b == 14 or not fast:
                 for stage in ("pilot", "all"):
                     sh([PY, os.path.join(AJS, "rk_loop.py"), root, out, stage], dict(env, BLOCK=str(b)), log)
             else:
@@ -1498,9 +1510,59 @@ def mock_r1(root, dr, parts=("rk", "pc")):
     return dr
 
 
+LIB_SELFTESTS = {   # the scripts' own code tests (plan 9; NOTES of the implementers), run by --selftest before the session's MOCK run
+    "r2_q1": ("stimuli", "rk", "axes", "gen14", "gen8"), "r2_q2": ("stimuli", "rk"), "r2_q3": ("stimuli",),
+    **{s: ("toy",) for s in ("r2_t1", "r2_t2", "r2_t3", "r2_t4", "r2_pc", "r2_ana")},
+}
+
+
+def lib_selftests(base, root, st_root, dr):
+    """r2_stimuli.py check with the real tokenizer; r2_rk.py, r2_axes.py and r2_gen_loop.py selftest (MOCK=1) on copies of the mock
+    round-1 tree (so that they cannot change it), on the CPU as their author ran them; r2_toy_common.py selftest (QUICK=1, incl. the
+    W0 equivalence tests and the reference comparison). 0 if all pass."""
+    def copy_mock(dst):
+        if not os.path.isdir(dst):
+            for s in SHARDS:
+                if os.path.isdir(os.path.join(dr, s)):
+                    shutil.copytree(os.path.join(dr, s), os.path.join(dst, s))
+        return dst
+    sc = lambda n: os.path.join(SCRIPTS, n)
+    os.makedirs(st_root, exist_ok=True)
+    env = dict(os.environ, DEVICE="cpu", NT=os.environ.get("NT", "4"), PYTHONUNBUFFERED="1")
+    for k in ("MOCK", "QUICK", "BLOCK", "R2_SELFTEST", "R1_SRC"):
+        env.pop(k, None)
+    r1s, r2s = os.path.join(st_root, "scripts_r1"), os.path.join(st_root, "scripts_r2")
+    for t in LIB_SELFTESTS.get(base, ()):
+        if t == "stimuli":
+            cmd, ex = [sc("r2_stimuli.py"), "check", os.path.join(root, "models", "qwen3-1.7b")], {}
+        elif t == "rk":
+            copy_mock(os.path.join(st_root, "rk_selftest", "r1"))
+            cmd, ex = [sc("r2_rk.py"), "selftest", root, os.path.join(st_root, "rk_selftest")], dict(MOCK="1")
+        elif t == "axes":
+            cmd, ex = [sc("r2_axes.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1")
+        elif t.startswith("gen"):
+            cmd, ex = [sc("r2_gen_loop.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1", BLOCK=t[3:])
+        else:
+            cmd, ex = [sc("r2_toy_common.py"), "selftest", os.path.join(st_root, "toy_common")], dict(QUICK="1")
+        log, t0 = os.path.join(st_root, f"lib_{t}.log"), time.time()
+        envs = " ".join("%s=%s" % kv for kv in ex.items())
+        say(f"[selftest] {envs} {os.path.basename(cmd[0])} {cmd[1] if t in ('stimuli', 'rk', 'toy') else 'selftest'}")
+        with open(log, "w") as f:
+            rc = subprocess.run([PY, "-u"] + cmd, env=dict(env, **ex), stdout=f, stderr=subprocess.STDOUT).returncode
+        tail = (read_text(log) or "").strip().splitlines()
+        last = next((l for l in reversed(tail) if l.strip() not in ("", "}", "]", "},", "],")), "")
+        say(f"[selftest] {os.path.basename(cmd[0])}: rc {rc} ({time.time() - t0:.0f}s) {last.strip()[:160]}")
+        if rc != 0:
+            print("\n".join(tail[-40:]), flush=True)
+            say(f"SELFTEST FAILED: {os.path.basename(cmd[0])} ({log})")
+            return 1
+    return 0
+
+
 def selftest(session, root, st_root):
-    """MOCK / QUICK run of the session through this runner (same code path as the real run), on a mock dsse_runs tree in
-    <st_root>/dsse_runs; a wave-2 session first runs the sessions it reads (r2_pc: r2_t1; r2_ana: all others) the same way."""
+    """The scripts' own code tests (LIB_SELFTESTS), then a MOCK / QUICK run of the session through this runner (same code path as the
+    real run) on a mock dsse_runs tree in <st_root>/dsse_runs; a wave-2 session first runs the sessions it reads (r2_pc: r2_t1;
+    r2_ana: all others) the same way (without their library tests)."""
     base, _ = split_session(session)
     st_root = os.path.abspath(st_root); dr = os.path.join(st_root, "dsse_runs")
     chain = list(SESSIONS[base]["upstream"]) + [base]
@@ -1508,9 +1570,13 @@ def selftest(session, root, st_root):
     for s in chain:
         parts |= {"rk"} if SESSIONS[s]["r1"] and "G4" in SESSIONS[s]["start"] else set()
         parts |= {"pc"} if SESSIONS[s]["r1"] and "G5" in SESSIONS[s]["start"] else set()
+    if {"rk", "axes", "gen14"} & set(LIB_SELFTESTS.get(base, ())):
+        parts.add("rk")
     t = time.time()
     if parts:
         mock_r1(root, dr, sorted(parts))
+    if lib_selftests(base, root, st_root, dr):
+        return 1
     for s in chain:
         if s != base and os.path.exists(os.path.join(dr, s, "session_done.json")):
             continue
