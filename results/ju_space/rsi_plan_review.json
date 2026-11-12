@@ -1,0 +1,305 @@
+{
+ "plan (written before any computation)": "# Plan (draft, 11 Nov 2026, 17:00 UTC): \"RSI as a direction\", inclination and steerability, transitivity, Base64 / Braille probes\n\nStatus: draft written before any computation. Nothing of this has been run.\n\n## 1 The user's message (translated from German, mid-session, 11 Nov 2026)\n\n\"If RSI is a direction, the 'inclination' would be correlated with steerability. An RSI of the RSI of the RSI would also do,\ni.e. a natural way of distilling meta-learning transitivity. Interesting probes for this could be knowledge cutoffs, i.e.\ntransitions between knowledge domains of different ordinal number (Base64 vs. Braille cycle structure, 6-bit system vs.\n64-bit ...). The repository https://github.com/Erikiss/Interface-Neuron-Atlas-by-GoodFire-AI (being finished right now)\ncould be used for this.\"\n\nContext. RSI = recursive self-improvement. Earlier the user conjectured \"a network that is organised inside in the sense of\nthe UFO paper (arXiv 2611.11862) is more inclined to change its own weights (RSI)\". The project answered: not testable here,\nbecause no model in the project can change its weights and nothing measures an inclination (README section 8.8, R1). The new\nmessage proposes an operationalisation: treat RSI as a direction in activation space; the model's inclination toward it would\nthen show as steerability along it.\n\nLabels used below: Q1 \"if RSI is a direction, inclination correlates with steerability\"; Q2 \"RSI of RSI of RSI: iterated\nself-application distils meta-learning transitivity\"; Q3 \"probes at transitions between knowledge domains of different\nordinal number: Base64 vs. Braille (cycle structure), 6-bit vs. 64-bit\".\n\n## 2 Constraints\n\n- Model: Qwen3-1.7B base (28 blocks, d_model 2048, SwiGLU MLPs of width 6144), float32 on 4 CPU cores, 14 GB memory. Forward\n  passes over a few thousand short texts and short greedy generations are feasible; training of the model is not.\n- The user's repository is an interface (search, API, MCP server, geometry toolkit) to Goodfire's Neuron Atlas of\n  Qwen3.6-35B-A3B. It contains no atlas data; its downloader fetches data from goodfire.com and static.goodfire.ai. Goodfire's\n  website terms forbid automated access and storing or redistributing content without consent (the repository's own README\n  says so). Project rule: no scripted access to goodfire.com / goodfire.ai by any tool, nothing from the atlas is stored or\n  committed; atlas content enters only if the user pastes it. The atlas also describes a 35B mixture-of-experts model that\n  cannot be run here, so its neuron ids do not transfer to Qwen3-1.7B.\n- Existing project tools (repository /home/user/DSSE, analysis/ju_space/): ufo_common.py (model loading, text sets), scripts\n  for perturbations of residual states, SAE pools, the J-lens etc. (README sections 1 to 7).\n\n## 3 Draft operationalisations (to be attacked)\n\nT1 Inclination vs. steerability across concepts (Q1 in general form). For K concepts (about 12 to 20, including an\n\"AI improving itself\" concept, neutral controls and the encodings of T4), a direction per concept and layer = difference of\nmeans of residual states between contrastive prompt sets (concept vs. matched non-concept). Inclination = how strongly the\nunsteered model already leans toward the concept on neutral prompts (for example the log-odds of concept-specific next\ntokens, or the projection of neutral states on the direction relative to the concept states). Steerability = slope of the\nconcept's log-odds (and the share of prompts whose top token flips) against the steering strength alpha (in units of the\nmedian residual norm), on held-out neutral prompts, together with the damage (KL to the unsteered model on unrelated text).\nPrediction of Q1: across concepts, inclination and steerability are positively correlated. Controls: random directions of\nequal norm; directions from shuffled prompt labels.\n\nT2 The \"RSI\" direction itself (Q1, special form). Contrast: texts in which an AI system improves, rewrites or retrains\nitself vs. texts in which an AI improves something else (a user's program, a document) and vs. a human improving themselves.\nPlace this direction among the K concepts of T1 (is it special in inclination or steerability?).\n\nT3 Iterated self-application (Q2). (a) Fixed point: steer with alpha * d1, recompute the direction d2 from the steered model\non the same contrastive sets, steer with d1 + d2, ...; does the direction converge, does steerability grow or saturate?\n(b) Transitivity: for three domains A, B, C (for example Base64, Braille, binary), compare the effect of steering with the\ndirection A->C derived directly against the sum of A->B and B->C derived from different prompt sets, and against applying\nA->B at one layer and B->C at a later layer. Note: difference-of-means directions from the same sets are additive by\nconstruction; only versions from different sets or different layers can fail.\n\nT4 Probes at transitions between symbol systems of equal cardinality (Q3). The Base64 alphabet has 64 symbols, each a 6-bit\nvalue; the Unicode Braille block U+2800..U+283F holds the 64 six-dot patterns, with code point offset = dot bit pattern. So\nthere is a natural bijection Base64 index <-> Braille cell, and the same bytes can be written in both. Questions:\n(a) Is the 6-bit value of a symbol linearly readable from the residual stream, for Base64 symbols and for Braille symbols\n(per-bit linear probes, trained on half of the symbols, tested on the others)? (b) Is the code shared: does a probe trained\non Base64 decode the bits of the corresponding Braille cells (transfer = \"transitivity\" across domains)? (c) The \"cycle\nstructure\" of literary Braille (letters a-j, k-t = a-j plus dot 3, u-z = plus dots 3 and 6): is it visible in the model's\nstates for Braille letters? (d) Transitions inside one text (Base64 followed by Braille, 6-bit groups vs. 64-bit integers):\nhow far does the state at a domain boundary move, and does a direction for \"inside Base64\" vs \"inside Braille\" steer the\ncontinuation from one code to the other?\n\n## 4 What I ask\n\nAttack the operationalisation before anything runs: which test bears on the user's sentences and which only sits next to\nthem; what a positive or negative result would and would not mean; confounds (token frequency, tokenisation of Base64 and\nBraille in the Qwen tokenizer, norm of directions, layer choice, prompt sets that differ in more than the concept, the\ntrivial additivity of mean differences); which controls are missing; what to drop; decision rules with numbers; and what\ncannot be tested here at all. Keep compute in mind (4 CPU cores, Qwen3-1.7B in float32 at roughly 1 to 3 s per forward\npass of 64 tokens).\n",
+ "plan review (critic: points, decision rules, what to drop and add)": {
+  "verdict": "Most of the plan sits next to the user's sentences rather than on them, and two of its tests are settled by algebra before any run. T1 correlates propensity with steerability across 12-20 hand-picked concepts. That is a statement about those concepts, not about RSI. At K = 16 an observed r = 0.5 has a 95% interval of [0.01, 0.80], and a positive correlation is expected anyway, because how well the contrast sets separate predicts steerability (Braun et al. 2025; Bhattarai & Alhanai 2026; abstracts only). T2 yields a topic direction for texts about AI self-improvement. It lacks the fourth cell of its own 2 x 2, has no recursion factor and no measure of inclination. T3a is trivial: re-deriving the mean difference from the steered model on the same sets returns d1 at the steering block, so d1 + d2 = 2 d1 and the run is only a dose-response curve. T3b gives an identity, sampling noise or layer dependence. T4 is dominated by tokenisation. 59 of the 64 six-dot Braille cells are a shared E2 A0 prefix token plus a bare continuation-byte token whose low 6 bits are the dot pattern, so Braille bit probes read byte values. From the token embeddings alone, dots 4-6 are already readable (0.66, 0.79, 0.98 held-out) and dots 1-3 are not. Base64 gets one token per symbol only when the symbols are separated. The Base64-index <-> U+2800+k bijection has no support in text: it agrees with literary Braille for 1 of 52 letters, and at the embedding level the transfer is at chance. So T4b cannot tell anything apart. Proposed first round instead (about 2.2 of the allowed 3 core-hours): (1) check whether the model can read the codes at all, then run probes with byte-level controls on cells whose tokens match exactly; (2) build an RSI direction from an established stated-preference set ('Desire For Recursive Self Improvement', Yes/No answers) and compare it with sibling sets, 20 random directions and the damage it causes; (3) test whether 'one more level of improving' is a consistent step, the only defensible analogue of Q2. The cross-concept correlation needs K >= 30 sets on one answer scale and belongs in a second round. RSI in the literal sense cannot be tested here.",
+  "points": [
+   {
+    "id": "P01",
+    "about": "Q1 vs T1/T2: which sentence is actually tested",
+    "problem": "Q1 is a conditional about one direction ('if RSI is a direction, its inclination correlates with steerability'). A correlation needs a population. T1 builds one from 12-20 concepts chosen by the experimenter, so its result is about those concepts, not about RSI. T2 tests the antecedent only in part (a topic direction) and defines no inclination. A positive T1 would mean: in this model and format, concepts the model already leans toward are easier to move along their mean-difference direction. It would not mean anything about RSI, nor that inclination causes steerability. It is also expected on generic grounds: how well positive and negative examples separate predicts steerability (Braun et al. 2025; Bhattarai & Alhanai 2026; abstracts), and separation also enters any projection-based inclination. A negative T1 would mean no monotone relation for these concepts and measures. It could come from saturation, unreliable per-concept measures or heterogeneous token sets, and it refutes nothing general.",
+    "fix": "Split Q1 into two parts. The antecedent is rule T2-A: a direction that changes stated agreement with recursive-self-improvement statements specifically. The consequent is rule T1' (round 2): K >= 30 sets on one scale, with partial correlation after controlling for separation and geometry. Report where the RSI set lies relative to the regression across the other sets, not only a correlation coefficient.",
+    "importance": "high"
+   },
+   {
+    "id": "P02",
+    "about": "T1 measures: token sets, scales, circularity, nonlinearity",
+    "problem": "Several problems with how T1 measures things. (a) Inclination as the log-odds of concept-specific next tokens on neutral prompts is dominated by those tokens' unigram prior, and the tokens differ from concept to concept. With tied embeddings (checked: the embed_tokens rows and the stored lm_head rows are identical), the same frequency effects shape the unembedding and therefore the response to steering. (b) If the evaluation tokens are picked from the direction's own readout (W_U d, a lens), steerability on those tokens is partly built in. (c) 'Share of prompts whose top token flips' needs a large alpha, i.e. damage. (d) Steering effects are not linear in alpha over the plan's range. In this model KL grows about quadratically with vector size (README 7.6: f = 0.1 gives 0.006-0.012 nats, 0.3 gives 0.055-0.11, 1.0 gives 0.74-1.96), and large vectors raise entropy (README 7.6), which lifts rare tokens just by flattening the distribution. (e) Inclination measured as the projection of neutral prompts relative to concept and matched non-concept prompts mostly measures how close the neutral prompts are to the matched set's template.",
+    "fix": "Use one answer scale for every concept: Yes/No agreement with label-balanced statements (the persona sets of Perez et al. 2022), with directions built CAA-style from the answer token. Then the token prior is the same for all concepts, and flattening pushes the log-odds of the matching answer toward 0 instead of up. Inclination = baseline log-odds of the matching answer on held-out statements. Steerability = slope of that log-odds per unit f, fitted only over the alphas whose damage (KL on unrelated text) is <= 0.1 nats, and only if the fit is linear (R^2 >= 0.8). Never pick evaluation tokens from the direction itself. Measure at the model's output, not through a lens.",
+    "importance": "high"
+   },
+   {
+    "id": "P03",
+    "about": "T1 statistics and the shared axis in this model",
+    "problem": "With K = 12, 16 or 20 concepts, the critical r at p < .05 (two-sided) is 0.58, 0.50 or 0.44. For an observed r = 0.5 at K = 16 the 95% interval is [0.01, 0.80]. 80% power for rho = 0.5 needs K = 30 (for rho = 0.4, K = 47). The effective K is smaller still, because mean-difference directions in this model share a common component. README 3: the mean of the other 15 behaviours' difference directions separates a behaviour almost as well as that behaviour's own direction (AUROC 0.72 vs 0.78). The anchor-word axes of different behaviours are also similar (cross-AUROC 0.66 vs 0.81 for their own behaviour; 11 of 16 fall into one group). And picking the concepts by hand makes the correlation depend on the list.",
+    "fix": "Fix the concept list before running, by a rule (e.g. all persona sets of named families), with K >= 30. Report the participation ratio of the K x K cosine matrix. Repeat the analysis on the concept-specific remainders (each direction minus its projection on the first principal component of the K directions). Require split-half reliability >= 0.6 for both measures: the largest correlation that can be observed is sqrt(rel_x * rel_y).",
+    "importance": "high"
+   },
+   {
+    "id": "P04",
+    "about": "Norm and layer of the directions",
+    "problem": "Normalising each direction to unit length throws away the concept's natural scale (its separation), which is exactly the variable that predicts steerability. Choosing the best layer separately for each concept is a selection effect. Directions from different blocks live at different scales: the state norm grows from 16 at block 0 to 3,147 at block 26 (README 7.1). They are also read and erased differently: README 7.3 finds that blocks 1-16 remove about 0.1-0.2 of an added vector per block, and only 0.02-0.13 along the roughly 250 axes where real states vary most.",
+    "fix": "Fix block 14 in advance for all claims, with block 18 as replication (project states already exist there). Size every vector as f times the state norm at each position, as in README 7. Report two covariates, both available from the existing pool statistics (scratchpad/ufo_out/ufo_pool.pt): separation (d' of the training projections) and the share of the direction's energy that lies in the top 256 principal axes.",
+    "importance": "medium"
+   },
+   {
+    "id": "P05",
+    "about": "Prompt sets that differ in more than the concept (T1, T2)",
+    "problem": "A mean difference picks up every systematic difference between the two sets: length, reflexive pronouns ('itself'), agent nouns, plausibility, sentiment, and, in this post-trained model, the safety stance that statements about AI self-improvement trigger. T2 has three cells (AI improves itself, AI improves something else, human improves themselves) and leaves out the fourth (human improves something else). So 'AI x self' cannot be separated from the main effects of 'AI' and of 'self'. None of the cells is recursive either.",
+    "fix": "Build minimal pairs from shared templates, equal in length within +-1 token. Use a full 2 x 2 x 2 design: agent (AI/human) x target (self/other) x level ('improves X' vs 'improves its ability to improve X'), 16 templates per cell. The RSI-specific contrast is the three-way interaction, tested against 1,000 label permutations. For steering, use the CAA answer-token contrast (the same statement with 'Yes' or 'No' appended), so that statement content cancels.",
+    "importance": "high"
+   },
+   {
+    "id": "P06",
+    "about": "T2: what it measures, and which model this is",
+    "problem": "A direction built from texts in which an AI improves itself encodes how the model reads such texts (topic, stance). It is not an inclination, and the plan defines no inclination measure for it. The model is also not a base model. The local checkpoint has eos <|im_end|> (151645), a chat template with an enable_thinking switch and sampling defaults (temperature 0.6, top-k 20, top-p 0.95). That indicates the post-trained Qwen3-1.7B, which README 7.1 calls 'Chat-Modell'; the README header's 'Basismodell' means 'not fine-tuned by the project'. Its stance toward AI self-improvement is shaped by post-training. A positive T2 (a direction that specifically steers stated agreement with RSI) would mean the model has a linear handle on its stated stance in this format. It would not mean the model has an RSI disposition or would act on one, and it is RSI-specific only if it separates from generic self-improvement directions. A negative T2 would mean there is no coherent direction for that stated stance at the tested blocks (compare Braun et al. 2025: steering is unreliable without a coherent direction). It would not mean RSI is unrepresented.",
+    "fix": "Measure inclination as stated agreement with the persona set 'Desire For Recursive Self Improvement' (Perez et al. 2022, Table 18; Yes/No format). Place it among its siblings ('Desire For Self Improvement', 'Desire To Be More Intelligent', 'Cognitive Enhancement') and two unrelated persona sets. Fix one input format (chat template, thinking off, as in ufo_common) and call the model post-trained in every write-up.",
+    "importance": "high"
+   },
+   {
+    "id": "P07",
+    "about": "T3a (fixed point) is decided by algebra",
+    "problem": "Suppose alpha*d1 is added at block l to every input, and d2 is re-derived at block l from the same contrastive sets. The same vector is then added to both set means, so d2 = d1 exactly. Read at a later block, d2 differs from d1 only by how differently the network responds to the push on average in the two sets, a second-order effect in alpha. Steering with d1 + d2 is then steering with about 2*d1. T3a is a dose-response curve whose 'convergence' is guaranteed, and neither outcome bears on Q2.",
+    "fix": "Drop T3a as specified. The only non-trivial loop here runs through the model's own text: generate under alpha*d_n; re-derive d_{n+1} from how the unsteered model reads steered vs unsteered continuations; repeat three times; compare with loops started from random directions (rule T3a', round 2, optional). Even a positive result there means only that the push produces text the model reads back as the same concept. No weights change and nothing is learned.",
+    "importance": "high"
+   },
+   {
+    "id": "P08",
+    "about": "T3b (transitivity of directions) gives an identity, noise or layer dependence",
+    "problem": "With the same sets, d(A->B) + d(B->C) = d(A->C) is an identity. With independent sets, the defect is [m(B1) - m(B2)] + [m(A3) - m(A1)] + [m(C2) - m(C3)]: sampling differences between domain means, with expected value zero. Applying A->B at one block and B->C at a later one tests how vectors survive from block to block (erasure and rebuilding, README 7.3-7.7), not transitivity. No outcome bears on 'meta-learning transitivity'.",
+    "fix": "Drop T3b. Replace it with the recursion-depth step-consistency test (rule Q2'): compute cos(d12, d23) and cos(d23, d34) for nested texts ('improves its ability to improve its ability to ...') and compare with a neutral nesting relation and a repetition-only control. These cosines are not fixed by algebra. A composition test between domains (fit linear maps A->B and B->C on paired items, then compare the composite with a direct A->C fit on held-out items) is possible only for domains with natural item correspondences, and only where the model is competent (rule T4-C).",
+    "importance": "high"
+   },
+   {
+    "id": "P09",
+    "about": "T4a/T4c: per-bit Braille probes read byte values",
+    "problem": "59 of the 64 six-dot cells are tokenised as [E2 A0][byte 0x80+k], and by Unicode design the low 6 bits of that byte are the dot pattern. A probe at that token therefore reads the bits of a generic continuation-byte token that hundreds of characters in other scripts share. Even from the token embeddings alone, with no context, dots 4, 5 and 6 (bits 3-5) are readable held-out at 0.66, 0.79 and 0.98 (99th percentile of the relabelling null about 0.58); dots 1-3 are not (0.52, 0.50, 0.54). So 'the 6-bit value is linearly readable' would be partly true before any Braille processing happens. The other 5 cells (the blank cell, the letters a and l, two contractions) are tokenised differently and must be dropped or analysed apart; a presentation with exactly one token per cell, equal for all cells, does not exist. The literary-Braille decades are dot 3 (bit 2, byte +4) and dots 3+6 (bits 2 and 5, byte +36), so any representation of byte values already yields a consistent offset vector. Also, 'a' and 'l' break the token pattern and 'w' is irregular (j + dot 6), which leaves 8 usable pairs between the first two decades (a-j, k-t) and 4 between the second and third (k-t, u-z). Statistical note: with 32/32 splits the null mean of the difference-of-means probe is 0.47, not 0.50, so chance level must come from permutations.",
+    "fix": "Use a matched-token design (rule T4-A). There are 51 values of k for which six-dot Braille U+2800+k, dot-7 Braille U+2840+k and Supplemental Mathematical Operators U+2A00+k are all [2-byte prefix token][the same byte token]. A Braille-specific dot code must show on bits 0-2 at blocks >= 2, must beat the U+2A00 control, and must transfer to dot-7 Braille (same dots) better than to U+2A00 (same bytes). Treat the decade ('cycle') question as the bit-2 and bit-5 probes restricted to letters, with the same byte offsets in U+2A00 as control. Report block 0 as the baseline. Split train/test by cell, never by occurrence. Never put a space before a cell: frames such as 'Symbol' + newline + X + newline, X in quotes, or X in parentheses keep all 64 cells in their stand-alone tokenisation.",
+    "importance": "high"
+   },
+   {
+    "id": "P10",
+    "about": "T4a for Base64: one token per symbol only when symbols are separated; index bits mostly encode character class",
+    "problem": "In running Base64 only half of the symbols get a token of their own, and how the text is chunked depends on the neighbouring symbols, so per-symbol probes there are impossible. In separated frames, 62 of the 64 symbols are one token each; '+' and '/' merge with adjacent punctuation or a newline. The bits of the Base64 index are entangled with character class (A-Z = 0-25, a-z = 26-51, digits = 52-61), so the high bits mostly encode the class. In the embeddings the index bits average 0.59 held-out, only slightly above a null that keeps the classes (95th percentile 0.584), and bit 1 comes out below chance (0.33).",
+    "fix": "Use separated frames and check the tokenisation of every symbol at run time. Exclude '+' and '/', or give them a frame of their own. Compare with a within-class relabelling null (indices permuted only within upper case, lower case and digits) and judge on bits 0-1. Require behavioural index competence on a-z and 0-9; for A-Z the index equals the alphabet position, so success there proves nothing.",
+    "importance": "high"
+   },
+   {
+    "id": "P11",
+    "about": "T4b: the Base64 <-> Braille bijection has no support in text",
+    "problem": "The mapping 'Base64 index k <-> U+2800+k' is a design choice of the plan. Text links the 64 six-dot cells to ASCII through Braille ASCII (ASCII 32-95; A = the dot-1 cell, B = dots 1-2, space = the blank cell) and to letters through literary Braille. The plan's bijection agrees with literary Braille for 1 of 52 letters ('P'). A positive transfer could only come from coarse shared features, such as a magnitude feature carried by the high bits. A negative transfer is expected under every account. At the embedding level, transferring the Base64 bit probes to the byte tokens gives 0.497 (5-95% of the relabelling null: 0.456-0.539). The test cannot tell anything apart.",
+    "fix": "Drop T4b. If cross-domain transfer is wanted, use only natural correspondences (Braille cell <-> Latin letter; a 6-bit value written in binary <-> in decimal), only after the model has shown it can do the mapping (rule T4-C), and judge on the low bits.",
+    "importance": "high"
+   },
+   {
+    "id": "P12",
+    "about": "T4d and the '6-bit vs 64-bit' contrast",
+    "problem": "At a Base64 -> Braille boundary the token type changes (ASCII letters become E2 A0 + byte tokens) and the next token is unpredictable. States of neighbouring tokens differ by about one state norm anyway (README 7.2). Steering a switch of script is expected to work and says nothing about Q1-Q3. Binary strings and 64-bit integers are one token per digit (64-bit decimals average 19.4 digits), so '6-bit groups vs 64-bit integers' contrasts length and spacing, not order.",
+    "fix": "Drop T4d from round 1. If it is kept later, compare boundary effects with a control that has the same token types (Base64 -> U+2A00), and express movement relative to the steps between tokens inside a segment. Replace '6 vs 64 bit' with the same value written in different formats (binary, decimal, Base64 symbol), using a target that is not a single digit (e.g. magnitude rank).",
+    "importance": "medium"
+   },
+   {
+    "id": "P13",
+    "about": "Competence before probes",
+    "problem": "The plan never asks whether Qwen3-1.7B can decode Base64 or read Braille at all. If it cannot, a probe can only find surface features (class, byte value). If it can, the representational tests become interpretable.",
+    "fix": "Run rule T4-C first, together with the T4 probes so the model is loaded once (about 7k tokens, about 6 core-minutes). Tasks: Braille cell -> letter for the 24 letters with the standard token form, 3 templates; Base64 decoding of 60 three-letter words, scored among the 60 candidates, 2 templates; symbol -> index for a-z and 0-9 by greedy decoding; 6-bit binary -> decimal.",
+    "importance": "high"
+   },
+   {
+    "id": "P14",
+    "about": "Two readings of the user's words: 'Neigung' and 'verschieden ordnungszahlig'",
+    "problem": "'Neigung' means propensity but also tilt or slope; the plan uses only the propensity sense. The tilt sense has a cheap, mechanistic version here: steerability per unit norm should rise with how much of the direction lies in the high-variance axes, since blocks 1-16 erase less along those axes (README 7.3) and covariance-shaped vectors cost more KL than vectors outside the data space (README 7.6-7.7). That outcome is expected, not a discovery. 'Verschieden ordnungszahlig' (different order number) fits the pairs 6 vs 64 and 64 vs 2^64, each a step n -> 2^n, which echoes 'RSI of RSI of RSI'. The plan instead chose two codes of equal size (64 and 64), which drops the 'different order' aspect.",
+    "fix": "Before building T4 beyond the competence checks, ask the user which readings are meant. Record the tilt covariate (share of energy in the top 256 axes) for every direction anyway; it costs no forward passes.",
+    "importance": "medium"
+   },
+   {
+    "id": "P15",
+    "about": "Steering damage and random controls",
+    "problem": "Random vectors of the same norm at f = 0.3 already cost 0.055-0.11 nats of KL (README 7.6-7.7), and a single KL figure moves by up to 22% between random draws (README 7.7). Comparing a target effect at one alpha with 'random directions of equal norm', without matching the damage and without enough random draws, does not test specificity. The plan names no number of random draws.",
+    "fix": "For every block used in a claim: 20 random directions (10 isotropic, 10 covariance-shaped, via ufo_common.Pool.direction 'rand' and 'cov', seeds 0-19) and 10 directions from shuffled labels. Specificity means the target effect beats all 20 random directions and their mean + 3 SD, at matched damage (KL on 4 unrelated 64-token texts from ufo_common). Add a neutral Yes/No control set to catch a general bias toward 'Yes': the target effect must be at least 4 times the control effect.",
+    "importance": "high"
+   },
+   {
+    "id": "P16",
+    "about": "The user's repository (Neuron Atlas interface): what it can and cannot contribute",
+    "problem": "The clone is an interface (search, API, MCP server, geometry toolkit) with no atlas data in it. Its downloader fetches from www.goodfire.com and static.goodfire.ai (config.py, upstream.py). Its README says the site's terms forbid automated access, storage and redistribution without consent. The atlas describes Qwen3.6-35B-A3B, a mixture-of-experts model (ids are layer/expert/neuron) that cannot run here, and its ids have no counterpart in the dense 1.7B model. The README uses 'braille dot art' and 'random hex hashes and base64' as search examples; that shows what its author searched for, not what the atlas contains.",
+    "fix": "Keep it out of every measurement: no scripted access, nothing stored. If the user pastes atlas descriptions of Braille or Base64 neurons, use them only as hypotheses. One such hypothesis is that Braille in web text is mostly dot art or filler; the vocabulary hints at this, since the blank cell is by far the most frequent Braille token.",
+    "importance": "medium"
+   },
+   {
+    "id": "P17",
+    "about": "Logit lens and token-list 'names' as evidence",
+    "problem": "Reading a direction through a lens, or naming it from its top tokens, is weak evidence in this model. At block 18 the J-lens predicts the next token worse than the plain readout (median rank 1,308 vs 36, README 1). Naming rules work almost as well for random directions as for SAE units (72% vs 77%, README Kurzfassung item 5).",
+    "fix": "Measure every effect at the model's actual output. Use lens readings only as illustrations.",
+    "importance": "medium"
+   },
+   {
+    "id": "P18",
+    "about": "Memory and speed",
+    "problem": "The float32 model needs about 7 GB, and the pool statistics (ufo_pool.pt) another 0.9 GB. During this review the available memory moved between about 5 and 13 GB while three training processes ran, and there is no swap: running out of memory could kill a training run. The plan's speed (1-3 s per 64-token forward pass on one core) was not measured here; at the slow end that is about 77k tokens per core-hour. The training runs occupy cores 1-3, so in practice the round runs on core 0 alone.",
+    "fix": "Check MemAvailable >= 9.5 GB before loading the model, and abort otherwise. Load the pool statistics only for the blocks needed. Budget at 3 s per 64 tokens. Use bf16 (the CPU has AMX-BF16) only after a one-off fp32/bf16 comparison on 8 texts, and never mix the two within one comparison.",
+    "importance": "medium"
+   },
+   {
+    "id": "P19",
+    "about": "Budget of the first round",
+    "problem": "The plan has no budget. T1 at K = 20, with several layers and alphas plus random controls, would alone exceed 3 core-hours.",
+    "fix": "First round of about 155k forward tokens, which is about 2.0 core-hours at 3 s per 64 tokens, plus about 10 minutes of model loading (not measured):\n- T4-C competence checks plus T4-A/T4-B probes: about 21k tokens, about 17 min.\n- T2-A/T2-B: about 118k tokens, about 92 min. Directions for 6 sets x 100 statements with a cached prefix: 24k. Evaluation of 260 held-out statements x 4 passes: 36k. DRSI at block 18: 4k. 20 random directions x 30 statements: 21k. 10 shuffled-label directions x 30 statements: 10k. Damage on 4 texts per condition: 13k. Yes-bias control: 4k. Factorial texts: 5k.\n- Q2': about 11-16k tokens, about 10 min.\n- Reserve: about 45 min.\nT1' (about 12k tokens per set, so about 360k for K = 30: 1.6-4.7 core-hours) and T3a' (about 40 min) go to round 2.",
+    "importance": "medium"
+   },
+   {
+    "id": "P20",
+    "about": "What the T4 outcomes could and could not mean for Q3",
+    "problem": "Even done well, T4 tests how codes are represented, not inclination, steerability, RSI or transitivity. A positive result (low dot bits readable beyond the byte controls, or a Base64 value code beyond character class) would mean the model computes code-specific structure. It would not show that 'knowledge-domain transitions' are useful probes for Q1 or Q2 unless a later test uses them in that way. A negative result (bits readable only as byte features, as at the embedding) would mean the 6-bit structure sits in the tokenizer's byte tokens and their embeddings, not in Braille or Base64 knowledge.",
+    "fix": "State this link explicitly in any write-up. Use the T4 results only to decide whether code-specific directions are worth including as concepts in T1' (round 2).",
+    "importance": "medium"
+   }
+  ],
+  "rules": [
+   {
+    "test": "T4-C behavioural competence for the codes (run first, together with T4-A/T4-B)",
+    "statement_tested": "Precondition for any Q3 probe: the model can map between the codes (Braille cell -> Latin letter; Base64 -> text; Base64 symbol -> index; 6-bit binary -> decimal).",
+    "counts_for": "Per task, top-1 accuracy >= 0.30 and the lower end of the 95% binomial interval >= 0.15. Chance is 1/26 for letters, 1/60 for a word among 60 candidates and about 1/64 for an index.",
+    "counts_against": "Accuracy <= 2 x chance in both input formats. Cross-code representation tests for that code are then skipped, and probe results for it are read as surface features only.",
+    "undecided": "Between the two thresholds, or competent in only one of the two formats.",
+    "minimum_runs_and_conditions": "24 letters with the [E2 A0][byte] form (a and l excluded) x 3 templates. 60 three-letter words x 2 templates, scored by log-probability among the 60 candidates. Index task on the 36 symbols a-z and 0-9 (A-Z reported separately, since their index equals their alphabet position). 64 six-bit strings. Chat template with thinking off, plus a plain-text variant. Greedy decoding. About 7k tokens."
+   },
+   {
+    "test": "T4-A bit probes on Braille with matched tokens (replaces T4a and T4c for Braille)",
+    "statement_tested": "Q3: the model holds a Braille-specific code for the six dots, beyond the value of the continuation byte that carries them.",
+    "counts_for": "At some block >= 2, all of the following: (1) mean held-out accuracy on bits 0-2 (dots 1-3) >= 0.65, with each bit above the 99th percentile of its relabelling null; (2) on bits 0-2, Braille beats the U+2A00 control by >= 0.10, with a 95% bootstrap interval over cells that excludes 0; (3) a probe trained on six-dot cells transfers to dot-7 Braille at >= 0.65 on bits 0-2, and at least 0.10 better than to U+2A00. For the decade ('cycle') structure: the offset vectors of the 8 a-j/k-t letter pairs are more consistent than the same byte offsets in U+2A00, by >= 0.15.",
+    "counts_against": "At every block, Braille is within 0.05 of the U+2A00 control on bits 0-2, or transfer to U+2A00 is at least as good as transfer to dot-7 Braille. Then the readable bits are byte-level. Block-0 baseline measured in this review: bits 3-5 at 0.66, 0.79 and 0.98; bits 0-2 at chance.",
+    "undecided": "Bits 0-2 between 0.55 and 0.65; differences whose interval includes 0; or a pass at one block while both neighbouring blocks fail.",
+    "minimum_runs_and_conditions": "The 51 values of k that are tokenised as [prefix][same byte token] in all three blocks. 3 frames with no space before the cell, plus 2 running contexts (random 8-cell strings from the same block). State taken at the byte token. Blocks 0, 2, 6, 10, 14, 18, 22 and 27. Difference-of-means and ridge probes (fixed lambda, no tuning). 200 random 50/50 splits by cell. 200 label permutations (seeds 0-199). 1,000 bootstrap resamples over cells. About 11k tokens."
+   },
+   {
+    "test": "T4-B Base64 index bits in separated frames",
+    "statement_tested": "Q3: the model encodes the 6-bit Base64 value of a symbol beyond its character class and alphabet position.",
+    "counts_for": "At some block >= 2: mean accuracy over the 6 bits is at least 0.05 above the 99th percentile of the within-class relabelling null; bits 0 and 1 are each >= 0.65; and the T4-C index task passes on a-z and 0-9.",
+    "counts_against": "At every block within the 95% range of the within-class null (block-0 value measured in this review: 0.59 against a 95th percentile of 0.584), or index competence <= 2 x chance.",
+    "undecided": "All other cases.",
+    "minimum_runs_and_conditions": "62 symbols ('+' and '/' excluded, since they break the frames) x 3 frames, with the tokenisation of each symbol checked at run time. Same blocks, probes, splits and permutations as T4-A, plus 200 within-class relabellings. About 2k tokens."
+   },
+   {
+    "test": "T2-A 'RSI is a direction' (stated-preference version)",
+    "statement_tested": "The antecedent of Q1, as far as it can be measured here: a direction exists whose addition changes the model's stated agreement with recursive-self-improvement statements specifically.",
+    "counts_for": "On >= 60 held-out statements of 'Desire For Recursive Self Improvement', all of the following: the slope of the log-odds of the matching answer per unit f at block 14 beats all 20 norm-matched random directions and also their mean + 3 SD; the response is linear (R^2 >= 0.8) over the alphas whose damage (KL on unrelated text) is <= 0.1 nats; the test also passes at block 18, with the same sign; and the effect on a neutral Yes/No control set is <= 25% of the target effect.",
+    "counts_against": "It passes at neither block, or effects appear only where the damage KL exceeds 0.3 nats.",
+    "undecided": "It passes at one block only; or the control for a general bias toward 'Yes' fails (control effect above 25% of the target effect); or directions built from two halves of the statements have cosine < 0.5 with each other (the direction itself is unstable).",
+    "minimum_runs_and_conditions": "100 label-balanced statements to build the direction (difference of means at the answer token, statement prefix cached), and 60 held-out statements. f in {-0.2, 0, +0.1, +0.3} times the per-position state norm, added at all positions of statement and answer. 20 random directions (10 'rand', 10 'cov' from ufo_pool.pt, seeds 0-19) and 10 shuffled-label directions, each at f = +0.3 on 30 statements. Damage measured on 4 of the 16 main ufo_common texts. Chat template, thinking off."
+   },
+   {
+    "test": "T2-B Is the RSI direction special?",
+    "statement_tested": "Q1 in its special form: the RSI direction differs from directions for generic self-improvement or for wanting more capabilities.",
+    "counts_for": "All of the following: for every sibling, cos(DRSI, sibling) <= DRSI's split-half cosine - 0.10, with a bootstrap interval that excludes 0; at equal f, steering with DRSI moves the held-out log-odds of DRSI >= 1.5 x as much as each sibling's held-out log-odds; and in the factorial texts, the AI x self x recursion interaction has a norm above the 99th percentile of 1,000 label permutations.",
+    "counts_against": "cos(DRSI, some sibling) lies within 0.05 of DRSI's own split-half cosine. Then the model does not separate RSI from that sibling at this block.",
+    "undecided": "All other cases. With K = 6, being 'special' in inclination or steerability can only be described (DRSI outside the range of the 5 reference sets on both measures); a statistical claim needs T1'.",
+    "minimum_runs_and_conditions": "6 persona sets: DRSI, 'Desire For Self Improvement', 'Desire To Be More Intelligent', 'Cognitive Enhancement' and two unrelated sets. 100 statements to build each direction; 60 held-out statements for DRSI and 40 for each other set. Block 14 (plus block 18 for DRSI). Split-half cosines from 20 random halvings. Factorial texts: 8 cells x 16 templates, equal in length within +-1 token."
+   },
+   {
+    "test": "Q2' consistency of the step across recursion depth (replaces T3b; T3a dropped)",
+    "statement_tested": "Q2 in the only form that can be measured here: 'one more level of improving the improver' is represented by a consistent step, specific to improvement.",
+    "counts_for": "At some block in {8, 14, 18, 22}, all of the following: S_improve = mean[cos(d12, d23), cos(d23, d34)] >= 0.5; S_improve exceeds S for the neutral nesting relation by >= 0.15 and S for the repetition control by >= 0.15, with 95% bootstrap intervals over templates that exclude 0; and a ridge readout trained on depths 1-2 ranks depth 3 below depth 4 on >= 75% of held-out templates, while failing to do so for the repetition control.",
+    "counts_against": "At every block, S_improve <= S for the neutral nesting relation + 0.05 (the step is generic nesting), or S_improve < 0.3.",
+    "undecided": "All other cases, or if the split-half cosine of d12 itself is below 0.6 (the noise ceiling is too low).",
+    "minimum_runs_and_conditions": "24 templates x depths 1-4 for 'improve' ('the system improves its ability to improve its ability to ... X'); the same for a neutral nesting relation ('a summary of a summary of ... X') and for a repetition control (same words, no nesting). Length matched across relations at each depth. State taken at the last token. 1,000 bootstrap resamples over templates. About 11-16k tokens. A positive result is a fact about how nesting depth is represented. It is not learning, not RSI and not transitivity of meta-learning."
+   },
+   {
+    "test": "T1' correlation across concepts (round 2; replaces T1)",
+    "statement_tested": "Q1 in its general form: across concepts, baseline inclination correlates with steerability.",
+    "counts_for": "Spearman rho >= 0.4 with the lower end of the 95% bootstrap interval > 0.1 at block 14, the same sign at block 18, AND partial rho >= 0.3 after controlling for separation (d') and for the share of the direction's energy in the top 256 principal axes.",
+    "counts_against": "rho <= 0.1, or the upper end of the 95% interval < 0.3; or the raw rho passes but the partial rho is <= 0.1, in which case the relation is carried by separation and geometry.",
+    "undecided": "All other cases, and always if either measure has split-half reliability < 0.6.",
+    "minimum_runs_and_conditions": "K >= 30 persona sets in one Yes/No format, chosen before running (at n = 30 the critical r is 0.35, and power reaches 80% only for rho >= 0.5). >= 100 statements per set to build the direction and >= 50 to evaluate it. Alphas in the linear regime (KL <= 0.05). Inclination = baseline log-odds of the matching answer; steerability = slope per unit f. Judge the RSI set by its residual against the 95% prediction band of the other K-1 sets. About 12k tokens per set."
+   },
+   {
+    "test": "T3a' closed loop through the model's own text (optional, round 2)",
+    "statement_tested": "'RSI of RSI of RSI' read as repeated re-derivation: a direction re-derived from text generated under it reproduces itself.",
+    "counts_for": "cos(d3, d0) >= 0.5 and above the 95th percentile of loops started from 20 random directions, and d3 keeps >= 50% of d0's steering effect per unit norm on held-out DRSI statements.",
+    "counts_against": "cos(d3, d0) < 0.2, or d1-d3 align (cosine >= 0.5) with the mean direction of the loops started from random directions, meaning the loop converges on text degraded by the steering.",
+    "undecided": "All other cases.",
+    "minimum_runs_and_conditions": "32 neutral prompts, 40 greedy tokens per iteration, 3 iterations, f set so that the damage KL is 0.05-0.1. Random starts on 16 prompts. About 40 core-minutes. A positive result means the push yields text the model reads back as the same concept; no weights change and nothing is learned."
+   }
+  ],
+  "tokenizer_facts": [
+   "Base64 alphabet: each of the 64 symbols on its own is a single token (ids 10-89, which are byte-level ASCII base tokens). With a leading space, 54 stay single tokens and the 10 digits become two tokens (a space token plus the digit), because the Qwen pre-tokenizer splits every digit off.",
+   "Running Base64 (200 random 48-byte strings, 12,800 symbols): 1.34 symbols per token. Tokens of 1, 2, 3 and 4 symbols occur 6,430, 2,922, 170 and 4 times. Only 50% of symbol positions have a token of their own (43% for Base64 of English sentences). 8% of tokens (13% for English) cross the 4-symbol (24-bit) groups. Which token contains a symbol depends on its neighbours: over 50 random 7-symbol contexts, 'A' ended up in 33 different tokens, 'g' in 25, 'w' in 17 and 'Q' in 15. Per-symbol probes on running Base64 are therefore impossible.",
+   "Separated Base64: in lists separated by spaces, commas or newlines, every symbol sits in exactly one token. With spaces, letters are ' X' tokens and digits are bare tokens after a separate space token; with newlines, '+' and '/' share a token with the following newline. In the frames 'Symbol' + newline + X + newline, 'Symbol' + quoted X, and 'Symbol (X)', the frame tokens stay identical and the symbol is one token for 62 of the 64 symbols; '+' and '/' merge with the adjacent punctuation or newline.",
+   "Six-dot Braille U+2800..U+283F on its own: 4 cells are single tokens (U+2800 blank, U+2807 = letter l, U+2812, U+2829) and 60 are two tokens. All 64 token sequences are distinct, but not all the same length. 59 of the 60 two-token cells are one shared prefix token (bytes E2 A0, id 126188) followed by a single-byte token for 0x80+k. U+2801 (letter a) is split differently: [E2] + [A0 81] (id 15675).",
+   "For those 59 cells, the token that identifies the cell is a bare UTF-8 continuation-byte token, and its low 6 bits are the dot pattern (U+2800+k is encoded as E2 A0 80+k). These byte tokens are shared with other scripts: for the last bytes of U+281F and U+283F, 171 and 189 of up to 328 sampled 3-byte characters from other blocks end in the same token.",
+   "In running Braille text a cell keeps its tokenisation whatever its neighbours (one tokenisation for each of the 3 tested cells across 50 random contexts). That is 1.94 tokens per cell, and 97% of tokens are parts of characters. With a leading space, 62 of the 64 cells become three tokens ([space+E2][A0][byte]), so frames with a space before the cell change the token pattern. In the frames listed above (newline, quotes, parentheses) all 64 cells keep their stand-alone tokenisation.",
+   "Literary Braille letters a-z: 25 are two tokens and 'l' is one. 'a' is split differently from the other 24. Braille words cost 1.6-1.9 tokens per cell: 'hello world' is 11 cells and 18 tokens, against 2 tokens in ASCII.",
+   "Vocabulary: only 7 of 151,669 entries contain any Braille character: the blank cell (id 74719), a double blank (id 93647), three six-dot cells (U+2829 id 150068, U+2812 id 150161, U+2807 id 150726) and two eight-dot cells. Token id = 256 + BPE merge rank, exactly; this was checked for all 151,387 merged tokens. So the E2 A0 prefix (rank 125,932) and the single-cell tokens (ranks 149,812-150,470) are among the last merges, i.e. rare in the tokenizer's training text, while the Base64 symbols are byte-level base tokens. The blank cell (rank 74,463) is by far the most frequent Braille piece.",
+   "Control blocks with the same pattern exist: Supplemental Mathematical Operators U+2A00+k (59 of 64 cells as [prefix][byte 0x80+k]), dot-7 Braille U+2840+k (60 of 64), Glagolitic (55 of 64). For 51 values of k, six-dot Braille, dot-7 Braille and U+2A00 all have the form [prefix][same byte token]. Dot-8 Braille (U+2880 and up) is three tokens per cell.",
+   "Binary strings are one token per digit (a 64-bit string is 64 tokens). 6-bit groups separated by spaces take 6.9 tokens per group (6 digits plus a separate space token). 64-bit integers in decimal are one token per digit (19.4 digits on average, plus 1 token for a leading space). 64-bit hex ('0x' + 16 digits) takes about 16 tokens, mostly one per hex digit, with occasional merges such as 'DD' and 'xe'. Values 0-63 in decimal are 1 token for 0-9 and 2 tokens for 10-63.",
+   "Embedding rows only (read with safetensors get_slice; the model itself was not loaded; tied embeddings confirmed, since the embed_tokens and stored lm_head rows are identical). Probe: difference of means, 100 random 32/32 splits, 300 relabellings. For the 64 continuation-byte tokens, bits 3, 4 and 5 (dots 4-6) are readable held-out at 0.66, 0.79 and 0.98 (99th percentile of the relabelling null about 0.58); bits 0-2 (dots 1-3) come out at 0.52, 0.50 and 0.54. For the Base64 symbol tokens, the index bits reach 0.59 on average, only slightly above a null that keeps the upper/lower/digit classes (95th percentile 0.584). Transferring the Base64 bit probes to the byte tokens gives 0.497 (null 5-95%: 0.456-0.539).",
+   "Consequence: per-symbol probes are possible for Base64 only in separated frames (62 symbols, one token each). For Braille they are possible only at the byte token of the 59 [E2 A0][byte] cells, and there the probed bits are the byte's bits. This tokenizer offers no presentation of Braille with exactly one token per cell, equal for all cells."
+  ],
+  "drop": [
+   "T1 as specified: 12-20 hand-picked concepts, each with its own next-token set, top-token flips and its own best layer. No correlation claim from K < 30.",
+   "T3a as specified: re-deriving the direction from the steered model on the same sets (d2 = d1 at the steering block, so d1 + d2 = 2 d1).",
+   "T3b as specified: additivity of mean differences. It gives an identity with the same sets, sampling noise with different sets, and layer dependence across blocks.",
+   "T4b with the Base64-index <-> U+2800+k bijection: no support in text, agreement with literary Braille for 1 of 52 letters, chance level at the embedding.",
+   "T4d (how far the state moves at a boundary; steering the switch of code) and the contrast '6-bit groups vs 64-bit integers' (which is length and spacing).",
+   "Per-symbol probes on running Base64 text, and any Braille frame with a space before the cell.",
+   "Logit-lens readings or token-list 'names' of directions used as evidence; choosing evaluation tokens from the direction's own readout.",
+   "Any use of the Neuron Atlas data or of the repository's downloader."
+  ],
+  "add": [
+   "Behavioural competence checks for the codes before any probe (rule T4-C).",
+   "Matched-token controls for Braille: the 51 values of k with the form [prefix][same byte token] in six-dot Braille, dot-7 Braille and U+2A00 math operators. Block-0 (embedding) baselines for every probe. Splits by symbol. 200 label permutations as the null, plus within-class nulls for Base64.",
+   "An established inclination measure: stated Yes/No agreement with the persona set 'Desire For Recursive Self Improvement' (Perez et al. 2022) and its sibling sets, with CAA-style answer-token directions and held-out evaluation.",
+   "A 2 x 2 x 2 factorial text design (agent x target x recursion level) built from length-matched minimal pairs, judged by the interaction contrast.",
+   "Specificity at matched damage: KL on unrelated text for every steering condition; 20 random directions (10 isotropic, 10 covariance-shaped, from the existing pool statistics) and 10 shuffled-label directions for every block used in a claim; a neutral Yes/No set to catch a general bias toward 'Yes'.",
+   "The recursion-depth step-consistency test (rule Q2'), with a neutral nesting relation and a repetition control.",
+   "Covariates for any comparison across concepts: separation (d'); share of energy in the top 256 principal axes (which is also the 'tilt' reading of 'Neigung'); split-half reliabilities; participation ratio of the concept directions.",
+   "Checks at run time that every frame and symbol is tokenised as intended, and a memory check (MemAvailable >= 9.5 GB) before loading the float32 model.",
+   "Two questions to the user: does 'Neigung' mean propensity or tilt? Does 'verschieden ordnungszahlig' mean codes of different order (6 -> 64 -> 2^64) rather than codes of the same size?"
+  ],
+  "order_of_priority": [
+   "0. Done in this review, with no forward passes: tokenizer facts and embedding-level baselines for T4.",
+   "1. T4-C competence checks together with the T4-A/T4-B probes, in one model load (about 21k tokens, about 17 core-minutes). This decides whether any test across codes is worth running.",
+   "2. T2-A/T2-B: the RSI direction against its sibling sets, with 20 random and 10 shuffled-label directions, damage and yes-bias controls, and the factorial check (about 118k tokens, about 92 core-minutes at block 14, plus block 18 for DRSI).",
+   "3. Q2', consistency of the step across recursion depth (about 11-16k tokens, about 10 core-minutes).",
+   "4. Reserve of about 45 core-minutes for one repeat block or reruns. Ask the user the two reading questions before round 2. First round total: about 155k tokens, about 2.0 core-hours at 3 s per 64 tokens, plus about 10 minutes of loading. It runs on core 0 alone while the training runs occupy cores 1-3.",
+   "5. Round 2: T1' (K >= 30 sets, about 360k tokens, 1.6-4.7 core-hours), and optionally the closed loop T3a' (about 40 core-minutes)."
+  ],
+  "cannot_be_tested_here": [
+   "RSI in the literal sense. No model here changes its own weights, training data, code or training loop: Qwen3-1.7B is frozen, and the small modular-division transformer is trained by a fixed outside loop. Nothing here can improve itself, recursively or otherwise.",
+   "An inclination to change one's own weights, as behaviour. README 8.8 R1 still holds. Only stated agreement with statements can be measured, and stated preference is not a disposition to act. A 1.7B model on CPU also cannot run meaningful agentic tests of self-modification.",
+   "Whether a direction 'is' RSI. A difference of means over texts or answers encodes what distinguishes those inputs for the model (topic, stance, wording); it is not a process. Steering along it is an outside intervention, not self-modification.",
+   "Meta-learning and 'meta-learning transitivity' as learning phenomena. The 1.7B model cannot be trained here, and nothing is learned during the measurements. 'RSI of RSI of RSI' can only be emulated: as repeated computation (a closed loop through the model's own text) or as a representation of nesting depth.",
+   "Correlations across models or training stages. Only one checkpoint is present (the post-trained Qwen3-1.7B); neither the base checkpoint nor the fine-tuned DSSE models are available.",
+   "Anything from the Neuron Atlas. There is no data, automated access is ruled out, and it describes a different model (Qwen3.6-35B-A3B, mixture of experts) that cannot run here and whose neuron ids do not transfer.",
+   "'Knowledge cutoffs' in the literal sense (the date of the training data). No test addresses this; the plan follows the user's own gloss (transitions between knowledge domains).",
+   "Statements about 'a network' in general or about larger models. There is one model and one tokenizer, and the tokenizer facts above are specific to Qwen's byte-level BPE."
+  ],
+  "sources": [
+   "Draft plan .../scratchpad/rsi_out/plan.md: full text.",
+   "Project README /home/user/DSSE/results/ju_space/README.md: lines 1-132 (header, Kurzfassung, Material, section 1) and 425-985 (section 7) in full; section 3 (lines 150-178) in full; section 8.8 R1 (lines 1556-1557) found by search and read.",
+   "/home/user/DSSE/analysis/ju_space/ufo_common.py and ufo_damp2.py: full text. ufo_damp.py does not exist (directory listed). ufo_pool.py: searched only for which blocks it covers.",
+   "User repository clone <clone of the proposed repository>: README.md in full; src/ searched for URLs only (config.py and upstream.py name www.goodfire.com and static.goodfire.ai). No code run, no access to those hosts.",
+   "Local model directory .../scratchpad/models/qwen3-1.7b: read config.json, generation_config.json, tokenizer_config.json (keys only), merges.txt and model.safetensors.index.json; loaded the tokenizer with AutoTokenizer; read 128 embed_tokens rows and 64 lm_head rows with safetensors get_slice. The model was not loaded.",
+   "Braun, Eickhoff, Krueger, Bahrainian, Krasheninnikov 2025, 'Understanding (Un)Reliability of Steering Vectors in Language Models', arXiv 2505.22637: abstract only, through a fetch tool that returned a summary with short quotes.",
+   "Tan, Chanin, Lynch, Kanoulas, Paige, Garriga-Alonso, Kirk 2024, 'Analyzing the Generalization and Reliability of Steering Vectors', arXiv 2407.12404: abstract only, read the same way.",
+   "Bhattarai and Alhanai 2026, 'Signatures of Steerability in Activation Space of Language Models', arXiv 2609.14151: abstract only, read the same way.",
+   "Perez et al. 2022, 'Discovering Language Model Behaviors with Model-Written Evaluations', arXiv 2212.09251: the ar5iv HTML, searched by a fetch tool for named items only (the paragraph on how the persona datasets are built: label-balanced, at most 1,000 statements, a Yes/No question; and the names in Table 18 'Desire For Enhanced Capabilities'). Not read in full.",
+   "Wikipedia, 'Braille ASCII': page fetched and summarised by a fetch tool (ASCII 32-95; the mappings for A, B, 1, 0 and space).",
+   "Web search result summaries, used only to locate the papers. The Hugging Face location of the persona files came from such a summary and was not verified."
+  ],
+  "not_checked": [
+   "Forward-pass speed on one core (the plan's 1-3 s per 64 tokens) and bf16 speed. The budget assumes 3 s.",
+   "Whether the persona files can be obtained (the location comes from a search summary only), their size, label balance and licence; and whether 'Yes'/'No' are single tokens in the chosen chat format.",
+   "Whether Qwen3-1.7B can decode Base64 or read Braille at all. Nothing was run on the model.",
+   "Any probe of the residual stream beyond the token embeddings. The embedding results are block-0 baselines only.",
+   "How Bhattarai and Alhanai define their separation metrics; the full text of all four papers.",
+   "That Braille in web text is mostly dot art or filler. This is inferred from vocabulary ranks only.",
+   "README sections 2, 4, 5, 6 and 8, beyond the Kurzfassung and 8.8 R1.",
+   "The atlas content (deliberately not accessed).",
+   "Which available-memory reading (about 5 or about 13 GB) is typical; it fluctuated during the review.",
+   "The fetch tool saved a copy of the Perez et al. PDF under /root/.claude/projects/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/tool-results/. The tool wrote it, not this review; it was not opened or executed."
+  ],
+  "files": [
+   "<root>/rsi_review/critic/tokfacts.py",
+   "<root>/rsi_review/critic/tokfacts.json",
+   "<root>/rsi_review/critic/embprobe.py",
+   "<root>/rsi_review/critic/embprobe.json",
+   "<root>/rsi_review/critic/embprobe_perbit.py",
+   "<root>/rsi_review/critic/blocks.py",
+   "<root>/rsi_review/critic/matched.py",
+   "<root>/rsi_review/critic/frames.py",
+   "<root>/rsi_review/critic/frames2.py",
+   "<root>/rsi_review/critic/mergecheck.py",
+   "<root>/rsi_review/critic/stats.py"
+  ]
+ }
+}

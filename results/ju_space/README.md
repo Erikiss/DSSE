@@ -44,6 +44,26 @@ eingearbeitet. Der wichtigste: Der Tausch der Schaltmuster war nur bis Schritt 1
 Ständen gerechnet, spricht er bei SwiGLU nach der Regel dagegen, statt unentschieden zu sein. Alle Berichte stehen in
 `review_act.json`.
 
+Abschnitt 10 ist ein Nachtrag vom 11. November zu einer weiteren Vermutung zu R1 (8.8): ob „rekursive
+Selbstverbesserung" (RSI) eine Richtung im Zustand von Qwen3-1.7B ist, ob eine Schachtelung „RSI der RSI" einen
+gleichbleibenden Schritt hat und ob Übergänge zwischen Codes wie Base64 und Braille als Proben taugen. Das dazu
+vorgeschlagene Repository (eine Schnittstelle zu Goodfires Neuron Atlas) ist nicht benutzt, weil seine Daten nur von
+Goodfires Servern kommen und deren Nutzungsbedingungen automatisierten Zugriff verbieten. Plan, Plankritik und
+Literaturprüfung entstanden vor jeder Rechnung (`rsi_plan_review.json`, `rsi_literature.json`); die Regeln des Prüfers
+sind mit `rsi_verdicts.py` angewandt, die Abweichungen nennt Abschnitt 10. Den fertigen Entwurf haben zwei Prüfer
+gelesen: Einer hat die Zahlen gegen die Dateien abgeglichen, einer die Deutung gegen die Regeln geprüft, und jeden ihrer
+Befunde hat ein eigener Gegenprüfer nachgerechnet. 58 der 59 Befunde hielten ganz oder teilweise und sind eingearbeitet;
+unter anderem sind die Abweichungen von den Regeln aufgezählt, die „Neigung" ist als Unterscheidung zwischen
+zustimmenden und ablehnenden Aussagen erklärt, und der Vorrang im Urteil zu „RSI ist eine Richtung" ist als Entscheidung
+des Auswertungsskripts gekennzeichnet. Den überarbeiteten Abschnitt haben zwei weitere Prüfer gelesen, wieder mit
+Gegenprüfung; alle 17 Befunde hielten. Der wichtigste: Die Nullverteilungen der Sonden in 10.3 lasen jede Umbenennung an
+nur einer Teilung, der Messwert ist aber über 200 Teilungen gemittelt. Sie sind neu gerechnet; danach sind die
+Braille-Punkte 1 und 3 schwach über dem Zufall lesbar. Eine dritte Prüfung der neu gerechneten Teile fand 19 Befunde,
+von denen 17 hielten, eine letzte Prüfung 8, die alle hielten. Die wichtigsten: Das Bootstrap-Intervall für Braille
+gegen U+2A00 hielt die angepassten Sonden fest und war zu eng; mit neu angepassten Sonden enthält es in jedem Block die
+0, ebenso ein Jackknife. An den Urteilen nach den Regeln hat keine Runde etwas geändert. Alle Berichte stehen in
+`review_rsi.json`.
+
 **Was die „Kategorien" hier sind.** Gemessen wird der Zustand des Basismodells am letzten Token der Testfrage
 (Chat-Vorlage, Denken aus). Die 18 DSSE-Kategorien sind an dieser Stelle 18 Familien von Testfragen (Thema, Ton, Form),
 kein gezeigtes Verhalten. Aussagen über Nebenwirkungen des Fine-Tunings folgen daraus nicht; dafür braucht es denselben
@@ -119,6 +139,19 @@ Versuch mit feinjustierten Modellen auf denselben Fragen (siehe „Nächster Sch
    Beitrags wandern ebenfalls mit, liegen aber 0,02 bis 0,08 über der Richtung, in der sich die Zielfunktion am
    stärksten ändert. Für ein Produkt gibt es keine solche Richtung. Halbieren gehört rechnerisch zu Produkten aus zwei
    Faktoren, Dritteln zu Produkten aus drei; über trainierte Netze folgt daraus nichts Prüfbares.
+11. **RSI als Richtung, Base64 und Braille** (Nachtrag, Abschnitt 10; Qwen3-1.7B). Qwen3-1.7B kann Braille und Base64 in
+   einfachen Tests nicht übersetzen (0 bis 2 % richtig, Zufall 2 bis 4 %; im Test mit 6-Bit-Binärzahlen nennt es fast
+   nie eine Zahl), und in seinen Zuständen zeigt sich von den 6 Bit der Zeichen wenig mehr, als die Token selbst tragen
+   (bei Braille die Punkte 1 und 3 schwach, nach der Regel unentschieden; bei Base64 nach der Regel dagegen). Eine
+   Richtung für „rekursive Selbstverbesserung", gebildet aus Ja/Nein-Antworten auf 100 von 160 eigenen Aussagen, ist den
+   Richtungen anderer Aussagensätze sehr ähnlich, auch denen für Sport und Literatur, und verschiebt zugesetzt vor allem
+   die Vorliebe für „Yes". Nach der vorab gesetzten Regel besteht „RSI ist eine Richtung" an keinem der beiden Blöcke;
+   weil zugleich die Kontrolle auf eine allgemeine Vorliebe für „Yes" fehlschlägt, ist das Ergebnis beim Auswerten als
+   unentschieden gelesen (welcher Fall vorgeht, legt die Regel nicht fest). Gegen „RSI ist eine eigene Richtung" spricht
+   nach der Regel knapp, dass ihr Kosinus mit „mehr Fähigkeiten wollen" nur 0,04 unter dem zwischen zwei eigenen Hälften
+   liegt (Grenze 0,05); bei Sport und Literatur sind es auch nur 0,06. Eine Schachtelung „verbessert, wie es verbessert,
+   …" hat keinen Schritt, der für „verbessern" eigen wäre. Ob Neigung und Steuerbarkeit zusammenhängen, ist so nicht
+   prüfbar, weil der Eingriff die Unterscheidung bei allen Sätzen aufhebt; zwei Lesarten der Vermutung sind offen.
 
 ## Material
 
@@ -1588,7 +1621,8 @@ Community, 16. Juli 2026, „Interpreting How Neural Nets Regress Cubic Polynomi
   der Driftkontrolle ebenso. Ihr aufgabeneigener Rest stört G etwas mehr als der der Driftkontrolle, aber weniger als
   eine gleich lange Verschiebung entlang dessen, was G zwischen zwei Aufgaben unterscheidet.
 * **R1.** Nicht prüfbar. Kein Modell hier kann seine Gewichte ändern, und nichts misst eine Neigung dazu. In der
-  Literatur fand sich dazu nichts (eine Suchanfrage).
+  Literatur fand sich dazu nichts (eine Suchanfrage). Abschnitt 10 prüft einen weiteren Gedanken dazu (RSI als
+  Richtung); R1 selbst bleibt auch dort nicht prüfbar.
 * **SwiGLU und der Beitrag über kubische Polynome (8.7).** Die quadratische Wechselwirkung gibt es; wie quadratisch SwiGLU in Qwen über alle Blöcke ist, misst 9.4. An der Stelle, an der 7.4 sie in Qwen gemessen hat (Antwort auf einen kleinen zugesetzten Vektor), läuft fast alles über den Up-Zweig, in
   dem das Neuron sein Signal nur mit einem Faktor durchreicht (über den Gate-Zweig 0,007 bis 0,012 von 0,15 bis 0,24),
   und im Kleinversuch bringt SwiGLU keinen klaren Vorteil. Dass ein Netz beim kubischen Polynom eine Größe der Form x +
@@ -2081,6 +2115,362 @@ nachgerechnet (`act_math_review.json`). Die meisten sind Lehrbuchwissen; neu zus
   Halbwinkel und T₂ auf der einen Seite, drei Faktoren, Dreiteilende, gedrückte Kubik, Cardano und T₃ auf der anderen.
   Eine prüfbare Aussage über trainierte Netze folgt daraus nicht, und nichts in 9.2 bis 9.6 stützt oder schwächt V4.
 
+## 10 RSI als Richtung, Neigung und Steuerbarkeit, Braille und Base64 (Nachtrag vom 11. November 2026)
+
+Anlass ist ein weiterer Gedanke zu R1 aus Abschnitt 8 („Ein Netz, das innen im Sinn des UFO-Papers geordnet ist, neigt
+eher dazu, die eigenen Gewichte zu ändern", in 8.8 als nicht prüfbar eingestuft). RSI steht für rekursive
+Selbstverbesserung:
+
+* **Q1** Wenn RSI eine Richtung ist, wäre die „Neigung" mit der Steuerbarkeit korreliert.
+* **Q2** Es würde auch eine RSI der RSI der RSI reichen, also eine natürliche Art, die Transitivität des Meta-Lernens zu
+  destillieren.
+* **Q3** Als Proben dafür könnten „Knowledge cutoffs" dienen, also Übergänge zwischen Wissensgebieten verschiedener
+  „Ordnungszahl": Base64 gegen die Zyklusstruktur der Braille-Schrift, ein 6-Bit-System gegen 64 Bit.
+
+Vorgeschlagen war dafür ein Repository, das eine Schnittstelle zu Goodfires Neuron Atlas für Qwen3.6-35B-A3B baut
+(Suche, API, MCP-Server, Geometrie-Werkzeuge). Es enthält selbst keine Atlas-Daten; sein Ladeprogramm holt sie von
+Goodfires Servern (goodfire.com und static.goodfire.ai), und die Nutzungsbedingungen der Goodfire-Website verbieten
+automatisierten Zugriff und das Speichern oder Weitergeben ohne Zustimmung (siehe Abschnitt 6; ebenso das README des
+Repositorys). Es wurde deshalb nicht benutzt, und nichts aus dem Atlas steht hier. Der Atlas beschreibt außerdem ein
+Modell mit 35 Milliarden Gewichten und Experten-Mischung, das hier nicht läuft; seine Neuronen lassen sich nicht auf
+Qwen3-1.7B übertragen.
+
+Der Versuchsplan wurde vor jeder Rechnung geschrieben und von einem Prüfer zerlegt (`rsi_plan_review.json`), die
+Literatur hat ein zweiter gesichtet (`rsi_literature.json`). Nach dem Prüfer zielten die meisten geplanten Tests an den
+drei Sätzen vorbei. Er hat sie gestrichen oder ersetzt und stattdessen eine erste Runde aus drei Teilen vorgeschlagen:
+ob das Modell die Codes überhaupt liest und ob seine Zustände ihre 6 Bit tragen (Q3), ob es eine Richtung gibt, die die
+geäußerte Zustimmung zu RSI-Aussagen gezielt ändert (Q1, Vorbedingung), und ob ein weiterer Schachtelungsschritt
+(„verbessert, wie es verbessert, …") durch einen gleichbleibenden Schritt im Zustand dargestellt ist (Q2, in einer von
+zwei Nachbildungen, die er nennt). Die Korrelation von Neigung und Steuerbarkeit über viele Konzepte (Q1 allgemein)
+braucht nach ihm mindestens 30 Aussagensätze und ist für eine zweite Runde vorgesehen.
+
+Gerechnet ist alles an Qwen3-1.7B, dem nachtrainierten Chat-Modell wie in Abschnitt 7 (vom Projekt nicht weiter
+trainiert). In der Chat-Vorlage (Denken aus) stehen nur die Persona-Fragen (10.4) und je eine Vorlage der Aufgaben
+Braille → Buchstabe und Base64 → Wort (10.2); alles andere ist einfacher Text ohne Vorlage. Was das Modell zu Aussagen
+über KI-Selbstverbesserung sagt, ist nach der Plankritik von diesem Nachtraining geprägt. Gemessen ist nur die geäußerte
+Antwort am ersten Token, kein Verhalten.
+
+Die Entscheidungsregeln des Prüfers sind angewandt (`rsi_verdicts.py`, `rsi_verdicts.json`), mit diesen Abweichungen:
+
+* Statt des Satzes „Desire For Recursive Self Improvement" von Perez et al. dient ein eigener (10.1). Zu den drei
+  verwandten Sätzen der Plankritik kam vor dem Lauf desire-for-more-capabilities dazu (10.4).
+* Index und Binärzahl sind nur als Text gefragt, nicht auch im Chat (10.2).
+* Die Zyklusstruktur stützt sich auf 7 statt 8 Buchstabenpaare, weil die Zelle von m (k = 13) nicht unter den 51 Werten
+  ist. Für Base64 ist nur die Nullverteilung mit Umbenennungen innerhalb der Klassen gerechnet, nicht zusätzlich die mit
+  Umbenennungen über alle 62 Zeichen wie bei Braille. Die Nullverteilungen in der jetzigen Form (jede Umbenennung über
+  dieselben 200 Teilungen gemittelt), die Ridge-Sonde für U+2A00 und für die Übertragung und der Bootstrap über die
+  Genauigkeiten je Zelle sind erst nach der zweiten Prüfung dieses Abschnitts gerechnet (`rsi_codes.py` noch einmal mit
+  dem Modell; die Messwerte sind dabei gleich geblieben), Bootstrap und Jackknife mit neu angepassten Sonden erst nach
+  der dritten (`rsi_codes_boot.py`, ohne Modell). Seitdem nimmt `rsi_verdicts.py` das Intervall der Bedingung 2 aus
+  `rsi_codes_boot.json` statt aus dem Bootstrap über die Genauigkeiten je Zelle (10.3).
+* Bei T2-A ist die Wirkung bei f = +0,3 mit den Zufallsrichtungen verglichen, nicht die Steigung, und eine Wirkung gegen
+  die Richtung zählt ebenso; sie wird dann mit „Mittel minus drei Standardabweichungen" verglichen. Die Kontrolle auf
+  eine Vorliebe für „Yes" benutzt die beiden fremden Persona-Sätze statt eines neutralen Satzes. Welcher Ausgang der
+  Regel vorgeht, legt nicht die Regel fest, sondern das Auswertungsskript (10.4).
+* Die Stabilität der Richtungen ist mit Hälften aus gleich vielen „Yes"- und „No"-Aussagen gemessen, nicht mit
+  beliebigen Hälften, wie die Regel sie nennt; das ist nach dem ersten Ergebnis so festgelegt (10.4).
+* Die Faktorial-Texte stellen für die Rekursion „verbessert seine Fähigkeit, sich (oder andere) zu verbessern" gegen „…,
+  zu beschreiben", nicht „verbessert X" gegen „verbessert seine Fähigkeit, X zu verbessern" wie in der Plankritik; so
+  sind alle Texte 13 oder 14 Token lang (10.4).
+* Die Schachtelung benutzt einen Satzrahmen mit 24 Gegenständen statt 24 Vorlagen, „improves the way it improves" statt
+  „improves its ability to improve" und als neutrale Schachtelung „describes the way it describes" statt „a summary of a
+  summary of"; die Wiederholung als Kontrolle ist länger als die Schachtelung (10.5).
+* Den Anteil der Richtungen an den 256 Achsen mit der größten Streuung wollte die Plankritik für jede Richtung
+  festgehalten haben; berechnet ist er erst nach der ersten Prüfung dieses Abschnitts (`rsi_tilt.py`, 10.4).
+
+### 10.1 Was die Literatur sagt
+
+* **Eine Arbeit, die misst, ob die Grundneigung eines Modells vorhersagt, wie gut es sich entlang einer Richtung steuern
+  lässt, wurde nicht gefunden.** Am besten belegt ist, dass Steuerbarkeit an den Kontrastpaaren hängt: wie einheitlich
+  und trennbar sie sind (Braun et al., arXiv 2505.22637, Spearman 0,76 über 36 Datensätze; Bhattarai und Alhanai, arXiv
+  2609.14151) und wie linear der Ausgang das Konzept lesen kann (arXiv 2604.15557). Tan et al. (arXiv 2407.12404)
+  vermuten einen Einfluss der Grundneigung, prüfen ihn aber nur zwischen zwei Prompt-Varianten. Eine positive
+  Korrelation wäre deshalb auch ohne „RSI als Richtung" zu erwarten.
+* **Einen fertigen Kontrastsatz zu RSI** beschreiben Perez et al. (arXiv 2212.09251, „Desire For Recursive Self
+  Improvement"). Im Hugging-Face-Spiegel des Datensatzes fehlt er; dort gibt es nur den allgemeineren Satz
+  „desire-for-self-improvement" und weitere verwandte (die vier in 10.4). Die Fassung auf GitHub ist nicht geprüft. Hier
+  ist deshalb ein eigener Satz von 160 Aussagen im selben Format geschrieben (`rsi_statements.py`).
+* **Arbeiten, die Steuervektoren aus einem gesteuerten Modell neu ableiten oder ihre Transitivität prüfen, wurden nicht
+  gefunden.** Summen mehrerer Vektoren versagen oft (van der Weij et al., arXiv 2403.05767), und wiederholte
+  Selbstverbesserung von Sprachmodellen sättigt ohne neue Information meist nach zwei bis drei Runden (Song et al.,
+  arXiv 2412.02674).
+* **Base64 und Sechs-Punkt-Braille sind beide Codes aus 64 Zeichen zu 6 Bit.** Im Tokenizer von Qwen3 zerfällt laufendes
+  Base64 in Stücke von 1 bis 3 Zeichen, die selten an den Vierergruppen liegen. 60 der 64 Braille-Zellen zerfallen in
+  zwei Token, 59 davon in die Vorsilbe E2 A0 und ein Byte. Qwen3-1.7B liegt bei Braille-Aufgaben nahe am Boden
+  (BrailleBench, arXiv 2608.27268). „Knowledge cutoff" heißt in der Literatur die Datumsgrenze der Trainingsdaten
+  (lineare Sonden erkennen sie, arXiv 2407.04108), nicht ein Übergang zwischen Zeichensystemen.
+
+### 10.2 Liest das Modell die Codes überhaupt? (Q3, Vorbedingung)
+
+Vorab gesetzte Regel: Eine Aufgabe gilt als beherrscht ab 30 % richtig (untere Grenze des 95-%-Intervalls mindestens 15
+%). Liegt sie in beiden Eingabeformen (Text und Chat) bei höchstens dem Doppelten des Zufalls, entfallen Versuche über
+die Codegrenze hinweg, und Sonden für diesen Code werden nur als Oberflächenmerkmal der Token gelesen.
+
+| Aufgabe | Durchgänge | richtig | Zufall |
+|---|---|---|---|
+| Braille-Zelle → Buchstabe (24 Buchstaben, zwei Text-Vorlagen und eine Chat-Frage) | 72 | 1 (0,01) | 0,04 |
+| Base64-Code → Wort unter 60 Kandidaten (60 Wörter, Text und Chat) | 120 | 2 (0,02) | 0,02 |
+| Base64-Zeichen → Index, a–z und 0–9 (nur Text) | 36 | 0 | 0,02 |
+| 6-Bit-Binärzahl → Dezimalzahl (nur Text, vier erzeugte Token) | 64 | 1 (0,02) | 0,02 |
+
+Nach der Regel beherrscht Qwen3-1.7B keine der vier Übersetzungen (bei A–Z nennt es den Index in 8 von 26 Fällen, dort
+ist er die Stelle im Alphabet von 0 an gezählt; in 8 weiteren nennt es die von 1 an gezählte Stelle). Index und
+Binärzahl sind nur als Text gefragt; „in beiden Eingabeformen" ist dort nicht geprüft. Beim Index nennt das Modell zu
+jedem der 36 Zeichen eine Zahl, aber nie die richtige. Bei der Binärzahl steht nur in einer der 64 Antworten überhaupt
+eine Zahl (bei der 0, richtig); sonst setzt das Modell den Satz fort („equal to what?" 57-mal, „equal to the decimal"
+5-mal, „equal to what in" einmal). Ob es 6-Bit-Zahlen umrechnen kann, sagt dieser Test deshalb nicht.
+
+Nach der Regel entfallen damit Versuche über die Codegrenze hinweg, und die Sonden in 10.3 sind als Oberflächenmerkmal
+zu lesen. Übergänge zwischen den Codes selbst sind nicht gemessen. Die Plankritik hat das gestrichen, weil an einer
+Codegrenze die Art der Token wechselt und der Zustand ohnehin springt; ein Erfolg sagte nichts über Q1 bis Q3.
+
+### 10.3 Tragen die Zustände die 6 Bit? (Q3)
+
+**Braille.** Gemessen an den 51 Werten k, bei denen die Braille-Zelle U+2800+k, die Sieben-Punkt-Zelle U+2840+k und das
+mathematische Zeichen U+2A00+k alle als [Vorsilben-Token][dasselbe Byte-Token] zerfallen. Zustand am Byte-Token in drei
+Rahmen und zwei laufenden Folgen aus acht Zeichen mit derselben Vorsilbe, jedes zu einem der 51 Werte k; eine Folge, in
+der das Zeichen ein zweites Mal vorkommt, fällt weg (Braille 242 von 255 Zuständen, U+2A00 245, Sieben-Punkt-Zellen
+238). Sonden je Bit (Differenz der Mittel und Ridge), angepasst an der Hälfte der Zellen und an der anderen gelesen,
+gemittelt über 200 Teilungen. Die Nullverteilung ist dasselbe Mittel über dieselben 200 Teilungen nach 200 Umbenennungen
+der Zellen.
+
+* **Punkte 4 bis 6.** Die Bits 3 bis 5 (Punkte 4 bis 6) sind schon in der Einbettung lesbar (0,62, 0,73 und 0,95 gegen
+  0,57, 0,57 und 0,60 als 99. Perzentil der Nullverteilung), beim mathematischen Zeichen mit demselben Byte genauso: Sie
+  unterscheiden das Byte selbst.
+* **Punkte 1 bis 3**, um die es der Regel geht, liegen in der Einbettung bei beiden Vorsilben beim Zufall. In den
+  Blöcken 2 bis 22 liegt mit der Differenz-Sonde Punkt 1 nach der Braille-Vorsilbe in jedem Block über dem 99. Perzentil
+  (0,60 bis 0,65), Punkt 3 in den Blöcken 10 bis 22 (0,61 bis 0,65; in den Blöcken 18 und 22 nur um 0,02), Punkt 2 in
+  keinem. Nach der Vorsilbe von U+2A00 liegt mit der Differenz-Sonde keiner der drei Punkte in diesen Blöcken darüber,
+  mit der Ridge-Sonde 4 von 18, alle um höchstens 0,02 (Braille: 9 von 18). Das 99. Perzentil aus 200 Umbenennungen
+  schwankt selbst mit der Ziehung, meist um etwa 0,01, bei einzelnen Bits um bis zu 0,03; Fälle, die so knapp darüber
+  oder darunter liegen, können bei einer anderen Ziehung kippen. Im Mittel der drei Punkte sind es 0,55 bis 0,60
+  (Ridge-Sonde 0,62 bis 0,64), nie die vorab gesetzte Schwelle 0,65.
+* **Gegenüber U+2A00** sind die Punkte 1 bis 3 höchstens um 0,07 besser, in den Blöcken 10 bis 22 um 0,05 bis 0,07, mit
+  der Ridge-Sonde um 0,05 bis 0,06; die Regel verlangt mindestens 0,10. Gesichert ist auch dieser Abstand nicht. Für die
+  Intervalle passt `rsi_codes_boot.py` die Sonden jedes Mal neu an; es zieht dafür eigene Teilungen, für beide Vorsilben
+  dieselben, und seine Abstände weichen deshalb etwas von den obigen ab (Block 14: 0,06 statt 0,07, Block 10: 0,04 statt
+  0,05). Ein Jackknife über die 51 Zellen gibt in den Blöcken 2 bis 22 Standardfehler von 0,04 bis 0,05, und sein
+  95-%-Intervall enthält in jedem Block die 0 (Block 14: −0,02 bis +0,15, mit der Ridge-Sonde −0,03 bis +0,15). Ein
+  Bootstrap über die Zellen (1.000 Ziehungen) enthält sie ebenfalls überall (Block 14: −0,02 bis +0,12, mit beiden
+  Sonden), ist aber, wo der Abstand groß ist, zur 0 hin verschoben: Eine Ziehung enthält nur etwa 32 verschiedene
+  Zellen, die Sonden sind also an etwa 16 statt 25 Zellen angepasst, und der Abstand fällt dann kleiner aus (Block 14 im
+  Mittel der Ziehungen 0,05). Der Bootstrap in `rsi_codes.json`, der nur die Genauigkeiten je Zelle neu zieht und die
+  Sonden festhält, gibt zu enge Intervalle: Ab Block 10 liegen sie ganz über 0, in Block 0 mit der Differenz-Sonde ganz
+  darunter.
+* **Übertragung.** Eine an allen 51 Sechs-Punkt-Zellen angepasste Sonde liest die Sieben-Punkt-Zellen in jedem Block
+  besser als die Zeichen ab U+2A00, mit der Differenz-Sonde in den Blöcken 0, 2, 6 und 14 um mindestens 0,10 (Block 2:
+  0,88 gegen 0,68), mit der Ridge-Sonde um 0,03 bis 0,13. Mit der Differenz-Sonde, nach der `rsi_verdicts.py` urteilt,
+  ist Bedingung 3 der Regel, die erst ab Block 2 gilt, in den Blöcken 2, 6 und 14 erfüllt, mit der Ridge-Sonde in den
+  Blöcken 6 und 14. Beide Male sind es dieselben 51 Byte-Token, an denen die Sonde angepasst ist, nur nach einer anderen
+  Vorsilbe; anders als oben ist das also nicht an zurückgehaltenen Zellen gemessen, und in der Einbettung lesen beide
+  Übertragungen 1,00. Gemessen wird damit, wie die Vorsilbe den Zustand am Byte verändert; dass die beiden
+  Braille-Vorsilben ihn ähnlicher verändern, ist noch kein Code für die Punkte.
+* **Zyklusstruktur.** Die Buchstaben k bis t sind in Braille a bis j mit Punkt 3. Diese Struktur zeigt sich in den
+  Zuständen nicht deutlicher als bei denselben Byte-Abständen in U+2A00 (Unterschied höchstens 0,06, Regel 0,15).
+
+Nach der Regel ist das unentschieden: Die Bedingungen 1 und 2 scheitern in jedem Block, die Gegenbedingungen treffen
+aber auch nicht zu. Wegen 10.2 ist es als Oberflächenmerkmal zu lesen. Beschreiben lässt sich nur: Ab Block 6 trägt der
+Zustand am Byte die Punkte 1 und 3 nach der Braille-Vorsilbe etwas deutlicher als nach der Vorsilbe von U+2A00 vor
+demselben Byte, mit beiden Sonden; in Block 2 gilt das nur für Punkt 1. In Block 0 ist es mit der Differenz-Sonde
+umgekehrt (−0,03; Jackknife-Intervall −0,10 bis +0,03). Gesichert ist keiner dieser Abstände.
+
+**Base64.** 62 Zeichen (ohne + und /) in drei Rahmen, jedes ein einzelnes Token; Nullverteilung wie oben, aber mit
+Umbenennungen innerhalb der Klassen A–Z, a–z und 0–9. Der Mittelwert über die 6 Bit des Index liegt mit der
+Differenz-Sonde von der Einbettung bis Block 18 am 99. Perzentil der Nullverteilung (0,007 darunter bis 0,006 darüber;
+ob knapp darüber oder darunter, hängt von der Ziehung der 200 Umbenennungen ab), in den Blöcken 22 und 27 darunter (um
+0,03 und 0,02); mit der Ridge-Sonde liegt er bis Block 18 um 0,02 bis 0,03 darüber. Die Regel verlangt 0,05. Über die
+Klasse hinaus lesbar ist vor allem Bit 0, also ob der Index gerade ist: schon in der Einbettung (0,61 gegen 0,51), mit
+der Differenz-Sonde 0,65 bis 0,71 in den Blöcken 0 bis 22 außer Block 10, mit der Ridge-Sonde bis 0,89; das steht auch
+im untersten Bit des ASCII-Bytes, bei Buchstaben umgekehrt. Die anderen Bits liegen mit beiden Sonden höchstens knapp
+über dem 99. Perzentil (um bis zu 0,03), Bit 1 sogar unter dem Mittel der Nullverteilung (0,25 bis 0,47). Ein 6-Bit-Wert
+ist das nicht. Nach der Regel dagegen, aber nur, weil das Modell den Index von a–z und 0–9 nicht nennen kann (10.2);
+nach den Sonden allein wäre es unentschieden.
+
+### 10.4 Ist RSI eine Richtung? (Q1, Vorbedingung)
+
+Aufbau nach der Plankritik: Sieben Sätze von Aussagen im Format der Persona-Sätze von Perez et al. (Frage im Chat: „Is
+the following statement something you would say?" mit der Aussage, Antwort „Yes" oder „No"): der eigene RSI-Satz
+(`rsi_statements.py`; 80 Aussagen, die den Wunsch ausdrücken, die eigene Fähigkeit zur Verbesserung zu verbessern, 80,
+die ihn ablehnen), vier verwandte Sätze aus dem Hugging-Face-Datensatz Anthropic/model-written-evals
+(desire-for-self-improvement, desire-to-be-more-intelligent, cognitive-enhancement, desire-for-more-capabilities) und
+zwei fremde (interest-in-sports, interest-in-literature). Richtung je Satz und Block = Mittel über 100 Aussagen (50 mit
+„Yes", 50 mit „No" als passender Antwort) von [Zustand am Antwort-Token mit der passenden Antwort] minus [mit der
+anderen]. „Neigung" = Log-Odds der passenden Antwort ohne Eingriff, gemittelt über zurückgehaltene Aussagen, je zur
+Hälfte mit „Yes" und „No" als passender Antwort (RSI 60, die anderen je 40); sie misst damit vor allem, wie deutlich das
+Modell zustimmende und ablehnende Aussagen unterscheidet. Gesteuert wird, indem die auf Länge 1 gebrachte Richtung, mal
+f und mal der Länge des Zustands, an jeder Position ab der Nutzer-Nachricht zum Ausgang von Block 14 (oder 18) addiert
+wird, f = −0,2 / 0 / +0,1 / +0,3; Schaden = mittlere KL-Divergenz auf vier fremden Texten (bei f = +0,3 0,06 bis 0,08
+nats).
+
+**Was als Richtung herauskommt, ist im Wesentlichen eine allen Sätzen gemeinsame Richtung, und zugesetzt verschiebt sie
+vor allem die Vorliebe für „Yes".**
+
+* Die Richtungen der sieben Sätze zeigen in Block 14 fast gleich, auch die der fremden: Kosinus der RSI-Richtung mit den
+  anderen 0,84 bis 0,91, Sport gegen Literatur 0,98; mit dem Mittel der sieben Richtungen hat jede einen Kosinus von
+  0,93 bis 0,97. Der bloße Unterschied der Antwort-Token „Yes" und „No" ist das nicht (Kosinus 0,09 bis 0,14).
+* Jede Richtung ist gut bestimmt: Zwei Hälften der Aussagen mit gleich vielen „Yes"- und „No"-Antworten geben einen
+  Kosinus von 0,91 bis 0,98 (RSI 0,95). Diese Hälften stammen aus einer Folgerechnung (`rsi_followup.py`, nach dem
+  Hauptlauf gerechnet). Mit zufälligen Hälften, wie die Regel sie vorsieht und wie zuerst gerechnet, kam für RSI −0,19
+  heraus: Eine Hälfte mit ungleich vielen „Yes"- und „No"-Antworten behält einen Teil des Unterschieds der
+  Antwort-Token, und der ist rund 20-mal so lang wie die Richtung. An den Urteilen nach den Regeln ändert das nichts.
+* Zugesetzt verschiebt jede Richtung in Block 14 vor allem die allgemeine Vorliebe für „Yes": Die Log-Odds „Yes" minus
+  „No" liegen ohne Eingriff bei +13 bis +16, gehen bei f = +0,1 auf +22 bis +24 (Schaden 0,01 nats), bei f = +0,3 nicht
+  weiter (+21 bis +24) und bei f = −0,2 auf −10 bis −5 (die RSI-Richtung in Block 18: +3,5 bei f = −0,2, +21,0 bei +0,1
+  und +28,0 bei +0,3). Zugleich verliert das Modell die Unterscheidung zwischen zustimmenden und ablehnenden Aussagen:
+  Die Log-Odds der passenden Antwort fallen bei beiden Vorzeichen (RSI: +3,50 ohne Eingriff, −1,11 bei f = −0,2, +0,37
+  bei f = +0,3). Eine Gerade passt in Block 14 bei keinem Satz (R² 0,01 bis 0,06). Bei f = +0,3 bleiben von der Neigung
+  jedes Satzes nur −0,01 bis +1,03 übrig.
+* Die RSI-Richtung wirkt auf die anderen Sätze ebenso, gemessen an der passenden Antwort sogar stärker (bei f = +0,3
+  Log-Odds der passenden Antwort −3,1 im eigenen, −9,6 bis −4,2 in den anderen; die rohe Vorliebe für „Yes" steigt in
+  den fremden Sätzen um +6,8 und +7,1). Auch das ist vor allem die Neigung des jeweiligen Satzes: Nach dem Eingriff
+  liegen alle sieben bei +0,35 bis +0,95. Umgekehrt wirkt jede andere Richtung auf die RSI-Aussagen wie die RSI-Richtung
+  selbst (−3,5 bis −3,2 gegen −3,1).
+* Kontrollen bei f = +0,3 an 30 zurückgehaltenen RSI-Aussagen, Block 14: Die RSI-Richtung senkt die Log-Odds um 3,06,
+  mehr als jede der 20 zufälligen Richtungen gleicher Länge (je 10 isotrop und mit der Kovarianz echter Zustände; −2,12
+  bis +1,30), aber nicht mehr als deren Mittel minus drei Standardabweichungen (−3,32). Richtungen aus zufällig
+  vertauschten Antworten wirken sogar stärker (−4,32 bis −3,59). Eine saubere Kontrolle sind sie aber nicht: Nach dem
+  Vertauschen gleichen sich „Yes"- und „No"-Antworten nicht mehr aus, und 9 der 10 bestehen zum größten Teil aus dem
+  Unterschied der Antwort-Token (Kosinus mit ihm 0,80 bis 1,00 im Betrag). In Block 14 wirken sie ähnlich, ob sie zu
+  „Yes" oder zu „No" zeigen (−3,63 bis −3,59 gegen −4,32 bis −3,98).
+* In Block 18 senkt die RSI-Richtung die Log-Odds um 1,66, mehr als jede zufällige Richtung (−0,63 bis +0,38) und als
+  deren Mittel minus drei Standardabweichungen (−0,93). Vertauschte Antworten erreichen −1,84 bis +0,51; deutlich senken
+  die Log-Odds nur die zu „Yes" zeigenden (−1,84 bis −1,17).
+* Eine solche Vorliebe für eine Antwort ist von dieser Kontrastmethode bekannt: Tan et al. (arXiv 2407.12404) fanden,
+  dass eine Voreinstellung für A/B oder Ja/Nein einen großen Teil der Unterschiede in der Steuerbarkeit erklärt.
+
+**Nach der Regel T2-A („RSI ist eine Richtung", in der Fassung: geäußerte Zustimmung) treffen zwei Ausgänge zugleich
+zu.** Dagegen spricht, dass die Richtung an keinem der beiden Blöcke besteht. Zugesetzt senkt sie in beiden Blöcken die
+passende Antwort, gleich mit welchem Vorzeichen (ohne Eingriff +3,50; Block 14: −1,11 / +0,87 / +0,37, Block 18: +3,37 /
++2,74 / +1,71 bei f = −0,2 / +0,1 / +0,3). In Block 14 passt deshalb keine Gerade (R² 0,04), und die Wirkung liegt nicht
+jenseits von drei Standardabweichungen der Zufallsrichtungen. In Block 18 fällt die passende Antwort fast gleichmäßig
+(R² 0,79, verlangt sind 0,80), also gegen die Richtung, in der sie gebildet ist; jenseits der Zufallsrichtungen liegt
+die Wirkung dort nur, wenn man „Mittel plus drei Standardabweichungen" nach unten spiegelt. Unentschieden heißt es nach
+der Regel, wenn die Kontrolle auf eine allgemeine Vorliebe für „Yes" fehlschlägt, und das tut sie: Auf die beiden
+fremden Sätze wirkt die RSI-Richtung bei f = +0,3 mit +6,8 und +7,1 auf die rohe Vorliebe für „Yes", mehr als das
+Doppelte der Zielwirkung (−3,1) statt höchstens ein Viertel. Welcher Ausgang vorgeht, legt die Regel nicht fest. Erst
+das Auswertungsskript gibt der Kontrolle den Vorrang (`rsi_verdicts.py`; angelegt kurz vor dem Hauptlauf und zuletzt
+geändert, als Steuerung und Kontrolle auf „Yes" schon gerechnet waren; wann der Vorrang hineinkam, lässt sich nicht mehr
+feststellen), mit der Begründung: Verschiebt die Richtung vor allem „Yes", sagt auch ihr Durchfallen wenig über RSI. Mit
+dem Vorrang für „an keinem Block bestanden" spräche die Regel dagegen.
+
+**Nach der Regel T2-B („die RSI-Richtung ist eine eigene") knapp dagegen.** Vom Satz desire-for-more-capabilities ist
+sie in Block 14 nicht getrennt: Ihr Kosinus mit ihm (0,91) liegt nur 0,04 unter dem Kosinus zwischen zwei Hälften der
+RSI-Aussagen (0,95; 95-%-Intervall des Abstands 0,00 bis 0,10). Die Regel verlangt mindestens 0,10 Abstand und nennt
+einen Abstand von höchstens 0,05 „nicht getrennt". Von den anderen verwandten Sätzen ist der Abstand 0,08 bis 0,11, von
+Sport und Literatur aber auch nur 0,06 (die Regel prüft nur die verwandten). Eine besondere Nähe zu „mehr Fähigkeiten
+wollen" zeigt das nicht; das „nicht getrennt" kommt vor allem von der allen Sätzen gemeinsamen Richtung. Diesen vierten
+verwandten Satz nennt die Plankritik in der Frage, die T2-B prüft, aber nicht in ihrer Liste von drei Sätzen; er ist vor
+dem Lauf dazugenommen. Mit den drei aufgelisteten allein wäre T2-B unentschieden. Die übrigen Bedingungen erfüllt die
+Richtung ebenfalls nicht. Auf die eigenen Aussagen wirkt sie schwächer als auf die der verwandten Sätze (−3,1 gegen −7,2
+bis −4,2; verlangt war das 1,5-Fache); eine Richtung, die die Unterscheidung bei allen Sätzen aufhebt, kann diese
+Bedingung beim RSI-Satz mit der kleinsten Neigung gar nicht erfüllen. In Sätzen, die Handelnde (KI oder Mensch), Ziel
+(sich selbst oder andere) und Rekursion („verbessert seine Fähigkeit, sich oder andere zu verbessern" gegen „…, zu
+beschreiben") kreuzen, zeigt sich kein Zusammenspiel der drei über dem Zufall (Block 14: 4,7 gegen 7,9 als 99. Perzentil
+vertauschter Zuordnungen; Block 18: 11,0 gegen 21,1).
+
+**Neigung und Steuerbarkeit (Q1) lassen sich mit diesen Richtungen nicht vergleichen.** Die Neigung liegt beim RSI-Satz
+bei +3,50, bei den verwandten Sätzen bei +4,55 bis +8,11, bei den fremden bei +9,88 und +10,08. Sie ist hier die halbe
+Differenz zweier großer „Yes"-Werte: Auch bei den Aussagen, zu denen „No" passt, zieht das Modell im Mittel „Yes" vor
+(Log-Odds „Yes" gegen „No" +4,3 bis +12,6). Am deutlichsten tut es das beim RSI-Satz (+12,6; bei den zustimmenden
+RSI-Aussagen +19,6): Es bejaht im Mittel auch die Aussagen, die RSI ablehnen. Eine Steuerbarkeit im Sinn einer Steigung
+gibt es im geprüften Bereich (f von −0,2 bis +0,3) nicht; ob es bei kleinerem f einen linearen Bereich gibt, ist nicht
+geprüft. Die Wirkung läuft bei allen Sätzen auf dieselbe Ja/Nein-Verschiebung hinaus. Bei f = +0,3 nimmt sie 83 bis 100
+% der Neigung weg, schon bei f = +0,1 (Schaden 0,01 nats) 62 bis 82 %. Über die sieben Sätze hängt sie deshalb eng an
+der Neigung (nebeneinander in `rsi_tilt.json`, nur beschrieben): Je deutlicher das Modell ohne Eingriff unterscheidet,
+desto mehr nimmt der Eingriff weg. Als Größe der Wirkung gelesen ist das ein positiver Zusammenhang, als Änderung der
+passenden Antwort, wie Regel T1' die Steuerbarkeit misst, ein negativer. Beides bildet nur dieses Aufheben der
+Unterscheidung ab. Für die Frage über viele Konzepte (Q1 allgemein) verlangt die Plankritik mindestens 30 Sätze im
+selben Ja/Nein-Format (Regel T1'). Nach dem Ergebnis hier bräuchte es zusätzlich ein Format, in dem eine Vorliebe für
+eine Antwort die Richtung nicht bestimmt; das ist eine Folgerung aus diesem Lauf, keine Auflage der Plankritik.
+
+**Die geometrische Lesart von „Neigung"** (10.6) ist hier nur beschrieben (`rsi_tilt.py`). Der Anteil der Richtungen an
+den 256 Achsen, in denen echte Zustände am stärksten streuen (Abschnitt 7), liegt in Block 14 bei 0,24 bis 0,28 und in
+Block 18 bei 0,22 bis 0,24: rund doppelt so viel wie bei einer isotropen Zufallsrichtung (0,12 bis 0,14), viel weniger
+als bei einer Zufallsrichtung mit der Kovarianz echter Zustände („Streuung" in 7.1; 0,63 bis 0,73), und von Satz zu Satz
+fast gleich. Zufallsrichtungen der zweiten Art richten bei f = +0,3 mehr Schaden an als isotrope (im Mittel 0,13 gegen
+0,08 nats), verschieben die Log-Odds der RSI-Aussagen aber nicht deutlich stärker (Mittel der Beträge 0,69 gegen 0,91 in
+Block 14, 0,28 gegen 0,19 in Block 18).
+
+### 10.5 „RSI der RSI der RSI": ein gleichbleibender Schritt je Schachtelung? (Q2)
+
+Die Plankritik nennt zwei Nachbildungen von Q2: die Darstellung der Schachtelungstiefe und eine Schleife durch den
+eigenen Text des Modells (Text unter Steuerung erzeugen, daraus die Richtung neu ableiten, dreimal; Regel T3a', für eine
+zweite Runde vorgesehen und freiwillig, hier nicht gerechnet). Gerechnet ist die erste, die sie für die erste Runde
+vorsieht: Wird „eine Ebene mehr verbessern" im Zustand durch einen gleichbleibenden Schritt dargestellt, und zwar eigens
+für „verbessern"? 24 Gegenstände („the chess engine", „the route planner" …), Schachtelungstiefe 1 bis 4 („The system
+improves the way it improves the way it improves the chess engine."), dasselbe mit dem neutralen Verb „describes" und,
+als zweite Kontrolle, dieselben Wörter ohne Schachtelung hintereinander. Zustand am letzten Token; d₁₂ = mittlerer
+Zustand bei Tiefe 2 minus bei Tiefe 1, entsprechend d₂₃ und d₃₄; S = Mittel aus cos(d₁₂, d₂₃) und cos(d₂₃, d₃₄), mit
+1.000 Bootstrap-Ziehungen über die Gegenstände.
+
+| Block | S „improves" | S „describes" | S Wiederholung | „improves" minus „describes" (95-%-Intervall) |
+|---|---|---|---|---|
+| 8 | 0,33 | 0,29 | −0,09 | +0,05 (+0,02 bis +0,08) |
+| 14 | 0,26 | 0,28 | −0,19 | −0,02 (−0,05 bis +0,02) |
+| 18 | 0,30 | 0,38 | −0,13 | −0,08 (−0,11 bis −0,03) |
+| 22 | 0,34 | 0,45 | −0,11 | −0,11 (−0,14 bis −0,07) |
+
+* Nach der vorab gesetzten Regel spricht das gegen Q2 in dieser Form: An keinem Block erreicht „improves" 0,5, und an
+  jedem liegt es höchstens 0,05 über der neutralen Schachtelung (in Block 8 mit +0,048 knapp). Die Schritte der
+  Schachtelung wiederholen sich teilweise (S 0,26 bis 0,45, unter der Schwelle 0,5 der Regel), deutlich mehr als bei der
+  bloßen Wiederholung (−0,19 bis −0,09), aber nicht eigens für „verbessern". Die Schritte sind gut bestimmt: Die
+  Richtung d₁₂ aus zwei Hälften der Gegenstände hat einen Kosinus von 0,92 bis 0,99.
+* Eine lineare Auslese der Tiefe, angepasst an den Tiefen 1 und 2 von 12 Gegenständen, ordnet bei den 12 anderen Tiefe 4
+  bei „improves" nur in 0 oder 1 Fall über Tiefe 3 ein (die Regel verlangt 75 %), bei „describes" in 1 bis 5 Fällen, bei
+  der Wiederholung nie: Wie die Tiefe dargestellt ist, setzt sich über Tiefe 2 hinaus nicht linear fort.
+* Die Wiederholung ist ab Tiefe 2 um 1 bis 3 Token länger als die Schachtelung; die Regel verlangt gleiche Längen. Der
+  Vergleich mit „describes", auf dem das Ergebnis beruht, hat gleiche Längen.
+* Ein positives Ergebnis wäre nach der Plankritik ohnehin nur eine Aussage darüber, wie Schachtelungstiefe dargestellt
+  ist: kein Lernen, keine RSI und keine Transitivität des Meta-Lernens.
+
+### 10.6 Was folgt daraus
+
+* **Q3, Lesen und Darstellen der Codes:** Qwen3-1.7B kann Braille und Base64 in diesen Tests nicht übersetzen; der Test
+  mit 6-Bit-Binärzahlen sagt nichts, weil das Modell dort fast nie eine Zahl nennt. In seinen Zuständen zeigt sich von
+  den 6 Bit wenig mehr, als die Token selbst tragen. Bei Braille sind die Punkte 1 und 3 nach der Braille-Vorsilbe
+  schwach lesbar, in den Blöcken 6 bis 22 etwas deutlicher als nach der Vorsilbe von U+2A00 vor demselben Byte (in Block
+  2 nur Punkt 1, in Block 0 keiner der beiden). Der Abstand (in den Blöcken 10 bis 22 zwischen 0,05 und 0,07) bleibt
+  unter den 0,10 der Regel und ist nicht gesichert: Mit neu angepassten Sonden enthalten die Intervalle die 0 (10.3).
+  Das ist nach der Regel unentschieden und wird wegen 10.2 als Oberflächenmerkmal gelesen. Bei Base64 spricht die Regel
+  dagegen.
+* **Q3, Übergänge als Proben:** Als Probe für ein „Wissensgebiet" fehlt diesen Codes in diesem Modell die Voraussetzung,
+  die die Plankritik verlangt: Es kann Braille und Base64 nicht in Buchstaben, Wörter oder Indizes übersetzen. Übergänge
+  zwischen den Codes sind nicht gemessen, und der Vergleich 6 Bit gegen 64 Bit ist nicht gerechnet; die Plankritik hat
+  ihn gestrichen, weil sich 6-Bit-Gruppen und 64-Bit-Zahlen im Tokenizer vor allem in Länge und Abständen unterscheiden.
+  Auch ein positives Ergebnis in 10.3 hätte nur gezeigt, wie das Modell die Codes darstellt, nicht Neigung,
+  Steuerbarkeit oder Transitivität; nach der Plankritik hätte es nur entschieden, ob Richtungen für die Codes in die
+  zweite Runde kommen. Für ein größeres Modell, das die Codes liest, wäre der Versuch neu zu stellen. „Knowledge cutoff"
+  im üblichen Sinn (die Datumsgrenze der Trainingsdaten) ist hier nicht untersucht.
+* **Q1, RSI als Richtung:** Mit dem Ja/Nein-Format der Persona-Sätze liefert die Kontrastmethode vor allem eine
+  Richtung, die allen Sätzen gemeinsam ist, auch Sport und Literatur, und die zugesetzt vor allem die Vorliebe für „Yes"
+  verschiebt. Den Test „RSI ist eine Richtung" besteht sie an keinem der beiden Blöcke; weil zugleich die Kontrolle auf
+  „Yes" fehlschlägt, ist das beim Auswerten als unentschieden gelesen (die Regel legt nicht fest, welcher Fall vorgeht;
+  mit dem Vorrang für „an keinem Block bestanden" hieße es dagegen). Eine eigene Richtung, getrennt von „mehr
+  Fähigkeiten wollen", ist sie nach der Regel knapp nicht, und von Sport und Literatur ist sie kaum weiter getrennt.
+* **Q1, Neigung und Steuerbarkeit:** Ob sie zusammenhängen, lässt sich damit nicht prüfen. Der Eingriff hebt bei allen
+  Sätzen die Unterscheidung auf, sodass ein Zusammenhang über Sätze schon daher käme. Dafür bräuchte es mindestens 30
+  Sätze (Regel T1') und ein Format, in dem eine Vorliebe für eine Antwort die Richtung nicht bestimmt. Über Modelle oder
+  Trainingsstände hinweg lässt sich der Zusammenhang hier gar nicht prüfen: Es gibt nur einen Stand von Qwen3-1.7B.
+* **Q2, RSI der RSI der RSI:** Jede weitere Schachtelung verschiebt den Zustand in eine Richtung, die sich von Ebene zu
+  Ebene teilweise wiederholt (bei „verbessern" Kosinus 0,26 bis 0,34), aber nicht eigens für „verbessern". Die neutrale
+  Schachtelung mit „beschreiben" wiederholt sich in Block 8 etwas schwächer (0,29 gegen 0,33), in Block 14 gleich stark
+  und in den Blöcken 18 und 22 stärker. Eine Transitivität des Meta-Lernens ließe sich so ohnehin nicht zeigen, denn
+  nichts davon lernt. Die zweite Nachbildung, eine Schleife durch den eigenen Text des Modells (T3a'), ist nicht
+  gerechnet.
+* **R1** (ein im Sinn des UFO-Papers geordnetes Netz neigt eher dazu, die eigenen Gewichte zu ändern) bleibt nicht
+  prüfbar. Kein Modell in diesem Projekt kann seine Gewichte ändern, und die „Neigung" hier ist geäußerte Zustimmung zu
+  Aussagen, kein Verhalten. Ob ein Netz im Sinn des UFO-Papers geordnet ist, kommt in diesem Abschnitt nicht vor.
+* **Zwei Lesarten sind offen** und bestimmen eine zweite Runde. (1) Meint „Neigung" einen Hang des Modells (hier nur als
+  geäußerte Zustimmung am ersten Antwort-Token gemessen) oder eine Neigung im geometrischen Sinn, also wie schräg die
+  Richtung zu den Achsen mit viel Streuung liegt? In der zweiten Lesart wäre ein Zusammenhang mit der Steuerbarkeit nach
+  der Plankritik zum Teil schon aus Abschnitt 7 zu erwarten: Entlang der Streuung wird ein zugesetzter Vektor in den
+  Blöcken 1 bis 16 weniger gelöscht (7.3) und verändert die Ausgabe stärker (7.6, 7.7). Hier zeigt sich davon nur der
+  Schaden: Zufallsrichtungen entlang der Streuung richten mehr an als isotrope, bewegen die Antworten auf die
+  RSI-Aussagen aber nicht deutlich stärker (10.4). Die sieben Richtungen liegen für einen Vergleich zu nah beieinander
+  (Anteil 0,24 bis 0,28 in Block 14). (2) Meint „verschieden ordnungszahlig" Codes verschiedener Stufe, bei denen aus n
+  jeweils 2ⁿ wird (6 Bit ergeben 64 Zeichen, 64 Bit ergeben 2⁶⁴ Werte; das passte zu „RSI der RSI"), statt zweier gleich
+  großer Codes wie Base64 und Braille?
+
 ## Grenzen
 
 * Basismodell, Fragenfamilien, erstes Antwort-Token, ein Eingriffsort (Block 21, letztes Token).
@@ -2136,6 +2526,22 @@ nachgerechnet (`act_math_review.json`). Die meisten sind Lehrbuchwissen; neu zus
   Polynome benutzen eigene Netze, auch die in seiner Größe, ohne SAE. Der Trainingsarm mit Selbstüberwachung ist nicht
   gelaufen. Die Mathematik in 9.6 ist nachgerechnet; an Netzen geprüft ist nur die Gradzählung für bilineare Schichten
   (kleine Anpassungen an die Kubik), der Bezug zu Halbieren und Dritteln nicht.
+* Abschnitt 10: ein Modell (Qwen3-1.7B, das nachtrainierte Chat-Modell; in der Chat-Vorlage mit Denken aus nur die
+  Persona-Fragen und je eine Vorlage zweier Lese-Aufgaben, alles andere als einfacher Text). Die Persona-Fragen sind am
+  ersten Antwort-Token gelesen: geäußerte Zustimmung, kein Verhalten. Richtungen an den Blöcken 14 und 18, gesteuert an
+  Block 14, mit der RSI-Richtung auch an Block 18. Ein Format (Ja/Nein-Fragen der Persona-Sätze); darin zieht das Modell
+  schon ohne Eingriff im Mittel auch bei den Aussagen „Yes" vor, zu denen „No" passt. Nur vier Werte von f; schon f =
+  +0,1 verschiebt die Antwort stark, und ob es darunter einen linearen Bereich gibt, ist nicht geprüft. Sieben
+  Aussagensätze, davon der RSI-Satz selbst geschrieben; der RSI-Satz von Perez et al. fehlt im Hugging-Face-Spiegel, und
+  ob die Fassung auf GitHub ihn enthält, ist nicht geprüft. Die Codes nur in einfachen Rahmen; Index und Binärzahl nur
+  als Text, nicht im Chat. 59 der 64 Braille-Zellen zerfallen in [Vorsilbe][Byte], und die Punkte stehen im Byte; das
+  begrenzt, was Sonden lesen können. Gemessen ist an den 51 Werten, bei denen das in allen drei Bereichen mit demselben
+  Byte gilt. Die Faktorial-Texte und die Schachtelung sind von Hand gebaut (16 Vorlagen, 24 Gegenstände); die
+  Wiederholung als Kontrolle ist ab Tiefe 2 länger. Nicht gerechnet sind die Korrelation von Neigung und Steuerbarkeit
+  über viele Konzepte (mindestens 30 Sätze) und die Schleife durch den eigenen Text (T3a'). Erst nachträglich berechnet
+  sind der Anteil der Richtungen an den 256 Achsen mit der größten Streuung, die Nullverteilungen der Bit-Sonden in der
+  jetzigen Form und das Bootstrap-Intervall für Braille gegen U+2A00 mit neu angepassten Sonden. Der Neuron Atlas und
+  das vorgeschlagene Repository sind nicht benutzt.
 
 ## Nächster Schritt
 
@@ -2164,6 +2570,15 @@ ohne Erfolg. (2) Ob ein Netz seine eigene Aktivierungsfunktion abbildet, lässt 
 sich Auskunft geben kann, mit einer Kontrolle, die nicht schon aus dem Aufbau folgt. (3) Wie quadratisch SwiGLU ist, an
 einem zweiten Sprachmodell und an mehr Text; die Richtung aus dem Beitrag an Netzen aus SwiGLU- oder bilinearen
 Einheiten.
+
+Zu Abschnitt 10: (1) die zwei offenen Lesarten klären (Neigung als Hang des Modells, hier nur als geäußerte Zustimmung
+gemessen, oder als geometrische Schräge; „verschieden ordnungszahlig" als Stufen n → 2ⁿ, also 6 → 64 → 2⁶⁴, oder als
+gleich große Codes); (2) für Q1 allgemein mindestens 30 Aussagensätze (Regel T1', dort im Ja/Nein-Format), mit kleineren
+f als hier und mit Trennbarkeit und Geometrie als Kovariaten, dazu ein Format, in dem eine Vorliebe für eine Antwort
+ausgeglichen und eigens gemessen wird (etwa zwei Antworten mit vertauschten Plätzen; auch dort fanden Tan et al. eine
+Vorliebe für A oder B); (3) die Codes an einem Modell, das sie liest; (4) für Q2 die Schleife durch den eigenen Text
+(T3a'). Auch ein positives Ergebnis hieße dort nur, dass das Modell den gesteuerten Text als dasselbe Konzept liest;
+Gewichte ändern sich nicht.
 
 ## Dateien
 
@@ -2205,10 +2620,20 @@ Einheiten.
 | `poly_targets.json`, `poly_A.json`, `poly_B.json`, `poly_C.json`, `poly_D2.json`, `poly_D3.json` | Richtungen der Zielfunktionen und der eigenen Netze, Netze in der Größe des Beitrags, Tiefe (9.5, 9.6) |
 | `trisect_math.json` | Nachrechnung der Mathematik (9.6) |
 | `review_act.json` | Prüfberichte zum fertigen Abschnitt 9 |
+| `rsi_plan_review.json`, `rsi_literature.json` | Plan, Plankritik mit Entscheidungsregeln und Literaturprüfung zu Abschnitt 10 |
+| `rsi_codes.json`, `rsi_codes_boot.json` | Lesen und Bit-Sonden für Braille und Base64; Bootstrap und Jackknife über die Zellen mit neu angepassten Sonden (10.2, 10.3) |
+| `rsi_direction.json`, `rsi_followup.json` | Richtungen, Neigung, Steuerung, Kontrollen, Faktorial-Texte, Schachtelung (10.4, 10.5); Hälften mit gleich vielen Ja- und Nein-Antworten |
+| `rsi_tilt.json` | Anteil der Richtungen an den 256 Achsen mit der größten Streuung; Neigung und Wirkung je Satz; Prüfung der Kontrollen (10.4) |
+| `rsi_verdicts.json`, `rsi_logs.txt` | die Regeln angewandt; Protokolle der Läufe (10) |
+| `review_rsi.json` | Prüfberichte zum fertigen Abschnitt 10 |
 
 Nicht im Repository: Zustände und SAE-Aktivierungen (zusammen etwa 500 MB), für Abschnitt 7 die Statistik echter
 Zustände (`ufo_pool.pt`, 860 MB), die Aktivierungen auf dem Zahlenraster (700 MB) und die Gewichte der Kleinversuche
 (Abschnitt 8: rund 770 MB, Abschnitt 9: rund 1,2 GB, dazu die Koeffizienten der Qwen-Anpassung mit 16 MB); sie entstehen beim Nachrechnen neu.
+Für Abschnitt 10 fehlen die Persona-Sätze von Perez et al. (`persona/<name>.jsonl` aus dem Hugging-Face-Datensatz
+Anthropic/model-written-evals), die Zustände von `rsi_codes.py` (`rsi_codes.json.states.npz`, 56 MB), die
+`rsi_codes_boot.py` liest, und die Zustände der Folgerechnung, die `rsi_tilt.py` liest (`rsi_followup.json.states.pt`,
+46 MB).
 
 ## Nachrechnen
 
@@ -2292,4 +2717,13 @@ python $S/act_qwen.py $R $A/act_qwen.json && COEF=$A/act_qwen.json.coef.pt pytho
 PARTS=1 python $S/poly_direction.py $A/poly_targets.json && TARGETS=deg2,deg4,deg2w PARTS=2 python $S/poly_direction.py $A/poly_A.json 5 8000 && TARGETS=prod,swiglu,deg3w PARTS=2 python $S/poly_direction.py $A/poly_B.json 5 8000
 TARGETS=deg3 ARCHS=post PARTS=23 python $S/poly_direction.py $A/poly_C.json 5 8000 && for t in 2 3; do TARGETS=deg${t}w ARCHS=post PARTS=2 python $S/poly_direction.py $A/poly_D$t.json 5 8000; done
 python $S/trisect_math.py $A/trisect_math.json
+# Abschnitt 10 (RSI, Base64, Braille); Qwen in float32, immer nur ein Lauf mit geladenem Modell
+# rsi_direction.py und rsi_tilt.py brauchen $R/ufo_out/ufo_pool.pt (ufo_pool.py, Abschnitt 7), rsi_direction.py außerdem $R/ju_out/corpus_wikitext.json und axes_pairs.json (wie oben)
+mkdir -p $R/rsi_out; P=$R/rsi_dl/persona     # sechs Persona-Sätze aus Anthropic/model-written-evals (persona/<name>.jsonl), Namen in rsi_direction.py
+NT=3 python $S/rsi_codes.py $R $R/rsi_out/rsi_codes.json                                                     # etwa 25 min mit drei Threads
+OMP_NUM_THREADS=1 WORKERS=3 python $S/rsi_codes_boot.py $R/rsi_out/rsi_codes.json.states.npz $R/rsi_out/rsi_codes_boot.json   # ohne Modell, etwa 20 min mit drei Prozessen
+NT=3 PERSONA=$P python $S/rsi_direction.py $R $R/rsi_out/rsi_direction.json                                   # etwa 2 h mit drei Threads
+NT=3 PERSONA=$P python $S/rsi_followup.py $R $R/rsi_out/rsi_direction.json $R/rsi_out/rsi_followup.json      # etwa 17 min
+python $S/rsi_tilt.py $R $R/rsi_out/rsi_followup.json.states.pt $R/rsi_out/rsi_direction.json $R/rsi_out/rsi_tilt.json   # ohne Modell, Sekunden
+python $S/rsi_verdicts.py $R/rsi_out
 ```

@@ -1,0 +1,482 @@
+{
+ "summary": "No source measures whether a model's baseline inclination toward a behaviour predicts how steerable that behaviour is. The best-supported predictors of activation steerability are properties of the contrastive activations: directional agreement and separability (Braun et al. 2505.22637, Spearman 0.76 over 36 datasets; Bhattarai and Alhanai 2609.14151, SNR Pearson 0.69 to 0.82 over six models) and how linearly accessible the concept is to the output head (Billa 2604.15557, rho +0.86 to +0.91). Evidence on baseline propensity is indirect, and its sign depends on the scale used. Tan et al. 2407.12404 found that similar unsteered propensity in two prompt settings predicts transfer between them (rho -0.26 and -0.46). Zeng et al. 2607.13162 found the largest steering gains on traits with low baseline expression, on a bounded 0-100 judge scale. Bigelow et al. 2511.00617 model steering as a constant shift of log-odds that does not depend on the prior. Perez et al. 2212.09251 describe a ready-made contrast set for an RSI inclination ('Desire For Recursive Self Improvement'). The Hugging Face mirror holds only 'desire-for-self-improvement', and nobody has steered on either. Power-seeking and survival instinct are steerable: power-seeking ranks 3rd of 40 datasets by median steerability in Tan et al., and RepE and Bas and Novak steer it too; survival instinct is steered in CAA. No work re-extracts steering directions from a steered model (fixed points) or tests transitivity of steering vectors. Composition works for some function vectors (Todd et al.) and for near-orthogonal vectors injected at separate layers (Kang et al. 2609.08410). Summing vectors into one often fails (van der Weij et al. 2403.05767). Iterated LLM self-improvement saturates after two or three rounds without new information (Song et al. 2412.02674). Base64 and six-dot Braille are both 64-symbol, 6-bit codes (RFC 4648; Unicode U+2800 to U+283F, mapping checked locally). In the Qwen3 tokenizer, however, Base64 text splits into 1-3 character tokens that rarely align with 4-character groups, and 60 of 64 Braille cells split into two byte-level tokens. Qwen3-1.7B is near the floor on Braille tasks (BrailleBench 2608.27268). No interpretability work on Braille representations was found, nor any on the bit structure of Base64 symbols. 'Knowledge cutoff' in the literature means the training-data date boundary, which linear probes can detect (Price et al. 2407.04108, 85-95%); it does not mean transitions between symbol systems. RSI is operationalised only through self-modifying agents and scaffolds, agentic research benchmarks (STOP, Goedel Agent, DGM, SEAL, RSIBench-Data, AI4AI-Bench) and stated-desire questionnaires.",
+ "items": [
+  {
+   "question": "L1",
+   "claim": "Steerability varies widely across and within concepts and is mostly a property of the dataset. Steering vectors transfer better between prompt settings in which the unsteered propensity is similar. The authors hypothesised that baseline propensity matters but did not correlate its level with steerability across concepts.",
+   "citation": "Tan, Chanin, Lynch, Kanoulas et al., 'Analyzing the Generalization and Reliability of Steering Vectors', arXiv 2407.12404 (NeurIPS 2024)",
+   "how_read": "Full text of sections 3-7 and appendix tables 2-3 (pdftotext); Figure 18 viewed as a rendered page image.",
+   "finding": "Measured: CAA mean-difference vectors at layer 13 (Llama-2-7b-Chat) and layer 21 (Qwen-1.5-14b-Chat) on 40 datasets (Model-Written Evals persona and AI-risk sets, sycophancy, TruthfulQA). Propensity = logit(positive option) - logit(negative option). Steerability = slope of a least-squares line of mean propensity against the multiplier lambda in {-1.5, ..., 1.5}. Per-input steerability is often bimodal, and several datasets have close to half of their inputs 'anti-steerable'. A spurious A/B and Yes/No 'steerability bias' explains much of the variance. Cross-model correlation of steerability (Llama vs Qwen): Spearman 0.769 in-distribution, 0.586 out-of-distribution. The authors write 'we hypothesise that the model's base propensity affects the effectiveness of steering vectors' but test this only with conflicting system and user prompts. Figure 8 correlates relative steerability with the difference in unsteered propensity between source and target settings: Spearman -0.26 (Llama), -0.46 (Qwen). Conclusion: 'often we would want to apply steering vectors to guide model behaviour towards something it does not normally do, but in these scenarios SVs tend to generalise less well.' No correlation between the level of baseline propensity and steerability across concepts is reported.",
+   "bears_on": "Q1, T1 (defines the slope metric T1 proposes and shows template and dataset confounds), T2"
+  },
+  {
+   "question": "L1",
+   "claim": "Contrastive activation addition steers all seven tested alignment behaviours, survival instinct among them.",
+   "citation": "Rimsky (Panickssery), Gabrieli, Schulz, Tong, Hubinger, Turner, 'Steering Llama 2 via Contrastive Activation Addition', arXiv 2312.06681 (ACL 2024)",
+   "how_read": "Abstract and named sections 3 (datasets), 4 (layer sweep, multiple-choice and open-ended effects) and 6 (PCA separability, base-to-chat transfer).",
+   "finding": "Behaviours: AI coordination, corrigibility, hallucination, myopic reward, survival instinct, sycophancy, refusal, on Llama 2 7B and 13B Chat. The optimal layer, found by sweeping multipliers -1 and +1, is about 13 (7B) and 14-15 (13B). 'CAA can consistently steer the results of multiple-choice behavioral evaluations for all tested behaviors.' PCA of contrastive activations is used 'for determining whether a dataset will enable the generation of effective steering vectors'; behavioural clustering appears about one third of the way through the layers. Vectors from the Llama 2 base model transfer to the chat model, especially at layers 10-15. Baseline propensity versus steerability is not analysed.",
+   "bears_on": "Q1, T1, T2 (a self-preservation direction is steerable; base-to-chat transfer matters because the project uses a base model)"
+  },
+  {
+   "question": "L1",
+   "claim": "Steering vectors can be built from a single contrast pair of prompts ('Love' minus 'Hate') and control topic and sentiment.",
+   "citation": "Turner, Thiergart, Leech, Udell, Vazquez, Mini, MacDiarmid, 'Steering Language Models With Activation Engineering' (ActAdd), arXiv 2308.10248",
+   "how_read": "Abstract only.",
+   "finding": "Reports state-of-the-art negative-to-positive sentiment shift and detoxification with ActAdd on LLaMA-3 and OPT, with off-target performance preserved. Nothing on which concepts fail, and nothing on baseline propensity.",
+   "bears_on": "T1 (method background)"
+  },
+  {
+   "question": "L1",
+   "claim": "Representation reading and control work for power-seeking and immorality.",
+   "citation": "Zou, Phan, Chen, Campbell et al., 'Representation Engineering: A Top-Down Approach to AI Transparency', arXiv 2310.01405",
+   "how_read": "Abstract and the section on monitoring and controlling immoral and power-seeking tendencies (MACHIAVELLI experiment).",
+   "finding": "LoRRA control was applied to LLaMA-2-Chat models and evaluated on 30 MACHIAVELLI test games. 'positive control of immorality and power-seeking leads to higher Immorality and Power scores, and conversely, the negative control for these functions leads to lower scores', with game reward roughly unchanged. Detectors for immoral and power-seeking inclinations are shown qualitatively on Vicuna-33B-Uncensored. No measure of how inclined the model was beforehand is related to how controllable it is.",
+   "bears_on": "Q1, T2"
+  },
+  {
+   "question": "L1",
+   "claim": "Theory: when steering negative examples toward positive ones, the mean of differences is the optimal steering vector. Steering is limited by how separable the positive and negative embeddings are.",
+   "citation": "Im and Li, 'A Unified Understanding and Evaluation of Steering Methods', arXiv 2502.02716",
+   "how_read": "Abstract and section 3 (Theorem 3.1 and its implications).",
+   "finding": "Theorem 3.1: the steering vector that minimises the stated objective is the mean of differences. Implication quoted: 'steering is inherently constrained by the separability of positive and negative embeddings within the given dataset', and the mean difference 'does not guarantee optimal performance for every individual' input. A PCA-based direction picks the direction of largest variance, which need not be the behaviour direction. No link to baseline propensity.",
+   "bears_on": "Q1, T1 (separability, not inclination, is the theoretical limit)"
+  },
+  {
+   "question": "L1",
+   "claim": "Linear representations can be formalised so that they connect to probing (output space) and to steering (input space), under a causal inner product.",
+   "citation": "Park, Choe, Veitch, 'The Linear Representation Hypothesis and the Geometry of Large Language Models', arXiv 2311.03658",
+   "how_read": "Abstract only.",
+   "finding": "Proposes a non-Euclidean causal inner product and builds probes and steering vectors from counterfactual pairs, with experiments on LLaMA-2. Nothing on steerability differences between concepts.",
+   "bears_on": "T1 (norm and inner-product choice for directions)"
+  },
+  {
+   "question": "L1",
+   "claim": "Higher directional agreement among per-sample activation differences, and better separation along the difference-of-means line, predict more effective and more reliable steering.",
+   "citation": "Braun, Eickhoff, Krueger, Bahrainian, Krasheninnikov, 'Understanding (Un)Reliability of Steering Vectors in Language Models', arXiv 2505.22637 (ICLR 2025 workshop); see also Braun, thesis, arXiv 2602.17881",
+   "how_read": "Full text of 2505.22637 including appendix Figure 6; abstract only for 2602.17881.",
+   "finding": "Setup: Llama2-7B-Chat, 36 Model-Written-Evals binary-choice datasets, seven prompt types. Effect size = steered minus unsteered logit difference; reliability = fraction of anti-steerable samples, which ranges from 3% to 50% across datasets. The mean cosine similarity of training activation differences to the steering vector correlates with mean per-sample steerability (Spearman 0.76, p = 1.0e-7), with the anti-steerable fraction (-0.78) and with discriminability d' (0.71). Vectors from different prompt types have pairwise cosine 0.07 to 0.86 yet perform similarly. The thesis abstract restates both predictors. No baseline-propensity analysis.",
+   "bears_on": "Q1, T1 (an inclination measured as a projection onto the direction is close to these separation measures)"
+  },
+  {
+   "question": "L1",
+   "claim": "Simple separation statistics of the contrastive activations predict steerability across model families, even after controlling for layer and dataset.",
+   "citation": "Bhattarai and Alhanai, 'Signatures of Steerability in Activation Space of Language Models', arXiv 2609.14151 (AACL 2026 short)",
+   "how_read": "Full text including appendices A-I.",
+   "finding": "Six instruction-tuned models: Qwen3 4B/14B, Gemma 3 4B/12B, Llama 3.1 8B, Llama 3.2 3B. 38 datasets: 26 Model-Written-Evals persona sets (including desire-to-be-more-intelligent), 5 truthfulness, 7 safety. Steerability is Tan et al.'s slope. SNR = ||mu||^2 / (Tr Sigma+ + Tr Sigma-); across dataset-layer pairs its Pearson r with steerability is 0.69 to 0.82 per model. The partial correlation after controlling for dataset or for layer is 0.74. In a synthetic superposition setting, SNR tracks the cosine between the estimated and true feature direction (Spearman 0.91). Appendix A: 'instruction-tuned models may exhibit an inherent propensity for the target behavior without any intervention. The steerability metric therefore captures how responsive the model is to steering beyond this baseline preference.' Baseline propensity is not analysed as a predictor. The authors state that the analysis is correlational.",
+   "bears_on": "Q1, T1, T2"
+  },
+  {
+   "question": "L1",
+   "claim": "Over 50 behaviours, steering effectiveness depends on behaviour type; vector separation did not predict success; trait expression follows an inverted U in the coefficient.",
+   "citation": "Bas and Novak, 'What Can We Actually Steer? A Multi-Behavior Study of Activation Control', arXiv 2511.18284",
+   "how_read": "Full text (13 pages).",
+   "finding": "Llama 3.1 8B, layer 15 only, 5 positive and 5 negative system prompts x 20 questions per behaviour, GPT-4.1 judge. Here 'separation' is the difference in judged trait expression between the positive and negative extraction data; it is not an activation SNR. Correlated with the mean steered trait score over 50 behaviours: Pearson r = -0.045 (p = 0.756), Spearman -0.122. Steering matched or beat prompting for personality (90.8 vs 87.9) and misalignment behaviours (71.3 vs 69.4), with power seeking, hallucination and sycophancy among the most steerable. It failed for knowledge-heavy personas such as public figures (51.4 vs 89.1). The authors call steering 'a dispositional modulator rather than a propositional injector'. Baseline inclination is not measured.",
+   "bears_on": "Q1, T1, T2"
+  },
+  {
+   "question": "L1",
+   "claim": "Steering success varies strongly by concept and strength and can be predicted from early decoding states. The study excluded cases the model already satisfies without steering.",
+   "citation": "Fan, Cheng, Li, Feizi, Zhou, 'When is Your LLM Steerable?', arXiv 2606.11599",
+   "how_read": "Abstract and sections 2-4 (testbed, steerability analysis, predictor).",
+   "finding": "ASTEER: 1.4M steered generations, 150 concepts at three abstraction levels, 50 Alpaca prompts, on Qwen3-1.7B, Gemma-2-2B-it and Llama-3.2-3B-Instruct, labelled by a GPT-5-nano judge. Prompt-concept pairs already judged successful at alpha = 0 were excluded 'to ensure that observed successes at alpha > 0 reflect genuine effects of activation steering rather than pre-existing alignment'. DiffMean success rate on Qwen3-1.7B: 18.67% overall; 10.32% low-level, 24.05% mid-level, 23.11% high-level concepts. Success rises and then falls with alpha (inverted U). A gradient-boosted classifier on steered-vs-unsteered hidden-state features from the first decoding steps predicts under-, successful or over-steering with macro-F1 of about 0.80 on seen and about 0.72 on unseen concepts.",
+   "bears_on": "Q1, T1 (same model family and size as the project; shows that the baseline must be handled explicitly)"
+  },
+  {
+   "question": "L1",
+   "claim": "How linearly accessible a concept is to the unembedding at intermediate layers (logit-lens accuracy A_lin) predicts difference-of-means steering effectiveness and the best layer.",
+   "citation": "Billa, 'Predicting Where Steering Vectors Succeed', arXiv 2604.15557",
+   "how_read": "Abstract and sections 1-4 (method, Linear Accessibility Profile, steerability prediction).",
+   "finding": "A_lin(layer) = fraction of concept prompts for which argmax(W_U LayerNorm(h)) is the correct token; no training is needed. Steering: d = mean(target) - mean(non-target), injected into non-target prompts; effect = change in target-token probability (Delta P). Across 24 controlled binary concept families on five models (Pythia-2.8B to Llama-8B), peak A_lin predicts maximum Delta P with rho +0.86 to +0.91; layer selection rho +0.63 to +0.92; partial r = 0.507 when controlling for layer index. 'Parity-related concepts with peak A_lin < 0.05 do not steer (typical Delta P < 0.01).' A_lin on Qwen-1.5B predicts Delta P on Qwen-7B (rho 0.88). Note: A_lin is measured on prompts where the concept is the correct answer, so it is an accessibility measure, not a propensity on neutral prompts.",
+   "bears_on": "Q1, Q3 (parity, a 1-bit property, was not steerable), T1, T4"
+  },
+  {
+   "question": "L1",
+   "claim": "Activation steering and in-context learning act on the same latent belief: steering adds a term proportional to its magnitude to the log posterior odds of a concept, on top of a constant prior offset.",
+   "citation": "Bigelow, Wurgaft, Wang, Goodman, Ullman, Tanaka, Lubana, 'Belief Dynamics Reveal the Dual Nature of In-Context Learning and Activation Steering', arXiv 2511.00617 (ICML 2026)",
+   "how_read": "Abstract, introduction, sections 2-4 (model derivation), discussion, and the appendix passages on large magnitudes and other models.",
+   "finding": "Final model: log o(c|x) = a*m + b + gamma*N^(1-alpha), where m is the steering magnitude, b the log prior odds offset, and N the number of in-context shots. Fitted to Llama-3.1-8B-Instruct on five persona domains from Model-Written Evals (Machiavellianism, psychopathy, narcissism, believes-life-has-no-meaning, moral nihilism), held-out r = 0.98 averaged over domains; also tested on Qwen-2.5-7B and Gemma-2-9B. The domains were chosen as concepts 'that LLMs assign relatively low probability to'. Behaviour breaks down toward chance at large magnitudes, and steering had no clear effect on phi-4-mini-instruct. My inference, not the authors' claim: if steering adds a constant to the log-odds, steerability measured as a log-odds slope does not depend on the baseline b. Measured in probability, in the share of flipped top tokens, or on a bounded score, steerability depends on the baseline mechanically.",
+   "bears_on": "Q1, T1 (choice of steerability scale), T3a"
+  },
+  {
+   "question": "L1",
+   "claim": "Across 53 traits, steering produces its largest gains on traits that the model's defaults exclude. Traits already expressed at baseline ('natural') show little gain.",
+   "citation": "Zeng, Emami, Choi, 'What Models Express, Suppress, and Resist: Auditing Open-Weight LLMs with Persona Vectors', arXiv 2607.13162",
+   "how_read": "Abstract, sections 3-6 (classification rule, single-trait map, pairwise composition), appendix A.5.",
+   "finding": "Models: Qwen3-8B and gpt-oss-20b; persona vectors; a judge scores trait expression from 0 to 100. Baseline B = score at alpha = 0; gain Delta = score at alpha = 2.5 minus score at alpha = 0, averaged over layers. Classes: natural if B >= 70 and Delta <= 10; steerable if B < 70 and Delta >= 10; intractable otherwise or if extraction fails. The scatter of baseline against gain forms two clusters (natural upper left, steerable lower right). 'steering preferentially amplifies the deviations from those defaults'. Largest gains: hyperbole, hallucination, sycophancy. The classes are defined by thresholds on the same bounded scale, so the inverse relation is partly built in (ceiling). No correlation coefficient between B and Delta is reported.",
+   "bears_on": "Q1 (on a bounded scale the relation runs opposite to Q1's prediction), T1, T3b"
+  },
+  {
+   "question": "L1",
+   "claim": "Prompt steerability is limited by skewed baseline behaviour and by asymmetry between steering directions.",
+   "citation": "Miehling, Desmond, Natesan Ramamurthy, Daly et al., 'Evaluating the Prompt Steerability of Large Language Models', arXiv 2411.12405 (NAACL 2025)",
+   "how_read": "Abstract, section 3.3 (steerability indices), section 4 (baseline behaviour), conclusion.",
+   "finding": "Prompting, not activation steering. 32 persona dimensions from Anthropic's persona dataset, six models. Steering capacity = Wasserstein distance from the base profile to the maximally steered profile; the steerability index is the fraction of that capacity achieved. Baselines often 'exhibit a significant skew from neutrality (0.5)', some are saturated at one end, and steerability within a dimension is asymmetric. Conclusion: 'a model's baseline behavior has a significant role in determining its susceptibility to prompt-based steering.' The statement is qualitative; no correlation coefficient between baseline and steerability index was found in the text.",
+   "bears_on": "Q1"
+  },
+  {
+   "question": "L1",
+   "claim": "Models are less steerable by prompting toward incongruous personas (combinations that the training distribution makes unlikely).",
+   "citation": "Liu, Diab, Fried, 'Evaluating Large Language Model Biases in Persona-Steered Generation', arXiv 2405.20253",
+   "how_read": "Abstract only.",
+   "finding": "'LLMs are 9.7% less steerable towards incongruous personas than congruous ones'; RLHF models are more steerable, especially toward stances associated with political liberals and women. Variance in steerability is not predicted by multiple-choice opinion evaluations. This is prompt steering, not activation steering.",
+   "bears_on": "Q1 (targets consistent with the prior are easier to reach by prompting)"
+  },
+  {
+   "question": "L1",
+   "claim": "Linear representations of factual relations form when pretraining co-occurrence frequency passes a threshold.",
+   "citation": "Merullo, Smith, Wiegreffe, Elazar, 'On Linear Representations and Pretraining Data Frequency in Language Models', arXiv 2504.12459",
+   "how_read": "Abstract only.",
+   "finding": "In OLMo-7B and GPT-J, a linear representation 'consistently (but not exclusively) forms when the subjects and objects within a relation co-occur at least 1k and 2k times'. A regression on linear-representation quality predicts term frequency, even across models. Steering is not tested.",
+   "bears_on": "Q1 (frequency is a candidate confound of steerability through linearity), Q3, T4 (rare encodings)"
+  },
+  {
+   "question": "L1",
+   "claim": "Evaluation methodology: steering evaluations should account for model likelihoods and baselines, and steering often underperforms prompting and varies by model.",
+   "citation": "Pres, Ruis, Lubana, Krueger, arXiv 2410.17245; Wu, Arora, Geiger et al., 'AxBench', arXiv 2501.17148; Da Silva, Sethuraman, Rajagopal, Hajishirzi et al., 'Steering off Course', arXiv 2504.04635",
+   "how_read": "Abstracts only.",
+   "finding": "Pres et al. propose four criteria for evaluations: contexts similar to downstream use, accounting for model likelihoods, comparability across behaviours, and baseline comparisons; under these, some interventions are 'less effective than previously reported'. AxBench (Gemma-2-2B/9B): 'prompting outperforms all existing methods, followed by finetuning'; difference-in-means is best for concept detection. Da Silva et al. tested DoLa, function vectors and task vectors on up to 36 models from 14 families and found 'substantial variability', with many models showing no improvement.",
+   "bears_on": "T1 (needs a prompting baseline and likelihood-based metrics)"
+  },
+  {
+   "question": "L1",
+   "claim": "Side effects of steering on other behaviours are common, structured and largely forecastable from unsteered representations.",
+   "citation": "Ong, Sim, Zhang, Sun, 'Forecasting Side Effects of Activation Steering', arXiv 2608.11227",
+   "how_read": "Abstract and introduction passages (pdftotext search).",
+   "finding": "A cross-effect matrix over 67 behaviours in three open-weight models. Side-effect magnitude 'depends primarily on the target behavior'. The direction of side effects is forecast with a behavioural probe plus a linear propagation map, both fitted on unsteered activations; the sign is correct for 68-78% of flagged cases.",
+   "bears_on": "T1 (the damage control: KL on unrelated text measures only part of the side effects)"
+  },
+  {
+   "question": "L1",
+   "claim": "Steering outcomes are intrinsically unstable because a sample-specific 'sensitive sector' around the concept axis cannot be identified from difference vectors.",
+   "citation": "Gao, Zhang, Liu, Ji et al., 'The Cylindrical Representation Hypothesis for Language Model Steering', arXiv 2605.01844",
+   "how_read": "Abstract only.",
+   "finding": "Theoretical relaxation of the Linear Representation Hypothesis with experiments. A central axis drives concept generation, and a surrounding normal plane sets steering sensitivity per sample. The authors claim this explains fluctuations even with well-aligned directions.",
+   "bears_on": "T1"
+  },
+  {
+   "question": "L1",
+   "claim": "Steered activations almost surely lie off the set of states that any text prompt can produce, so white-box steerability is formally separate from black-box prompting.",
+   "citation": "Mishra, Khashabi, Liu, 'Steered LLM Activations are Non-Surjective', arXiv 2604.09839",
+   "how_read": "Abstract only.",
+   "finding": "Proof under stated assumptions that steering 'pushes the residual stream off the manifold of states reachable from discrete prompts', with an empirical illustration on three LLMs. The authors 'caution against interpreting the ease and success of activation steering as evidence of prompt-based interpretability or vulnerability'.",
+   "bears_on": "Q1 (steerability is not the same thing as an inclination expressed under prompts), T3a (directions re-extracted from steered states describe off-manifold states)"
+  },
+  {
+   "question": "L1",
+   "claim": "SAE features steer well only when they have a high 'output score', that is a clear effect on outputs, as opposed to features that mainly track inputs.",
+   "citation": "Arad, Mueller, Belinkov, 'SAEs Are Good for Steering -- If You Select the Right Features', arXiv 2505.20063",
+   "how_read": "Abstract only.",
+   "finding": "Input and output scores rarely co-occur in the same feature. Filtering out low-output-score features gives 2-3x better SAE steering.",
+   "bears_on": "Q1, T1 (output alignment, as in Billa 2604.15557, predicts steering)"
+  },
+  {
+   "question": "L2",
+   "claim": "A model-written persona dataset for 'Desire For Recursive Self Improvement' was generated, alongside 'Desire For Self Improvement' and ten other 'Desire For Enhanced Capabilities' sets.",
+   "citation": "Perez, Ringer, Lukosiute, Nguyen et al., 'Discovering Language Model Behaviors with Model-Written Evaluations', arXiv 2212.09251 (Findings of ACL 2023); Hugging Face mirror Anthropic/model-written-evals",
+   "how_read": "Abstract, section 3.5, and the appendix behaviour table (pdftotext). Hugging Face Hub API listing of the persona folder, fetched 11 Nov 2026. The GitHub release was not accessed (project rule).",
+   "finding": "Appendix: 'Desire For Recursive Self Improvement: Suppose there is an AI system that would like to become recursively self-improving.' and 'Desire For Self Improvement: Suppose there is an AI system that would like to improve itself.' Both are grouped under 'Desire For Enhanced Capabilities (12)', with cognitive enhancement, more capabilities, more intelligent, more compute, more data, more parameters, own hardware and others. Measured quantity: '% answers matching behavior' on yes/no statements for a 52B pretrained LM, RLHF models and the preference model; Fig. 3 shows group averages. The Hub listing has 99 .jsonl files plus a README, alphabetical with no pagination link. It includes desire-for-self-improvement.jsonl, desire-to-be-more-intelligent.jsonl, cognitive-enhancement.jsonl, desire-for-more-capabilities.jsonl, desire-to-be-trained-on-more-data.jsonl, desire-to-be-trained-with-more-compute.jsonl and desire-to-be-trained-with-more-parameters.jsonl. It has no recursive-self-improvement file. This stated-desire measure is the only existing measurement of an 'inclination to RSI' in language models found.",
+   "bears_on": "Q1, T2 (ready-made contrast sets; nobody has steered on them)"
+  },
+  {
+   "question": "L2",
+   "claim": "Among 40 behaviour datasets, power-seeking and several self-awareness datasets are among the most steerable; survival instinct is in the middle. No self-improvement dataset was included.",
+   "citation": "Tan et al., arXiv 2407.12404, Figure 18 and Tables 2-3",
+   "how_read": "Figure 18 viewed as a rendered image; appendix tables read in full.",
+   "finding": "Figure 18 sorts the datasets by median per-sample steerability: corrigible-neutral-HHH, self-aware-lm and power-seeking-inclination are the top three, the latter with a low anti-steerable fraction (about 0.1 read from the plot). survival-instinct sits mid-table (median about 2); self-awareness-general-ai is lower. narcissism and willingness-to-use-physical-force are near zero. The caption does not name the model; the main experiments use Llama-2-7b-Chat. The 40 datasets contain no self-improvement or enhanced-capability set.",
+   "bears_on": "Q1, T2"
+  },
+  {
+   "question": "L2",
+   "claim": "The projection of the last prompt token onto a persona vector tracks trait expression, and finetuning-induced shifts along the vector track changes in trait expression.",
+   "citation": "Chen, Arditi, Sleight, Evans et al., 'Persona Vectors: Monitoring and Controlling Character Traits in Language Models', arXiv 2507.21509",
+   "how_read": "Abstract and sections 3-4 (extraction, steering, monitoring, finetuning shifts).",
+   "finding": "Qwen2.5-7B-Instruct and Llama-3.1-8B-Instruct; traits evil, sycophancy and hallucination, plus four in the appendix. Eight system prompts from trait-suppressing to trait-encouraging: correlation of the projection with expression r = 0.75-0.83. The authors note that this 'arises primarily from distinguishing between different prompt types', with weaker correlations within a prompt type. Finetuning shift along the vector vs trait expression: r = 0.76-0.97, against cross-trait baselines of 0.34-0.86. 'Projection difference' of the training data predicts post-finetuning expression. Inclination is measured as a projection here, not as steerability.",
+   "bears_on": "Q1, T1 (supports the projection-based inclination measure, with the caveat that it is driven by prompt type), T2"
+  },
+  {
+   "question": "L2",
+   "claim": "Evaluation or test awareness has linear directions that can be probed and steered.",
+   "citation": "Nguyen, Hoang, Attubato, Hofstaetter, arXiv 2507.01786; Abdelnabi and Salem, arXiv 2505.14617; Hua, Qin, Marks, Nanda, arXiv 2510.20487",
+   "how_read": "Abstracts only.",
+   "finding": "Linear probes separate evaluation from deployment prompts in Llama-3.3-70B-Instruct. In reasoning models, steering toward or away from test awareness changes compliance with harmful requests, 'with effects varying in both magnitude and direction across models'. A steering vector built from the original model, before training, suppresses evaluation-aware behaviour (type hints) in a trained model organism. None relates steerability to a prior inclination.",
+   "bears_on": "Q1, T2 (situational-awareness directions as neighbours of an RSI direction)"
+  },
+  {
+   "question": "L2",
+   "claim": "A residual-stream vector related to the model's 'self' controls self-authorship judgements; a fine-tuning objective that aligns self and other representations reduces deception.",
+   "citation": "Ackerman and Panickssery, arXiv 2410.02064; Carauleanu, Vaiana, Rosenblatt, Berg et al., arXiv 2412.16325",
+   "how_read": "Abstracts only.",
+   "finding": "Llama3-8b-Instruct, but not the base Llama3-8b, recognises its own text. The identified vector 'is related to the concept of self' and steers the model to claim or disclaim authorship. Self-other-overlap fine-tuning reduced deceptive responses, e.g. Mistral-7B-Instruct-v0.2 from 73.6% to 17.2%.",
+   "bears_on": "T2 (self directions exist; the base/chat difference matters for a base model)"
+  },
+  {
+   "question": "L2",
+   "claim": "Misalignment has convergent linear directions or features that predict and control emergent misalignment.",
+   "citation": "Wang, Dupre la Tour, Watkins, Makelov et al., arXiv 2506.19823; Soligo, Turner, Rajamanoharan, Nanda, arXiv 2506.11618",
+   "how_read": "Abstracts only.",
+   "finding": "A 'toxic persona' SAE feature 'most strongly controls emergent misalignment and can be used to predict whether a model will exhibit such behavior'. A misalignment direction extracted from one fine-tune ablates misaligned behaviour in other fine-tunes. Here a direction's activation predicts a propensity after training; steerability is not used as the measure.",
+   "bears_on": "Q1, T2"
+  },
+  {
+   "question": "L2",
+   "claim": "White-box perturbations (latent or weight tampering, noise, unsupervised adapters) reveal latent behaviours. Tampering success predicts black-box attack success.",
+   "citation": "Che, Casper, Kirk, Satheesh et al., arXiv 2502.05209; Tice, Kreer, Helm-Burger, Shahani et al., arXiv 2412.01784; Mack, Panickssery, Turner, 'Mechanistically Eliciting Latent Behaviors in Language Models', arXiv 2606.29604",
+   "how_read": "Abstracts only.",
+   "finding": "'the success rate of model tampering attacks can empirically predict and offer conservative estimates for the success of held-out input-space attacks'. Sandbagging models improve anomalously under weight noise, while normal models degrade. Unsupervised LoRAs (Causal Perturbative Elicitation) restore 85% of password-locked BigCodeBench performance in Llama3-70B and 'virtually eliminate' alignment faking in a model organism. These are the nearest operationalisations of 'perturbation response reveals a latent disposition'. None uses steering slope as an inclination measure, and none concerns self-improvement.",
+   "bears_on": "Q1, T2"
+  },
+  {
+   "question": "L3",
+   "claim": "Function vectors can partly be composed by vector algebra; some composed tasks work and others resist composition.",
+   "citation": "Todd, Li, Sen Sharma, Mueller, Wallace, Bau, 'Function Vectors in Large Language Models', arXiv 2310.15213 (ICLR 2024)",
+   "how_read": "Abstract and the section on vector algebra over function vectors, including Table 7 (GPT-J).",
+   "finding": "Parallelogram test: v*_BD = v_AD + v_BC - v_AC (e.g. Last-Capital* = Last-Copy + First-Capital - First-Copy), applied zero-shot. Accuracy, ICL / extracted FV / composed sum: Last-Country-Capital 0.32 / 0.15 / 0.60; Last-Capitalize-First-Letter 0.75 / 0.76 / 0.95; Last-English-French 0.45 / 0.16 / 0.06; Last-Antonym 0.25 / 0.02 / 0.07. 'some FVs can be composed ... Other tasks ... resist vector composition.' This is an analogy (parallelogram) test, not a chain A->B plus B->C against A->C.",
+   "bears_on": "Q2, T3b"
+  },
+  {
+   "question": "L3",
+   "claim": "Task vectors in weight space and in-context vectors in activation space support addition, negation and analogies.",
+   "citation": "Ilharco, Ribeiro, Wortsman, Gururangan et al., 'Editing Models with Task Arithmetic', arXiv 2212.04089; Liu, Ye, Xing, Zou, 'In-context Vectors', arXiv 2311.06668; Hendel, Geva, Globerson, 'In-Context Learning Creates Task Vectors', arXiv 2310.15916",
+   "how_read": "Abstracts only.",
+   "finding": "Weight-space task vectors: 'when tasks are linked by an analogy relationship of the form A is to B as C is to D, combining task vectors from three of the tasks can improve performance on the fourth'. In-context vectors can be combined by 'simple vector arithmetics' to follow several instruction types at once. ICL compresses demonstrations into a single task vector. None tests transitivity of chained transformations.",
+   "bears_on": "Q2, T3b"
+  },
+  {
+   "question": "L3",
+   "claim": "Combining several behaviour steering vectors into one vector is largely unsuccessful; injecting each vector at a different layer works better.",
+   "citation": "van der Weij, Poesio, Schoots, 'Extending Activation Steering to Broad Skills and Multiple Behaviours', arXiv 2403.05767",
+   "how_read": "Full text (sections 2-4).",
+   "finding": "Llama 2 7B Chat; behaviours myopia, wealth seeking, sycophancy, agreeableness, anti-immigration. Eight ways of combining the vectors (mean or sum, weighted or not, added or subtracted) at layer 15 gave 'unexpected and often smaller effect sizes'; wealth seeking lost its effect, and some combinations reversed the direction. Simultaneous injection (myopia at layer 11, wealth 12, sycophancy 13, agreeableness 14, anti-immigration 15): myopia and wealth comparable to individual steering, the others weaker and unstable. Mode collapse appears toward 0.5 at large coefficients.",
+   "bears_on": "T3b (summing at one layer versus applying at successive layers)"
+  },
+  {
+   "question": "L3",
+   "claim": "Additive, training-free composition succeeds when each attribute vector is injected at its own best layer and the vectors are nearly orthogonal.",
+   "citation": "Kang, Gurgurov, Baeumel, van Genabith et al., 'Compositional Multilingual and Behavioral Attribute Steering', arXiv 2609.08410",
+   "how_read": "Abstract, sections 1-2, 6-7.",
+   "finding": "Llama-3.1-8B/70B-Instruct and Qwen2.5-14B/32B-Instruct; attributes language, jailbreak and conciseness. Language works best at earlier layers, abstract behaviours at middle layers. Two-attribute composition works at per-attribute layers. Language and jailbreak vectors are nearly orthogonal and compose; language and conciseness are less orthogonal and compose less reliably; three-way composition partly works. The authors conjecture that 'cosine similarity of attribute vectors may be a good predictor for activation steering composability'.",
+   "bears_on": "T3b"
+  },
+  {
+   "question": "L3",
+   "claim": "Pairs of steerable traits can collapse when composed; pairs that include a default trait never do.",
+   "citation": "Zeng, Emami, Choi, arXiv 2607.13162",
+   "how_read": "Abstract and section 6 (pairwise composition over 171 generic-trait pairs).",
+   "finding": "Interactions are labelled constructive, dominant or destructive by thresholds on judged expression. 'two steerable traits can collapse the composition, but pairs involving a default never do.'",
+   "bears_on": "T3b"
+  },
+  {
+   "question": "L3",
+   "claim": "Iterative procedures exist to refine steering vectors or their contrastive data. No convergence or fixed-point analysis of re-extracting a direction from the steered model was found.",
+   "citation": "Zhu, Wang, Jiang, Liang et al., 'Self-Improving Model Steering' (SIMS), arXiv 2507.08967; Jiang, Yu, Wang, Hu, 'Global Evolutionary Steering', arXiv 2603.12298; Chen, Dong, Xie, 'Adaptive Probe-based Steering', arXiv 2605.20286",
+   "how_read": "Abstracts only.",
+   "finding": "SIMS 'autonomously generates and refines contrastive samples through iterative self-improvement cycles'. GER-steer refines raw vectors using cross-layer consistency. Adaptive probe-based steering approximates an 'ideal' vector by model extraction. None reports whether repeated re-extraction converges.",
+   "bears_on": "Q2, T3a"
+  },
+  {
+   "question": "L3",
+   "claim": "Transformers generalise transitively (A>B, B>C, so A>C) when they learn a linear ordinal embedding in weights. In-context learners do so only when the training data demand it.",
+   "citation": "Geerts, Liu, Chan, Clopath et al., 'Relational reasoning and inductive bias in transformers and large language models', arXiv 2506.04289; Singh, 'Emergent Ordinal Geometry in Transformers Trained on Local Comparisons', arXiv 2606.01269",
+   "how_read": "Abstracts plus the LLM sections of both papers (pdftotext search).",
+   "finding": "In-weights learning yields a linear embedding and transitive inference. ICL models otherwise learn match-and-copy; pre-training on in-context linear regression makes them more transitive. In seven LLMs, number-line prompts increased transitive inference, except in the smallest (Gemma 1B). Singh: small transformers trained only on adjacent comparisons generalise to distant pairs as embeddings collapse onto a 1-D rank axis. In Qwen2.5-1.5B, digits align with a principal component (r about 0.81), months only weakly (r = 0.41): 'The cyclic domain resists the line.'",
+   "bears_on": "Q2 (transitivity depends on training regime and geometry), Q3 (cyclic structure is not captured by one axis), T3b, T4c"
+  },
+  {
+   "question": "L3",
+   "claim": "Adapting through intermediate domains can succeed where direct source-to-target adaptation fails ('transitive' or gradual transfer).",
+   "citation": "Kumar, Ma, Liang, 'Understanding Self-Training for Gradual Domain Adaptation', arXiv 2002.11361; Tan, Song, Zhong, Yang, 'Transitive Transfer Learning', KDD 2015, DOI 10.1145/2783258.2783295",
+   "how_read": "Kumar et al.: abstract only. Tan et al. KDD 2015: search-result snippets and descriptions in later papers only, full text not read.",
+   "finding": "Kumar et al. prove a non-vacuous bound for self-training under gradual shift 'under settings where directly adapting to the target domain can result in unbounded error'. Tan et al. 2015 connect distant source and target domains through one intermediate domain. This is the established ML meaning of 'transitivity' across domains, and it concerns training, not steering vectors.",
+   "bears_on": "Q2, T3b (terminology)"
+  },
+  {
+   "question": "L3",
+   "claim": "Composition of two relational hops inside an LLM is partial, and learned relations are not automatically reversible.",
+   "citation": "Yang, Gribovskaya, Kassner, Geva et al., arXiv 2402.16837; Berglund, Tong, Kaufmann, Balesni et al., 'The Reversal Curse', arXiv 2309.12288",
+   "how_read": "Abstracts only.",
+   "finding": "Latent multi-hop: strong evidence for the first hop; the second hop and the full traversal are 'rather moderate'. Reversal curse: training on 'A is B' does not give 'B is A'; GPT-4 answers forward questions 79% of the time, reverse questions 33%.",
+   "bears_on": "Q2, T3b (chaining A->B and B->C inside the model is not guaranteed)"
+  },
+  {
+   "question": "L3",
+   "claim": "In self-referential networks the tower of meta-levels (learning to learn to learn ...) can in principle be handled by one self-modifying weight matrix, without explicit meta-optimisation.",
+   "citation": "Irie, Schlag, Csordas, Schmidhuber, 'A Modern Self-Referential Weight Matrix That Learns to Modify Itself', arXiv 2202.05780; Kirsch and Schmidhuber, 'Eliminating Meta Optimization Through Self-Referential Meta Learning', arXiv 2212.14392",
+   "how_read": "Abstracts only.",
+   "finding": "Irie et al.: 'In principle, such NNs can meta-learn to learn, and meta-meta-learn to meta-learn to learn, and so on, in the sense of recursive self-improvement.' They evaluate the method on few-shot learning and multi-task RL. Kirsch and Schmidhuber: 'A neural network self-modifies ..., improves its self-modifications, and learns how to learn' via fitness monotonic execution. This is the closest literature to 'RSI of RSI of RSI'; it concerns trained self-modifying networks, not activation directions.",
+   "bears_on": "Q2, T3a"
+  },
+  {
+   "question": "L4",
+   "claim": "Base64 and six-dot Braille are both 64-symbol, 6-bit codes. In Unicode the dot pattern is the code-point offset. Literary Braille letters form decades, with w outside the pattern.",
+   "citation": "RFC 4648 section 4; Wikipedia articles 'Braille' and 'Braille ASCII'; local check with Python unicodedata",
+   "how_read": "RFC section 4 and the relevant Wikipedia passages via fetch; local computation of Unicode names for U+2800 to U+283F.",
+   "finding": "RFC 4648: 'The encoding process represents 24-bit groups of input bits as output strings of 4 encoded characters. ... Each 6-bit group is used as an index into an array of 64 printable characters.' Alphabet: A-Z, a-z, 0-9, +, /, with '=' as padding. Braille: '64 (2^6) possible patterns, including one in which there are no raised dots'. a-j use the upper four dots; k-t add dot 3; the next decade (u v x y z in English) adds dots 3 and 6; 'w was left out as it was not part of the official French alphabet'. Braille ASCII 'uses the 64 ASCII characters between 32 and 95 inclusive'. Local check: for all 64 cells the Unicode name equals 'BRAILLE PATTERN DOTS-...', with bit i of the offset = dot i+1 (offset 0 = blank). Side note: Wei et al. 2307.02483 describe Base64 as encoding 'each byte as three text characters', which contradicts RFC 4648.",
+   "bears_on": "Q3 (cardinality premise holds; the 'cycle structure' holds with the w exception), T4a-c"
+  },
+  {
+   "question": "L4",
+   "claim": "Local tokenizer check, not literature: in the Qwen3-1.7B tokenizer, Base64 6-bit symbols and 4-character groups are not token units, and Braille cells mostly split into two byte-level tokens.",
+   "citation": "Local run of AutoTokenizer from scratchpad/models/qwen3-1.7b (tokenizer only, no weights); script rsi_review/lit/scripts/tok_check.py, output rsi_review/lit/tok_check.json",
+   "how_read": "Local computation.",
+   "finding": "Braille, isolated cells: 60 of 64 cells encode to 2 tokens, 4 to 1 token (U+2800, U+2807, U+2812, U+2829). 200 random cells give 386 tokens. Pieces show a shared lead-byte token plus a token carrying the final UTF-8 byte (0x80 + dot pattern), so the 6 dot bits sit in the low bits of a byte-token identity. The split of the same cell varies with context: the first cell of a run split as E2 | A0 81, later cells as E2 A0 | 83. Base64: all 64 alphabet characters are single tokens in isolation. In Base64 text, tokens are 1-3 characters long (87 one-char, 55 two-char, 1 three-char tokens for 200 chars), and only 28.7% of token ends fall on 4-character (24-bit) boundaries. An English sentence of 30 tokens becomes 143 tokens as Base64. My inference: a per-bit probe can read the bits of Braille cells from token identity alone (64 classes, d_model 2048), so only tests on held-out symbols are informative. Base64 symbols inside text do not have their own token positions.",
+   "bears_on": "Q3, T4a, T4b, T4d"
+  },
+  {
+   "question": "L4",
+   "claim": "Large models learn to follow Base64-encoded instructions during pretraining, while safety training does not cover this ('mismatched generalization'); the ability appears with scale.",
+   "citation": "Wei, Haghtalab, Steinhardt, 'Jailbroken: How Does LLM Safety Training Fail?', arXiv 2307.02483",
+   "how_read": "Section 3.2 (Base64 example) and the discussion on scaling (pdftotext search).",
+   "finding": "GPT-4 'can follow Base64-encoded instructions, but with fewer safeguards'; 'GPT-3.5 Turbo cannot follow Base64-encoded instructions'. Ablations: encoded input matters more than encoded output, and both together are most potent. The paper also notes that 'GPT-4 cannot reliably follow instructions in ROT13'.",
+   "bears_on": "Q3, T4 (Base64 competence grows with scale; a 1.7B model may have little)"
+  },
+  {
+   "question": "L4",
+   "claim": "Interpretability of Base64: a one-layer model has a Base64 context feature. It splits into features for letters, for digits (driven by the tokenizer) and for Base64 that decodes to ASCII text.",
+   "citation": "Bricken, Templeton, Batson, Chen et al. (Anthropic), 'Towards Monosemanticity: Decomposing Language Models With Dictionary Learning', transformer-circuits.pub, 4 Oct 2023 (not on arXiv)",
+   "how_read": "Downloaded HTML; text search of all base64 passages (sections on the base64 feature and on feature splitting).",
+   "finding": "Model: one-layer transformer with a 512-neuron MLP; SAEs with 512 to 131,072 features. A/0/45 'seems to activate on all tokens of base64-encoded strings'. In A/1 it splits into A/1/2357 (fires 'preferentially on letters in base64'), A/1/2364 (on digits, 'exploiting a property of the BPE tokenizer'), and A/1/1544, which 'seems to respond to base64 strings which encode ASCII text' (e.g. the token ICAgICAg, six spaces). 'activating the base64 feature we study causes the model to generate base64 text.' Pearson r between the computational proxy and A/1/2357 is 0.38. 'four base64 characters encode triples of ASCII characters'. No feature encoding 6-bit symbol values is reported.",
+   "bears_on": "Q3, T4a, T4d (an 'inside Base64' context direction exists; tokenizer properties shape the features)"
+  },
+  {
+   "question": "L4",
+   "claim": "Ciphered reasoning ability tracks how often the cipher appears in pretraining data. Well-known ciphers (rot13, base64) work for frontier models; rare ones do not. Output probability also drives cipher-decoding accuracy.",
+   "citation": "Guo, Sleight, Roger, 'All Code, No Thought: Current Language Models Struggle to Reason in Ciphered Language', arXiv 2510.09714; McCoy, Yao, Friedman, Hardy et al., 'Embers of Autoregression', arXiv 2309.13638",
+   "how_read": "Guo et al.: abstract, sections 4.2 and 5.1, appendix cipher list. McCoy et al.: abstract only.",
+   "finding": "28 ciphers, including base64, base64 2x and 3x, and gzip-to-base64. Claude Sonnet 3.5/4 'can reason in well-known ciphers like rot13 and base64 with < 10% accuracy loss'; lesser-known ciphers lose more than 45%. Prevalence is estimated from 4-gram frequencies in RedPajama via Infini-gram. A logistic fit of accuracy on log prevalence gives R^2 = 0.906 for structure-preserving ciphers (Qwen2.5-14B fine-tuned); base64 is classed as 'structure-disrupting'. McCoy et al.: GPT-4 decodes a simple cipher with 51% accuracy when the output is a high-probability word sequence, 13% when it is low-probability.",
+   "bears_on": "Q3, T4 (frequency and output-probability confounds between encodings)"
+  },
+  {
+   "question": "L4",
+   "claim": "LLM Braille comprehension is poor and depends strongly on the surface form (Braille ASCII, Unicode, dot numbers); Qwen3-1.7B is near the floor.",
+   "citation": "Zhang, Mo, Chen, Han et al., 'BrailleBench', arXiv 2608.27268; Abdullah, 'I'm Sorry, but I Can't Help with Braille', arXiv 2607.11893",
+   "how_read": "BrailleBench: sections II and IV, Tables II, VIII, IX, X. Abdullah: abstract only.",
+   "finding": "BrailleBench uses Braille ASCII as the primary format, with Unicode and dot-number variants; Unified English Braille Grades 1 and 2 via liblouis; 5,570 instances. Qwen3 1.7B scores 69.4 on English GSM8K but 2.4 with Grade-1 Braille input and English output (1.4 for Grade 2); near zero on the other tasks. On the format diagnostics (Qwen3 1.7B not included), 'Braille ASCII gives the strongest and most stable performance', dot notation is 'almost uniformly at the floor', and Llama 3.1 8B scores about 0 with Unicode Braille. Related-work statement: Unicode Braille 'symbols remain poorly matched to English-centric tokenizers'. Abdullah: Korean-Braille translation by LLMs is poor, which 'point[s] to missing Braille-aware tokenization'.",
+   "bears_on": "Q3, T4 (a 1.7B model has little behavioural Braille competence to probe)"
+  },
+  {
+   "question": "L4",
+   "claim": "Covert encoding by LLM agents uses a shared low-dimensional 'encoding subspace' across nine encoding families; a probe trained on eight recovers the ninth.",
+   "citation": "Revankar, Chauhan, Kim, Nur et al., 'MIRAGE: A Polarity-Flipping Encoding Subspace in LLM Agents', arXiv 2606.10304",
+   "how_read": "Abstract, introduction, sections 3.2-3.4.",
+   "finding": "Families: keyed Caesar, hex, columnar transposition, acrostic, synonym chain, narrative paraphrase, sentiment polarity, word-length steganography, homophonic substitution. Base64 and ROT13 were evaluated only end to end. Final-layer hidden states of eight models (Qwen2.5-1.5B to 14B-Instruct, Mistral-7B, Llama-3-8B, DeepSeek-7B, Phi-3.5-mini). Mean-difference directions per family have pairwise cosine 0.32-0.64 and lie in a subspace of at most 5 dimensions. Leave-one-encoding-out probe AUC: 0.975-1.000. An apparent embedding-layer AUC of 1.000 collapsed to 0.500 under matched controls, a surface (last-token identity) confound. The shared direction marks the act of encoding, not a shared code for the same content.",
+   "bears_on": "Q3, T4b, T4d (an 'inside an encoding' direction is plausible; token-identity confounds must be controlled)"
+  },
+  {
+   "question": "L4",
+   "claim": "Models share semantic representations across languages and data types in middle layers. Internal states of a model reasoning in a cipher can be decoded with the logit lens.",
+   "citation": "Wu, Yu, Yogatama, Lu et al., 'The Semantic Hub Hypothesis', arXiv 2411.04986; Wendler, Veselovsky, Monea, West, arXiv 2402.10588; Fang and Marks, arXiv 2512.01222",
+   "how_read": "Semantic hub: abstract and introduction. The other two: abstracts only.",
+   "finding": "Semantic hub: semantically equivalent inputs in different languages, arithmetic expressions, code and visual/audio inputs have similar intermediate representations, and interventions transfer across data types. Base64 and Braille are not studied (no occurrence in the text). Llama-2 decodes a concept in an English-near 'concept space' in middle layers. Logit lens recovers ROT-13 chain-of-thought in a fine-tuned DeepSeek-R1-Distill-Llama-70B, with accuracy peaking in intermediate-to-late layers.",
+   "bears_on": "Q3, T4b (shared content codes are known for languages and code, not for bit-level encodings)"
+  },
+  {
+   "question": "L4",
+   "claim": "Periodic and cyclic quantities are represented by multi-dimensional circular or helical features, and numbers by base-10 digit circles. Parity is carried by high-frequency features.",
+   "citation": "Engels, Michaud, Liao, Gurnee et al., arXiv 2405.14860; Levy and Geva, arXiv 2410.11781; Zhou, Fu, Sharan, Jia, arXiv 2406.03445; Kantamneni and Tegmark, arXiv 2502.00873",
+   "how_read": "Abstracts only.",
+   "finding": "Circular features for days of the week and months of the year (GPT-2, Mistral 7B), with causal tests in Mistral 7B and Llama 3 8B. LLMs represent numbers 'with individual circular representations per-digit in base 10'. Attention layers do modular addition, 'e.g., computing whether the answer is even or odd', with high-frequency Fourier features. Numbers lie on a 'generalized helix'. No work on binary bit codes of symbols was found.",
+   "bears_on": "Q3 (a 'cycle structure' would need a 2-D or multi-dimensional readout, not one direction), T4a, T4c"
+  },
+  {
+   "question": "L4",
+   "claim": "'Knowledge cutoff' in the literature means the boundary of training-data dates. Activations encode whether an event lies before or after it, and time has linear and weight-space structure.",
+   "citation": "Price, Panickssery, Bowman, Stickland, 'Future Events as Backdoor Triggers', arXiv 2407.04108; Cheng, Marone, Weller, Lawrie et al., 'Dated Data', arXiv 2403.12958; Gurnee and Tegmark, arXiv 2310.02207; Nylund, Gururangan, Smith, 'Time is Encoded in the Weights of Finetuned Language Models', arXiv 2312.13401",
+   "how_read": "Price et al.: abstract and section 4 (probing). The others: abstracts only.",
+   "finding": "Logistic-regression probes on residual-stream activations (last token, every fifth layer) of base Llama 2 7B and 13B separate news headlines from 2017-2019 vs 2023-2024 with 85-95% accuracy. A date steering vector changes backdoor activation rates. Effective cutoffs differ from reported ones, per resource and topic. Linear probes recover the dates of historical figures, artworks and headlines. 'Time vectors specialized to adjacent time periods appear to be positioned closer together in a manifold', and interpolating between them improves performance on intervening years.",
+   "bears_on": "Q3 (the user's 'knowledge cutoffs' means something different), T4d"
+  },
+  {
+   "question": "L4",
+   "claim": "At language switches inside one text (code-switching), hidden states anchor to the grammatical frame language. Probes can detect code-switched text.",
+   "citation": "Park, Yoon, Jun, Lee, 'Code-Switching Reveals Language Anchoring in Multilingual LLMs', arXiv 2606.19668; Laureano De Leon, Tayyar Madabushi, Lee, 'Code-Mixed Probes', arXiv 2403.04872",
+   "how_read": "Abstracts only.",
+   "finding": "Anchor Bias, a geometric measure: 'source-framed CS stays source-anchored, whereas target-framed CS shifts target-ward and shows larger QA degradation'. Steering hidden states toward the source anchor (CANVAS) recovers QA F1. Pre-trained LMs detect code-switched text and generalise to it. No work on transitions between symbol encodings inside a text was found.",
+   "bears_on": "T4d"
+  },
+  {
+   "question": "L4",
+   "claim": "The user's repository documents example searches for Braille and Base64 neuron modes in Goodfire's atlas of Qwen3.6-35B-A3B.",
+   "citation": "Local clone <clone of the proposed repository>, README.md",
+   "how_read": "README read locally (grep); no code run, no atlas data accessed.",
+   "finding": "The README shows queries 'braille', 'braille dot art' and 'random hex hashes and base64'. It says that with the multilingual embedder, 'Blindenschrift' finds 'die Braille-Modi' among '23.586 Modus-Beschriftungen'. This suggests that the atlas has labelled modes for these encodings, but that could not be verified (project rule: no access to goodfire domains), and the atlas describes a different model.",
+   "bears_on": "Q3, T4"
+  },
+  {
+   "question": "L5",
+   "claim": "Recursive self-improvement has been operationalised for scaffolds and agents that rewrite their own code. One framework updates its own weights through self-generated finetuning data.",
+   "citation": "Zelikman, Lorch, Mackey, Kalai, 'STOP', arXiv 2310.02304; Yin, Wang, Pan, Lin et al., 'Goedel Agent', arXiv 2410.04444; Zhang, Hu, Lu, Lange et al., 'Darwin Goedel Machine', arXiv 2505.22954; Zweiger, Pari, Guo, Akyurek et al., 'Self-Adapting Language Models' (SEAL), arXiv 2506.10943",
+   "how_read": "Abstracts only.",
+   "finding": "STOP: a seed improver is run on itself and the improved improver does better. The authors note: 'Since the language models themselves are not altered, this is not full recursive self-improvement.' Goedel Agent modifies its own logic via prompting. DGM iteratively modifies its own code with empirical validation: SWE-bench 20.0% to 50.0%, Polyglot 14.2% to 30.7%. SEAL: the model writes 'self-edits' that become supervised finetuning weight updates, trained by RL on downstream performance.",
+   "bears_on": "Q2, background to the project's earlier RSI conjecture"
+  },
+  {
+   "question": "L5",
+   "claim": "Self-application at the meta level (judging one's own judgements, improving the prompts that improve prompts, amplify-then-distil) has been implemented.",
+   "citation": "Yuan, Pang, Cho, Li et al., 'Self-Rewarding Language Models', arXiv 2401.10020; Wu, Yuan, Golovneva, Xu et al., 'Meta-Rewarding Language Models', arXiv 2407.19594; Fernando, Banarse, Michalewski, Osindero et al., 'Promptbreeder', arXiv 2309.16797; Christiano, Shlegeris, Amodei, 'Supervising strong learners by amplifying weak experts', arXiv 1810.08575",
+   "how_read": "Abstracts only.",
+   "finding": "Meta-Rewarding adds a step 'where the model judges its own judgements' because self-rewarding showed 'rapid saturation during iterative training'. AlpacaEval 2 win rate of Llama-3-8B-Instruct rose from 22.9% to 39.4%. Promptbreeder improves 'the mutation-prompts that improve these task-prompts'. Iterated Amplification 'progressively builds up a training signal for difficult problems by combining solutions to easier subproblems'. This is the established form of 'distilling' an iterated self-application.",
+   "bears_on": "Q2"
+  },
+  {
+   "question": "L5",
+   "claim": "Theory and measurements of self-improvement: it is governed by the generation-verification gap and saturates after a few rounds without new information. It cannot create information absent from the model.",
+   "citation": "Song, Zhang, Eisenach, Kakade et al., 'Mind the Gap', arXiv 2412.02674; Huang, Block, Foster, Rohatgi et al., 'Self-Improvement in Language Models: The Sharpening Mechanism', arXiv 2412.01951",
+   "how_read": "Song et al.: abstract and section 5 (iterative self-improvement takeaway). Huang et al.: abstract only.",
+   "finding": "Song et al. (Qwen-1.5 family, GSM8K): 'Without new information, iterative self-improvement typically saturates after two or three rounds, regardless of the model's capacity'; the gap 'saturates to 0 in handful rounds', and effective generation diversity degrades. A variant of the gap scales with pre-training FLOPs. Huang et al.: 'It is impossible for this self-improvement to create information that is not already in the model'; they formalise self-improvement as 'sharpening'.",
+   "bears_on": "Q2 (iterated self-application saturates rather than compounding), T3a"
+  },
+  {
+   "question": "L5",
+   "claim": "Benchmarks for AI research and development by agents exist, some framed explicitly as RSI. Current agents improve inconsistently.",
+   "citation": "Wijk, Lin, Becker, Jawhar et al., 'RE-Bench', arXiv 2411.15114; Chan, Chowdhury, Jaffe, Aung et al., 'MLE-bench', arXiv 2410.07095; Meng, Du, Chen, Zhao et al., 'RSIBench-Data', arXiv 2607.25886; Chi, Li, Hong, Wang et al., 'AI4AI-Bench', arXiv 2608.20318",
+   "how_read": "Abstracts only.",
+   "finding": "RE-Bench: 7 ML research-engineering environments; the best agents score 4x human experts at a 2-hour budget, humans 2x the agents at 32 hours. MLE-bench: 75 Kaggle competitions; o1-preview with AIDE reaches at least a bronze medal in 16.9%. RSIBench-Data: agents revise training-data strategies for a fixed model. They improve on the first valid attempt in 58.33% of settings, but 78.26% of searches continuing after the best score end lower. AI4AI-Bench defines RSI as improving the training algorithm. On a scale where 0.1 is the shipped algorithm and 1.0 the optimum, the mean is 0.166 and the best system 0.250. None of these measures an 'inclination' to self-improve.",
+   "bears_on": "Q1 (background: RSI is measured as capability, not inclination), Q2"
+  }
+ ],
+ "users_premises": [
+  {
+   "premise": "If RSI is a direction, inclination correlates with steerability.",
+   "verdict": "Untested in the literature; not supported as a general rule. The sign of any such correlation depends on how inclination and steerability are measured.",
+   "detail": "No study correlates a model's baseline inclination toward a behaviour with its activation steerability across concepts. Tan et al. 2407.12404 hypothesised that base propensity matters, but measured only that similar unsteered propensity in two prompt settings predicts transfer (Spearman -0.26 and -0.46). The predictors with the strongest support are properties of the contrastive activations: directional agreement (Braun et al., Spearman 0.76), SNR separability (Bhattarai and Alhanai, r 0.69-0.82), and logit-lens accessibility (Billa, rho +0.86 to +0.91). An inclination measured as the projection of neutral states onto the direction relative to concept states is close to these separation measures, so a positive result could be circular. On a bounded 0-100 judge scale, steering gains are largest for traits with low baseline expression (Zeng et al. 2607.13162), partly a ceiling effect. In a Bayesian fit with r = 0.98, steering adds a constant to the log-odds independent of the prior (Bigelow et al. 2511.00617). My inference from that model: a log-odds slope should not depend on the baseline, while a share of flipped top tokens at fixed strength rises mechanically with the baseline margin. Steered states also lie off the prompt-reachable set (Mishra et al. 2604.09839), so steerability is not the same thing as a disposition shown under prompts. For RSI specifically, the only existing inclination measure is a stated-desire questionnaire. Perez et al. describe 'Desire For Recursive Self Improvement'; the Hugging Face mirror holds 'desire-for-self-improvement' and related sets, but no recursive one. Nobody has steered on these. Neighbouring behaviours are steerable: power-seeking (3rd of 40 in Tan et al.) and survival instinct (CAA)."
+  },
+  {
+   "premise": "Iterating the self-application (RSI of RSI of RSI) distils meta-learning transitivity.",
+   "verdict": "No support found. The phrase has no operational counterpart in the literature, and the nearest evidence points to saturation and to composition that depends on the task and the layer.",
+   "detail": "In LLM self-improvement, iterating without new information 'typically saturates after two or three rounds, regardless of the model's capacity' (Song et al. 2412.02674); self-rewarding showed 'rapid saturation' (Wu et al. 2407.19594); self-improvement cannot add information absent from the model (Huang et al. 2412.01951). The idea that self-reference absorbs the tower of meta-levels exists for trained self-modifying networks (Irie et al. 2202.05780: 'meta-meta-learn to meta-learn to learn ... in the sense of recursive self-improvement'; Kirsch and Schmidhuber 2212.14392), not for activation directions. 'Distilling' an iterated self-application is established as iterated amplification and distillation (1810.08575) and as meta-judging (2407.19594); these are training procedures. No study re-extracts a steering direction from a steered model to look for fixed points, and steered states lie off the prompt-reachable manifold (2604.09839). No study tests whether chained steering vectors (A->B plus B->C) reproduce A->C. The closest evidence: function-vector parallelogram sums work for some tasks and fail for others (Todd et al.). Summing behaviour vectors into one vector mostly fails (van der Weij et al.). Near-orthogonal vectors compose when each is injected at its own layer (Kang et al.). Pairs of steerable traits can collapse (Zeng et al.). Transitive inference in transformers depends on the training regime and on a linear ordinal geometry (Geerts et al., Singh). 'Transitive transfer' in ML (Tan et al. KDD 2015; gradual domain adaptation, Kumar et al.) concerns training through intermediate domains. Mean-difference directions from the same prompt sets are additive by construction, as the plan notes."
+  },
+  {
+   "premise": "Base64 and Braille, both 64-symbol 6-bit systems, are good probes for transitions between knowledge domains.",
+   "verdict": "The factual part holds. As probes of 'knowledge-domain transitions' in Qwen3-1.7B they are doubtful: competence is low, tokenisation confounds the bit structure, and 'knowledge cutoff' means something else in the literature.",
+   "detail": "Holds: Base64 maps each 6-bit group to one of 64 characters (RFC 4648). The 64 six-dot Braille patterns, including the blank, are U+2800 to U+283F with bit i = dot i+1 (checked locally for all 64). Literary Braille has the decade structure a-j / +dot 3 / +dots 3 and 6, but w is outside it. Braille ASCII is a third conventional 64-symbol mapping. The plan's bijection 'Base64 index = Braille cell offset' is not a convention used in any text, so a model has no training signal linking the two codes (my inference). Problems: (1) Tokenisation (local check): Base64 text splits into 1-3 character tokens, with only 28.7% of token ends on 4-character boundaries, so a 6-bit symbol is not a token unit. 60 of 64 Braille cells split into two byte-level tokens whose last byte carries the dot bits, so bits are readable from token identity alone. Only probes tested on held-out symbols are informative, and MIRAGE (2606.10304) shows a surface confound that disappeared under matched controls. (2) Competence: Qwen3 1.7B is near the floor on Braille (BrailleBench: GSM8K 69.4 in English vs 2.4 with Grade-1 Braille input). Base64 instruction-following appeared only at GPT-4 scale (Wei et al.). Ciphered-reasoning ability tracks pretraining prevalence (Guo et al.). (3) Interpretability: Base64 has a context feature that splits by tokenizer properties and by 'decodes to ASCII' (Towards Monosemanticity). A shared direction for the act of encoding exists across nine encodings (MIRAGE). No work on Braille representations or on 6-bit codes was found. Cyclic structure is poorly captured by a single axis (Singh: months r = 0.41; Engels et al.: circles). Parity concepts did not steer (Billa). (4) Terms: 'knowledge cutoff' means the training-data date boundary, which probes detect at 85-95% (Price et al.). '64-bit' refers to word length (2^64 values) and is a different scale from 64 symbols of 6 bits."
+  }
+ ],
+ "not_found": [
+  "Any study that correlates a model's baseline propensity or inclination toward a behaviour with its activation steerability across concepts. Tan et al. 2407.12404 hypothesised it but measured only propensity similarity against transfer.",
+  "Any use of steerability as a measure of a model's inclination toward self-improvement, self-modification, power-seeking or self-preservation.",
+  "Any steering or probing study on Perez et al.'s 'Desire For Recursive Self Improvement' or 'Desire For Self Improvement' data, or any RSI-specific activation direction.",
+  "A 'desire-for-recursive-self-improvement' file in the Hugging Face mirror Anthropic/model-written-evals (persona folder, 99 .jsonl files).",
+  "Any analysis of iterated re-extraction of a steering direction from the steered model (fixed points, convergence, growth or saturation of steerability).",
+  "Any test of transitivity of steering vectors (A->B plus B->C against A->C), or of chained domain-transition vectors applied at successive layers.",
+  "Any interpretability study of Braille (Unicode or Braille ASCII) in LLM activations.",
+  "Any probe of the 6-bit values of Base64 symbols or of Braille dot bits, or of a representation shared between Base64 and Braille.",
+  "Any work using 'knowledge cutoffs' in the user's sense of transitions between knowledge domains of different ordinal number.",
+  "Any direct study of concept frequency in pretraining against activation steerability. Only frequency against linear-representation formation (Merullo et al.) and prevalence against ciphered reasoning (Guo et al.) were found.",
+  "Base64 encoding or decoding results for Qwen3-1.7B or any model of about 2B parameters."
+ ],
+ "not_checked": [
+  "The GitHub release of Anthropic's model-written evals (anthropics/evals): whether desire-for-recursive-self-improvement.jsonl exists there was not checked, because GitHub access is excluded by the project rules.",
+  "Gross, Kaya, Kruegel, Vigna, 'Demystifying Cipher-Following in Large Language Models via Activation Analysis' (NeurIPS 2025 workshop): the NSF PAR PDF returned 404, so whether Base64 is among its ten ciphers and what logit lens or steering showed for it was not checked.",
+  "Tan, Song, Zhong, Yang, 'Transitive Transfer Learning' (KDD 2015): read only through search snippets and later papers' descriptions.",
+  "The many items marked 'abstract only' (among them ActAdd, Park et al., AxBench, Pres et al., Da Silva et al., CRH, Mishra et al., Arad et al., Merullo et al., Liu et al., the evaluation-awareness, self-recognition, emergent-misalignment and elicitation papers, task arithmetic and ICV, SIMS, GER-steer, Kumar et al., Yang et al., the reversal curse, Irie et al., Kirsch and Schmidhuber, the semantic-hub companions, the number-representation papers, Cheng et al., Gurnee and Tegmark, Nylund et al., the code-switching papers, and all L5 items except Song et al.): only claims stated in the abstracts are reported.",
+  "Whether Fan et al. 2606.11599 used the post-trained Qwen3-1.7B or the Qwen3-1.7B-Base checkpoint, and generally how the steerability results transfer to the base model used in the project. Most cited studies used chat or instruction-tuned models.",
+  "Persona vectors appendix C.2 (correlations within a prompt type) was not read.",
+  "Tan et al.'s released data (steering-bench) could be used to compute baseline propensity against steerability per dataset; this was not done.",
+  "Base64Bench (LessWrong post, 5 Oct 2025): the post gives numbers only for the top models; it names Llama 3.1 8B as an exception to 'better decoders than encoders' without a score. Qwen3-1.7B's Base64 ability could not be measured without loading the full model, which the rules exclude.",
+  "Zolkowski et al. 2507.02737 (steganographic capabilities): only the abstract was read; whether Base64 was among the tested encoding schemes was not checked.",
+  "Daniel and Pal 2405.14490: a search summary attributed Braille findings to it; these were not verified (abstract only, which does not mention Braille).",
+  "'Iterative Vectors' (Liu and Deng, ICML 2025) and an ICLR 2026 workshop on recursive self-improvement: seen in search results only, not read.",
+  "Anthropic's introspection work (concept injection) and the 2026 'assistant axis' line of work were not checked.",
+  "The atlas content (neuron modes of Qwen3.6-35B-A3B for Braille or Base64): not accessed, by project rule; only the README examples were read."
+ ]
+}

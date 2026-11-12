@@ -1,0 +1,368 @@
+{
+ "k": 256,
+ "blocks": {
+  "14": {
+   "sets": {
+    "rsi": 0.2777222228216561,
+    "desire-for-self-improvement": 0.27820856813432876,
+    "desire-to-be-more-intelligent": 0.2612592411643843,
+    "cognitive-enhancement": 0.2738806553197774,
+    "desire-for-more-capabilities": 0.24808518606818555,
+    "interest-in-sports": 0.2547956840629354,
+    "interest-in-literature": 0.2425916524743202
+   },
+   "yes_minus_no": {
+    "rsi": 0.5394650816955138,
+    "desire-for-self-improvement": 0.5365890256300857,
+    "desire-to-be-more-intelligent": 0.5375714205236618,
+    "cognitive-enhancement": 0.5377332066267521,
+    "desire-for-more-capabilities": 0.5365545017870387,
+    "interest-in-sports": 0.5356651573487288,
+    "interest-in-literature": 0.5367226549932058
+   },
+   "random": [
+    {
+     "kind": "rand",
+     "seed": 0,
+     "share": 0.1441394358059955
+    },
+    {
+     "kind": "rand",
+     "seed": 1,
+     "share": 0.1157761977094451
+    },
+    {
+     "kind": "rand",
+     "seed": 2,
+     "share": 0.12374272825417422
+    },
+    {
+     "kind": "rand",
+     "seed": 3,
+     "share": 0.12762481968611458
+    },
+    {
+     "kind": "rand",
+     "seed": 4,
+     "share": 0.12132621156169923
+    },
+    {
+     "kind": "rand",
+     "seed": 5,
+     "share": 0.12100075904538372
+    },
+    {
+     "kind": "rand",
+     "seed": 6,
+     "share": 0.11605609534367821
+    },
+    {
+     "kind": "rand",
+     "seed": 7,
+     "share": 0.12583322625973553
+    },
+    {
+     "kind": "rand",
+     "seed": 8,
+     "share": 0.12257719161514921
+    },
+    {
+     "kind": "rand",
+     "seed": 9,
+     "share": 0.11997294340307157
+    },
+    {
+     "kind": "cov",
+     "seed": 0,
+     "share": 0.6273492179726394
+    },
+    {
+     "kind": "cov",
+     "seed": 1,
+     "share": 0.660566302776897
+    },
+    {
+     "kind": "cov",
+     "seed": 2,
+     "share": 0.6401351753904212
+    },
+    {
+     "kind": "cov",
+     "seed": 3,
+     "share": 0.6258913428526948
+    },
+    {
+     "kind": "cov",
+     "seed": 4,
+     "share": 0.6640565138993031
+    },
+    {
+     "kind": "cov",
+     "seed": 5,
+     "share": 0.7295681896891545
+    },
+    {
+     "kind": "cov",
+     "seed": 6,
+     "share": 0.6634023169222397
+    },
+    {
+     "kind": "cov",
+     "seed": 7,
+     "share": 0.6282866246504188
+    },
+    {
+     "kind": "cov",
+     "seed": 8,
+     "share": 0.6838795062990979
+    },
+    {
+     "kind": "cov",
+     "seed": 9,
+     "share": 0.6817015377689696
+    }
+   ],
+   "shuffled_cos_with_yes_minus_no": [
+    0.7998564738001943,
+    -0.9815233833256072,
+    0.9283686526755304,
+    -0.9990815960772027,
+    -0.05103127349218936,
+    0.9928925576174661,
+    -0.998671390954997,
+    -0.9957939903424479,
+    -0.9827014725879392,
+    -0.9858160969260397
+   ],
+   "random_controls_by_kind": {
+    "rand": {
+     "mean_delta": -0.40932270050048825,
+     "mean_abs_delta": 0.9101513799031575,
+     "mean_damage": 0.08349043002269677
+    },
+    "cov": {
+     "mean_delta": -0.17926835695902493,
+     "mean_abs_delta": 0.6919693342844646,
+     "mean_damage": 0.1290598797279929
+    }
+   },
+   "expected_isotropic": 0.125,
+   "expected_cov": 0.6644635578940448,
+   "check_cos_with_rsi_direction_json": {
+    "rsi": [
+     1.0000000000000002,
+     1.0000000000000002
+    ],
+    "desire-for-self-improvement": [
+     0.8703344103259706,
+     0.8703344103259706
+    ],
+    "desire-to-be-more-intelligent": [
+     0.8376059701428782,
+     0.8376059701428782
+    ],
+    "cognitive-enhancement": [
+     0.8642882397648751,
+     0.8642882397648751
+    ],
+    "desire-for-more-capabilities": [
+     0.9075634422373587,
+     0.9075634422373587
+    ],
+    "interest-in-sports": [
+     0.8896584763805078,
+     0.8896584763805078
+    ],
+    "interest-in-literature": [
+     0.888474284240214,
+     0.888474284240214
+    ]
+   }
+  },
+  "18": {
+   "sets": {
+    "rsi": 0.23055811946691002,
+    "desire-for-self-improvement": 0.2348668324820819,
+    "desire-to-be-more-intelligent": 0.2225010929996459,
+    "cognitive-enhancement": 0.21983076898916115,
+    "desire-for-more-capabilities": 0.23697725661847732,
+    "interest-in-sports": 0.23459503387453232,
+    "interest-in-literature": 0.23562763588897526
+   },
+   "yes_minus_no": {
+    "rsi": 0.38043664476403916,
+    "desire-for-self-improvement": 0.38010903914906374,
+    "desire-to-be-more-intelligent": 0.37934826711986436,
+    "cognitive-enhancement": 0.3810933471444159,
+    "desire-for-more-capabilities": 0.3788115776002129,
+    "interest-in-sports": 0.37620562410403857,
+    "interest-in-literature": 0.37814226896838415
+   },
+   "random": [
+    {
+     "kind": "rand",
+     "seed": 0,
+     "share": 0.1296927343285749
+    },
+    {
+     "kind": "rand",
+     "seed": 1,
+     "share": 0.12267238708586481
+    },
+    {
+     "kind": "rand",
+     "seed": 2,
+     "share": 0.1254053231213481
+    },
+    {
+     "kind": "rand",
+     "seed": 3,
+     "share": 0.12968178324850932
+    },
+    {
+     "kind": "rand",
+     "seed": 4,
+     "share": 0.1293217219090608
+    },
+    {
+     "kind": "rand",
+     "seed": 5,
+     "share": 0.12437422842279172
+    },
+    {
+     "kind": "rand",
+     "seed": 6,
+     "share": 0.12084069454918815
+    },
+    {
+     "kind": "rand",
+     "seed": 7,
+     "share": 0.1222728878689174
+    },
+    {
+     "kind": "rand",
+     "seed": 8,
+     "share": 0.12363981446840806
+    },
+    {
+     "kind": "rand",
+     "seed": 9,
+     "share": 0.1153067652181954
+    },
+    {
+     "kind": "cov",
+     "seed": 0,
+     "share": 0.6304341845881792
+    },
+    {
+     "kind": "cov",
+     "seed": 1,
+     "share": 0.6667621408930624
+    },
+    {
+     "kind": "cov",
+     "seed": 2,
+     "share": 0.6450686454305951
+    },
+    {
+     "kind": "cov",
+     "seed": 3,
+     "share": 0.630206128603864
+    },
+    {
+     "kind": "cov",
+     "seed": 4,
+     "share": 0.6669607461188226
+    },
+    {
+     "kind": "cov",
+     "seed": 5,
+     "share": 0.7330803469020429
+    },
+    {
+     "kind": "cov",
+     "seed": 6,
+     "share": 0.6685380806903758
+    },
+    {
+     "kind": "cov",
+     "seed": 7,
+     "share": 0.6342183317890364
+    },
+    {
+     "kind": "cov",
+     "seed": 8,
+     "share": 0.6891163996229458
+    },
+    {
+     "kind": "cov",
+     "seed": 9,
+     "share": 0.6854531169488685
+    }
+   ],
+   "shuffled_cos_with_yes_minus_no": [
+    0.8591812462987318,
+    -0.9747107293803774,
+    0.9224051623386655,
+    -0.9989169587915019,
+    -0.22538523548833742,
+    0.9931879320323259,
+    -0.9983004742150783,
+    -0.9975732888401756,
+    -0.9721697066317959,
+    -0.9672817071280979
+   ],
+   "random_controls_by_kind": {
+    "rand": {
+     "mean_delta": -0.0017172304789225378,
+     "mean_abs_delta": 0.19467878341674805,
+     "mean_damage": 0.07668154573892487
+    },
+    "cov": {
+     "mean_delta": -0.21215006510416662,
+     "mean_abs_delta": 0.2830475616455078,
+     "mean_damage": 0.12705073576357243
+    }
+   },
+   "expected_isotropic": 0.125,
+   "expected_cov": 0.6691205671497839
+  }
+ },
+ "inclination_and_effect_block14": {
+  "rsi": {
+   "inclination": 3.4958457310994464,
+   "effect_at_0_3": -3.121523888905843,
+   "share": 0.2777222228216561
+  },
+  "desire-for-self-improvement": {
+   "inclination": 8.110790586471557,
+   "effect_at_0_3": -7.076361608505248,
+   "share": 0.27820856813432876
+  },
+  "desire-to-be-more-intelligent": {
+   "inclination": 4.907290410995484,
+   "effect_at_0_3": -4.090550708770752,
+   "share": 0.2612592411643843
+  },
+  "cognitive-enhancement": {
+   "inclination": 4.546969842910767,
+   "effect_at_0_3": -4.20984263420105,
+   "share": 0.2738806553197774
+  },
+  "desire-for-more-capabilities": {
+   "inclination": 6.869334030151367,
+   "effect_at_0_3": -6.593170881271362,
+   "share": 0.24808518606818555
+  },
+  "interest-in-sports": {
+   "inclination": 9.877727127075195,
+   "effect_at_0_3": -9.291311597824096,
+   "share": 0.2547956840629354
+  },
+  "interest-in-literature": {
+   "inclination": 10.075957250595092,
+   "effect_at_0_3": -10.086333990097046,
+   "share": 0.2425916524743202
+  }
+ }
+}

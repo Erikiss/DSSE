@@ -1,0 +1,217 @@
+{
+ "statistic": "mean over splits of held-out accuracy on bits 0-2, Braille minus U+2A00, paired splits by cell",
+ "n_splits": 200,
+ "n_boot": 1000,
+ "n_splits_per_resample": 100,
+ "blocks": {
+  "0": {
+   "dom": {
+    "diff": -0.03464899314490696,
+    "boot_lo": -0.06894019830435884,
+    "boot_hi": 0.03593685499730367,
+    "boot_sd": 0.027640288800950638,
+    "boot_mean": -0.016321205127151628,
+    "boot_share_below_point": 0.259,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.03535582956227521,
+    "jackknife_lo": -0.10394641908696636,
+    "jackknife_hi": 0.034648432797152455
+   },
+   "ridge": {
+    "diff": -0.015501396737819051,
+    "boot_lo": -0.06835347676885094,
+    "boot_hi": 0.04322389385408823,
+    "boot_sd": 0.02796029335645054,
+    "boot_mean": -0.013707787209645921,
+    "boot_share_below_point": 0.468,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.040354127769157644,
+    "jackknife_lo": -0.09459548716536803,
+    "jackknife_hi": 0.06359269368972992
+   }
+  },
+  "2": {
+   "dom": {
+    "diff": -0.020907882953680845,
+    "boot_lo": -0.06811550253808549,
+    "boot_hi": 0.05259369691655214,
+    "boot_sd": 0.0320688901626167,
+    "boot_mean": -0.00841308766479204,
+    "boot_share_below_point": 0.348,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.042947029655935186,
+    "jackknife_lo": -0.10508406107931381,
+    "jackknife_hi": 0.06326829517195212
+   },
+   "ridge": {
+    "diff": 0.0016834258382353194,
+    "boot_lo": -0.057970221977238286,
+    "boot_hi": 0.061984893436798,
+    "boot_sd": 0.031239023842081045,
+    "boot_mean": -0.0017636600181648349,
+    "boot_share_below_point": 0.553,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04418722606441262,
+    "jackknife_lo": -0.08492353724801341,
+    "jackknife_hi": 0.08829038892448404
+   }
+  },
+  "6": {
+   "dom": {
+    "diff": 0.03066333871611253,
+    "boot_lo": -0.04795894934625605,
+    "boot_hi": 0.09996770142608427,
+    "boot_sd": 0.03704244549407011,
+    "boot_mean": 0.027194797720406592,
+    "boot_share_below_point": 0.528,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04959784433630339,
+    "jackknife_lo": -0.06654843618304211,
+    "jackknife_hi": 0.12787511361526716
+   },
+   "ridge": {
+    "diff": 0.042594972221957905,
+    "boot_lo": -0.03592327494570872,
+    "boot_hi": 0.09934055247831852,
+    "boot_sd": 0.03515809358618078,
+    "boot_mean": 0.034343228644457886,
+    "boot_share_below_point": 0.585,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.05072888926102225,
+    "jackknife_lo": -0.056833650729645704,
+    "jackknife_hi": 0.1420235951735615
+   }
+  },
+  "10": {
+   "dom": {
+    "diff": 0.041994531890111,
+    "boot_lo": -0.029849646422566403,
+    "boot_hi": 0.10287283770110947,
+    "boot_sd": 0.03376225878863354,
+    "boot_mean": 0.03979630080761688,
+    "boot_share_below_point": 0.515,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04118517261006668,
+    "jackknife_lo": -0.038728406425619685,
+    "jackknife_hi": 0.12271747020584169
+   },
+   "ridge": {
+    "diff": 0.04736267515928503,
+    "boot_lo": -0.020940808254495003,
+    "boot_hi": 0.09965828270883448,
+    "boot_sd": 0.031252947857987615,
+    "boot_mean": 0.04262178338155357,
+    "boot_share_below_point": 0.551,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04692732059888117,
+    "jackknife_lo": -0.04461487321452206,
+    "jackknife_hi": 0.1393402235330921
+   }
+  },
+  "14": {
+   "dom": {
+    "diff": 0.060964360872905334,
+    "boot_lo": -0.02411318312964117,
+    "boot_hi": 0.11607999418746129,
+    "boot_sd": 0.03568663304139273,
+    "boot_mean": 0.049230976785959155,
+    "boot_share_below_point": 0.623,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04344527984706213,
+    "jackknife_lo": -0.024188387627336445,
+    "jackknife_hi": 0.14611710937314712
+   },
+   "ridge": {
+    "diff": 0.060406026581366,
+    "boot_lo": -0.015181508939174434,
+    "boot_hi": 0.11612103458339303,
+    "boot_sd": 0.03423860657752124,
+    "boot_mean": 0.05230097656210841,
+    "boot_share_below_point": 0.598,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04826075695119592,
+    "jackknife_lo": -0.034185057042978,
+    "jackknife_hi": 0.15499711020571
+   }
+  },
+  "18": {
+   "dom": {
+    "diff": 0.04959484992413987,
+    "boot_lo": -0.0286118602066714,
+    "boot_hi": 0.10184641031783542,
+    "boot_sd": 0.03271003692367446,
+    "boot_mean": 0.03808473377406769,
+    "boot_share_below_point": 0.629,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04116083503276154,
+    "jackknife_lo": -0.031080386740072755,
+    "jackknife_hi": 0.13027008658835249
+   },
+   "ridge": {
+    "diff": 0.048221231369970766,
+    "boot_lo": -0.026351064143273862,
+    "boot_hi": 0.10800588883964851,
+    "boot_sd": 0.0335685430668286,
+    "boot_mean": 0.041276073169042526,
+    "boot_share_below_point": 0.565,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04840991207352304,
+    "jackknife_lo": -0.046662196294134387,
+    "jackknife_hi": 0.14310465903407593
+   }
+  },
+  "22": {
+   "dom": {
+    "diff": 0.047497552946205966,
+    "boot_lo": -0.017826085070861985,
+    "boot_hi": 0.09878055645479573,
+    "boot_sd": 0.029181017718356073,
+    "boot_mean": 0.03925247589962544,
+    "boot_share_below_point": 0.612,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.03775985945497711,
+    "jackknife_lo": -0.026511771585549175,
+    "jackknife_hi": 0.1215068774779611
+   },
+   "ridge": {
+    "diff": 0.048035536693814086,
+    "boot_lo": -0.017092930818796353,
+    "boot_hi": 0.10373704188267595,
+    "boot_sd": 0.0316512264625359,
+    "boot_mean": 0.042908356815418394,
+    "boot_share_below_point": 0.558,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04406618682448923,
+    "jackknife_lo": -0.038334189482184804,
+    "jackknife_hi": 0.13440526286981297
+   }
+  },
+  "27": {
+   "dom": {
+    "diff": 0.025253797335141267,
+    "boot_lo": -0.003539422954483843,
+    "boot_hi": 0.05651566840374591,
+    "boot_sd": 0.01564367920791502,
+    "boot_mean": 0.02582850911038737,
+    "boot_share_below_point": 0.49,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.015544142818374329,
+    "jackknife_lo": -0.005212722588872416,
+    "jackknife_hi": 0.05572031725915495
+   },
+   "ridge": {
+    "diff": 0.047817296803187304,
+    "boot_lo": -0.012036761142843326,
+    "boot_hi": 0.10849183611195197,
+    "boot_sd": 0.030796819571011342,
+    "boot_mean": 0.04811342463619151,
+    "boot_share_below_point": 0.514,
+    "boot_mean_distinct_cells": 32.315,
+    "jackknife_se": 0.04069186557636741,
+    "jackknife_lo": -0.03193875972649282,
+    "jackknife_hi": 0.12757335333286743
+   }
+  }
+ },
+ "seconds": 1066.5102498531342
+}

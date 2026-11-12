@@ -1,0 +1,415 @@
+{
+ "check_against_rsi_direction": {
+  "rsi": {
+   "cos_rsi_now": 1.0000000000000002,
+   "cos_rsi_before": 1.0000000000000002
+  },
+  "desire-for-self-improvement": {
+   "cos_rsi_now": 0.8703344103259706,
+   "cos_rsi_before": 0.8703344103259706
+  },
+  "desire-to-be-more-intelligent": {
+   "cos_rsi_now": 0.8376059701428782,
+   "cos_rsi_before": 0.8376059701428782
+  },
+  "cognitive-enhancement": {
+   "cos_rsi_now": 0.8642882397648751,
+   "cos_rsi_before": 0.8642882397648751
+  },
+  "desire-for-more-capabilities": {
+   "cos_rsi_now": 0.9075634422373587,
+   "cos_rsi_before": 0.9075634422373587
+  },
+  "interest-in-sports": {
+   "cos_rsi_now": 0.8896584763805078,
+   "cos_rsi_before": 0.8896584763805078
+  },
+  "interest-in-literature": {
+   "cos_rsi_now": 0.888474284240214,
+   "cos_rsi_before": 0.888474284240214
+  }
+ },
+ "blocks": {
+  "14": {
+   "split_half": {
+    "rsi": {
+     "mean": 0.945626360200853,
+     "min": 0.9153493496077727,
+     "max": 0.9644138138970327
+    },
+    "desire-for-self-improvement": {
+     "mean": 0.9329843097523307,
+     "min": 0.8410632653797304,
+     "max": 0.9636838169399191
+    },
+    "desire-to-be-more-intelligent": {
+     "mean": 0.914212747660209,
+     "min": 0.7481826593544786,
+     "max": 0.9663069325122574
+    },
+    "cognitive-enhancement": {
+     "mean": 0.9309092355544003,
+     "min": 0.8684861781931934,
+     "max": 0.9573275879507386
+    },
+    "desire-for-more-capabilities": {
+     "mean": 0.955906470818167,
+     "min": 0.8947459207828683,
+     "max": 0.9746198241315766
+    },
+    "interest-in-sports": {
+     "mean": 0.983469045493886,
+     "min": 0.9689500275195809,
+     "max": 0.9922002876351697
+    },
+    "interest-in-literature": {
+     "mean": 0.983674599535054,
+     "min": 0.9694833935985027,
+     "max": 0.9907725918175161
+    }
+   },
+   "gap": {
+    "desire-for-self-improvement": {
+     "gap": 0.07529194987488241,
+     "lo": 0.03755732495199505,
+     "hi": 0.14314756442348048,
+     "cos": 0.8703344103259706
+    },
+    "desire-to-be-more-intelligent": {
+     "gap": 0.10802039005797481,
+     "lo": 0.06986702458883194,
+     "hi": 0.22381485107607785,
+     "cos": 0.8376059701428782
+    },
+    "cognitive-enhancement": {
+     "gap": 0.08133812043597788,
+     "lo": 0.03297352656160797,
+     "hi": 0.17211869376060443,
+     "cos": 0.8642882397648751
+    },
+    "desire-for-more-capabilities": {
+     "gap": 0.03806291796349426,
+     "lo": 0.00011939553166398544,
+     "hi": 0.10381829345695995,
+     "cos": 0.9075634422373587
+    },
+    "interest-in-sports": {
+     "gap": 0.05596788382034523,
+     "lo": 0.019892145119123315,
+     "hi": 0.11336138234203026,
+     "cos": 0.8896584763805078
+    },
+    "interest-in-literature": {
+     "gap": 0.05715207596063898,
+     "lo": 0.02544512546185908,
+     "hi": 0.11172831614151545,
+     "cos": 0.888474284240214
+    }
+   },
+   "yes_no": {
+    "rsi": {
+     "norm_yes_minus_no": 106.41755400931308,
+     "norm_direction": 5.333982919209776,
+     "cos_direction_with_yes_minus_no": 0.12218923550492972
+    },
+    "desire-for-self-improvement": {
+     "norm_yes_minus_no": 107.12527076600024,
+     "norm_direction": 5.370061989548113,
+     "cos_direction_with_yes_minus_no": 0.13663150820686557
+    },
+    "desire-to-be-more-intelligent": {
+     "norm_yes_minus_no": 106.77018992141087,
+     "norm_direction": 4.544892340262468,
+     "cos_direction_with_yes_minus_no": 0.10094747231229981
+    },
+    "cognitive-enhancement": {
+     "norm_yes_minus_no": 106.7675866755124,
+     "norm_direction": 5.084853210436878,
+     "cos_direction_with_yes_minus_no": 0.13427709102989
+    },
+    "desire-for-more-capabilities": {
+     "norm_yes_minus_no": 106.9383993368243,
+     "norm_direction": 6.293345252240527,
+     "cos_direction_with_yes_minus_no": 0.09135856743737403
+    },
+    "interest-in-sports": {
+     "norm_yes_minus_no": 106.04553494512601,
+     "norm_direction": 10.04634846506495,
+     "cos_direction_with_yes_minus_no": 0.12557321473379907
+    },
+    "interest-in-literature": {
+     "norm_yes_minus_no": 106.17863192894582,
+     "norm_direction": 10.104587615756184,
+     "cos_direction_with_yes_minus_no": 0.10291788978186117
+    }
+   },
+   "shared": {
+    "cos_with_mean": {
+     "rsi": 0.9344430328452688,
+     "desire-for-self-improvement": 0.9714211681686599,
+     "desire-to-be-more-intelligent": 0.9549418530938314,
+     "cognitive-enhancement": 0.9566339203835309,
+     "desire-for-more-capabilities": 0.9663085949035931,
+     "interest-in-sports": 0.9532349986313682,
+     "interest-in-literature": 0.9599734460756786
+    },
+    "cos_after_removing_mean": {
+     "rsi": {
+      "rsi": 0.9999999999999996,
+      "desire-for-self-improvement": -0.44249763245165297,
+      "desire-to-be-more-intelligent": -0.5178531376779105,
+      "cognitive-enhancement": -0.2856529695389886,
+      "desire-for-more-capabilities": 0.050220193192962365,
+      "interest-in-sports": -0.010084059172892568,
+      "interest-in-literature": -0.08588203650947206
+     },
+     "desire-for-self-improvement": {
+      "rsi": -0.44249763245165297,
+      "desire-for-self-improvement": 1.0,
+      "desire-to-be-more-intelligent": 0.5422844296744462,
+      "cognitive-enhancement": 0.5272593483649926,
+      "desire-for-more-capabilities": -0.2113711196471503,
+      "interest-in-sports": -0.5759418498449798,
+      "interest-in-literature": -0.5921128835928243
+     },
+     "desire-to-be-more-intelligent": {
+      "rsi": -0.5178531376779105,
+      "desire-for-self-improvement": 0.5422844296744462,
+      "desire-to-be-more-intelligent": 1.0,
+      "cognitive-enhancement": 0.6082841814062162,
+      "desire-for-more-capabilities": -0.3125575320336607,
+      "interest-in-sports": -0.6050761583472467,
+      "interest-in-literature": -0.5532681308349044
+     },
+     "cognitive-enhancement": {
+      "rsi": -0.2856529695389886,
+      "desire-for-self-improvement": 0.5272593483649926,
+      "desire-to-be-more-intelligent": 0.6082841814062162,
+      "cognitive-enhancement": 0.9999999999999997,
+      "desire-for-more-capabilities": -0.4516650223798705,
+      "interest-in-sports": -0.6631889758471103,
+      "interest-in-literature": -0.6375291622258178
+     },
+     "desire-for-more-capabilities": {
+      "rsi": 0.050220193192962365,
+      "desire-for-self-improvement": -0.2113711196471503,
+      "desire-to-be-more-intelligent": -0.3125575320336607,
+      "cognitive-enhancement": -0.4516650223798705,
+      "desire-for-more-capabilities": 1.0,
+      "interest-in-sports": -0.025491440880419044,
+      "interest-in-literature": 0.024767617981030263
+     },
+     "interest-in-sports": {
+      "rsi": -0.010084059172892568,
+      "desire-for-self-improvement": -0.5759418498449798,
+      "desire-to-be-more-intelligent": -0.6050761583472467,
+      "cognitive-enhancement": -0.6631889758471103,
+      "desire-for-more-capabilities": -0.025491440880419044,
+      "interest-in-sports": 1.0000000000000002,
+      "interest-in-literature": 0.7761534454960398
+     },
+     "interest-in-literature": {
+      "rsi": -0.08588203650947206,
+      "desire-for-self-improvement": -0.5921128835928243,
+      "desire-to-be-more-intelligent": -0.5532681308349044,
+      "cognitive-enhancement": -0.6375291622258178,
+      "desire-for-more-capabilities": 0.024767617981030263,
+      "interest-in-sports": 0.7761534454960398,
+      "interest-in-literature": 1.0000000000000004
+     }
+    }
+   }
+  },
+  "18": {
+   "split_half": {
+    "rsi": {
+     "mean": 0.9048070911292536,
+     "min": 0.7462763344265394,
+     "max": 0.9592430980261938
+    },
+    "desire-for-self-improvement": {
+     "mean": 0.9798534763412464,
+     "min": 0.9607078283159537,
+     "max": 0.9877828260360101
+    },
+    "desire-to-be-more-intelligent": {
+     "mean": 0.9678046050081331,
+     "min": 0.9224480118709821,
+     "max": 0.9872159841823583
+    },
+    "cognitive-enhancement": {
+     "mean": 0.9675098586710578,
+     "min": 0.9312194971183804,
+     "max": 0.9848776050890884
+    },
+    "desire-for-more-capabilities": {
+     "mean": 0.9879045283530903,
+     "min": 0.9718213325700766,
+     "max": 0.9934374471779294
+    },
+    "interest-in-sports": {
+     "mean": 0.9937574622804431,
+     "min": 0.9890011201114527,
+     "max": 0.9972199913608181
+    },
+    "interest-in-literature": {
+     "mean": 0.9960138020207158,
+     "min": 0.9912456574947912,
+     "max": 0.997796534047267
+    }
+   },
+   "gap": {
+    "desire-for-self-improvement": {
+     "gap": 0.051887386249883316,
+     "lo": -0.08606591044915456,
+     "hi": 0.21034547775280502,
+     "cos": 0.8529197048793703
+    },
+    "desire-to-be-more-intelligent": {
+     "gap": 0.047234550858265445,
+     "lo": -0.10856495649222236,
+     "hi": 0.20730017482118548,
+     "cos": 0.8575725402709882
+    },
+    "cognitive-enhancement": {
+     "gap": 0.03463614486593036,
+     "lo": -0.11888841608696188,
+     "hi": 0.1698351147668446,
+     "cos": 0.8701709462633233
+    },
+    "desire-for-more-capabilities": {
+     "gap": 0.048758779461223645,
+     "lo": -0.1058620273750184,
+     "hi": 0.23090803830715134,
+     "cos": 0.85604831166803
+    },
+    "interest-in-sports": {
+     "gap": 0.04877456154797011,
+     "lo": -0.08792891974639709,
+     "hi": 0.21861065325211476,
+     "cos": 0.8560325295812835
+    },
+    "interest-in-literature": {
+     "gap": 0.07059319339969417,
+     "lo": -0.08855454342756915,
+     "hi": 0.24458798660710057,
+     "cos": 0.8342138977295595
+    }
+   },
+   "yes_no": {
+    "rsi": {
+     "norm_yes_minus_no": 368.7640200117727,
+     "norm_direction": 19.358224796998837,
+     "cos_direction_with_yes_minus_no": 0.2281863354058755
+    },
+    "desire-for-self-improvement": {
+     "norm_yes_minus_no": 371.998347033081,
+     "norm_direction": 40.156236955831275,
+     "cos_direction_with_yes_minus_no": 0.21018999979592698
+    },
+    "desire-to-be-more-intelligent": {
+     "norm_yes_minus_no": 369.02662063748073,
+     "norm_direction": 30.35990248287438,
+     "cos_direction_with_yes_minus_no": 0.13157215224022212
+    },
+    "cognitive-enhancement": {
+     "norm_yes_minus_no": 370.2971423069106,
+     "norm_direction": 30.707841617889727,
+     "cos_direction_with_yes_minus_no": 0.14316864123457745
+    },
+    "desire-for-more-capabilities": {
+     "norm_yes_minus_no": 367.928811779021,
+     "norm_direction": 49.14456942338118,
+     "cos_direction_with_yes_minus_no": 0.203680733249272
+    },
+    "interest-in-sports": {
+     "norm_yes_minus_no": 370.31336803359403,
+     "norm_direction": 62.77984784378566,
+     "cos_direction_with_yes_minus_no": 0.22845762286834354
+    },
+    "interest-in-literature": {
+     "norm_yes_minus_no": 368.538438275448,
+     "norm_direction": 76.95503513722548,
+     "cos_direction_with_yes_minus_no": 0.1885210467628996
+    }
+   },
+   "shared": {
+    "cos_with_mean": {
+     "rsi": 0.9010885431614216,
+     "desire-for-self-improvement": 0.9906024835490792,
+     "desire-to-be-more-intelligent": 0.9828739304769182,
+     "cognitive-enhancement": 0.9780486727899992,
+     "desire-for-more-capabilities": 0.9855162753848767,
+     "interest-in-sports": 0.9799657763789005,
+     "interest-in-literature": 0.9814113998786038
+    },
+    "cos_after_removing_mean": {
+     "rsi": {
+      "rsi": 1.0,
+      "desire-for-self-improvement": -0.669385727960024,
+      "desire-to-be-more-intelligent": -0.3514443051626851,
+      "cognitive-enhancement": -0.12325786958728893,
+      "desire-for-more-capabilities": -0.43501163594562037,
+      "interest-in-sports": -0.31266476728665155,
+      "interest-in-literature": -0.602304892448108
+     },
+     "desire-for-self-improvement": {
+      "rsi": -0.669385727960024,
+      "desire-for-self-improvement": 0.9999999999999998,
+      "desire-to-be-more-intelligent": 0.37420044853279366,
+      "cognitive-enhancement": 0.1400661078957482,
+      "desire-for-more-capabilities": 0.26215844663945465,
+      "interest-in-sports": -0.09977030914265389,
+      "interest-in-literature": 0.16031298162408586
+     },
+     "desire-to-be-more-intelligent": {
+      "rsi": -0.3514443051626851,
+      "desire-for-self-improvement": 0.37420044853279366,
+      "desire-to-be-more-intelligent": 0.9999999999999998,
+      "cognitive-enhancement": 0.7643263712986842,
+      "desire-for-more-capabilities": -0.33966991359880033,
+      "interest-in-sports": -0.5595546923230789,
+      "interest-in-literature": -0.38184933953275657
+     },
+     "cognitive-enhancement": {
+      "rsi": -0.12325786958728893,
+      "desire-for-self-improvement": 0.1400661078957482,
+      "desire-to-be-more-intelligent": 0.7643263712986842,
+      "cognitive-enhancement": 1.0000000000000002,
+      "desire-for-more-capabilities": -0.4402169391469912,
+      "interest-in-sports": -0.6739888313322162,
+      "interest-in-literature": -0.5525668610750802
+     },
+     "desire-for-more-capabilities": {
+      "rsi": -0.43501163594562037,
+      "desire-for-self-improvement": 0.26215844663945465,
+      "desire-to-be-more-intelligent": -0.33966991359880033,
+      "cognitive-enhancement": -0.4402169391469912,
+      "desire-for-more-capabilities": 1.0000000000000002,
+      "interest-in-sports": 0.25458341560367953,
+      "interest-in-literature": 0.4523862311928995
+     },
+     "interest-in-sports": {
+      "rsi": -0.31266476728665155,
+      "desire-for-self-improvement": -0.09977030914265389,
+      "desire-to-be-more-intelligent": -0.5595546923230789,
+      "cognitive-enhancement": -0.6739888313322162,
+      "desire-for-more-capabilities": 0.25458341560367953,
+      "interest-in-sports": 1.0000000000000002,
+      "interest-in-literature": 0.7839252783416285
+     },
+     "interest-in-literature": {
+      "rsi": -0.602304892448108,
+      "desire-for-self-improvement": 0.16031298162408586,
+      "desire-to-be-more-intelligent": -0.38184933953275657,
+      "cognitive-enhancement": -0.5525668610750802,
+      "desire-for-more-capabilities": 0.4523862311928995,
+      "interest-in-sports": 0.7839252783416285,
+      "interest-in-literature": 1.0000000000000002
+     }
+    }
+   }
+  }
+ },
+ "seconds": 1042.256670475006
+}

@@ -1,0 +1,684 @@
+{
+ "T4-C": {
+  "braille_to_letter": {
+   "accuracy": 0.013888888888888888,
+   "chance": 0.038461538461538464,
+   "by_format": [
+    0.0,
+    0.0,
+    0.041666666666666664
+   ],
+   "verdict": "against"
+  },
+  "base64_to_word": {
+   "accuracy": 0.016666666666666666,
+   "chance": 0.016666666666666666,
+   "by_format": [
+    0.016666666666666666,
+    0.016666666666666666
+   ],
+   "verdict": "against"
+  },
+  "base64_index_a-z_0-9": {
+   "accuracy": 0.0,
+   "chance": 0.015625,
+   "by_format": [
+    0.0
+   ],
+   "verdict": "against"
+  },
+  "binary_to_decimal": {
+   "accuracy": 0.015625,
+   "chance": 0.015625,
+   "by_format": [
+    0.015625
+   ],
+   "verdict": "against"
+  }
+ },
+ "T4-A": {
+  "blocks": {
+   "2": {
+    "bits012_braille": 0.5494266755150932,
+    "bits012_braille_ridge": 0.6265862241705016,
+    "bits012_u2a00": 0.5703497016130029,
+    "bits012_u2a00_ridge": 0.6267280040001802,
+    "braille_minus_u2a00": -0.020923026097909747,
+    "braille_minus_u2a00_boot": {
+     "diff": -0.020907882953680845,
+     "boot_lo": -0.06811550253808549,
+     "boot_hi": 0.05259369691655214,
+     "boot_sd": 0.0320688901626167,
+     "boot_mean": -0.00841308766479204,
+     "boot_share_below_point": 0.348,
+     "boot_mean_distinct_cells": 32.315,
+     "jackknife_se": 0.042947029655935186,
+     "jackknife_lo": -0.10508406107931381,
+     "jackknife_hi": 0.06326829517195212,
+     "source": "rsi_codes_boot.json (probes refitted)"
+    },
+    "braille_minus_u2a00_ridge": -0.00014177982967866765,
+    "bits_above_null": [
+     true,
+     false,
+     false
+    ],
+    "bits_above_null_ridge": [
+     true,
+     false,
+     false
+    ],
+    "u2a00_bits_above_null": [
+     false,
+     false,
+     false
+    ],
+    "transfer_dot7": 0.8781512605042017,
+    "transfer_u2a00": 0.6843537414965987,
+    "transfer_dot7_ridge": 0.957983193277311,
+    "transfer_u2a00_ridge": 0.8653061224489796,
+    "c1": false,
+    "c2": false,
+    "c3": true,
+    "decade_braille_minus_u2a00": 0.016642798881490367
+   },
+   "6": {
+    "bits012_braille": 0.5751636499400221,
+    "bits012_braille_ridge": 0.6324970802120701,
+    "bits012_u2a00": 0.5407790358782845,
+    "bits012_u2a00_ridge": 0.5915423471037723,
+    "braille_minus_u2a00": 0.03438461406173765,
+    "braille_minus_u2a00_boot": {
+     "diff": 0.03066333871611253,
+     "boot_lo": -0.04795894934625605,
+     "boot_hi": 0.09996770142608427,
+     "boot_sd": 0.03704244549407011,
+     "boot_mean": 0.027194797720406592,
+     "boot_share_below_point": 0.528,
+     "boot_mean_distinct_cells": 32.315,
+     "jackknife_se": 0.04959784433630339,
+     "jackknife_lo": -0.06654843618304211,
+     "jackknife_hi": 0.12787511361526716,
+     "source": "rsi_codes_boot.json (probes refitted)"
+    },
+    "braille_minus_u2a00_ridge": 0.04095473310829778,
+    "bits_above_null": [
+     true,
+     false,
+     false
+    ],
+    "bits_above_null_ridge": [
+     true,
+     false,
+     false
+    ],
+    "u2a00_bits_above_null": [
+     false,
+     false,
+     false
+    ],
+    "transfer_dot7": 0.8221288515406163,
+    "transfer_u2a00": 0.6979591836734693,
+    "transfer_dot7_ridge": 0.9089635854341737,
+    "transfer_u2a00_ridge": 0.7809523809523808,
+    "c1": false,
+    "c2": false,
+    "c3": true,
+    "decade_braille_minus_u2a00": 0.05203891206654251
+   },
+   "10": {
+    "bits012_braille": 0.6041280109736662,
+    "bits012_braille_ridge": 0.6379217873098556,
+    "bits012_u2a00": 0.5522582093423334,
+    "bits012_u2a00_ridge": 0.5865254270217775,
+    "braille_minus_u2a00": 0.05186980163133281,
+    "braille_minus_u2a00_boot": {
+     "diff": 0.041994531890111,
+     "boot_lo": -0.029849646422566403,
+     "boot_hi": 0.10287283770110947,
+     "boot_sd": 0.03376225878863354,
+     "boot_mean": 0.03979630080761688,
+     "boot_share_below_point": 0.515,
+     "boot_mean_distinct_cells": 32.315,
+     "jackknife_se": 0.04118517261006668,
+     "jackknife_lo": -0.038728406425619685,
+     "jackknife_hi": 0.12271747020584169,
+     "source": "rsi_codes_boot.json (probes refitted)"
+    },
+    "braille_minus_u2a00_ridge": 0.05139636028807815,
+    "bits_above_null": [
+     true,
+     false,
+     true
+    ],
+    "bits_above_null_ridge": [
+     true,
+     false,
+     true
+    ],
+    "u2a00_bits_above_null": [
+     false,
+     false,
+     false
+    ],
+    "transfer_dot7": 0.7394957983193278,
+    "transfer_u2a00": 0.7034013605442176,
+    "transfer_dot7_ridge": 0.8445378151260504,
+    "transfer_u2a00_ridge": 0.7768707482993197,
+    "c1": false,
+    "c2": false,
+    "c3": false,
+    "decade_braille_minus_u2a00": 0.04193473858114288
+   },
+   "14": {
+    "bits012_braille": 0.5981795321828524,
+    "bits012_braille_ridge": 0.638509627440348,
+    "bits012_u2a00": 0.5307619417550794,
+    "bits012_u2a00_ridge": 0.5780260178881671,
+    "braille_minus_u2a00": 0.06741759042777296,
+    "braille_minus_u2a00_boot": {
+     "diff": 0.060964360872905334,
+     "boot_lo": -0.02411318312964117,
+     "boot_hi": 0.11607999418746129,
+     "boot_sd": 0.03568663304139273,
+     "boot_mean": 0.049230976785959155,
+     "boot_share_below_point": 0.623,
+     "boot_mean_distinct_cells": 32.315,
+     "jackknife_se": 0.04344527984706213,
+     "jackknife_lo": -0.024188387627336445,
+     "jackknife_hi": 0.14611710937314712,
+     "source": "rsi_codes_boot.json (probes refitted)"
+    },
+    "braille_minus_u2a00_ridge": 0.060483609552180906,
+    "bits_above_null": [
+     true,
+     false,
+     true
+    ],
+    "bits_above_null_ridge": [
+     true,
+     false,
+     true
+    ],
+    "u2a00_bits_above_null": [
+     false,
+     false,
+     false
+    ],
+    "transfer_dot7": 0.7478991596638656,
+    "transfer_u2a00": 0.6231292517006803,
+    "transfer_dot7_ridge": 0.8823529411764706,
+    "transfer_u2a00_ridge": 0.7795918367346939,
+    "c1": false,
+    "c2": false,
+    "c3": true,
+    "decade_braille_minus_u2a00": 0.057889656552273655
+   },
+   "18": {
+    "bits012_braille": 0.5817916844467627,
+    "bits012_braille_ridge": 0.620115388895112,
+    "bits012_u2a00": 0.527625816147192,
+    "bits012_u2a00_ridge": 0.5637638089368121,
+    "braille_minus_u2a00": 0.05416586829957071,
+    "braille_minus_u2a00_boot": {
+     "diff": 0.04959484992413987,
+     "boot_lo": -0.0286118602066714,
+     "boot_hi": 0.10184641031783542,
+     "boot_sd": 0.03271003692367446,
+     "boot_mean": 0.03808473377406769,
+     "boot_share_below_point": 0.629,
+     "boot_mean_distinct_cells": 32.315,
+     "jackknife_se": 0.04116083503276154,
+     "jackknife_lo": -0.031080386740072755,
+     "jackknife_hi": 0.13027008658835249,
+     "source": "rsi_codes_boot.json (probes refitted)"
+    },
+    "braille_minus_u2a00_ridge": 0.05635157995829987,
+    "bits_above_null": [
+     true,
+     false,
+     true
+    ],
+    "bits_above_null_ridge": [
+     true,
+     false,
+     false
+    ],
+    "u2a00_bits_above_null": [
+     false,
+     false,
+     false
+    ],
+    "transfer_dot7": 0.7703081232492996,
+    "transfer_u2a00": 0.7129251700680271,
+    "transfer_dot7_ridge": 0.8711484593837535,
+    "transfer_u2a00_ridge": 0.8231292517006802,
+    "c1": false,
+    "c2": false,
+    "c3": false,
+    "decade_braille_minus_u2a00": 0.053591024967757056
+   },
+   "22": {
+    "bits012_braille": 0.5755917977267874,
+    "bits012_braille_ridge": 0.6223193721633422,
+    "bits012_u2a00": 0.5203496491268526,
+    "bits012_u2a00_ridge": 0.5676033400501809,
+    "braille_minus_u2a00": 0.055242148599934815,
+    "braille_minus_u2a00_boot": {
+     "diff": 0.047497552946205966,
+     "boot_lo": -0.017826085070861985,
+     "boot_hi": 0.09878055645479573,
+     "boot_sd": 0.029181017718356073,
+     "boot_mean": 0.03925247589962544,
+     "boot_share_below_point": 0.612,
+     "boot_mean_distinct_cells": 32.315,
+     "jackknife_se": 0.03775985945497711,
+     "jackknife_lo": -0.026511771585549175,
+     "jackknife_hi": 0.1215068774779611,
+     "source": "rsi_codes_boot.json (probes refitted)"
+    },
+    "braille_minus_u2a00_ridge": 0.05471603211316134,
+    "bits_above_null": [
+     true,
+     false,
+     true
+    ],
+    "bits_above_null_ridge": [
+     true,
+     false,
+     true
+    ],
+    "u2a00_bits_above_null": [
+     false,
+     false,
+     false
+    ],
+    "transfer_dot7": 0.65406162464986,
+    "transfer_u2a00": 0.6244897959183674,
+    "transfer_dot7_ridge": 0.8739495798319328,
+    "transfer_u2a00_ridge": 0.8408163265306122,
+    "c1": false,
+    "c2": false,
+    "c3": false,
+    "decade_braille_minus_u2a00": 0.04836676491569795
+   },
+   "27": {
+    "bits012_braille": 0.5275166580170162,
+    "bits012_braille_ridge": 0.615985998630762,
+    "bits012_u2a00": 0.5015545171098503,
+    "bits012_u2a00_ridge": 0.5701509636573793,
+    "braille_minus_u2a00": 0.025962140907165865,
+    "braille_minus_u2a00_boot": {
+     "diff": 0.025253797335141267,
+     "boot_lo": -0.003539422954483843,
+     "boot_hi": 0.05651566840374591,
+     "boot_sd": 0.01564367920791502,
+     "boot_mean": 0.02582850911038737,
+     "boot_share_below_point": 0.49,
+     "boot_mean_distinct_cells": 32.315,
+     "jackknife_se": 0.015544142818374329,
+     "jackknife_lo": -0.005212722588872416,
+     "jackknife_hi": 0.05572031725915495,
+     "source": "rsi_codes_boot.json (probes refitted)"
+    },
+    "braille_minus_u2a00_ridge": 0.045835034973382704,
+    "bits_above_null": [
+     false,
+     false,
+     true
+    ],
+    "bits_above_null_ridge": [
+     true,
+     false,
+     true
+    ],
+    "u2a00_bits_above_null": [
+     false,
+     false,
+     false
+    ],
+    "transfer_dot7": 0.5196078431372548,
+    "transfer_u2a00": 0.508843537414966,
+    "transfer_dot7_ridge": 0.6176470588235294,
+    "transfer_u2a00_ridge": 0.5510204081632653,
+    "c1": false,
+    "c2": false,
+    "c3": false,
+    "decade_braille_minus_u2a00": 0.0037881101274954976
+   }
+  },
+  "verdict": "undecided",
+  "decade": "not more consistent by 0.15 at any block",
+  "note": "T4-C is against for Braille, so by the rule these probes are read as surface features only"
+ },
+ "T4-B": {
+  "blocks": {
+   "emb": {
+    "mean": 0.5844623655913979,
+    "null_p99": 0.5814400537634409,
+    "bit0": 0.6087096774193539,
+    "bit1": 0.32790322580645165,
+    "ridge_mean": 0.6258064516129033,
+    "ridge_null_p99": 0.6035782258064516
+   },
+   "0": {
+    "mean": 0.5834587813620071,
+    "null_p99": 0.588956899641577,
+    "bit0": 0.7082795698924724,
+    "bit1": 0.2888172043010754,
+    "ridge_mean": 0.6276164874551973,
+    "ridge_null_p99": 0.606156541218638
+   },
+   "2": {
+    "mean": 0.5815501792114696,
+    "null_p99": 0.5877262544802868,
+    "bit0": 0.6958064516129029,
+    "bit1": 0.28741935483870973,
+    "ridge_mean": 0.6303046594982079,
+    "ridge_null_p99": 0.6084617383512546
+   },
+   "6": {
+    "mean": 0.5856810035842295,
+    "null_p99": 0.584250716845878,
+    "bit0": 0.6880107526881721,
+    "bit1": 0.3013978494623656,
+    "ridge_mean": 0.635241935483871,
+    "ridge_null_p99": 0.6145502688172043
+   },
+   "10": {
+    "mean": 0.5444265232974911,
+    "null_p99": 0.5410596774193548,
+    "bit0": 0.5272043010752685,
+    "bit1": 0.46516129032258086,
+    "ridge_mean": 0.6341487455197132,
+    "ridge_null_p99": 0.6068866487455197
+   },
+   "14": {
+    "mean": 0.5896505376344086,
+    "null_p99": 0.5833893369175627,
+    "bit0": 0.6499999999999997,
+    "bit1": 0.3554301075268819,
+    "ridge_mean": 0.6342741935483871,
+    "ridge_null_p99": 0.6027362903225807
+   },
+   "18": {
+    "mean": 0.574310035842294,
+    "null_p99": 0.5817181003584229,
+    "bit0": 0.6583333333333334,
+    "bit1": 0.3131182795698926,
+    "ridge_mean": 0.6211111111111111,
+    "ridge_null_p99": 0.6039224910394266
+   },
+   "22": {
+    "mean": 0.5513082437275986,
+    "null_p99": 0.5837541218637993,
+    "bit0": 0.6673655913978487,
+    "bit1": 0.24924731182795715,
+    "ridge_mean": 0.5984677419354839,
+    "ridge_null_p99": 0.602279569892473
+   },
+   "27": {
+    "mean": 0.5588172043010752,
+    "null_p99": 0.5783752688172042,
+    "bit0": 0.6185483870967741,
+    "bit1": 0.34881720430107555,
+    "ridge_mean": 0.5738888888888889,
+    "ridge_null_p99": 0.6041745519713262
+   }
+  },
+  "verdict": "against: index competence <= 2 x chance"
+ },
+ "T2-A": {
+  "blocks": {
+   "14": {
+    "target": -3.0603143692016603,
+    "random_max": 1.2951843261718752,
+    "random_min": -2.121029218037923,
+    "random_mean": -0.29429552872975656,
+    "random_sd": 1.0100715559473779,
+    "shuffled": [
+     -3.62601261138916,
+     -4.3172299067179365,
+     -3.616303253173828,
+     -4.118611272176107,
+     -4.059272956848145,
+     -3.587580935160319,
+     -4.115042813618977,
+     -3.9818394343058268,
+     -4.0626829147338865,
+     -4.170840644836426
+    ],
+    "beats_random": false,
+    "slope": 1.8351528461162854,
+    "linear_r2": 0.03966666921335371,
+    "damage_at_0_3": 0.06803411475195388,
+    "passes": false
+   },
+   "18": {
+    "target": -1.6573903719584147,
+    "random_max": 0.3796528498331706,
+    "random_min": -0.6275620142618816,
+    "random_mean": -0.10693364779154457,
+    "random_sd": 0.27445972314781863,
+    "shuffled": [
+     -1.83868408203125,
+     -0.07657267252604161,
+     -1.6355065027872722,
+     0.23841463724772138,
+     -0.6396615982055662,
+     -1.1685900052388507,
+     0.1355052312215168,
+     0.14639879862467442,
+     0.21945056915283212,
+     0.5092106501261395
+    ],
+    "beats_random": true,
+    "slope": -3.4795593420664512,
+    "linear_r2": 0.7879505969519323,
+    "damage_at_0_3": 0.07887575680930012,
+    "passes": false
+   }
+  },
+  "target_effect_block14": -3.121523888905843,
+  "yes_bias_on_unrelated": {
+   "interest-in-sports": 7.139360380172729,
+   "interest-in-literature": 6.84291853904724
+  },
+  "yes_bias_ok": false,
+  "split_half": 0.945626360200853,
+  "split_half_source": "rsi_followup.json (label-balanced halves)",
+  "split_half_unbalanced": -0.18758742440707196,
+  "same_sign": false,
+  "verdict": "undecided: Yes-bias control fails (effect on the unrelated sets above 25 % of the target effect); passes at neither block"
+ },
+ "T2-B": {
+  "gap": {
+   "desire-for-self-improvement": {
+    "gap": 0.07529194987488241,
+    "lo": 0.03755732495199505,
+    "hi": 0.14314756442348048,
+    "cos": 0.8703344103259706
+   },
+   "desire-to-be-more-intelligent": {
+    "gap": 0.10802039005797481,
+    "lo": 0.06986702458883194,
+    "hi": 0.22381485107607785,
+    "cos": 0.8376059701428782
+   },
+   "cognitive-enhancement": {
+    "gap": 0.08133812043597788,
+    "lo": 0.03297352656160797,
+    "hi": 0.17211869376060443,
+    "cos": 0.8642882397648751
+   },
+   "desire-for-more-capabilities": {
+    "gap": 0.03806291796349426,
+    "lo": 0.00011939553166398544,
+    "hi": 0.10381829345695995,
+    "cos": 0.9075634422373587
+   }
+  },
+  "own_effect": 3.121523888905843,
+  "effect_on_siblings": {
+   "desire-for-self-improvement": -7.226797580718994,
+   "desire-to-be-more-intelligent": -4.32593469619751,
+   "cognitive-enhancement": -4.195618677139282,
+   "desire-for-more-capabilities": -6.5173520088195795
+  },
+  "factorial_block14": {
+   "interaction_norm": 4.714737156073609,
+   "null_p99": 7.888338646903154,
+   "null_mean": 5.392831238277533,
+   "p": 0.7412587412587412
+  },
+  "factorial_block18": {
+   "interaction_norm": 10.9904578437814,
+   "null_p99": 21.1403174154631,
+   "null_mean": 14.041794165864875,
+   "p": 0.8771228771228772
+  },
+  "conditions": {
+   "gap": false,
+   "ratio": false,
+   "factorial": false
+  },
+  "verdict": "against: not separated from desire-for-more-capabilities",
+  "inclination_and_slope": {
+   "rsi": {
+    "inclination": 3.4958457310994464,
+    "slope": 1.8351528461162854,
+    "linear_r2": 0.03966666921335371,
+    "damage_at_0_3": 0.06803411475195388
+   },
+   "desire-for-self-improvement": {
+    "inclination": 8.110790586471557,
+    "slope": -2.6318320677830638,
+    "linear_r2": 0.02714710780031282,
+    "damage_at_0_3": 0.06468626451120084
+   },
+   "desire-to-be-more-intelligent": {
+    "inclination": 4.907290410995484,
+    "slope": 2.307085000551665,
+    "linear_r2": 0.03773370235129059,
+    "damage_at_0_3": 0.06658750278449513
+   },
+   "cognitive-enhancement": {
+    "inclination": 4.546969842910767,
+    "slope": 0.8110037950369028,
+    "linear_r2": 0.005496714421465043,
+    "damage_at_0_3": 0.06853442312535432
+   },
+   "desire-for-more-capabilities": {
+    "inclination": 6.869334030151367,
+    "slope": -1.1508169540992157,
+    "linear_r2": 0.005313699363545643,
+    "damage_at_0_3": 0.07772627124419701
+   },
+   "interest-in-sports": {
+    "inclination": 9.877727127075195,
+    "slope": -4.506132107514604,
+    "linear_r2": 0.046963263749895234,
+    "damage_at_0_3": 0.0719242911458541
+   },
+   "interest-in-literature": {
+    "inclination": 10.075957250595092,
+    "slope": -5.187933243238012,
+    "linear_r2": 0.05559899654978118,
+    "damage_at_0_3": 0.07389900137557763
+   }
+  }
+ },
+ "Q2'": {
+  "blocks": {
+   "8": {
+    "S_improves": 0.33290679461428463,
+    "S_describes": 0.28508594311176966,
+    "S_repetition": -0.09234155934495586,
+    "minus_describes": {
+     "diff": 0.04782085150251497,
+     "lo": 0.020710424998198265,
+     "hi": 0.07793909259274964
+    },
+    "minus_repetition": {
+     "diff": 0.4252483539592405,
+     "lo": 0.39884114576228996,
+     "hi": 0.4449589728005557
+    },
+    "ranks": [
+     0.0,
+     0.4166666666666667,
+     0.0
+    ],
+    "split_half_d12": 0.9764543683966534,
+    "passes": false
+   },
+   "14": {
+    "S_improves": 0.2592136674825327,
+    "S_describes": 0.28186294142485724,
+    "S_repetition": -0.18732628833684206,
+    "minus_describes": {
+     "diff": -0.02264927394232452,
+     "lo": -0.049378048580523116,
+     "hi": 0.018039690751714372
+    },
+    "minus_repetition": {
+     "diff": 0.4465399558193748,
+     "lo": 0.41919922678104615,
+     "hi": 0.4672710111182297
+    },
+    "ranks": [
+     0.0,
+     0.08333333333333333,
+     0.0
+    ],
+    "split_half_d12": 0.9656863649058375,
+    "passes": false
+   },
+   "18": {
+    "S_improves": 0.30416060074084683,
+    "S_describes": 0.38226807309261235,
+    "S_repetition": -0.1334438720200644,
+    "minus_describes": {
+     "diff": -0.07810747235176552,
+     "lo": -0.10877412047203794,
+     "hi": -0.03384726687719055
+    },
+    "minus_repetition": {
+     "diff": 0.43760447276091125,
+     "lo": 0.40935397193191175,
+     "hi": 0.46153348841883984
+    },
+    "ranks": [
+     0.08333333333333333,
+     0.08333333333333333,
+     0.0
+    ],
+    "split_half_d12": 0.9707752514235317,
+    "passes": false
+   },
+   "22": {
+    "S_improves": 0.340061084179632,
+    "S_describes": 0.45013575866112754,
+    "S_repetition": -0.10731822040705666,
+    "minus_describes": {
+     "diff": -0.11007467448149555,
+     "lo": -0.1419615731286908,
+     "hi": -0.06645819136094476
+    },
+    "minus_repetition": {
+     "diff": 0.4473793045866886,
+     "lo": 0.41025316822908997,
+     "hi": 0.4782147737786565
+    },
+    "ranks": [
+     0.0,
+     0.16666666666666666,
+     0.0
+    ],
+    "split_half_d12": 0.9582037354685381,
+    "passes": false
+   }
+  },
+  "verdict": "against"
+ }
+}

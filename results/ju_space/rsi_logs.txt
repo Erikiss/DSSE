@@ -1,0 +1,89 @@
+== rsi_codes.log
+model loaded (6s), 15.3 GB were available
+braille -> letter: 0.013888888888888888 [0.0, 0.0, 0.041666666666666664] (68s)
+base64 -> word: 0.016666666666666666 [0.016666666666666666, 0.016666666666666666] (183s)
+base64 index: 0.0 0.3076923076923077 (269s)
+binary -> decimal: 0.015625 (362s)
+collected Braille states: 242, 238, 245 (875s)
+T4-A layer emb: bits 0-2 Braille [0.5  0.51 0.47] (null p99 [0.58 0.59 0.57]) vs U+2A00 [0.51 0.52 0.48] | bits 3-5 [0.62 0.73 0.95] | transfer dot-7 [1. 1. 1.] U+2A00 [1. 1. 1.] | decade {'pairs': 7, 'braille': 0.007611458882222409, 'math_ops': 0.007611458882222409}
+T4-A layer 0: bits 0-2 Braille [0.63 0.47 0.51] (null p99 [0.61 0.65 0.64]) vs U+2A00 [0.67 0.5  0.58] | bits 3-5 [0.66 0.79 0.96] | transfer dot-7 [0.95 1.   0.8 ] U+2A00 [0.77 0.98 0.54] | decade {'pairs': 7, 'braille': 0.04065238199384179, 'math_ops': 0.023917236768068815}
+T4-A layer 2: bits 0-2 Braille [0.63 0.49 0.52] (null p99 [0.61 0.63 0.64]) vs U+2A00 [0.58 0.52 0.61] | bits 3-5 [0.66 0.81 0.96] | transfer dot-7 [0.87 0.92 0.84] U+2A00 [0.71 0.8  0.55] | decade {'pairs': 7, 'braille': 0.03916309853412429, 'math_ops': 0.02252029965263392}
+T4-A layer 6: bits 0-2 Braille [0.65 0.49 0.58] (null p99 [0.61 0.62 0.62]) vs U+2A00 [0.58 0.49 0.56] | bits 3-5 [0.65 0.76 0.96] | transfer dot-7 [0.82 0.83 0.82] U+2A00 [0.74 0.8  0.56] | decade {'pairs': 7, 'braille': 0.05628277421083942, 'math_ops': 0.004243862144296918}
+T4-A layer 10: bits 0-2 Braille [0.65 0.51 0.65] (null p99 [0.61 0.61 0.61]) vs U+2A00 [0.57 0.5  0.58] | bits 3-5 [0.64 0.7  0.91] | transfer dot-7 [0.73 0.77 0.72] U+2A00 [0.76 0.75 0.6 ] | decade {'pairs': 7, 'braille': 0.06169485159477342, 'math_ops': 0.019760113013630533}
+T4-A layer 14: bits 0-2 Braille [0.65 0.5  0.65] (null p99 [0.61 0.6  0.61]) vs U+2A00 [0.57 0.45 0.57] | bits 3-5 [0.65 0.74 0.93] | transfer dot-7 [0.75 0.77 0.73] U+2A00 [0.65 0.62 0.6 ] | decade {'pairs': 7, 'braille': 0.073979154420311, 'math_ops': 0.01608949786803734}
+T4-A layer 18: bits 0-2 Braille [0.64 0.48 0.63] (null p99 [0.6  0.61 0.61]) vs U+2A00 [0.57 0.47 0.54] | bits 3-5 [0.65 0.77 0.93] | transfer dot-7 [0.79 0.79 0.74] U+2A00 [0.76 0.75 0.63] | decade {'pairs': 7, 'braille': 0.06774489621423826, 'math_ops': 0.014153871246481212}
+T4-A layer 22: bits 0-2 Braille [0.6  0.52 0.61] (null p99 [0.57 0.6  0.59]) vs U+2A00 [0.55 0.47 0.53] | bits 3-5 [0.59 0.71 0.92] | transfer dot-7 [0.74 0.63 0.6 ] U+2A00 [0.66 0.61 0.6 ] | decade {'pairs': 7, 'braille': 0.06712732980742304, 'math_ops': 0.018760564891725097}
+T4-A layer 27: bits 0-2 Braille [0.52 0.52 0.54] (null p99 [0.54 0.54 0.53]) vs U+2A00 [0.51 0.49 0.5 ] | bits 3-5 [0.5  0.53 0.61] | transfer dot-7 [0.54 0.51 0.51] U+2A00 [0.53 0.45 0.54] | decade {'pairs': 7, 'braille': 0.0979420278955676, 'math_ops': 0.0941539177680721}
+T4-B layer emb: index bits [0.61 0.33 0.48 0.53 0.67 0.89] mean 0.584 | within-class null p99 of the mean 0.581
+T4-B layer 0: index bits [0.71 0.29 0.48 0.45 0.69 0.88] mean 0.583 | within-class null p99 of the mean 0.589
+T4-B layer 2: index bits [0.7  0.29 0.49 0.44 0.69 0.88] mean 0.582 | within-class null p99 of the mean 0.588
+T4-B layer 6: index bits [0.69 0.3  0.49 0.45 0.71 0.88] mean 0.586 | within-class null p99 of the mean 0.584
+T4-B layer 10: index bits [0.53 0.47 0.53 0.53 0.64 0.58] mean 0.544 | within-class null p99 of the mean 0.541
+T4-B layer 14: index bits [0.65 0.36 0.49 0.47 0.72 0.86] mean 0.590 | within-class null p99 of the mean 0.583
+T4-B layer 18: index bits [0.66 0.31 0.48 0.44 0.7  0.86] mean 0.574 | within-class null p99 of the mean 0.582
+T4-B layer 22: index bits [0.67 0.25 0.51 0.42 0.66 0.81] mean 0.551 | within-class null p99 of the mean 0.584
+T4-B layer 27: index bits [0.62 0.35 0.47 0.47 0.66 0.79] mean 0.559 | within-class null p99 of the mean 0.578
+done (1415s)
+
+== rsi_codes_boot.log
+block 6: dom +0.031 boot [-0.048, +0.100] sd 0.037 jackknife se 0.050 | ridge +0.043 boot [-0.036, +0.099] sd 0.035 jackknife se 0.051 (356s)
+block 0: dom -0.035 boot [-0.069, +0.036] sd 0.028 jackknife se 0.035 | ridge -0.016 boot [-0.068, +0.043] sd 0.028 jackknife se 0.040 (357s)
+block 2: dom -0.021 boot [-0.068, +0.053] sd 0.032 jackknife se 0.043 | ridge +0.002 boot [-0.058, +0.062] sd 0.031 jackknife se 0.044 (358s)
+block 14: dom +0.061 boot [-0.024, +0.116] sd 0.036 jackknife se 0.043 | ridge +0.060 boot [-0.015, +0.116] sd 0.034 jackknife se 0.048 (351s)
+block 10: dom +0.042 boot [-0.030, +0.103] sd 0.034 jackknife se 0.041 | ridge +0.047 boot [-0.021, +0.100] sd 0.031 jackknife se 0.047 (353s)
+block 18: dom +0.050 boot [-0.029, +0.102] sd 0.033 jackknife se 0.041 | ridge +0.048 boot [-0.026, +0.108] sd 0.034 jackknife se 0.048 (356s)
+block 22: dom +0.047 boot [-0.018, +0.099] sd 0.029 jackknife se 0.038 | ridge +0.048 boot [-0.017, +0.104] sd 0.032 jackknife se 0.044 (354s)
+block 27: dom +0.025 boot [-0.004, +0.057] sd 0.016 jackknife se 0.016 | ridge +0.048 boot [-0.012, +0.108] sd 0.031 jackknife se 0.041 (358s)
+done (1067s)
+
+== rsi_direction.log
+model loaded (6s), 15.6 GB were available; user content starts at token 3
+direction rsi: built from 100 statements; norm at block 14 5.33 (176s)
+direction desire-for-self-improvement: built from 100 statements; norm at block 14 5.37 (319s)
+direction desire-to-be-more-intelligent: built from 100 statements; norm at block 14 4.54 (459s)
+direction cognitive-enhancement: built from 100 statements; norm at block 14 5.08 (602s)
+direction desire-for-more-capabilities: built from 100 statements; norm at block 14 6.29 (744s)
+direction interest-in-sports: built from 100 statements; norm at block 14 10.05 (883s)
+direction interest-in-literature: built from 100 statements; norm at block 14 10.10 (1020s)
+cosines with rsi: {'rsi': 1.0, 'desire-for-self-improvement': 0.87, 'desire-to-be-more-intelligent': 0.838, 'cognitive-enhancement': 0.864, 'desire-for-more-capabilities': 0.908, 'interest-in-sports': 0.89, 'interest-in-literature': 0.888} | split-half -0.188
+sweep rsi: inclination +3.50 | slope +1.84 (R2 0.03966666921335371) | damage at +0.3 0.068 (1305s)
+sweep desire-for-self-improvement: inclination +8.11 | slope -2.63 (R2 0.02714710780031282) | damage at +0.3 0.065 (1496s)
+sweep desire-to-be-more-intelligent: inclination +4.91 | slope +2.31 (R2 0.03773370235129059) | damage at +0.3 0.067 (1690s)
+sweep cognitive-enhancement: inclination +4.55 | slope +0.81 (R2 0.005496714421465043) | damage at +0.3 0.069 (1883s)
+sweep desire-for-more-capabilities: inclination +6.87 | slope -1.15 (R2 0.005313699363545643) | damage at +0.3 0.078 (2098s)
+sweep interest-in-sports: inclination +9.88 | slope -4.51 (R2 0.046963263749895234) | damage at +0.3 0.072 (2305s)
+sweep interest-in-literature: inclination +10.08 | slope -5.19 (R2 0.05559899654978118) | damage at +0.3 0.074 (2515s)
+sweep rsi at block 18: slope -3.48 (2802s)
+cross effects done (3609s)
+controls block 14: target -3.06 (damage 0.068) | random -2.12 to +1.30 (mean -0.29, sd 1.01) | shuffled -4.32 to -3.59 (5012s)
+controls block 18: target -1.66 (damage 0.079) | random -0.63 to +0.38 (mean -0.11, sd 0.27) | shuffled -1.84 to +0.51 (6523s)
+factorial: {'14': {'interaction_norm': 4.714737156073609, 'null_p99': 7.888338646903154, 'null_mean': 5.392831238277533, 'p': 0.7412587412587412}, '18': {'interaction_norm': 10.9904578437814, 'null_p99': 21.1403174154631, 'null_mean': 14.041794165864875, 'p': 0.8771228771228772}} (6639s)
+Q2' block 8: S improves 0.333 [0.30, 0.35] describes 0.285 repetition -0.092 | ranks 4>3: 0.00 / 0.42 / 0.00
+Q2' block 14: S improves 0.259 [0.23, 0.28] describes 0.282 repetition -0.187 | ranks 4>3: 0.00 / 0.08 / 0.00
+Q2' block 18: S improves 0.304 [0.27, 0.33] describes 0.382 repetition -0.133 | ranks 4>3: 0.08 / 0.08 / 0.00
+Q2' block 22: S improves 0.340 [0.30, 0.37] describes 0.450 repetition -0.107 | ranks 4>3: 0.00 / 0.17 / 0.00
+done (6887s)
+exit 0
+
+== rsi_followup.log
+model loaded (5s)
+states rsi (155s)
+states desire-for-self-improvement (301s)
+states desire-to-be-more-intelligent (445s)
+states cognitive-enhancement (603s)
+states desire-for-more-capabilities (753s)
+states interest-in-sports (900s)
+states interest-in-literature (1038s)
+block 14: balanced split-half rsi 0.95, desire-for-s 0.93, desire-to-be 0.91, cognitive-en 0.93, desire-for-m 0.96, interest-in- 0.98, interest-in- 0.98
+block 14: gap RSI vs siblings desire-for-s +0.08 [+0.04, +0.14], desire-to-be +0.11 [+0.07, +0.22], cognitive-en +0.08 [+0.03, +0.17], desire-for-m +0.04 [+0.00, +0.10], interest-in- +0.06 [+0.02, +0.11], interest-in- +0.06 [+0.03, +0.11]
+block 18: balanced split-half rsi 0.90, desire-for-s 0.98, desire-to-be 0.97, cognitive-en 0.97, desire-for-m 0.99, interest-in- 0.99, interest-in- 1.00
+block 18: gap RSI vs siblings desire-for-s +0.05 [-0.09, +0.21], desire-to-be +0.05 [-0.11, +0.21], cognitive-en +0.03 [-0.12, +0.17], desire-for-m +0.05 [-0.11, +0.23], interest-in- +0.05 [-0.09, +0.22], interest-in- +0.07 [-0.09, +0.24]
+done (1042s)
+exit 0
+
+== rsi_tilt.log
+block 14: sets rsi 0.278 desire-for-s 0.278 desire-to-be 0.261 cognitive-en 0.274 desire-for-m 0.248 interest-in- 0.255 interest-in- 0.243 | yes-no 0.536-0.539 | rand 0.116-0.144 (exp 0.125) | cov 0.626-0.730 (exp 0.664)
+block 18: sets rsi 0.231 desire-for-s 0.235 desire-to-be 0.223 cognitive-en 0.220 desire-for-m 0.237 interest-in- 0.235 interest-in- 0.236 | yes-no 0.376-0.381 | rand 0.115-0.130 (exp 0.125) | cov 0.630-0.733 (exp 0.669)
+block 14: shuffled cos with yes-no +0.80 -0.98 +0.93 -1.00 -0.05 +0.99 -1.00 -1.00 -0.98 -0.99 | {'rand': {'mean_delta': -0.409, 'mean_abs_delta': 0.91, 'mean_damage': 0.083}, 'cov': {'mean_delta': -0.179, 'mean_abs_delta': 0.692, 'mean_damage': 0.129}}
+block 18: shuffled cos with yes-no +0.86 -0.97 +0.92 -1.00 -0.23 +0.99 -1.00 -1.00 -0.97 -0.97 | {'rand': {'mean_delta': -0.002, 'mean_abs_delta': 0.195, 'mean_damage': 0.077}, 'cov': {'mean_delta': -0.212, 'mean_abs_delta': 0.283, 'mean_damage': 0.127}}
+check: {'rsi': [1.0, 1.0], 'desire-for-self-improvement': [0.8703, 0.8703], 'desire-to-be-more-intelligent': [0.8376, 0.8376], 'cognitive-enhancement': [0.8643, 0.8643], 'desire-for-more-capabilities': [0.9076, 0.9076], 'interest-in-sports': [0.8897, 0.8897], 'interest-in-literature': [0.8885, 0.8885]}
