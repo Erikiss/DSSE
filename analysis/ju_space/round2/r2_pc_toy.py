@@ -398,7 +398,7 @@ def stage_cross_pc(out):
     T4 (B's column distilled to A's output distribution on the new task's 289 inputs; PC receivers by the soft-target PC local update),
     T3 h2 stitching where both widths are <= 256 and B is a BP net (T3 into a PC receiver is not defined). Searches in PC nets use the
     PC local update (W7); every evaluation by the feedforward pass. Field names follow r2_rgi_toy's rgi_toy/cross/w<ws>.json."""
-    r1 = R1PC(r1_root(out)); t1root = os.environ.get("R2T1") or os.path.join(out, "r2_t1"); worlds = list(SEEDS)
+    r1 = R1PC(r1_root(out)); t1root = os.environ.get("R2T1") or os.path.join(out, "r2_t1"); worlds = list(SEEDS); t_start = time.time()
     groups = []                                                          # (Nets, [model info], eta or None)
     for nets, metas in _bp_groups(t1root):
         infos = [_model_info(m, "bp") for m in metas]; keep = [i for i, f in enumerate(infos) if f["ws"] in worlds]
@@ -491,8 +491,9 @@ def stage_cross_pc(out):
         res = dict(stage="cross_pc", measurement="AT5 cross-model pairs with a PC net (descriptive)", world=ws, quick=QUICK, plan_sha256=UT.PLAN_SHA256,
                    pc_widths=sorted({info(m)["W"] for m in ms if info(m)["kind"] == "pc"}), t3_max_width=T3_MAXW,
                    models=[{k: v_ for k, v_ in per[m].items() if k != "v_free"} for m in ms], pairs=[P_[p] for p in pairs if p[0] in ms],
-                   finder=r1.log, notes="every PC width runs (critique v2-11); pairs at a width without G-PC(W) are 'not testable' (r2_ana); "
-                                        "t3 only where both widths <= the T3 limit and the receiver is a BP net")
+                   finder=r1.log, meta=dict(UT.meta("cross_pc", t_start), r1pc=r1_root(out), r2t1=t1root),
+                   notes="every PC width runs (critique v2-11); pairs at a width without G-PC(W) are 'not testable' (r2_ana); "
+                         "t3 only where both widths <= the T3 limit and the receiver is a BP net")
         write_json(res, pdir(out, "cross_pc", f"w{ws}.json")); print(f"  cross_pc: world {ws} written ({len(res['pairs'])} pairs)", flush=True)
     return None
 

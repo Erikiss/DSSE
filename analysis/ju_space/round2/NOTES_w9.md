@@ -155,8 +155,8 @@ run with `NUR_SELBSTTEST = True`. r2_ana's full self-test (all sessions) is off 
 
 - `python test_runner.py [scenarios]` (scratchpad `r2_impl/w9/`; NT=1, one process at a time; stub scripts, fake git, fabricated
   dsse_runs; no round-1 output exists there). Fast scenarios `units dry q1 guard fail wait q3 wave2 integ cont`: 156 checks pass
-  (52 s); the self-test scenario `selftest` (real rk_loop.py MOCK and pc_meta.py QUICK build the mock tree, stub session scripts): see
-  the final line of this list. Covered: brace expansion, G7-G9 incl. ties, OD-G9 choices, the R1.final rule; dry runs of all nine
+  (52 s); the self-test scenario `selftest` (real rk_loop.py MOCK and pc_meta.py QUICK build the mock tree, stub session scripts): 16 checks
+  pass (422 s). 172 checks in all on the final code. Covered: brace expansion, G7-G9 incl. ties, OD-G9 choices, the R1.final rule; dry runs of all nine
   sessions write nothing; full runs with step order, BLOCK and env, manifest (sha256, shard and Drive time of every copy, freeze
   block, Drive times of logs and summaries with freeze_before_first_summary both ways, G3 label, R1.meta, G47, references incl. the
   committed ref comparison), Drive sync (no r1/, r2in/, local/), read-only copies, resume, single-step rerun; time guard ->

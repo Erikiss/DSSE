@@ -162,7 +162,7 @@ def cached(out, key, fn, sub=SUB):
 
 def lib_sha256():
     import hashlib
-    return {f: hashlib.sha256(open(os.path.join(_HERE, f), "rb").read()).hexdigest() for f in ("r2_toy_common.py", os.path.basename(__file__))
+    return {f: hashlib.sha256(open(os.path.join(_HERE, f), "rb").read()).hexdigest() for f in ("r2_toy_common.py", "r2_unlearn_toy.py", "r2_pc_toy.py")
             if os.path.exists(os.path.join(_HERE, f))}
 
 
@@ -1395,7 +1395,7 @@ def rules_t2(res):
         v.sort(key=lambda d: d["ws"])
     ks = sorted({k for _, k in by}); codes = sorted({c for c, _ in by}); out = dict(cells={}, k_min={}, effects={})
     for (code, k), v in sorted(by.items()):
-        n = len(v); zs = [d["zero_shot"] for d in v]; modal_tr = [m["modal_is_trained"] for d in v for m in d["zs_modal"]]
+        zs = [d["zero_shot"] for d in v]; modal_tr = [m["modal_is_trained"] for d in v for m in d["zs_modal"]]
         out["cells"][f"{code}_k{k}"] = dict(level1_seeds=sum(bool(d["level1"]) for d in v), zero_shot=tci(zs), code_search=tci([d["code_search"] for d in v]),
                                            heldout_eval=tci([d["heldout_eval"] for d in v]), free_A8=tci([d["free_A8"] for d in v]), B2_8=tci([d["B2_8"] for d in v]),
                                            snap=bool(np.mean(zs) < 0.03 and np.mean(modal_tr) >= 0.75), modal_trained_share=float(np.mean(modal_tr)))
