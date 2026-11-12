@@ -373,6 +373,18 @@ def _free_cols(nets, idx, ws_of, eta=None):
 
 
 @torch.no_grad()
+def s_line_batched(netsB, iB, alphaA, ws, sets):
+    """TC.s_line in one evaluation call: v_B = mean_B + C_B,centred alpha_A (anchored_param) and the 30 permuted correspondences
+    TC.s_perms(ws), on B's new-task held-out sets. Returns dict(S_gain, accB, accB_perm) as TC.s_line."""
+    perms = TC.s_perms(ws); v0, Bm = TC.anchored_param(netsB, np.full(NNEW, iB)); al = torch.as_tensor(np.asarray(alphaA), dtype=F32, device=DEV)
+    mats = [Bm] + [Bm[:, :, torch.as_tensor(np.asarray(pm), device=DEV)] for pm in perms]
+    cols = torch.stack([v0 + (Mx @ al.unsqueeze(-1)).squeeze(-1) for Mx in mats], 1).reshape(NNEW * len(mats), -1)
+    hx, hy, hl = TC.stack_sets(sets, "ho"); k = len(mats)
+    acc = TC.cols_accuracy(netsB, np.full(len(cols), iB), cols, (np.repeat(hx, k, 0), np.repeat(hy, k, 0), np.repeat(hl, k, 0))).reshape(NNEW, k)
+    return dict(S_gain=float(np.mean(acc[:, 0] - acc[:, 1:].mean(1))), accB=acc[:, 0].tolist(), accB_perm=acc[:, 1:].mean(1).tolist())
+
+
+@torch.no_grad()
 def _chain_logp_h2(nets, net_of, cols, x, y):
     _, h = TC.hidden_states(nets, np.asarray(net_of), cols, (x, y))
     no = torch.as_tensor(np.asarray(net_of), device=DEV)
@@ -431,7 +443,7 @@ def stage_cross_pc(out):
         A_, B_ = per[a], per[b]; ws = A_["ws"]; sets = [TC.new_task_sets(ws, j) for j in range(NNEW)]
         d = dict(A=A_["name"], B=B_["name"], ws=ws, A_W=A_["W"], B_W=B_["W"], A_arm=A_["arm"], B_arm=B_["arm"], A_kind=A_["kind"], B_kind=B_["kind"],
                  A_init=A_["init"], B_init=B_["init"], A_level1=A_["level1"], B_level1=B_["level1"])
-        d.update(TC.s_line(groups[a[0]][0], a[1], np.asarray(A_["alpha"]), groups[b[0]][0], b[1], sets, TC.s_perms(ws)))
+        d.update(s_line_batched(groups[b[0]][0], b[1], A_["alpha"], ws, sets))
         fl = TC.f_line(groups[a[0]][0], a[1], ws, np.asarray(A_["v_free"], np.float64), A_["acc_free"], groups[b[0]][0], b[1])
         d.update({k: v_ for k, v_ in fl.items() if k not in ("Phi", "acc_proj")})
         P_[(a, b)] = d
@@ -584,6 +596,11 @@ def selftest(work):
     h1b, h2b, _ = TC.pc_relax(pcn, vb[:1], UT._chain_cols(pcn, tasks, vb[:1], tp[:1]), (x[:1, sel], yy[:1, sel], lab[:1, sel]), eta, T=20)
     ok = abs(eta - 1 / lam) < 1e-12 and float((h2b[0] - h2r[:144]).abs().max()) < 1e-4
     check("eta_x = 1 / pc_meta.lam_max; batched relaxation of a round-1 PC net = pc_meta.pc_relax (task 0's training pairs)", ok)
+    nb = TC.load_pc_state_dicts([r1.find(job_name("bp_mup", 64, 0)), r1.find(job_name("bp_mup", 64, 1))]); sets = [TC.new_task_sets(0, j) for j in range(NNEW)]
+    al = np.random.default_rng(3).standard_normal((NNEW, NPRE)).astype(np.float32) * 0.3
+    a_, b_ = TC.s_line(nb, 1, al, nb, 0, sets, TC.s_perms(0)), s_line_batched(nb, 0, al, 0, sets)
+    check("S line batched = TC.s_line (30 permuted correspondences)", np.allclose(a_["accB"], b_["accB"]) and abs(a_["S_gain"] - b_["S_gain"]) < 1e-9
+          and np.allclose(a_["accB_perm"], b_["accB_perm"]), f"S_gain {b_['S_gain']:.4f}")
     for st in STAGES:
         try:
             r = run_stage(out, st)

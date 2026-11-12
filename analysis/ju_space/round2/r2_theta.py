@@ -529,7 +529,15 @@ def stage_rsib(cx):
     rk = cx.open()
     if rk is None:
         js = _missing(cx, "rsib"); R.write_json(js_p, js); return js
-    start = R.unit(rk.ST["axes"]["u_T_perp"].double()); rows = rk.run_loop(RSIB, start, 2, rounds=4); L = RSIB + rk.SUF
+    start = R.unit(rk.ST["axes"]["u_T_perp"].double()); att_p = os.path.join(os.path.dirname(cx.part("x")), f"b{cx.b}_rsib_attempts.json")
+    try:
+        rows = rk.run_loop(RSIB, start, 2, rounds=4)
+    except Exception as e:                                     # G49: a loop that fails in two attempts is 'not run'; B-Q0 then has no cross-fit
+        n = (json.load(open(att_p))["n"] if os.path.exists(att_p) else 0) + 1; R.write_json(att_p, dict(n=n, error=repr(e)))
+        if n < 2: raise
+        js = dict(_base(cx, "rsib"), status="not run (r2RSIb failed in two attempts; G49: no independent loop)", error=repr(e), attempts=n)
+        R.write_json(js_p, js); R.log(f"r2RSIb b{cx.b}: {js['status']}: {e!r}"); return js
+    L = RSIB + rk.SUF
     keys = sorted(k for k in rk.ST if k.startswith((f"ev_{L}_", f"dir_{L}_", f"dmg_{L}_")))
     R.torch_save(pt_p, dict(loop=L, suffix=rk.SUF, start=start.float(), rows=rows, entries={k: rk.ST[k] for k in keys}))
     js = dict(_base(cx, "rsib"), status="ran", loop=L, nseed=2, rounds=4, start="unit(u_T_perp(b))", keys="keyseed('r2RSIb' + SUF_b, n, p, s, b)",
@@ -933,6 +941,21 @@ def selftest(root, r1_dir, r2_dir, b):
     pw3 = json.load(open(cx2.path(f"b{b}_power.json")))
     check("variant theta_std: guard passed, cells along u*_b (or u*_A / u*_B), power step ran", q2["m_star2"]["guard_pass"] and q2["config"]["mode"] in ("standard", "switch")
           and pw3["status"] == "ran" and os.path.exists(cx2.path(f"b{b}_cells.pt")), (q2["config"]["mode"], pw3["status"]))
+    if b != 14:                                                 # G49: an r2RSIb loop that fails twice is recorded, B-Q0 runs without it
+        cx3 = _AltCtx(cx, "theta_rsibfail"); shutil.rmtree(os.path.join(r2_dir, "theta_rsibfail"), ignore_errors=True); orig = rk.run_loop
+
+        def boom(*a, **k): raise RuntimeError("simulated failure of the r2RSIb loop")
+        rk.run_loop = boom
+        try:
+            try: stage_rsib(cx3); first = "no exception"
+            except RuntimeError: first = "raised"
+            second = stage_rsib(cx3)
+        finally:
+            rk.run_loop = orig
+        q3, _ = stage_q0(cx3)
+        check("G49: the first failure of r2RSIb raises (the runner retries), the second is recorded; B-Q0 then runs with 'no independent loop', no cross-fit",
+              first == "raised" and second["status"].startswith("not run (r2RSIb failed") and q3["status"] == "ok" and "no independent loop" in q3["labels"]
+              and RSIB not in q3["loops"] and not q3["cross_fit"]["computed"], (first, second.get("status"), q3.get("labels")))
     ok = all(r["ok"] for r in res); R.write_json(os.path.join(r2_dir, f"selftest_theta_b{b}.json"), dict(ok=ok, tests=res, block=b))
     print(f"r2_theta selftest (block {b}): {sum(r['ok'] for r in res)}/{len(res)} passed", flush=True); return ok
 

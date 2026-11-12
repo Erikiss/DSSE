@@ -783,10 +783,14 @@ def unsearch(nets, ws_of, arms, rounds, steps, budgets, remove_budget, key, pc_e
     return rec
 
 
-def rstar(A, thr=UNLEARN_ACC):
-    """First round r with accuracy <= thr per chain (A [C, rounds]); rounds (= '> last') if never."""
+RSTAR_NEVER = 25                                                 # C-T5: '> 24' counts as 25
+
+
+def rstar(A, thr=UNLEARN_ACC, never=None):
+    """First round r with accuracy <= thr per chain (A [C, rounds]); never = the value for '> last round' (default: the number of rounds,
+    i.e. the next round; the C-T5 rule uses RSTAR_NEVER = 25 whatever the number of rounds)."""
     A = np.asarray(A, float); hit = A <= thr
-    return np.where(hit.any(1), hit.argmax(1), A.shape[1])
+    return np.where(hit.any(1), hit.argmax(1), A.shape[1] if never is None else never)
 
 
 # ================================================================================================================ C-T0
@@ -1192,7 +1196,8 @@ def t4_cell(out, arm, W):
             d.update(relearn=rr[f"op|{nm}"], A_new=an[f"op|{nm}"], B2={str(ns): b2_value(a[sl], F[ns]) for ns, a in A.items()},
                      B2_A={str(ns): a[sl].mean((1, 2)) for ns, a in A.items()})
         dmd = dict(dmf[nm], match=dm_public(dmatch[nm]), relearn=rr[f"dm|{nm}"], A_new=an[f"dm|{nm}"])
-        out_ops[nm] = dict(dim=dims[nm], op=d, iso=iso[nm], span=span.get(nm), dm=dmd, push=push.get(nm))
+        out_ops[nm] = dict(dim=dims[nm], op=d, iso=iso[nm], span=span.get(nm), dm=dmd, push=push.get(nm),
+                           label="out-of-distribution damage (5.1)" if nm == "reflect" else ("positive control for generic damage" if nm == "xspan" else None))
     t4b_res = strip(t4b_res)
     return dict(arm=arm, W=W, nets=slim(rows), base=base, ops=out_ops, t4b=t4b_res)
 
@@ -1530,21 +1535,24 @@ def rules_t5(res):
         for arm in w["arms"]:
             idx = [i for i, (a, b, j) in enumerate(ch) if a == arm]; Aa = A[idx].reshape(n, NNEW, R)
             la = min(last, w.get("pc_last", last)) if arm == "pc" else last
-            rs = rstar(Aa.reshape(-1, R)[:, :la + 1]).reshape(n, NNEW); rs_seed = np.median(rs, 1)
+            rs = rstar(Aa.reshape(-1, R)[:, :la + 1], never=RSTAR_NEVER).reshape(n, NNEW); rs_seed = np.median(rs, 1)
             A_free = Aa[:, :, 0].mean(1); A_op = Aa[:, :, la].mean(1)
-            A_at_r = [float(np.mean([Aa[s, j, min(int(rs[s, j]), la)] for j in range(NNEW)])) for s in range(n)]
+            A_at_r = [float(np.mean([Aa[s, j, min(int(rs[s, j]), la)] for j in range(NNEW)])) for s in range(n)]     # s_(r*), s_last if never
             arms[arm] = dict(A_free=A_free, A_op=A_op, A_s4=Aa[:, :, i4].mean(1), rstar_task=rs, rstar_seed=rs_seed, A_op_at_rstar=A_at_r,
                              A_op_t=tci(A_op), last_round=la)
         col, rnd = arms.get("col"), arms.get("rand"); o = dict(rounds=R, s4_index=i4, last_index=last, arms=arms)
         if col and rnd:
             o["low_dimensional_search"] = bool(sum(r_ <= 4 for r_ in col["rstar_seed"]) >= q and sum(a >= 0.8 * f for a, f in zip(rnd["A_s4"], rnd["A_free"])) >= q)
             o["re_routing"] = _ge(_lo(col["A_op"]), UNLEARN_ACC + 1e-12)
+        dm_last = [d for d in w.get("dm", []) if d["round"] == last]
         for X, ctl in (("col", "rand"), ("z1", "dmr")):
             if X in arms and ctl in arms:
                 ax, ac = arms[X], arms[ctl]; ok_c = _ge(_mean(ac["A_op"]), 0.8 * _mean(ax["A_free"]))
                 us = _le(_hi(ax["A_op"]), UNLEARN_ACC) and ok_c
                 o[f"verdict_{X}"] = "un-searched" if us else ("partial" if _le(_mean(ax["A_op"]), 0.5 * _mean(ac["A_op"])) else "none")
                 o[f"control_{X}"] = dict(control=ctl, A_rand_mean=_mean(ac["A_op"]), A_free_mean=_mean(ax["A_free"]), control_keeps=ok_c)
+                if ctl == "dmr" and dm_last and not dm_last[0]["matched"]:
+                    o[f"verdict_{X}"] = "not testable (no damage-matched control within 0.02 at s_last, G45)"
         out[name] = o
     return out
 

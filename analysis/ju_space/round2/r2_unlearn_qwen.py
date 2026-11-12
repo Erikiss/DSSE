@@ -43,7 +43,7 @@ per-pair arrays, texts as token ids, bootstrap draws). A stage whose round-1 inp
 status 'not run (round-1 output missing)' (G4, G6); C-Q4b with a closed gate 'not testable (gate ...)'.
 Usage: python r2_unlearn_qwen.py <root> <r1_dir> <r2_dir> [q3 | q4a | q2 | q4b | armA | q5 | q6 | all | selftest]
        env DEVICE, NT, MOCK; BLOCK (must be 14 if set)."""
-import contextlib, copy, hashlib, json, math, os, shutil, subprocess, sys, time
+import contextlib, hashlib, json, math, os, shutil, subprocess, sys, time
 import numpy as np, torch
 
 HERE = os.path.dirname(os.path.abspath(__file__)); JU = os.path.dirname(HERE)
@@ -249,6 +249,18 @@ def rule_suppressed(g, g0, ratio_hi, ctrl_p5, Ue, z, M0, damage, m_foreign, m_co
     ok = all(c.values())
     return dict(conditions=c, failed=[k for k, v in c.items() if not v], suppressed=ok, verdict="suppressed" if ok else "not suppressed",
                 note="no baseline discrimination" if not c["M0_baseline"] else "")
+
+
+def restored_share(per_cue, per_abl, per_0, W):
+    """C-Q4a: restored share (g_cue - g_abl) / (g_0 - g_abl) from the per-prompt values on the fixed axes of the cued (ablated) texts against
+    C-Q3's ablated anti texts, of C-Q3's ablated instructed texts and of the unablated instructed texts, with the joint prompt bootstrap
+    (the same W for all three). Undefined (NaN) if |g_0 - g_abl| <= 1e-9 |g_0| (the ablation left the instructed gap unchanged).
+    Returns dict(share, ci90, defined, g_cue, g_abl, g0) and the draws."""
+    nanmean = lambda v: float(np.nanmean(np.asarray(v, dtype=float))) if np.isfinite(np.asarray(v, dtype=float)).any() else float("nan")
+    gc, ga, g0 = nanmean(per_cue), nanmean(per_abl), nanmean(per_0); den = g0 - ga; defined = bool(fin(den) and abs(den) > 1e-9 * abs(g0))
+    dc, da, d0 = boot_g(per_cue, W), boot_g(per_abl, W), boot_g(per_0, W); draws = (dc - da) / (d0 - da)
+    share = (gc - ga) / den if defined else float("nan")
+    return dict(share=share, ci90=list(R.interval(draws.numpy(), LEVEL)), defined=defined, g_cue=gc, g_abl=ga, g0=g0), draws
 
 
 def rule_cue(share, share_hi, passed):
@@ -528,7 +540,7 @@ class Ctx:
     def instructed_texts(self, tag, concept, d=None, alpha=0.0, sign=1.0, hooks=(), hook_sig=""):
         """64 pro + 64 anti instructed texts of a concept generated under an operation (push sign * alpha * unit(d) and / or hooks), read by
         the unmodified model under the plain prompt (cached unit). Returns dict(pro, anti, keys, Xp, Xa, capped_share)."""
-        rk = self.rk; rows = self.instructed_rows(concept, sign)
+        rows = self.instructed_rows(concept, sign)
         sg = sig_of("instructed", concept, [r[1] for r in rows], d if d is not None else "none", alpha, sign, hook_sig)
 
         def make():
@@ -735,15 +747,16 @@ def stage_q4a(ctx):
     G_cue = R.gap_on_fixed_axes(abl["X"], Xa_abl, ctx.fold, ref["a_A"], ref["a_B"])
     G_abl = R.gap_on_fixed_axes(P3["texts"][f"{use}|RSI"]["Xp"], Xa_abl, ctx.fold, ref["a_A"], ref["a_B"])
     G_ceil = R.gap_on_fixed_axes(una["X"], ref["Xa"], ctx.fold, ref["a_A"], ref["a_B"])
-    W = ctx.W; d_cue, d_abl, d_0, d_ceil = boot_g(G_cue["per_prompt"], W), boot_g(G_abl["per_prompt"], W), ref["g0_draws"], boot_g(G_ceil["per_prompt"], W)
-    g0 = ref["g0"]; den = g0 - G_abl["g"]; defined = bool(fin(den) and abs(den) > 1e-9 * abs(g0))    # undefined if the ablation left g_0 unchanged
-    share = (G_cue["g"] - G_abl["g"]) / den if defined else float("nan"); share_d = (d_cue - d_abl) / (d_0 - d_abl); lo, hi = R.interval(share_d.numpy(), LEVEL)
-    ceil_share = (G_ceil["g"] - G_abl["g"]) / den if defined else float("nan")
+    W = ctx.W; d_cue, d_ceil = boot_g(G_cue["per_prompt"], W), boot_g(G_ceil["per_prompt"], W); g0 = ref["g0"]
+    RS, share_d = restored_share(G_cue["per_prompt"], G_abl["per_prompt"], ref["per_prompt"], W); share, (lo, hi), defined = RS["share"], RS["ci90"], RS["defined"]
+    den = g0 - G_abl["g"]; ceil_share = (G_ceil["g"] - G_abl["g"]) / den if defined else float("nan")
+    try: own_cue = R.axis_from_texts(abl["X"], Xa_abl, ctx.fold, basis=ref["Q"], n_null=0)["gap_perp_cross"]
+    except Exception: own_cue = float("nan")
     verdict = rule_cue(share, hi, passed is not None)
     lens = [len(r[0]) for r in rows]
     js = base_info("q4a", dict(status="ran", ablation=use, passed_C_Q3=passed is not None, g_cue=G_cue["g"], g_abl=G_abl["g"], g0=g0,
                                g_abl_q3=J3["ablations"][dict(rand_14_2="null2", cov_14_0="null8").get(use, use)]["texts"]["RSI"]["g"],
-                               restored_share=share, restored_share_ci90=[lo, hi], share_defined=defined, ceiling=dict(g=G_ceil["g"], share=ceil_share, ratio_g0=G_ceil["g"] / g0 if g0 else float("nan"),
+                               restored_share=share, restored_share_ci90=[lo, hi], share_defined=defined, own_axis_gap_cue=own_cue, ceiling=dict(g=G_ceil["g"], share=ceil_share, ratio_g0=G_ceil["g"] / g0 if g0 else float("nan"),
                                ci90_g=list(R.interval(d_ceil.numpy(), LEVEL))), kept=dict(cue=G_cue["kept"], abl=G_abl["kept"], ceiling=G_ceil["kept"]),
                                verdict_in_session=verdict, rule="shallow if share >= 0.5; deep if share < 0.2 with 90 % upper end < 0.35; otherwise partial; "
                                "'not applicable (nothing removed)' if no ablation passed C-Q3 (G43)", cue_prompt_tokens=dict(min=min(lens), max=max(lens), mean=float(np.mean(lens))),
@@ -885,7 +898,7 @@ def _ref_nll(ctx, prompts, push):
         try:
             with torch.no_grad(): lp = torch.log_softmax(rk.model(ids).logits[0][pos].double(), -1)
         finally: rk.steer_off()
-        per.append((-lp[torch.arange(len(c)), torch.tensor(c).to(rk.DEV)]).cpu())
+        per.append((-lp[torch.arange(len(c), device=lp.device), torch.tensor(c, device=lp.device)]).cpu())
     tot = sum(float(x.sum()) for x in per if x is not None); n = sum(len(x) for x in per if x is not None)
     return dict(ppl=math.exp(tot / n) if n else float("nan"), mean_nll=tot / n if n else float("nan"), per_text=[float(x.mean()) if x is not None else None for x in per], n_tokens=n)
 
@@ -1197,9 +1210,8 @@ def _median_ci(v):
 def q6_relation(rk, rel, items, tr, te, cache):
     """Unpatched states of one relation, its helix / readout statistics, the caps of depth-3 and depth-4 sentences and their KL fractions,
     readouts and self-repair."""
-    it = [x for x in items if x["rel"] == rel]; pos = {(x["k"], x["obj"]): j for j, x in enumerate(it)}; nO = len(S.NEST_OBJ); te_set = set(te)
-    U = cache.get(f"{rel}_states", sig_of("q6", rel, [x["ids"] for x in it]), lambda: dict(zip(("st", "lp"), q6_forward(rk, [x["ids"] for x in it], Q6_BLOCKS))))
-    st, lp = U["st"], U["lp"]
+    it = [x for x in items if x["rel"] == rel]; pos = {(x["k"], x["obj"]): j for j, x in enumerate(it)}; nO = len(S.NEST_OBJ)
+    st, lp = q6_forward(rk, [x["ids"] for x in it], Q6_BLOCKS)                 # unpatched (recomputed on a rerun: 96 short forwards)
     X = {b: np.stack([np.stack([st[b][pos[(k, o)]][-1].double().numpy() for k in S.NEST_DEPTHS]) for o in range(nO)]) for b in Q6_BLOCKS}
     out = dict(helix={}, angular={}, linear={}, readout={}, cap={}, kl={}); arr = dict(ranks={})
     for b in Q6_BLOCKS:
@@ -1230,9 +1242,12 @@ def q6_relation(rk, rel, items, tr, te, cache):
                     Rr = torch.stack([torch.linalg.qr(torch.randn(rk.D, r, generator=torch.Generator().manual_seed(int(rk.keyseed("r2Q6rand", rel, k, r, o) % (2 ** 31))), dtype=torch.float64))[0]
                                       for o in range(nO)])
                 mk = lambda ii, Rr=Rr, Vr=Vr: DepthPatch(rk, starts[ii], Vr, m2t, None if Rr is None else Rr[ii])
-                res = cache.get(f"{rel}_cap_{k}_{r}_{kind}", sig_of("cap", rel, k, r, kind, Vr, m2t, Rr if Rr is not None else "none"),
-                                lambda seqs=seqs, mk=mk: dict(zip(("st", "lp"), q6_forward(rk, seqs, (BLOCK,) + Q6_READ_BLOCKS, patch=mk, last_only=True))))
-                kc = np.array([kl_lp(LP(2, o), res["lp"][o]) for o in range(nO)]); frac = 1 - kc / base
+
+                def run_cap(seqs=seqs, mk=mk):
+                    s_, l_ = q6_forward(rk, seqs, (BLOCK,) + Q6_READ_BLOCKS, patch=mk, last_only=True)
+                    return dict(st=s_, kc=np.array([kl_lp(LP(2, o), l_[o]) for o in range(nO)]))
+                res = cache.get(f"{rel}_cap_{k}_{r}_{kind}", sig_of("cap", rel, k, r, kind, Vr, m2t, Rr if Rr is not None else "none"), run_cap)
+                kc = res["kc"]; frac = 1 - kc / base
                 rv = {b: np.array([RD[b](res["st"][b][o].double().numpy()) for o in range(nO)]) for b in Q6_READ_BLOCKS}
                 if kind == "mode":                                     # the patched block-14 last state carries m2's projection on the modes
                     x14 = torch.stack([res["st"][BLOCK][o].double() for o in range(nO)]); checks.append(float(((x14 - m2t) @ Vr).abs().max() / (x14 @ Vr).abs().max().clamp_min(1e-12)))
@@ -1362,7 +1377,7 @@ def selftest(root, r1_dir, r2_dir):
     selftest_loops(check, ctx, J["q4b"], P["q4b"], J["armA"], P["armA"])
     selftest_q5(check, ctx, J["q5"], P["q5"])
     selftest_q6(check, ctx, J["q6"], P["q6"])
-    selftest_variants(check, root, r1_dir, r2_dir, ctx)
+    ctx_q5_before[0] = J["q5"]; selftest_variants(check, root, r1_dir, r2_dir, ctx)
     ok = all(r["ok"] for r in res); R.write_json(os.path.join(r2_dir, "unlearn", "selftest.json"), dict(ok=ok, n=len(res), passed=sum(r["ok"] for r in res), seconds=time.time() - t0, tests=res))
     print(f"r2_unlearn_qwen selftest: {sum(r['ok'] for r in res)}/{len(res)} passed ({time.time() - t0:.0f} s)", flush=True); return ok
 
@@ -1411,6 +1426,12 @@ def selftest_rules(check):
     bg = boot_g(s, Wt).numpy()
     check("boot_g: weighted mean over kept prompts, NaN if none kept", abs(bg[0] - 3.0) < 1e-12 and abs(bg[1] - 3.0) < 1e-12 and np.isnan(bg[2]))
     check("z_against: ddof 1", abs(z_against(3.0, [1.0, 2.0, 3.0]) - 1.0) < 1e-12 and np.isnan(z_against(1.0, [1.0])))
+    g = torch.Generator().manual_seed(1); p0 = 1.0 + 0.2 * torch.randn(64, generator=g, dtype=torch.float64); pa = 0.1 * p0 + 0.05 * torch.randn(64, generator=g, dtype=torch.float64)
+    pc = pa + 0.6 * (p0 - pa); pc[3] = float("nan"); Wb = R.prompt_bootstrap(64, B=500, seed=1); rs, dr = restored_share(pc, pa, p0, Wb)
+    rs0, _ = restored_share(pa, p0, p0, Wb)
+    check("restored share: (g_cue - g_abl) / (g_0 - g_abl) on per-prompt values (NaN prompts drop out), joint bootstrap; undefined if g_abl = g_0",
+          rs["defined"] and abs(rs["share"] - (np.nanmean(pc.numpy()) - pa.mean().item()) / (p0.mean().item() - pa.mean().item())) < 1e-12 and rs["ci90"][0] < 0.6 < rs["ci90"][1]
+          and not rs0["defined"] and math.isnan(rs0["share"]), (rs, rs0["defined"]))
 
 
 def _gap_recompute(ref, Xp, Xa, W):
@@ -1467,9 +1488,10 @@ def selftest_q4a(check, ctx, J, P, J3, P3):
     check("q4a: cue message format (OD-C3) and ablation choice from q3", P["messages"][5] == m == want and use == (J3["c_q4a"]["ablation"] or "u_RSI") and J["passed_C_Q3"] == (J3["c_q4a"]["ablation"] is not None))
     ref = O["refs"]["RSI"]; Xa = P3["texts"][f"{use}|RSI"]["Xa"]
     gc = R.gap_on_fixed_axes(P["ablated"]["X"], Xa, ctx.fold, ref["a_A"], ref["a_B"])["g"]; ga = J3["ablations"][dict(rand_14_2="null2", cov_14_0="null8").get(use, use)]["texts"]["RSI"]["g"]
-    sh = (gc - ga) / (ref["g0"] - ga)
-    check("q4a: g_cue against C-Q3's ablated anti texts; restored share; rule", abs(gc - J["g_cue"]) < 1e-9 * max(1, abs(gc)) and abs(ga - J["g_abl"]) < 1e-9 * max(1, abs(ga))
-          and (abs(sh - J["restored_share"]) < 1e-9 * max(1, abs(sh)) or (math.isnan(sh) and math.isnan(J["restored_share"])))
+    den = ref["g0"] - ga; sh = (gc - ga) / den if abs(den) > 1e-9 * abs(ref["g0"]) else float("nan")
+    check("q4a: g_cue against C-Q3's ablated anti texts; restored share (undefined if g_abl = g_0, as with the MOCK u_RSI ablation); rule",
+          abs(gc - J["g_cue"]) < 1e-9 * max(1, abs(gc)) and abs(ga - J["g_abl"]) < 1e-9 * max(1, abs(ga))
+          and (abs(sh - J["restored_share"]) < 1e-9 * max(1, abs(sh)) or (math.isnan(sh) and math.isnan(J["restored_share"]) and not J["share_defined"]))
           and J["verdict_in_session"] == rule_cue(J["restored_share"], J["restored_share_ci90"][1], J["passed_C_Q3"]), (gc, J["g_cue"], sh, J["restored_share"]))
     rows = [(rk.enc(rk.chat(P["messages"][p])), P["keys"][p], 1.0) for p in range(n)]
     with R.WriteOrth(P["U"].double()): G = rk.generate(rows)
@@ -1501,6 +1523,8 @@ def selftest_q2(check, ctx, J, P):
     rl = J["rules"]["u_RSI"]; t = J["texts"]["u_RSI|RSI"]; bh = J["behaviour"]["u_RSI"]
     rr = rule_suppressed(t["g"], t["g0"], t["ratio_ci90"][1], rl["ctrl_p5"], bh["Ue_fin"], bh["z_fin"], bh["M0"], J["alpha_u"]["u_RSI"]["damage"], t["m_foreign"], t["m_concept"])
     check("q2: rule inputs reproduce rule_suppressed; M0 = R1.k6 M0 for H30", rr["failed"] == rl["failed"] and abs(bh["M0"] - k6["M0"]) < 1e-12, rl["failed"])
+    check("q2: RGI30 null regression at the R1 push sizes R1.state[14]['k6_null<i>']['f']", all(abs(x["f"] - rk.ST[f"k6_null{i}"]["f"]) < 1e-12 for i, x in enumerate(J["K6"]["nulls_RGI30"]))
+          and len(J["K6"]["nulls_RGI30"]) == J["n_nulls"])
     k6b, src = load_r1_k6(type("C", (), dict(r1=os.path.join(ctx.r2, "_nonexistent_r1"), rk=rk))())
     check("R1.k6 fallback: k6.json missing -> R1.state[14]['k6'] (flagged)", k6b is rk.ST["k6"] and "missing" in src)
 
@@ -1564,6 +1588,9 @@ def selftest_q6(check, ctx, J, P):
           and float(((bm[s0:] - m2) @ Vr).abs().max()) < 1e-4 * float(bm.abs().max()))
 
 
+ctx_q5_before = [None]
+
+
 def selftest_variants(check, root, r1_dir, r2_dir, ctx):
     """Gate branches and 'not run' paths on modified copies of the MOCK fixture (separate processes)."""
     base = os.path.join(r2_dir, "selftest_variants"); shutil.rmtree(base, ignore_errors=True); os.makedirs(base)
@@ -1591,9 +1618,9 @@ def selftest_variants(check, root, r1_dir, r2_dir, ctx):
           and not os.path.exists(out_paths(r2c, "q4b")[1]), Jc.get("status"))
     # (3) block 14 not final (no summary_b14.json): q3 / q4b 'not run (round-1 output missing)'; q6 still runs (no round-1 input)
     r1n = os.path.join(base, "r1_nonfinal"); shutil.copytree(r1_dir, r1n); os.remove(os.path.join(r1n, "gpu1", f"summary_b{BLOCK}.json")); r2n = os.path.join(base, "r2_nonfinal")
-    rcs = {st: _cli(root, r1n, r2n, st) for st in ("q3", "q4b", "q6")}; Jn = {st: json.load(open(out_paths(r2n, st)[0])) for st in rcs if rcs[st] == 0}
-    check("block 14 not final: q3 and q4b 'not run (round-1 output missing)' without O2; q6 runs with the model only",
-          all(v == 0 for v in rcs.values()) and Jn["q3"]["status"] == NOT_RUN_R1 and Jn["q4b"]["status"] == NOT_RUN_R1 and Jn["q6"]["status"] == "ran"
+    rcs = {st: _cli(root, r1n, r2n, st) for st in STAGES}; Jn = {st: json.load(open(out_paths(r2n, st)[0])) for st in rcs if rcs[st] == 0}
+    check("block 14 not final: every model stage 'not run (round-1 output missing)' without O2; q6 runs with the model only",
+          all(v == 0 for v in rcs.values()) and all(Jn[st]["status"] == NOT_RUN_R1 for st in STAGES if st != "q6") and Jn["q6"]["status"] == "ran"
           and Jn["q6"]["model"].startswith("model only") and not os.path.exists(os.path.join(r2n, "rk")), {k: v.get("status") for k, v in Jn.items()})
     q6a, q6b = json.load(open(out_paths(r2_dir, "q6")[0])), Jn.get("q6", {})
     check("q6 without round-1 state equals q6 with it (same model, same numbers)", q6b.get("relations", {}).get("improves", {}).get("helix") == q6a["relations"]["improves"]["helix"])
@@ -1602,7 +1629,26 @@ def selftest_variants(check, root, r1_dir, r2_dir, ctx):
     AX = torch.load(os.path.join(r2g, "axes", "r2_axes.pt"), map_location="cpu", weights_only=False); AX["blocks"][BLOCK] = dict(AX["blocks"][BLOCK], GA=True); R.torch_save(os.path.join(r2g, "axes", "r2_axes.pt"), AX)
     c2 = Ctx(root, r1_dir, r2g, "selftest", ctx.rk)
     check("GA(14) true: no 'RGI axis not resolved' label; false (MOCK): label", c2.o2()["labels_rgi"] == [] and (ctx.o2()["GA"] or ctx.o2()["labels_rgi"] == ["RGI axis not resolved"]))
-    # (5) BLOCK must be 14
+    # (5) O2 'not run' at block 14 (round-1 output missing there): q3 'not run'
+    r2o = os.path.join(base, "r2_o2nr"); shutil.copytree(os.path.join(r2_dir, "axes"), os.path.join(r2o, "axes")); jp = os.path.join(r2o, "axes", "r2_axes.json")
+    AJ = json.load(open(jp)); AJ["blocks"][str(BLOCK)] = dict(status=NOT_RUN_R1, GA=None); R.write_json(jp, AJ)
+    j3 = stage_q3(Ctx(root, r1_dir, r2o, "q3", ctx.rk))
+    check("O2 'not run' at block 14: q3 'not run (round-1 output missing)'", j3["status"] == NOT_RUN_R1 and os.path.exists(out_paths(r2o, "q3")[0]))
+    # (6) resume from the intra-stage cache: q5 rerun after its outputs were removed gives the same numbers
+    for p in out_paths(r2_dir, "q5"): os.remove(p)
+    rc5 = _cli(root, r1_dir, r2_dir, "q5"); q5b = json.load(open(out_paths(r2_dir, "q5")[0])) if rc5 == 0 else {}
+    strip = lambda j: json.dumps({k: v for k, v in j.items() if k not in ("finder", "versions")}, sort_keys=True)          # NaN-safe comparison
+    check("intra-stage cache: q5 rerun (outputs removed) reproduces its numbers", rc5 == 0 and strip(q5b) == strip(ctx_q5_before[0]), rc5)
+    # (7) block 14 that ran at 1.5 alpha (GO1 retry: suffix '@1.5' in every round-1 loop key): q4b, armA, q5 read the suffixed keys
+    r1s = os.path.join(base, "r1_s15"); env = dict(os.environ, MOCK="1", BLOCK=str(BLOCK), DEVICE="cpu", NT="1", OMP_NUM_THREADS="1", ASCALE="1.5")
+    subprocess.run([sys.executable, os.path.join(JU, "rk_loop.py"), root, os.path.join(r1s, "gpu1", "rk"), "all"], env=env, check=True, capture_output=True)
+    R.mock_r1(root, r1s, spec=((BLOCK, "gpu1", ("all",)),)); r2s15 = os.path.join(base, "r2_s15")
+    rcs = {st: _cli(root, r1s, r2s15, st) for st in ("q4b", "armA", "q5")}; Js = {st: json.load(open(out_paths(r2s15, st)[0])) for st in rcs if rcs[st] == 0}
+    ST15 = torch.load(os.path.join(r1s, "gpu1", "rk", f"b{BLOCK}", "state.pt"), map_location="cpu", weights_only=False)
+    ok = all(v == 0 for v in rcs.values()) and all(Js[st]["suffix"] == "@1.5" and abs(Js[st]["alpha_14"] - 1.5 * ST15["alpha"]["alpha"]) < 1e-9 for st in Js)
+    ok = ok and Js["q4b"]["r1"]["d1_RSI_a_key"] == "dir_RSI_a@1.5_1" and Js["armA"]["reference_seed0_RSI_a"]["key"] == "ev_RSI_a@1.5_0" and "ev_SEA@1.5_0" in Js["q5"]["references"]["SEA"]
+    check("block 14 at 1.5 alpha: suffixed round-1 keys and alpha_14 = 1.5 alpha", ok, {k: (v.get("status"), v.get("suffix"), v.get("alpha_14")) for k, v in Js.items()})
+    # (8) BLOCK must be 14
     rcb = _cli(root, r1_dir, os.path.join(base, "r2_block"), "q5", extra_env=dict(BLOCK="8"))
     check("env BLOCK other than 14 is refused", rcb != 0)
 

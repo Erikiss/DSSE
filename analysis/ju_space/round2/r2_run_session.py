@@ -85,17 +85,6 @@ ANA = "{r1} {r2in} {work}/"          # analysis scripts (9.4): <r1_dir> <r2_root
 M17, M06 = "qwen3-1.7b", "qwen3-0.6b"
 
 
-def _theta_extra(blk):
-    """At an extra block: the second RSI loop r2RSIb (B-Q0, critique v2-3; G49: a loop that did not run its 4 rounds is a state that
-    r2_theta.py records in theta/b<b>_r2RSIb.json, while a crash stops the block), B-Q0 (directions, kappa, switch), the cells (B-Q1,
-    B-Q5 with reserve 3), the power step (B-Q6) and the FDT anchor (B-Q7)."""
-    return [Step("rsib_b{b}", blk, "r2_theta.py", QW + " rsib", "theta/b{b}_r2RSIb.json"),
-            Step("q0_b{b}", blk, "r2_theta.py", QW + " q0", "theta/b{b}_q0.json", opt="theta/b{b}_q0.pt", after="rsib_b{b}"),
-            Step("cells_b{b}", blk, "r2_theta.py", QW + " cells", "theta/b{b}_cells.json", opt="theta/b{b}_cells.pt", after="q0_b{b}"),
-            Step("power_b{b}", blk, "r2_theta.py", QW + " power", "theta/b{b}_power.*", after="cells_b{b}", gate_in_script=True),
-            Step("fdt_b{b}", blk, "r2_theta.py", QW + " fdt", "theta/b{b}_fdt.pt", after="q0_b{b}")]
-
-
 def _geom(m, extra, needs=""):
     """A1 states, A3 gradients, O7, O8 of one model, then A2-A5 statistics (r_DiD in the second model's statistics)."""
     tag = "17" if m == M17 else "06"
@@ -119,15 +108,16 @@ STEPS = {
         Step("q6", "14", "r2_unlearn_qwen.py", QW + " q6", "unlearn/q6.json", opt="unlearn/q6.pt", r1_reads=None),
         *[Step("gen_b{b}", blk, "r2_gen_loop.py", QW, "rgi/dyn_b{b}.json", opt="rgi/dyn_b{b}.pt", after="axes") for blk in ("b_lo", "b_hi")],
     ],
-    "r2_q2": [   # Part B only. Block 14: B-Q0, code checks, cells (B-Q1, B-Q3, B-Q4), turn 2 (B-Q8), power step (B-Q6), FDT (B-Q7);
-                 # then each extra block: the r2RSIb loop, B-Q0, cells incl. reserve 3, power step, FDT
-        Step("q0_b{b}", "14", "r2_theta.py", QW + " q0", "theta/b{b}_q0.json", opt="theta/b{b}_q0.pt"),
-        Step("checks", "14", "r2_theta.py", QW + " checks", "theta/checks.json"),
-        Step("cells_b{b}", "14", "r2_theta.py", QW + " cells", "theta/b{b}_cells.json", opt="theta/b{b}_cells.pt", after="q0_b{b}"),
-        Step("turn2", "14", "r2_theta.py", QW + " turn2", "theta/b14_turn2.pt", after="cells_b14"),
-        Step("power_b{b}", "14", "r2_theta.py", QW + " power", "theta/b{b}_power.*", after="cells_b{b}", gate_in_script=True),
-        Step("fdt_b{b}", "14", "r2_theta.py", QW + " fdt", "theta/b{b}_fdt.pt", after="q0_b{b}"),
-        *_theta_extra("b_lo"), *_theta_extra("b_hi"),
+    "r2_q2": [   # Part B only; one process per block (r2_theta.py 'all' runs the block's stages in the plan's order, each resumable):
+                 # block 14: B-Q0, code checks, cells (B-Q1, B-Q3, B-Q4), turn 2 (B-Q8), power step (B-Q6), FDT (B-Q7); each extra
+                 # block: the second RSI loop r2RSIb (critique v2-3; a loop that did not run its 4 rounds is recorded by the script, G49),
+                 # B-Q0, cells incl. reserve 3, power step, FDT
+        Step("theta_b{b}", "14", "r2_theta.py", QW + " all",
+             "theta/b{b}_q0.json theta/checks.json theta/b{b}_cells.json theta/b{b}_turn2.pt theta/b{b}_power.json theta/b{b}_fdt.pt",
+             opt="theta/b{b}_q0.pt theta/b{b}_cells.pt theta/b{b}_turn2.json theta/b{b}_power.pt"),
+        *[Step("theta_b{b}", blk, "r2_theta.py", QW + " all",
+               "theta/b{b}_r2RSIb.json theta/b{b}_q0.json theta/b{b}_cells.json theta/b{b}_power.json theta/b{b}_fdt.pt",
+               opt="theta/b{b}_r2RSIb.pt theta/b{b}_q0.pt theta/b{b}_cells.pt theta/b{b}_power.pt") for blk in ("b_lo", "b_hi")],
     ],
     "r2_q3": _geom(M17, "") + _geom(M06, " --model " + M06, needs="qwen06"),   # A1-A5 for Qwen3-1.7B, then the Qwen3-0.6B arm
     "r2_t1": [   # AT0; AT2 (with AT1, AT3); AT5 among BP nets; AT4 (its 'other init' nets come from AT5, critique 17); AT6
@@ -139,9 +129,9 @@ STEPS = {
         Step("fam", None, "r2_rgi_toy.py", "{work} fam", "rgi_toy/fam.json", after="cross"),
         Step("forcing", None, "r2_rgi_toy.py", "{work} forcing", "rgi_toy/forcing.json"),
     ],
-    "r2_t2": [   # B-T1; B-T2 (after t1); B-T5 (after t1); B-T4 and the theta toy rules
-        Step("t1", None, "r2_theta_toy.py", "{work} t1", "theta_toy/nets.json"),
-        Step("t2", None, "r2_theta_toy.py", "{work} t2", "theta_toy/nets.json", after="t1"),
+    "r2_t2": [   # B-T1; B-T2 (after t1); B-T5 (after t1); B-T4 and the theta toy rules (stage 'rules', alias 't4')
+        Step("t1", None, "r2_theta_toy.py", "{work} t1", "theta_toy/rows_t1.json theta_toy/nets.json"),
+        Step("t2", None, "r2_theta_toy.py", "{work} t2", "theta_toy/t2.json theta_toy/rows_t2.json", after="t1"),
         Step("t5", None, "r2_theta_toy.py", "{work} t5", "theta_toy/t5.json", after="t1"),
         Step("rules", None, "r2_theta_toy.py", "{work} rules", "theta_toy/verdict.json", after="t1,t2,t5"),
     ],
@@ -254,7 +244,8 @@ SHIM_SHA256 = {   # Appendix E: the repository's round-1 files that the referenc
     "analysis/ju_space/pc_meta.py": "b69e314a2ca442ba56e9e31916578d718f9fdee4ec4bee329d3aa358a27bc0ae",
     "analysis/ju_space/pc_common.py": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f",
 }
-REF_COMPARISON_GLOBS = ("ref_comparison*", "ref_compare*", "ref_check*", "ref/*comparison*", "ref/*compare*")  # 9.5: committed output
+REF_COMPARISON = "analysis/ju_space/round2/tests/ref_comparison_w5.json"     # 9.5: committed output of r2_toy_common.py selftest
+REF_COMPARISON_GLOBS = ("ref_comparison*", "ref_compare*", "ref_check*", "tests/*compar*", "ref/*comparison*", "ref/*compare*")
 GUARD_S_DEFAULT = 1200.0             # 7.4 / G48: 20 min
 EXIT_DONE, EXIT_FAILED, EXIT_GATE, EXIT_GUARD, EXIT_WAIT = 0, 1, 2, 3, 4
 NOT_SYNCED = ("local", "r1", "r2in")  # top-level folders of <work> that never go to Drive
@@ -866,13 +857,15 @@ def references_record():
         r["ok"] = r["sha256"] == r["expected"]
     r2 = os.path.dirname(REF_DIR)
     comp = sorted({p for g in REF_COMPARISON_GLOBS for p in rglob(r2, g)} |
-                  {p for p in rglob(r2, "*") if re.search(r"compar|refcheck", os.path.basename(p), re.I) and not p.endswith((".py", ".pyc"))})
+                  {p for d in ("*", "tests/*") for p in rglob(r2, d)
+                   if re.search(r"compar|refcheck", os.path.basename(p), re.I) and not p.endswith((".py", ".pyc"))})
+    mt, rc = os.path.join(REF_DIR, "MISSING.txt"), os.path.join(REPO, REF_COMPARISON)
+    comparison = dict(path=REF_COMPARISON, sha256=sha256_file(rc) if os.path.isfile(rc) else None,
+                      status="ok" if os.path.isfile(rc) else "missing (9.5: committed before the first session)",
+                      others={os.path.relpath(p, REPO): sha256_file(p) for p in comp if os.path.normpath(p) != os.path.normpath(rc)})
     return dict(dir=os.path.relpath(REF_DIR, REPO), files=files, n_ok=sum(f["status"] == "ok" for f in files.values()),
                 n_missing=sum(f["status"] != "ok" for f in files.values()), not_in_appendix_E=extra,
-                missing_txt_sha256=sha256_file(mt) if os.path.isfile(mt := os.path.join(REF_DIR, "MISSING.txt")) else None,
-                shim_modules=shim,
-                comparison={os.path.relpath(p, REPO): sha256_file(p) for p in comp} or
-                "not found (9.5: the committed output of the ref comparison is expected before the first session)")
+                missing_txt_sha256=sha256_file(mt) if os.path.isfile(mt) else None, shim_modules=shim, comparison=comparison)
 
 
 # ======================================================================================================================================
@@ -1512,14 +1505,14 @@ def mock_r1(root, dr, parts=("rk", "pc")):
 
 LIB_SELFTESTS = {   # the scripts' own code tests (plan 9; NOTES of the implementers), run by --selftest before the session's MOCK run
     "r2_q1": ("stimuli", "rk", "axes", "gen14", "gen8"), "r2_q2": ("stimuli", "rk"), "r2_q3": ("stimuli",),
-    **{s: ("toy",) for s in ("r2_t1", "r2_t2", "r2_t3", "r2_t4", "r2_pc", "r2_ana")},
+    **{s: ("toy", "sim") for s in ("r2_t1", "r2_t2", "r2_t3", "r2_t4", "r2_pc", "r2_ana")},
 }
 
 
 def lib_selftests(base, root, st_root, dr):
     """r2_stimuli.py check with the real tokenizer; r2_rk.py, r2_axes.py and r2_gen_loop.py selftest (MOCK=1) on copies of the mock
-    round-1 tree (so that they cannot change it), on the CPU as their author ran them; r2_toy_common.py selftest (QUICK=1, incl. the
-    W0 equivalence tests and the reference comparison). 0 if all pass."""
+    round-1 tree (so that they cannot change it); r2_toy_common.py selftest (QUICK=1, incl. the W0 equivalence tests and the reference
+    comparison) and r2_sim.py selftest; all on the CPU, as their authors ran them. 0 if all pass."""
     def copy_mock(dst):
         if not os.path.isdir(dst):
             for s in SHARDS:
@@ -1542,11 +1535,13 @@ def lib_selftests(base, root, st_root, dr):
             cmd, ex = [sc("r2_axes.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1")
         elif t.startswith("gen"):
             cmd, ex = [sc("r2_gen_loop.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1", BLOCK=t[3:])
-        else:
-            cmd, ex = [sc("r2_toy_common.py"), "selftest", os.path.join(st_root, "toy_common")], dict(QUICK="1")
+        elif t == "sim":
+            cmd, ex = [sc("r2_sim.py"), "selftest"], {}
+        else:                                               # NOTES_w5: QUICK=1 NT=1 OMP_NUM_THREADS=1 python r2_toy_common.py selftest <dir>
+            cmd, ex = [sc("r2_toy_common.py"), "selftest", os.path.join(st_root, "toy_common")], dict(QUICK="1", NT="1", OMP_NUM_THREADS="1")
         log, t0 = os.path.join(st_root, f"lib_{t}.log"), time.time()
         envs = " ".join("%s=%s" % kv for kv in ex.items())
-        say(f"[selftest] {envs} {os.path.basename(cmd[0])} {cmd[1] if t in ('stimuli', 'rk', 'toy') else 'selftest'}")
+        say(f"[selftest] {envs} {os.path.basename(cmd[0])} {cmd[1] if t in ('stimuli', 'rk', 'toy', 'sim') else 'selftest'}")
         with open(log, "w") as f:
             rc = subprocess.run([PY, "-u"] + cmd, env=dict(env, **ex), stdout=f, stderr=subprocess.STDOUT).returncode
         tail = (read_text(log) or "").strip().splitlines()

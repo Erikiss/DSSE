@@ -619,12 +619,43 @@ def pooling_lines(pool, groups_of_models, al):
     return out
 
 
+def stitch_fit_t(HA, HB, npair=P * P, grid=(1e-4, 1e-3, 1e-2, 1e-1)):
+    """TC.stitch_fit (ref rgi_lib.stitch_fit) in float64 torch on the session device: affine ridge map h2_A -> h2_B on the 12 pretraining
+    tasks x 289 pairs; lambda = r tr(G) / dim(G) with r from the grid chosen by leave-3-tasks-out R2 (4 folds of 3 tasks, the first
+    maximum); every fold's Gram matrix and right-hand side are formed once instead of once per grid value (same estimator; selftest
+    against TC.stitch_fit). HA [12 x 289, W_A], HB [12 x 289, W_B] (tensors or arrays). Returns (S [W_A + 1, W_B] float64 tensor,
+    (r, R2))."""
+    HA = torch.as_tensor(HA, dtype=torch.float64, device=DEV)
+    HB = torch.as_tensor(HB, dtype=torch.float64, device=DEV)
+    XA = torch.cat([HA, torch.ones(len(HA), 1, dtype=torch.float64, device=DEV)], 1)
+    eye = torch.eye(XA.shape[1], dtype=torch.float64, device=DEV)
+    parts = []
+    for f in [list(range(i, i + 3)) for i in range(0, NPRE, 3)]:
+        te = np.concatenate([np.arange(k * npair, (k + 1) * npair) for k in f])
+        trn = torch.as_tensor(np.setdiff1d(np.arange(len(HA)), te), device=DEV)
+        te = torch.as_tensor(te, device=DEV)
+        G = XA[trn].T @ XA[trn]
+        parts.append((G, XA[trn].T @ HB[trn], XA[te], HB[te], float(((HB[te] - HB[trn].mean(0)) ** 2).sum())))
+    best = None
+    for r in grid:
+        sr = st = 0.0
+        for G, R, Xte, Hte, st_f in parts:
+            S = torch.linalg.solve(G + (r * torch.trace(G) / G.shape[0]) * eye, R)
+            sr += float(((Xte @ S - Hte) ** 2).sum())
+            st += st_f
+        if best is None or 1 - sr / st > best[1]:
+            best = (r, 1 - sr / st)
+    G = XA.T @ XA
+    return torch.linalg.solve(G + (best[0] * torch.trace(G) / G.shape[0]) * eye, XA.T @ HB), best
+
+
 def t34_pairs(pool, pairs, fc, t3_ok=lambda a, b: False):
     """AT1 T4 (and T3 where t3_ok(a, b)) per ordered pair (a, b) (TC.t3_t4, batched per receiver group): A's free column gives h2_A and
     log p_A on the new task's 289 inputs; T4 fits b's column from zero (Adam lr 1e-2, FT_STEPS steps) to KL(p_A || p_B) (batchmean); T3
     fits it to the stitched target [h2_A, 1] S (S = TC.stitch_fit of h2_A -> h2_B on 12 tasks x 289 pairs, leave-3-tasks-out lambda;
     its R2 reported). Accuracy on b's new-task held-out pairs (b's labels). Returns list of dict(t4 [4], t4_mean, t3, t3_mean, stitch)."""
     xa, ya = TC.PAIRS[:, 0], TC.PAIRS[:, 1]
+    t3s = {a for a, b in pairs if t3_ok(a, b)}
     lp, h2 = {}, {}
     for g, ms in pool.by_group(sorted({a for a, _ in pairs})).items():
         nets = pool.groups[g]
@@ -634,16 +665,16 @@ def t34_pairs(pool, pairs, fc, t3_ok=lambda a, b: False):
             cols = np.concatenate([fc[m]["v"] for m in chunk]).astype(np.float32)
             with torch.no_grad():
                 lpa = torch.log_softmax(chain_logits(nets, net_of, cols, xa, ya), -1).cpu().numpy()
-                _, ha = TC.hidden_states(nets, net_of, cols, (xa, ya))
-                ha = ha.double().cpu().numpy()
+                ha = TC.hidden_states(nets, net_of, cols, (xa, ya))[1].double() if t3s.intersection(chunk) else None
             for n, m in enumerate(chunk):
                 lp[m] = lpa[n * NNEW:(n + 1) * NNEW]
-                h2[m] = ha[n * NNEW:(n + 1) * NNEW]
+                if m in t3s:
+                    h2[m] = ha[n * NNEW:(n + 1) * NNEW]
     allh = {}
 
     def all_h2(m):
         if m not in allh:
-            allh[m] = TC.all_h2(pool.nets(m), pool.models[m]["i"])
+            allh[m] = torch.as_tensor(TC.all_h2(pool.nets(m), pool.models[m]["i"]), dtype=torch.float64, device=DEV)
         return allh[m]
 
     out = [dict(t4=None, t3=None, stitch=None) for _ in pairs]
@@ -653,9 +684,9 @@ def t34_pairs(pool, pairs, fc, t3_ok=lambda a, b: False):
             if mode == "t3":
                 if not t3_ok(a, b):
                     continue
-                S, best = TC.stitch_fit(all_h2(a), all_h2(b))
+                S, best = stitch_fit_t(all_h2(a), all_h2(b))
                 out[pi]["stitch"] = dict(lam=best[0], R2=best[1])
-                tg = (np.concatenate([h2[a], np.ones((NNEW, P * P, 1))], 2) @ S).astype(np.float32)
+                tg = (torch.cat([h2[a], torch.ones(NNEW, P * P, 1, dtype=torch.float64, device=DEV)], 2) @ S).float().cpu().numpy()
             else:
                 tg = lp[a]
             for j in range(NNEW):
@@ -866,7 +897,7 @@ def stage_r0(out):
                + [dict(arm=a, gamma=c["gamma"], reason="fails level 1 in an init") for a, cs in (("sham_late", sham), ("task_early", et),
                                                                                                     ("sham_early", esh)) for c in cs if not c["pass_both"]])
     res = dict(stage="r0", measurement="AT0", world=R0_WORLD, inits=list(R0_INITS), W=W_MAIN, quick=QUICK, delta_nat=delta_nat,
-               delta_nat_from=[r["init"] for r in use], flags=flags, task_late_grid=grid, selection=sel, sham_late=sham, task_early=et,
+               delta_nat_from=[r["init"] for r in use], delta_nat_all_inits=float(np.mean([r["delta_h2"] for r in nat])), flags=flags, task_late_grid=grid, selection=sel, sham_late=sham, task_early=et,
                sham_early=esh, levels=levels, dropped=dropped, models=rows, seconds=time.time() - t0,
                rule="AT0: closest grid gamma by the mean log2 ratio over the 2 inits, accepted within 0.4 and level 1 in both inits; else the "
                     "closest passing gamma (flagged); else dropped; each grid gamma used once (farther target moves on)")
@@ -976,9 +1007,13 @@ def at_lines(pool, mids, recursion_on=True, pairs_by=("ws", "cond")):
         rp = [n for n, (a, b) in enumerate(pairs) if pool.models[a]["arm"] != "nat2"]
         for n, d in zip(rp, recursion(pool, [pairs[n] for n in rp], al)):
             R[n] = d
-        pc = [(k, ms) for k, ms in cells.items() if len(ms) > 1 and pool.models[ms[0]]["arm"] != "nat2"]
-        PL = [dict(cell=dict(zip(pairs_by, k)), models=[pool.models[m]["name"] for m in ms], **d)
-              for (k, ms), d in zip(pc, pooling_lines(pool, [ms for _, ms in pc], al))]
+        pc = [(dict(zip(pairs_by, k)), ms) for k, ms in cells.items() if len(ms) > 1 and pool.models[ms[0]]["arm"] != "nat2"]
+        wl = {}
+        for m in mids:                                   # AT1 literal: alpha averaged over all of a world's models (first checkpoint)
+            if pool.models[m]["arm"] != "nat2":
+                wl.setdefault(pool.models[m]["ws"], []).append(m)
+        pc += [(dict(ws=w, cond="all conditions"), ms) for w, ms in sorted(wl.items()) if len(ms) > 1]
+        PL = [dict(cell=c, models=[pool.models[m]["name"] for m in ms], **d) for (c, ms), d in zip(pc, pooling_lines(pool, [ms for _, ms in pc], al))]
         say(f"  recursion: round trip, warm start, pooling ({time.time() - t0:.0f}s)")
     per = {}
     for m in mids:
@@ -1045,6 +1080,7 @@ def stage_r1(out):
         ok = [m for m in nat if pool.models[m]["level1"]]
         use = ok or nat
         dnat = float(np.mean([per[m]["delta_h2"] for m in use]))
+        dnat_all = float(np.mean([per[m]["delta_h2"] for m in nat]))
         rows = []
         for m in wm:
             r = dict(per[m])
@@ -1057,14 +1093,17 @@ def stage_r1(out):
             rows.append(r)
         names = {r["name"] for r in rows}
         res = dict(stage="r1", measurement="AT2 (with AT1 lines and AT3 mediators)", world=ws, quick=QUICK, W=W_MAIN, conditions=conds,
-                   r0_levels=r0["levels"], delta_nat=dnat, delta_nat_from=[pool.models[m]["init"] for m in use],
+                   r0_levels=r0["levels"], delta_nat=dnat, delta_nat_from=[pool.models[m]["init"] for m in use], delta_nat_all_inits=dnat_all,
                    delta_nat_flag=None if ok else "no natural net passes level 1: delta_nat from all natural nets",
                    models=[r for r in rows if r["arm"] != "nat2"], natural_second=[r for r in rows if r["arm"] == "nat2"],
-                   pairs=[p for p in plist if p["A"] in names], pooling=[p for p in PL if p["cell"]["ws"] == ws],
+                   pairs=[p for p in plist if p["A"] in names],
+                   pooling_world=[p for p in PL if p["cell"]["ws"] == ws and p["cell"]["cond"] == "all conditions"],
+                   pooling=[p for p in PL if p["cell"]["ws"] == ws and p["cell"]["cond"] != "all conditions"],
                    within_run=r1_within(rows), mediators_by_condition=r1_by_condition(rows), seconds=time.time() - t0,
                    notes="per model: x = log2(delta_h2 / delta_nat(world)); p = relative parameter distance to the same-init natural model "
                          "(late), |gamma| / 0.01 (early), 0 (natural); S_gain / T1_gain / T1 / LOO = mean over the model's 2 pairs as "
-                         "receiver; RG = mean over its pairs as sender")
+                         "receiver; RG = mean over its pairs as sender; pooling_world = alpha averaged over all of the world's models at the "
+                         "first checkpoint (AT1's literal reading), pooling = the same within each condition (descriptive)")
         write_json(os.path.join(out, "rgi_toy", "r1", f"w{ws}.json"), res)
         say(f"r1: world {ws} written ({len(rows)} models)")
     r1_at3(out)
@@ -1396,8 +1435,9 @@ def stage_fam(out):
                      "(8 for the 8-shift variant); every accuracy in B on B's labels; summary t intervals over worlds are descriptive (the "
                      "family verdict is r2_rgi_verdict's)")
     write_json(path, res)
-    say("fam: " + "; ".join(f"{v}: S-gain {s['S_gain']['mean'] if 'S_gain' in s and s['S_gain']['mean'] is not None else float('nan'):+.3f} "
-                            f"(level 1 {s.get('n_level1')})" for v, s in summ.items()) + f" ({time.time() - t0:.0f}s)")
+    say("fam: " + "; ".join((f"{v}: S-gain {s['S_gain']['mean']:+.3f} (level 1 {s['n_level1']}/{s['n_worlds']})"
+                             if s.get("S_gain", {}).get("mean") is not None else f"{v}: {s.get('note', 'no values')}") for v, s in summ.items())
+        + f" ({time.time() - t0:.0f}s)")
 
 
 # ====================================================================================================================== AT6 (forcing)
@@ -1547,6 +1587,12 @@ def selftest(out):
         pl = pooling_lines(pool, [mids], al)[0]
         rp = TC.pooling(nets, [0, 1, 2], np.stack([al[m]["alpha"] for m in mids]), sets)
         _check(res, "pooling = TC.pooling", abs(pl["gain"] - rp["gain"]) <= tol, (pl["gain"], rp["gain"]))
+        HA, HB = TC.all_h2(nets, 0), TC.all_h2(nets, 1)
+        S0, b0 = TC.stitch_fit(HA, HB)
+        S1, b1 = stitch_fit_t(HA, HB)
+        rel = float(np.abs(S1.cpu().numpy() - S0).max() / np.abs(S0).max())
+        _check(res, "stitch_fit_t = TC.stitch_fit (same lambda, R2 and map)", b0[0] == b1[0] and abs(b0[1] - b1[1]) <= 1e-9 and rel <= 1e-8,
+               dict(ref=b0, mine=b1, max_rel_diff_S=rel))
         t34 = t34_pairs(pool, [(a, b)], fc, t3_ok=lambda x, y: True)[0]
         rt34 = TC.t3_t4(nets, 0, fc[a]["v"].astype(np.float32), nets, 1, sets)
         _check(res, "T4 and T3 pairs = TC.t3_t4", np.abs(t34["t4"] - rt34["t4_acc"]).max() <= tol and np.abs(t34["t3"] - rt34["t3_acc"]).max() <= tol,

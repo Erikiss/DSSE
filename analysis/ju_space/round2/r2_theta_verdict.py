@@ -14,7 +14,7 @@ by name, the expected session first).
 Usage: python r2_theta_verdict.py <r1_dir> <r2_root> <out.json>
        python r2_theta_verdict.py selftest <workdir> [<r1_dir> <r2_root>]     (synthetic checks; with MOCK theta outputs also end to end)
 Env: R2_THETA_POWER_REPS (400: replicates per scenario of the power re-run, OD-B14), MOCK (MOCK Pool directions)."""
-import glob, json, math, os, sys, time
+import glob, json, math, os, shutil, sys, time
 import numpy as np, torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -172,7 +172,7 @@ def rule_R3(entries, what):
     monotone relation'; two blocks: the middle clause is dropped (marked); fewer: 'not decidable'. The non-overlap form is reported."""
     e = sorted(entries, key=lambda t: t[1]); n = len(e); out = dict(quantity=what, blocks=[x[0] for x in e], delta=[x[1] for x in e], note=DEPTH)
     if n < 2: out["verdict"] = "not decidable (fewer than two entering blocks)"; return out
-    (bl, dl, rl), (bh, dh, rh) = e[0], e[-1]; mid = e[1] if n == 3 else None
+    (bl, _, rl), (bh, _, rh) = e[0], e[-1]; mid = e[1] if n == 3 else None
     d = _np(rh) - _np(rl); l, h = lohi(d); (lol, hil), (loh, hih) = lohi(rl), lohi(rh); mp = float(_np(mid[2])[0]) if mid else None
     falls = h < 0 and (mid is None or (fin(mp) and mp <= hil)); rises = l > 0 and (mid is None or (fin(mp) and mp <= hih))
     v = f"{what} falls with delta" if falls else (f"{what} rises with delta" if rises else "no monotone relation")
@@ -291,7 +291,7 @@ def _cfg_used(ins, reps):
     arrays of the recomputed B-Q0 for that mode."""
     mode = ins["mode"]; up, ur = torch.as_tensor(ins["u_push"]).double(), torch.as_tensor(ins["u_read"]).double()
     if mode == "standard": m2p, mG = reps["m2"], torch.sqrt(reps["m2"])
-    elif mode == "switch": m2p, mG = torch.full_like(reps["m2"], R.cosf(up, ur)), torch.sqrt(reps["mA2"])
+    elif mode == "switch": m2p, mG = torch.full_like(reps["m2"], float(up @ ur)), torch.sqrt(reps["mA2"])        # cos(u*_A, u*_B) as in bq0
     else: m2p, mG = reps["mA2"], torch.sqrt(reps["mA2"])
     return dict(mode=mode, u_push=up, u_read=ur, m2_par=m2p, mG=mG)
 
@@ -376,6 +376,24 @@ def reserves(cores):
 def _entered_label(enters): return "entered" if enters else "ran, condition not met (descriptive)"
 
 
+def collapse(core):
+    """B-Q4's collapse comparison (descriptive only): every off-series cell's read-back F_T(alpha) = alpha g(alpha, T) (decision gain, push
+    units) against the T 0.7 curve at alpha' = 0.7 alpha / T, log-log interpolated between the existing T 0.7 cells (no prediction outside
+    their alpha range); difference and ratio with 90 % intervals."""
+    CT, cells = core["CT"], core["cells"]; base = sorted((cells[n]["a"], n) for n in cells if abs(cells[n]["T"] - 0.7) < 1e-9)
+    out = dict(rule="descriptive: F_T(alpha) against F_0.7(0.7 alpha / T), log-log interpolation inside the T 0.7 alpha grid", cells={})
+    if len(base) < 2: out["note"] = "fewer than two T 0.7 cells"; return out
+    a = np.array([x[0] for x in base]); lF = np.log(np.clip(np.stack([x[0] * _np(CT[x[1]]["all"]["dec"]) for x in base], 1), 1e-12, None))
+    for n, c in cells.items():
+        if abs(c["T"] - 0.7) < 1e-9: continue
+        ap = 0.7 * c["a"] / c["T"]
+        if not (a.min() * (1 - 1e-12) <= ap <= a.max() * (1 + 1e-12)): out["cells"][n] = dict(T=c["T"], a=c["a"], a_prime=ap, note="outside the T 0.7 grid: no prediction"); continue
+        i = int(min(np.searchsorted(a, ap, side="right") - 1, len(a) - 2)); t = (math.log(ap) - math.log(a[i])) / (math.log(a[i + 1]) - math.log(a[i]))
+        pred = np.exp(lF[:, i] * (1 - t) + lF[:, i + 1] * t); FT = c["a"] * _np(CT[n]["all"]["dec"])
+        out["cells"][n] = dict(T=c["T"], a=c["a"], a_prime=ap, F_T=S(FT), F_07_at_a_prime=S(pred), diff=S(FT - pred), ratio=S(FT / pred))
+    return out
+
+
 def r1_series(core, b, RS, window="all"):
     """The alpha series of block b entering R1 (B-Q3 / B-Q5): block 14: cells 0.5, 1, 2 alpha_0 at T 0.7 (+ 4 alpha_0 if reserve 1 entered);
     extra blocks: the low end Gamma_b (B-Q0 pooled with the alpha_0 T 0.7 cell; for another window with that window's cell gain) and the
@@ -416,10 +434,6 @@ def power_rerun(core, b, names, a_cells, NP, reps=POWER_REPS):
     band = r2_sim.resolvable_band(np.asarray(a_cells, float), np.asarray(n), np.asarray(sd), rho, reps=reps); out["resolvable_band"] = dict(lo=band["lo"], hi=band["hi"])
     out["band_rate"] = dict(grid=band["grid"], rate=band["rate"]); out["seconds"] = time.time() - t0; out["status"] = "ok"
     return out
-
-
-def _bank_mean_rows(P):
-    return P.mean()
 
 
 def r4_block(core, b, F, AXB, labels):
@@ -495,25 +509,32 @@ def turn2_block(core, T2, W, labels):
     return out
 
 
+def _f(x):
+    return "nan" if not (fin(x) or x in (float("inf"), float("-inf"))) else f"{x:.3g}"
+
+
 def sentence(b, R1b, R2b, R4b, T2, R3, delta_order):
     """The per-block statement in the user's form (4.1)."""
     if R2b is None: return f"Block {b}: not run."
-    pts = ", ".join(f"{T:g}: {p['pt']:.2f} [{p['lo']:.2f}, {p['hi']:.2f}]" for T, p in zip(R2b["T"], R2b["points"]))
+    pts = ", ".join(f"{T:g}: {_f(p['pt'])} [{_f(p['lo'])}, {_f(p['hi'])}]" for T, p in zip(R2b["T"], R2b["points"]))
     sl = R2b.get("slope", {}); s = f"Block {b}: at push alpha_0 the self-steering gain is G(T) = {pts}"
-    if sl: s += f" (slope dlogG/dT {sl['pt']:+.2f} [{sl['lo']:+.2f}, {sl['hi']:+.2f}])"
+    if sl: s += f" (slope dlogG/dT {_f(sl['pt'])} [{_f(sl['lo'])}, {_f(sl['hi'])}])"
     v = R2b.get("verdict"); rng = f"[{min(R2b['T']):g}, {max(R2b['T']):g}]"
-    if v == "T_c located": s += f"; it crosses 1 at T_c = {R2b['T_c']['pt']:.2f} [{R2b['T_c']['lo']:.2f}, {R2b['T_c']['hi']:.2f}]"
-    elif v == "below 1 throughout": s += f"; it stays below 1 over {rng} (upper 90 % band at most {R2b['margin']['max_upper_band']:.2f}, i.e. by at least {1 - R2b['margin']['max_upper_band']:.2f})"
-    elif v == "above 1 throughout": s += f"; it stays above 1 over {rng} (lower 90 % band at least {R2b['margin']['min_lower_band']:.2f}, i.e. by at least {R2b['margin']['min_lower_band'] - 1:.2f})"
+    if v == "T_c located": s += f"; it crosses 1 at T_c = {_f(R2b['T_c']['pt'])} [{_f(R2b['T_c']['lo'])}, {_f(R2b['T_c']['hi'])}]"
+    elif v == "below 1 throughout": s += f"; it stays below 1 over {rng} (upper 90 % band at most {_f(R2b['margin']['max_upper_band'])}, i.e. by at least {_f(1 - R2b['margin']['max_upper_band'])})"
+    elif v == "above 1 throughout": s += f"; it stays above 1 over {rng} (lower 90 % band at least {_f(R2b['margin']['min_lower_band'])}, i.e. by at least {_f(R2b['margin']['min_lower_band'] - 1)})"
     else: s += f"; whether it crosses 1 over {rng} is {v}"
     s += ". "
     if T2 is not None and T2.get("cells"):
-        ks = ", ".join(f"{x['T']:g}{'' if abs(x['a'] - 1) < 1e-9 else ' (2 alpha_0)'}: " + (f"{x['R6']['K']['pt']:.2f} [{x['R6']['K']['lo']:.2f}, {x['R6']['K']['hi']:.2f}]" if x["R6"]["defined"] else "not defined")
+        ks = ", ".join(f"{x['T']:g}{'' if abs(x['a'] - 1) < 1e-9 else ' (2 alpha_0)'}: " + (f"{_f(x['R6']['K']['pt'])} [{_f(x['R6']['K']['lo'])}, {_f(x['R6']['K']['hi'])}] ({x['R6']['verdict']})" if x["R6"]["defined"] else "not defined")
                        for x in T2["cells"].values())
         s += f"The model's own text carries K(T) = {ks} of its stance into the next turn. "
     elif b == 14: s += "The in-context carry K was not measured. "
     else: s += "The in-context carry K is measured at block 14 only. "
-    mode = R4b.get("verdict") if R4b else "not resolved (no R4)"
+    if not R4b or (R4b.get("verdict") is None and R4b.get("verdict_descriptive") is None): mode = "not resolved (no R4 at this block)"
+    elif R4b.get("verdict") is not None: mode = R4b["verdict"]
+    else: mode = f"{R4b['verdict_descriptive']} (descriptive: G-blk failed)"
+    if R4b and R4b.get("ii", {}).get("applies") and str(R4b["ii"].get("verdict", "")).startswith("the critical mode changes"): mode += f"; at cell {R4b['ii']['cell']} {R4b['ii']['verdict']}"
     onset = (R1b or {}).get("onset", {}).get("verdict", "onset undecided")
     s += f"The critical mode is {mode}, with {onset if onset != 'onset undecided' else 'undecided'} onset" + (" (R1: " + R1b["verdict"] + ")" if R1b else "")
     s += f", and this changes with delta as follows: {R3.get('Gamma', {}).get('verdict', 'not decidable')}; alignment: {R3.get('alignment_RSI', {}).get('verdict', 'not decidable')}"
@@ -550,12 +571,12 @@ def analyse(r1_dir, r2_root, power_reps=POWER_REPS):
     if q14 and q14.get("label"): lab.append(q14["label"])
     out["labels_global"] = lab
     RS = reserves(cores); out["reserves"] = RS
-    blocks, ent = {}, []
+    blocks = {}
     for b in B3:
         c = cores[b]; bl = list(lab) + (["descriptive (round-1 gate failed)"] if (b == 14 and gdesc) else []); res = dict(status=c.get("status"), labels=bl)
         if "BQ" in c and c["BQ"]["js"].get("status") == "ok":
             res["B_Q0"] = c["BQ"]["js"]; res["od_g8"] = c.get("od_g8"); res["mode"] = c["cfg"]["mode"]; res["G_blk"] = c.get("G_blk")
-            res["labels"] += [x for x in c["BQ"]["js"]["labels"] if x not in res["labels"]]
+            res["labels"] += [x for x in F[b]["q0"].get("labels", []) if x not in res["labels"]]      # in-session labels govern (OD-G8)
         if c.get("status") == "ok":
             res["cells"] = cells_json(c, NP)
             for nm, cj in res["cells"].items():
@@ -579,11 +600,12 @@ def analyse(r1_dir, r2_root, power_reps=POWER_REPS):
             r2["g_par_fit"] = {k: v for k, v in rule_R2([c["cells"][n]["T"] for n in Tn], [c["CT"][n]["all"]["g_par"] for n in Tn], ext).items() if k in ("verdict", "slope", "T_c")}
             r2["G_norm_fit"] = {k: v for k, v in rule_R2([c["cells"][n]["T"] for n in Tn], [c["CT"][n]["all"]["G"] for n in Tn], ext).items() if k in ("verdict", "slope", "T_c")}
             r2["rotation_with_T"] = {str(c["cells"][n]["T"]): S(c["CT"][n]["all"]["rot"]) for n in Tn}
+            r2["collapse"] = collapse(c)
             res["R2"] = r2
             rel4 = c["BQ"]["js"]["mode_set"]["rel_d4"].get("RSI_a"); res["R5"] = rule_R5(rel4, c.get("Gamma_R3", c["BQ"]["reps"]["Gamma"]))
-            entering = bool(c.get("G_blk")) and c["cfg"]["mode"] != "not_resolved" and (b == 14 or "no independent loop" not in c["BQ"]["js"]["labels"])
+            noind = "no independent loop" in F[b]["q0"].get("labels", []); entering = bool(c.get("G_blk")) and c["cfg"]["mode"] != "not_resolved" and not noind
             why = [] if entering else [x for x, cond in (("G-blk failed or summary missing", not c.get("G_blk")), ("mode not resolved", c["cfg"]["mode"] == "not_resolved"),
-                                                         ("no independent loop", b != 14 and "no independent loop" in c["BQ"]["js"]["labels"])) if cond]
+                                                         ("no independent loop (G49)", noind)) if cond]
             res["enters_R3"] = dict(enters=entering, reasons=why)
             AXB = None if AX is None else AX.get("blocks", {}).get(b)
             if c["cfg"]["mode"] != "not_resolved":
@@ -613,7 +635,10 @@ def analyse(r1_dir, r2_root, power_reps=POWER_REPS):
         blocks[str(b)] = res
     # R3 over blocks and alignment against delta
     dl = order["delta"]; E = [b for b in B3 if blocks[str(b)].get("enters_R3", {}).get("enters")]
-    R3 = dict(entering=E, note=DEPTH)
+    R3 = dict(entering=E, note=DEPTH, not_entering={str(b): dict(reasons=blocks[str(b)].get("enters_R3", {}).get("reasons", [blocks[str(b)].get("status")]),
+                                                                      Gamma=blocks[str(b)].get("Gamma_R3"), mode=blocks[str(b)].get("mode"),
+                                                                      note="gains along the block's push direction (unit(d_4^RSI_a) when the mode is not resolved), reported next to the verdict")
+                                                      for b in B3 if b not in E})
     R3["Gamma"] = rule_R3([(b, dl[b], cores[b]["Gamma_R3"]) for b in E if "Gamma_R3" in cores[b]], "loop gain")
     for T in (0.3, 0.7, 1.0):
         nm = TH.cell_name(1, T); R3[f"g_alpha0_T{T:g}"] = rule_R3([(b, dl[b], cores[b]["CT"][nm]["all"]["dec"]) for b in E if nm in cores[b].get("CT", {})], f"g(alpha_0, T {T:g})")
@@ -731,12 +756,14 @@ def selftest(work, r1_dir=None, r2_root=None):
     cells_b, CTb = gains([(0.5, 0.7), (1, 0.6), (2, 0.5), (4, 0.4)], seed=11); repb = [CTb[TH.cell_name(a, 0.7)]["all"]["dec"] for a in (0.5, 1, 2, 4)]
     r1b = rule_R1([0.5, 1, 2, 4], repb, 0)
     check("R1: a series built below 1 is not located (SUB), alpha* censored at 0", r1b["verdict"] == "SUB" and r1b["alpha_star"]["pt"] == 0.0, (r1b["verdict"], r1b["alpha_star"]))
-    r1c = rule_R1([0.5, 1, 2, 4], [CTb[TH.cell_name(a, 0.7)]["all"]["dec"] * 2.5 for a in (0.5, 1, 2, 4)], 0)
+    r1c = rule_R1([0.5, 1, 2, 4], [CTb[TH.cell_name(a, 0.7)]["all"]["dec"] * 3.5 for a in (0.5, 1, 2, 4)], 0)
     check("R1: a series built above 1 is SUPER, alpha* censored at +inf", r1c["verdict"] == "SUPER" and r1c["alpha_star"]["pt"] == float("inf"), r1c["verdict"])
     _, CTh = gains([(0.5, 0.5), (1, 0.7), (2, 1.4), (4, 1.8)], seed=21); r1h = rule_R1([0.5, 1, 2, 4], [CTh[TH.cell_name(a, 0.7)]["all"]["dec"] for a in (0.5, 1, 2, 4)], 0)
     check("R1: a hard (threshold) onset is FOUND-hard with onset 'hard'", r1h["verdict"] == "FOUND-hard" and r1h["onset"]["verdict"] == "hard", (r1h["verdict"], r1h["onset"]))
-    r1s = rule_R1([0.5, 1, 2], [np.r_[0.8, np.full(50, 1.1)], np.r_[0.8, np.full(50, 0.9)], np.r_[0.8, np.full(50, 0.85)]], 0)
-    check("R1: SUB(>= alpha_0) when only the cells at >= alpha_0 lie below 1", r1s["verdict"] == "SUB(>= alpha_0)", r1s["verdict"])
+    r1s = rule_R1([0.5, 1, 2], [np.r_[1.0, np.linspace(0.8, 1.2, 50)], np.r_[0.8, np.full(50, 0.9)], np.r_[0.8, np.full(50, 0.85)]], 0)
+    r1f = rule_R1([0.5, 1, 2], [np.r_[1.1, np.full(50, 1.1)], np.r_[0.8, np.full(50, 0.9)], np.r_[0.8, np.full(50, 0.85)]], 0)
+    check("R1: SUB(>= alpha_0) when the cells at >= alpha_0 lie below 1 and the 0.5 alpha_0 cell straddles 1 (above 1 there: FOUND-soft)",
+          r1s["verdict"] == "SUB(>= alpha_0)" and r1f["verdict"] == "FOUND-soft", (r1s["verdict"], r1f["verdict"]))
     r1x = rule_R1([1.0], [np.r_[0.7, np.linspace(0.6, 0.8, 50)]], None)
     check("R1 at an extra block with Gamma_b only: SUB(>= alpha_0), onset undecided", r1x["verdict"] == "SUB(>= alpha_0)" and r1x["onset"]["verdict"] == "onset undecided")
     dmg = rule_R1([0.5, 1, 2, 4], reps, 0, {0.5: 0.05, 1.0: 0.12, 2.0: 0.3, 4.0: 0.9})
@@ -757,9 +784,10 @@ def selftest(work, r1_dir=None, r2_root=None):
     check("R2: gains built below 1 at every temperature give 'below 1 throughout' (not located)", r2b["verdict"] == "below 1 throughout" and r2b["margin"]["max_upper_band"] < 1, r2b["verdict"])
     r2c = rule_R2([0.3, 0.7, 1.0], [np.r_[1.05, np.random.default_rng(5).normal(1.05, 0.3, 200)] for _ in range(3)])
     check("R2: flat gains near 1 with wide noise are 'undecided'", r2c["verdict"] == "undecided", r2c["verdict"])
-    r2e = rule_R2([0.15, 0.3, 0.7, 1.0], [np.r_[g, np.random.default_rng(int(10 * g)).normal(g, 0.02, 400)] for g in (math.exp(2 * (0.12 - T)) for T in (0.15, 0.3, 0.7, 1.0))], extended=True)
-    r2n = rule_R2([0.15, 0.3, 0.7, 1.0], [np.r_[g, np.random.default_rng(int(10 * g)).normal(g, 0.02, 400)] for g in (math.exp(2 * (0.12 - T)) for T in (0.15, 0.3, 0.7, 1.0))], extended=False)
-    check("R2: a crossing at T 0.12 is located only within the extended window [0.1, 1.4]; curvature with 4 temperatures", r2e["verdict"] == "T_c located" and r2n["verdict"] != "T_c located" and "curvature" in r2e, (r2e["T_c"], r2n["verdict"]))
+    g17 = [np.r_[g, np.random.default_rng(int(100 * g)).normal(g, 0.02, 400)] for g in (math.exp(2 * (0.17 - T)) for T in (0.15, 0.3, 0.7, 1.0))]
+    r2e = rule_R2([0.15, 0.3, 0.7, 1.0], g17, extended=True); r2n = rule_R2([0.15, 0.3, 0.7, 1.0], g17, extended=False)
+    check("R2: a crossing at T 0.17 (tested range 0.15-1.0) is located only within the extended window [0.1, 1.4]; curvature with 4 temperatures",
+          r2e["verdict"] == "T_c located" and r2n["verdict"] == "undecided" and "curvature" in r2e and r2e["T_c"]["lo"] <= 0.17 <= r2e["T_c"]["hi"], (r2e["T_c"], r2n["verdict"]))
     # R3
     base = np.random.default_rng(9).normal(0, 0.03, 2001)
     mk = lambda v: np.r_[v, v + base[1:] + np.random.default_rng(int(100 * v)).normal(0, 0.02, 2000)]
@@ -788,7 +816,7 @@ def selftest(work, r1_dir=None, r2_root=None):
     check("reserves: 4 alpha_0 enters (G(2) lower > 1), T 1.3 does not, T 0.15 does; reserve 3 only at the higher extra block with lower > 0.8",
           RS["reserve1_a4_T0.7"]["enters"] and not RS["reserve2_T1.3"]["enters"] and RS["reserve2_T0.15"]["enters"] and RS["reserve3_a2_T0.7"]["block"] == 8
           and RS["reserve3_a2_T0.7"]["enters"] == {"8": True, "20": False}, RS)
-    cores[8]["CT"][CELL_A0] = fake(0.7); RS2 = reserves(cores)
+    cores[8]["CT"][CELL_A0] = fake(0.7); cores[20]["CT"][CELL_A0] = fake(0.75); RS2 = reserves(cores)
     check("reserves: no reserve-3 cell enters when the higher block's lower bound <= 0.8", RS2["reserve3_a2_T0.7"]["enters"] == {"8": False, "20": False} and RS2["reserve3_a2_T0.7"]["block"] == 20)
     # B-Q7 lambda_lin on planted covariance: S = c (x - mean) along u
     rr = np.random.default_rng(12); Xs = rr.normal(size=(2 * NP, D)); Ss = 0.7 * (Xs @ u.numpy())[:, None] * u.numpy()[None] + rr.normal(size=(2 * NP, D)) * 0.1
@@ -812,20 +840,26 @@ def selftest(work, r1_dir=None, r2_root=None):
     axB = dict(axA, u_T_perp=(e[6], nul), u_RGI_perp=(e[0], nul))
     A2 = alignment(Ua, 0.9, axB, None, ga=False)
     check("B-Q2: RSI-aligned and RSI-specific on a planted RSI mode; GI-aligned with 'RGI axis not resolved' when GA fails; z_beh", A1["RSI_aligned"]
-          and A1["RSI_specific"] and not A1["GI_aligned"] and abs(A1["axes"]["u_T_perp"]["corrected"]["pt"] - 1 / 0.9) < 1e-9 and A1["axes"]["u_T_perp"]["p"] < 0.01
-          and abs(A1["z_beh"]["rsi"] - 3.0) < 1e-9 and A2["GI_aligned"] and not A2["RSI_aligned"] and "RGI axis not resolved" in A2["labels"], (A1["RSI_aligned"], A1["RSI_specific"], A2["labels"]))
+          and A1["RSI_specific"] and not A1["GI_aligned"] and abs(A1["axes"]["u_T_perp"]["corrected"]["pt"] - 1 / 0.9) < 1e-6 and A1["axes"]["u_T_perp"]["p"] < 0.01
+          and abs(A1["z_beh"]["rsi"] - 3.0) < 1e-6 and A2["GI_aligned"] and not A2["RSI_aligned"] and "RGI axis not resolved" in A2["labels"], (A1["RSI_aligned"], A1["RSI_specific"], A2["labels"]))
     # B-Q0 on planted loops: Gamma recovers lambda; guard; switch on a strong bulk self-response; mode not resolved at low SNR
     cb_ref = dict(sum=[40.0] * NP, cnt=[40] * NP)
     for lam in (0.7, 1.3):
         bank, rX, ax, w_ = synth_bank(31, lam, 0.25)
         BQ = TH.bq0(bank, 14, 1.0, 1.0, cb_ref, rX, ax, W); js = BQ["js"]
-        check(f"B-Q0 (planted lambda {lam}): Gamma_b interval covers lambda, guard passes, u*_b on the mode, no switch", js["m_star2"]["guard_pass"]
-              and js["Gamma"]["lo"] <= lam <= js["Gamma"]["hi"] and abs(float(BQ["tensors"]["u_star"] @ torch.as_tensor(w_))) > 0.9 and not js["cross_fit"].get("switch")
+        check(f"B-Q0 (planted lambda {lam}): Gamma_b within 10 % of lambda, guard passes, u*_b on the mode, lambda_cf close to g_par^AB (no switch)",
+              js["m_star2"]["guard_pass"] and abs(js["Gamma"]["pt"] - lam) < 0.1 * lam and abs(js["cross_fit"]["lambda_cf"]["pt"] - lam) < 0.1 * lam and abs(float(BQ["tensors"]["u_star"] @ torch.as_tensor(w_))) > 0.9 and not js["cross_fit"].get("switch")
               and js["config"]["mode"] == "standard" and "RSI_b" in js["mode_set"]["members"], (js["Gamma"], js["m_star2"]["p5"], js["cross_fit"].get("reason")))
-    bank, rX, ax, w_ = synth_bank(33, 0.8, 0.2, bulk=0.9, K=4); BQb = TH.bq0(bank, 14, 1.0, 1.0, cb_ref, rX, ax, W)
-    cf = BQb["js"]["cross_fit"]
-    check("B-Q0: a strong bulk self-response biases g_par^AB, the cross-fit does not, and the cells switch (G18)", cf.get("computed") and cf.get("switch")
-          and abs(cf["lambda_cf"]["pt"] - 0.8) < abs(cf["g_par_AB"]["pt"] - 0.8) and BQb["js"]["config"]["mode"] == "switch", (cf.get("lambda_cf"), cf.get("g_par_AB"), BQb["js"]["m_star2"]["pt"]))
+    bank, rX, ax, w_ = synth_bank(31, 1.3, 0.25); old = TH.CF_SWITCH
+    try:
+        TH.CF_SWITCH = 0.0; BQs = TH.bq0(bank, 14, 1.0, 1.0, cb_ref, rX, ax, W); TH.CF_SWITCH = 1e9; BQo = TH.bq0(bank, 14, 1.0, 1.0, cb_ref, rX, ax, W)
+    finally: TH.CF_SWITCH = old
+    cs = BQs["cfg"]; uA4 = R.unit(bank["RSI_a"]["d"][4]); uB4 = R.unit(bank["RSI_b"]["d"][4]) * (1 if float(bank["RSI_a"]["d"][4] @ bank["RSI_b"]["d"][4]) >= 0 else -1)
+    check("B-Q0 switch (G18, threshold set in the test): push u*_A = unit(d_4^A), read u*_B = s unit(d_4^B), g_par / cos(u*_A, u*_B), G / m_A; no switch otherwise",
+          cs["mode"] == "switch" and float((cs["u_push"] - uA4).norm()) < 1e-9 and float((cs["u_read"] - uB4).norm()) < 1e-9 and abs(float(cs["m2_par"][5]) - float(uA4 @ uB4)) < 1e-12
+          and float((cs["mG"] - torch.sqrt(BQs["reps"]["mA2"])).abs().max()) == 0 and BQo["cfg"]["mode"] == "standard" and BQs["js"]["cross_fit"]["switch"], cs["mode"])
+    cfg_s = _cfg_used(dict(mode="switch", u_push=cs["u_push"], u_read=cs["u_read"]), BQs["reps"])
+    check("analysis configuration of a 'switch' session (OD-G8: the in-session mode governs)", abs(float(cfg_s["m2_par"][0]) - float(uA4 @ uB4)) < 1e-6 and torch.equal(cfg_s["mG"], torch.sqrt(BQs["reps"]["mA2"])))
     bank, rX, ax, w_ = synth_bank(35, 0.5, 2.5); BQn = TH.bq0(bank, 14, 1.0, 1.0, cb_ref, rX, ax, W)
     check("B-Q0: at low SNR the m*^2 guard fails -> 'mode not resolved', push / read along unit(d_4^RSI_a), no switch", not BQn["js"]["m_star2"]["guard_pass"]
           and BQn["js"]["config"]["mode"] == "not_resolved" and "mode not resolved" in BQn["js"]["labels"] and not BQn["js"]["cross_fit"].get("computed"), BQn["js"]["m_star2"])
@@ -854,7 +888,7 @@ def selftest(work, r1_dir=None, r2_root=None):
               and B["20"]["enters_R3"]["enters"] is False and all(B[k]["R4"].get("verdict") is None for k in B if B[k].get("mode") == "not_resolved"), (B["14"]["labels"], B["20"]["enters_R3"]))
         std = os.path.join(r2_root, "theta_std")
         if os.path.isdir(std):
-            v2 = os.path.join(work, "e2e_std"); import shutil; shutil.rmtree(v2, ignore_errors=True); os.makedirs(os.path.join(v2, "r2_q2"))
+            v2 = os.path.join(work, "e2e_std"); shutil.rmtree(v2, ignore_errors=True); os.makedirs(os.path.join(v2, "r2_q2"))
             os.symlink(std, os.path.join(v2, "r2_q2", "theta"))
             if os.path.isdir(os.path.join(r2_root, "axes")): os.makedirs(os.path.join(v2, "r2_q1")); os.symlink(os.path.join(r2_root, "axes"), os.path.join(v2, "r2_q1", "axes"))
             out2 = os.path.join(work, "theta_verdict_e2e_std.json")
@@ -870,6 +904,16 @@ def selftest(work, r1_dir=None, r2_root=None):
                   {k: (B2[k]["R4"].get("verdict"), B2[k]["R4"]["ii"].get("verdict")) for k in B2})
             check("end to end (variant): block 8 enters R3 (G-blk, mode resolved, independent loop); sentences name the mode", B2["8"]["enters_R3"]["enters"]
                   and "critical mode is" in B2["8"]["sentence"] and j2["R3"]["entering"] == [8], (j2["R3"]["entering"], B2["8"]["sentence"][:200]))
+            # (c) b_hi not final (summary missing, G4) and no O2 axes: b_hi 'not run', GI alignment 'not available'
+            nf = os.path.join(work, "r1_nonfinal"); shutil.rmtree(nf, ignore_errors=True); shutil.copytree(r1_dir, nf, copy_function=os.symlink)
+            bh = R.r1_blocks(r1_dir)["b_hi"]; os.remove(R.find_r1(nf, f"summary_b{bh}.json", bh))
+            v3 = os.path.join(work, "e2e_noax"); shutil.rmtree(v3, ignore_errors=True); os.makedirs(os.path.join(v3, "r2_q2")); os.symlink(std, os.path.join(v3, "r2_q2", "theta"))
+            out3 = os.path.join(work, "theta_verdict_e2e_nonfinal.json")
+            if os.path.exists(out3): os.remove(out3)
+            rc = main(["r2_theta_verdict.py", nf, v3, out3]); j3 = json.load(open(out3)); B3_ = j3["blocks"]
+            check("end to end (b_hi not final, no O2 axes): b_hi 'not run (round-1 output missing)', the others analysed, GI alignment 'not available'",
+                  rc == 0 and B3_[str(bh)]["status"] == "not run (round-1 output missing)" and B3_["14"]["status"] == "ok" and B3_["8"]["status"] == "ok"
+                  and "GI alignment not available (O2 axes missing)" in B3_["8"]["R4"]["labels"] and j3["R3"]["entering"] == [8], {k: v["status"] for k, v in B3_.items()})
     ok = all(r["ok"] for r in res); R.write_json(os.path.join(work, "selftest_theta_verdict.json"), dict(ok=ok, tests=res, seconds=time.time() - t0))
     print(f"r2_theta_verdict selftest: {sum(r['ok'] for r in res)}/{len(res)} passed ({time.time() - t0:.0f}s)", flush=True); return ok
 

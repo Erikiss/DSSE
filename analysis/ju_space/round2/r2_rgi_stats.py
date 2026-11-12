@@ -8,7 +8,7 @@ the g_SELF spillover, delta per block (A4) and the over-block relation to delta 
 Reads r2_rgi_geom.py's outputs of the model (local/geom_<m>.npz, local/delta_states_<m>.npz, local/pool_<m>.pt, rgi/causal_<m>.pt,
 rgi/geom_meta_<m>.json); writes rgi/geom_stats_<m>.json and rgi/geom_draws_<m>.npz (per-draw values), and a resumable per-block cache
 local/geom_stats_cache_<m>.pt. <root> and <r1_dir> are not read. Env: DEVICE, NT, MOCK (tests only: R2_NDRAW / R2_NDBOOT may lower the
-numbers of draws; a real run always uses the plan's 1,000 and 200).
+numbers of draws, default 64 and 20 under MOCK; a real run always uses the plan's 1,000 and 200).
 
 Estimator (A2, the RGI design's sim_tg.py extended to the owner x substrate factorial; frames pooled = mean of the F1 and F2 states):
   units x(F, l, o) per family F, lexeme l, object o; cells c = (owner, substrate) for the 48 model objects (12 cells x 4 paraphrases)
@@ -39,8 +39,8 @@ over paraphrases (point: the 3 paraphrase splits; draws: the A2 draws' paraphras
 = the F2 SELF contrast of IMP-DES (rgi/dirs_<m>.pt); z = (mean - null mean) / null sd against 200 directions drawn with the O8 pool
 covariance of the block (unit((z * sqrt(ev)) @ U^T), torch seed 1105 + block); FR = other / SELF mean only where z_self >= 3.
 A4: delta_MMLU = O7's dn_delta values (geom_meta); 200-draw within-topic text bootstrap of F - floor (floor = mean over 50 label
-permutations per draw; draws and permutations shared by blocks and readings; seed 1103); delta_OBJ = F - floor (50 permutations, seed
-1104) of the 15 object categories on the neutral sentences ('.'), per frame, series = mean of the frames; tau = cross-validated share of
+permutations per draw; draws and permutations shared by blocks and readings; seed 1103); delta_OBJ = F - floor (50 permutations from
+np.random.default_rng([1104, block]), F1 then F2) of the 15 object categories on the neutral sentences ('.'), per frame, series = mean of the frames; tau = cross-validated share of
 the general IMP-DES direction's energy in the span of the centred O7 topic means (last token for '.', question mean for the object
 reading) against tau of CHG-DES and the mean over the 200 pool-covariance directions of |P v|^2 / |v|^2 (also tr(P Sigma) / tr(Sigma));
 anisotropy = mean pairwise cosine of the frame-pooled DES states. Separability (G31) over P: SD (ddof 0) of delta's cubic-in-block-index
@@ -52,7 +52,7 @@ sim_depth.py), r3 per draw; nuisance r3 after partialling the anisotropy's cubic
 Series: dFG, FG(IMP-DES), rho_S, sigma_self (pooled, F1, F2), FG_causal, rho_causal (also over the composed blocks of P).
 r_DiD: corr over P_1.7B & P_0.6B of dFG_1.7B - dFG_0.6B with delta_1.7B - delta_0.6B, surrogate p (phase-randomised delta difference).
 The verdicts of A7 are made by r2_rgi_verdict.py (r2_ana) from these numbers; the u_T_perp spillover (A3) uses spillover() below."""
-import argparse, datetime, hashlib, itertools, json, math, os, sys, time
+import argparse, datetime, hashlib, itertools, json, math, os, shutil, sys, time
 import numpy as np, torch
 
 HERE = os.path.dirname(os.path.abspath(__file__)); JU = os.path.dirname(HERE)
@@ -73,8 +73,8 @@ LEX_SPLITS = (((0, 1), (2, 3)), ((0, 2), (1, 3)), ((0, 3), (1, 2)))             
 SPLIT_FAMS = ("IMP", "CHG", "DES")                                                          # families with 4 lexemes (WOR, PRA: halves (0,), (1,))
 SEEDS = dict(draws=1101, surrogates=1102, delta_boot=1103, delta_obj=1104, randdirs=1105, did=1106)
 LEVEL = 0.95
-N_DRAWS = 1000 if not MOCK else int(os.environ.get("R2_NDRAW", "1000"))
-N_DBOOT = 200 if not MOCK else int(os.environ.get("R2_NDBOOT", "200"))
+N_DRAWS = 1000 if not MOCK else int(os.environ.get("R2_NDRAW", "64"))        # MOCK (code tests): 64 draws unless R2_NDRAW is set
+N_DBOOT = 200 if not MOCK else int(os.environ.get("R2_NDBOOT", "20"))
 N_SURR, N_PERM, N_RAND = 2000, 50, 200
 OWN = np.array([c // 3 if c < 12 else 4 + c - 12 for c in range(NCELL)]); SUB = np.array([c % 3 if c < 12 else 3 + c - 12 for c in range(NCELL)])
 MODEL_CELL = np.arange(NCELL) < 12
@@ -277,7 +277,8 @@ def supt_band(point, draws, sel, level=LEVEL):
     point = np.asarray(point, dtype=np.float64); d = np.asarray(draws, dtype=np.float64); n = len(point); lo = np.full(n, np.nan); hi = np.full(n, np.nan)
     idx = [j for j in np.nonzero(sel)[0] if np.isfinite(d[:, j]).sum() >= 2]
     if not idx: return lo, hi, float("nan")
-    with np.errstate(all="ignore"):
+    with np.errstate(all="ignore"), __import__("warnings").catch_warnings():
+        __import__("warnings").simplefilter("ignore", RuntimeWarning)
         m = np.nanmean(d[:, idx], 0); s = np.nanstd(d[:, idx], 0, ddof=1); use = s > 0
         if not use.any():
             lo[idx], hi[idx] = point[idx], point[idx]; return lo, hi, 0.0
@@ -466,6 +467,22 @@ def spillover(w, is_self, u, nulls):
                 n_null=int(nl.shape[0]), s_per_object=s.cpu().tolist())
 
 
+def spill_inputs(W, b):
+    """The spillover inputs of block b from rgi/causal_<m>.pt's W [60, 4, NL, D]: w [48, D] = the IMP-DES gradient of each model object
+    (mean of the two lexeme halves) and is_self [48] (owner SELF). For r2_ana's u_T_perp spillover: spillover(*spill_inputs(W, b),
+    u_T_perp(b), R1 null_u_T_perp(b))."""
+    W = torch.as_tensor(W); return 0.5 * (W[:48, 0, b].double() + W[:48, 1, b].double()), np.array([o in SELF_OBJ for o in range(48)])
+
+
+def sign_flip_nulls(c_o, n=2000, seed=1107):
+    """A6 null axes for g_b and s_b (rgi/dirs_<m>.pt): sign flips of the 48 model-object contrasts c_o [48, D] (torch.Generator seed),
+    each null built like its axis: g' = mean(eps c_o), s' = mean over the SELF objects of eps c_o minus its projection on unit(g').
+    Returns dict(g [n, D], s [n, D]) float64."""
+    c = torch.as_tensor(c_o).double(); g = torch.Generator().manual_seed(int(seed)); E = (torch.randint(0, 2, (n, c.shape[0]), generator=g) * 2 - 1).double()
+    gn = E @ c / c.shape[0]; sm = torch.zeros(c.shape[0], dtype=torch.float64); sm[SELF_OBJ] = 1.0 / len(SELF_OBJ); ds = (E * sm) @ c
+    u = gn / gn.norm(dim=1, keepdim=True).clamp_min(1e-300); return dict(g=gn, s=ds - (ds * u).sum(1, keepdim=True) * u)
+
+
 def pool_dirs(pool_b, n, seed, dev):
     """n unit directions with the pool covariance of the block: unit((z * sqrt(ev)) @ U^T), z ~ N(0, I) from torch's CPU generator."""
     g = torch.Generator().manual_seed(int(seed)); D = pool_b["ev"].shape[0]; z = torch.randn(n, D, generator=g, dtype=torch.float64)
@@ -639,7 +656,8 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
         per_block[v] = {}
         for k in draws[v]:
             lo, hi = pw[v][k]; slo, shi, c = supt_band(series[v][k], draws[v][k], sel)
-            with np.errstate(all="ignore"): sd = np.nanstd(draws[v][k], 0, ddof=1)
+            fin = np.isfinite(draws[v][k]).sum(0)
+            with np.errstate(all="ignore"): sd = np.array([np.nanstd(draws[v][k][:, j], ddof=1) if fin[j] >= 2 else np.nan for j in range(NL)])
             per_block[v][k] = dict(point=series[v][k], lo=lo, hi=hi, sd=sd, sim_lo=slo, sim_hi=shi, sim_crit=c, n_nan_draws=np.isnan(draws[v][k]).sum(0))
     point_only = {}
     for key in BS[0]["point"]:
@@ -647,6 +665,7 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
         point_only[key] = {k: np.array([BS[b]["point"][key][k] for b in range(NL)]) for k in BS[0]["point"][key]}
     loo = {nm: {k: np.array([BS[b]["extra"]["loo"][nm][k] for b in range(NL)]) for k in BS[0]["extra"]["loo"][nm]} for nm in BS[0]["extra"]["loo"]}
     naive = {k: np.array([BS[b]["extra"]["naive"][k] for b in range(NL)]) for k in BS[0]["extra"]["naive"]}
+    per_cell = {CN[x]: [BS[b]["extra"]["per_cell_P_cell"][x] for b in range(NL)] for x in range(NX)}
     spill = {k: [BS[b]["extra"]["spill_g_self"][k] for b in range(NL)] for k in BS[0]["extra"]["spill_g_self"] if k != "s_per_object"}
     spill["s_per_object"] = [BS[b]["extra"]["spill_g_self"]["s_per_object"] for b in range(NL)]
     tau = {r: {k: [BS[b]["extra"][f"tau_{r}"][k] for b in range(NL)] for k in BS[0]["extra"][f"tau_{r}"]} for r in ("dot", "obj")}
@@ -704,7 +723,7 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
                gate=dict(C0=C0, C0_parts=C0_parts, uncomposed=uncomp, passing=passing, P=Pset, n_P=len(Pset), G30_ok=pinfo["ok"], runs=pinfo["runs"], tie=pinfo["tie"],
                          composed=composed, P_composed=[int(b) for b in Pc],
                          label=None if pinfo["ok"] else "undecided (fewer than 12 passing blocks)"),
-               per_block=per_block, point_only=point_only, lexical=lex, loo=loo, naive=naive, spillover_g_self=spill,
+               per_block=per_block, point_only=point_only, lexical=lex, loo=loo, naive=naive, per_cell_P_cell=per_cell, spillover_g_self=spill,
                delta=dict(mmlu={nm: dict(**{k: o7[nm][k] for k in ("F", "floor", "delta", "delta_rel")}, boot_sd=boot_sd[nm], boot_lo=np.percentile(boot[nm], 2.5, 0),
                                          boot_hi=np.percentile(boot[nm], 97.5, 0)) for nm in ("last", "mean")},
                           obj=dict(F1=dict(F=[BS[b]["extra"]["delta_obj"]["F1"][0] for b in range(NL)], floor=[BS[b]["extra"]["delta_obj"]["F1"][1] for b in range(NL)], delta=dobj["F1"]),
@@ -841,7 +860,8 @@ def _synth_world(path_r2, m, D, NL, seed, fg_of_delta, topics):
 def selftest(root, r2_dir):
     assert MOCK, "selftest needs MOCK=1"
     global N_DRAWS, N_DBOOT
-    torch.set_num_threads(int(os.environ.get("NT", "1"))); res = []; t0 = time.time(); work = os.path.join(r2_dir, "stats_selftest"); os.makedirs(work, exist_ok=True)
+    torch.set_num_threads(int(os.environ.get("NT", "1"))); res = []; t0 = time.time(); work = os.path.join(r2_dir, "stats_selftest")
+    shutil.rmtree(work, ignore_errors=True); os.makedirs(work)                             # the test's own folder, from scratch
 
     def check(name, ok, info=""):
         res.append((name, bool(ok))); print(f"  [{'PASS' if ok else 'FAIL'}] {name} {info}", flush=True)
@@ -912,6 +932,12 @@ def selftest(root, r2_dir):
     w2 = 0.05 * g7.standard_normal((48, 64)) + 0.3 * u[None]; w2[~is_self] -= 0.15 * u; sp2 = spillover(w2, is_self, u, nulls)
     check("spillover: other-owner push detected, FR only with a SELF response", sp["z_other"] > 5 and abs(sp["z_self"]) < 3 and np.isnan(sp["FR"])
           and sp2["z_self"] > 5 and abs(sp2["FR"] - sp2["S_other"] / sp2["S_self"]) < 1e-12 and 0.3 < sp2["FR"] < 0.7, f"z_other {sp['z_other']:.1f}, FR {sp2['FR']:.2f}")
+    Wt = torch.tensor(g7.standard_normal((60, 4, 3, 64))); wi, si = spill_inputs(Wt, 1)
+    co = torch.tensor(g7.standard_normal((48, 64))); nl = sign_flip_nulls(co, n=5, seed=3)
+    e0 = (torch.randint(0, 2, (5, 48), generator=torch.Generator().manual_seed(3)) * 2 - 1).double()[0]; c0 = e0[:, None] * co
+    gA = c0.mean(0); dS = c0[SELF_OBJ].mean(0); sA = dS - (dS @ gA / (gA @ gA)) * gA
+    check("helpers: spill_inputs (IMP-DES half mean, SELF flags); sign-flip nulls built like g_b and s_b", torch.allclose(wi, 0.5 * (Wt[:48, 0, 1] + Wt[:48, 1, 1]))
+          and si.sum() == 12 and si[:12].all() and nl["g"].shape == (5, 64) and torch.allclose(nl["g"][0], gA) and torch.allclose(nl["s"][0], sA))
     # 8. r_DiD
     b8 = np.arange(28); da = 0.1 + 0.05 * np.sin(b8 / 3); db_ = 0.1 + 0.05 * np.cos(b8 / 4); fa = 0.2 + 2 * da + 0.002 * g7.standard_normal(28); fb = 0.2 + 2 * db_ + 0.002 * g7.standard_normal(28)
     rd = r_did(fa, da, list(range(2, 26)), fb, db_, list(range(4, 28)))

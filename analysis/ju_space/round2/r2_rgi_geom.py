@@ -481,7 +481,9 @@ def stage_o8(M, P, m):
         blocks[l] = dict(mu=mu.cpu(), ev=ev.cpu(), U=U.float().cpu().contiguous(), n_fit=int(n[l]), med_norm=MED[l], **cnt[l])
         summ_b[l] = dict(n_fit=int(n[l]), med_norm=MED[l], **cnt[l], top5_eigenvalues=ev[:5].cpu().tolist(), trace=float(ev.sum()),
                          mean_eigenvalue=float(ev.mean()), participation_ratio=float(ev.sum() ** 2 / (ev ** 2).sum()))
-    g7 = od_g7(blocks[POOL_REF_BLOCK]["ev"].numpy(), pool_ref_path(M.root)) if m == "qwen3-1.7b" else dict(checked=False, ok=None, note="not applicable (the reference ufo_pool.pt is of Qwen3-1.7B)")
+    if m != "qwen3-1.7b": g7 = dict(checked=False, ok=None, note="not applicable (the reference ufo_pool.pt is of Qwen3-1.7B)")
+    elif MOCK and not os.environ.get("POOL_REF"): g7 = dict(checked=False, ok=None, note="not applicable (MOCK model)")
+    else: g7 = od_g7(blocks[POOL_REF_BLOCK]["ev"].numpy(), pool_ref_path(M.root))
     summ = dict(n_pool_texts=len(pool), n_fit_texts=nfit, n_wiki=sum(s == "wiki" for s, _, _ in pool), n_chat=sum(s == "chat" for s, _, _ in pool),
                 median_texts=len(pool[::max(1, len(pool) // 12)]), blocks=summ_b, od_g7=g7, seconds=time.time() - t0,
                 definition="ufo_pool.py: valid positions (ufo_common.texts), median norm from every len(pool)//12-th text, fit part i % 3 != 2, "
@@ -554,7 +556,7 @@ def stage_meta(P, m, fp, summaries, minfo, mrec):
     flags = []
     o8 = summaries.get("o8") or {}
     if (o8.get("od_g7") or {}).get("flag"): flags.append(o8["od_g7"]["flag"])
-    if (o8.get("od_g7") or {}).get("checked") is False and m == "qwen3-1.7b": flags.append("OD-G7 not checked (pool_ref.json missing)")
+    if (o8.get("od_g7") or {}).get("checked") is False and m == "qwen3-1.7b" and not MOCK: flags.append("OD-G7 not checked (pool_ref.json missing)")
     o7 = summaries.get("o7") or {}
     if o7.get("storage", "float16") != "float16": flags.append("O7 states stored as float32 (float16 overflow)")
     meta = dict(fingerprint=fp, plan_sha256=PLAN_SHA256, model=minfo, model_record=mrec, versions=versions(),
@@ -576,7 +578,7 @@ def stage_summary(P, k):
 def run(root, r2_dir, m="qwen3-1.7b", stages=STAGES, model_path=None, force=(), mrec=None):
     """Runs the given stages (skipping those whose output exists with this run's fingerprint); returns the meta dict or None.
     mrec: model_record(...) if already computed (the Qwen3-0.6B checksum is computed once)."""
-    P = out_paths(r2_dir, m); M = None; fp = None; summaries = {}; path = model_path or os.path.join(root, "models", m)
+    P = out_paths(r2_dir, m); M = None; fp = None; summaries = {}; path = model_path or os.path.join(root, "models", m); redone = set()
 
     def model():
         nonlocal M, fp
@@ -585,13 +587,15 @@ def run(root, r2_dir, m="qwen3-1.7b", stages=STAGES, model_path=None, force=(), 
         return M
     for k in stages:
         p = P[STAGE_OUT[k]]
-        if k in force and os.path.exists(p): os.remove(p)
+        stale = (k == "dirs" and "a1" in redone) or (k == "meta" and redone)          # outputs derived from recomputed stages are redone
+        if (k in force or stale) and os.path.exists(p): os.remove(p); log(f"{k}: recomputed ({'forced' if k in force else 'its inputs were recomputed'})")
         if os.path.exists(p):
             have = file_meta(p); want = fp or dict(version=VERSION, model=m, mock=MOCK)    # without loading the model where possible
             if not same_run(have, want): raise RuntimeError(f"{p} was written by another run ({have}); delete it to recompute")
             if k != "meta": summaries[k] = stage_summary(P, k); log(f"{k}: output exists, skipped ({p})")
             else: log(f"meta exists, skipped ({p})")
             continue
+        redone.add(k)
         if k == "a1": summaries[k] = stage_a1(model(), P, m)
         elif k == "a3": summaries[k] = stage_a3(model(), P, m)
         elif k == "o7": summaries[k] = stage_o7(model(), P, m)
@@ -625,7 +629,7 @@ def selftest(root, r2_dir, m="qwen3-1.7b"):
 
     def check(name, ok, info=""):
         res.append((name, bool(ok))); print(f"  [{'PASS' if ok else 'FAIL'}] {name} {info}", flush=True)
-    work = os.path.join(r2_dir, "geom_selftest"); P = out_paths(work, m)
+    work = os.path.join(r2_dir, "geom_selftest", m); shutil.rmtree(work, ignore_errors=True); P = out_paths(work, m)     # from scratch
     meta = run(root, work, m) or json.load(open(P["meta"]))
     check("all stages wrote their outputs", all(os.path.exists(P[k]) for k in P), str({k: os.path.exists(v) for k, v in P.items()}))
     M = Model(root, m); fp = fingerprint(M, m)
@@ -713,6 +717,9 @@ def selftest(root, r2_dir, m="qwen3-1.7b"):
     mt = json.load(open(P["meta"])); check("meta: stages, outputs with sha256, model record", set(mt["stages"]) == set(STAGES[:-1]) and all(len(v["sha256"]) == 64 for v in mt["outputs"].values()))
     mt0 = {k: os.path.getmtime(v) for k, v in P.items()}; t1 = time.time(); run(root, work, m)
     check("resume: a second run skips every stage", {k: os.path.getmtime(v) for k, v in P.items()} == mt0, f"({time.time() - t1:.1f}s)")
+    os.remove(P["geom"]); run(root, work, m); mt1 = {k: os.path.getmtime(v) for k, v in P.items()}
+    check("resume after a lost local A1 file: A1, dirs and meta recomputed, the rest kept", all(mt1[k] != mt0[k] for k in ("geom", "dirs", "meta"))
+          and all(mt1[k] == mt0[k] for k in ("causal", "delta", "pool")) and json.load(open(P["meta"]))["outputs"]["geom"]["sha256"] == sha256_file(P["geom"]))
     Pb = out_paths(os.path.join(work, "foreign"), m); npz_save(Pb["geom"], dict(fingerprint=dict(fp, version="other")), a=np.zeros(1))
     try: run(root, os.path.join(work, "foreign"), m, stages=("a1",)); refused = False
     except RuntimeError: refused = True
