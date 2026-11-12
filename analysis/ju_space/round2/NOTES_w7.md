@@ -157,8 +157,62 @@ round 2'). C-T3's gate result (G41) is `rules_t3(...)['gate']`.
 
 ## 5 Tests (this container: CPU only, one thread; QUICK = pc_meta's QUICK sizes and tiny grids)
 
-(filled in below)
+QUICK code tests against the final r2_toy_common.py (NOTES_w5):
+- `QUICK=1 NT=1 OMP_NUM_THREADS=1 DEVICE=cpu python r2_unlearn_toy.py <dir> selftest`: 16 / 16 checks, about 80 s. Unit checks:
+  eval_old = TC.task_accuracy; sum_probe_gen = TC.sum_probe; the net cache reloads with verified checksums; a search split into
+  chunks of 5 chains = one batched call; a zero-rank block is a no-op; the class-mean eraser equalises the task means (1e-7);
+  damage_match and the push bisection run (matched or flagged); then every stage t0-t6 end to end (JSON + rule preview), and a rerun of
+  t0 from the saved nets reproduces its output exactly.
+- `QUICK=1 ... python r2_pc_toy.py <dir> selftest`: 9 / 9 checks, about 4.5 min (most of it the fixture: pc_meta QUICK runs PC-muP W 64
+  (gpu4) and W 128 (gpu3), BP-muP W 64 and 128 (gpu5), seeds 0-1, K 12 and K 1, pc_summary per shard, pc_expected and shard_done as
+  run_shard writes them, a duplicate of one model on gpu6). Checks: OD-G9 finder picks the shard whose pc_expected lists the job; PCS
+  de-duplicated; gates = pc_analyze.gates on the rows; eta_x = 1 / pc_meta.lam_max and the batched relaxation of a loaded round-1 PC net
+  = pc_meta.pc_relax; the batched S line = TC.s_line; gates, t7 (both sides at both widths, Holm family of 28 items) and cross_pc (one
+  file per world with BP -> PC, PC -> BP and PC -> PC pairs, T4 everywhere, T3 only into BP receivers at W <= the T3 limit) run; G35's
+  fallback formulas.
+- At QUICK sizes nothing is learned (LEVEL1 0, 100 updates), so the QUICK previews are meaningless; they test the code paths only.
+
+Non-QUICK smoke test of the semantics (scratchpad `r2_impl/w7/smoke_ut.py`: the real pc_meta constants, MAXSTEPS 6000, budgets 300 /
+3000; grids reduced by monkeypatching to BP-muP W 64, seeds 0-1, W4 at W 64, C-T3 at W 64 with L 3 and 12, C-T2 k 2, C-T5 3 rounds, C-T6
+L 1; about 8 min CPU). The pilot facts the plan lists in 5.1 reappear:
+- C-T4: intact old-task accuracy 0.96, sum probe 0.87, relearn_300 0.60, A_new_300 0.18 / 0.36, B2(8) 0.20 / 0.31. Edit: accuracy 0.07
+  with the sum probe at 0.98 (specific), relearning intact (0.60). 11-dim span block: 0.07 (sum probe 0.56 / 0.33). Top-1 / 2 / 4 / 6 PC
+  blocks: 0.71 / 0.52 / 0.28 / 0.16, within-span random controls 0.87 / 0.73 / 0.51 / 0.32. Push at half / full block damage hits its
+  targets (0.52 / 0.06; beta 1.6 / 4-12). Reflection 0.04 with the sum probe at 0.02 (out-of-distribution damage); x-span block: sum
+  probe 0.00 (positive control), B2 0.01 (meta level unlearned). T4b: erasure at h1 removes the ability (0.07; linear and MLP task probes
+  at chance), at h2 it keeps it (0.95 / 0.97) while the linear task probe drops to chance (0.06 / 0.08). W4 (W 64 nets ended at
+  MAXSTEPS, add 0.80 / sub 0.78): block of the add span -> add 0.06, sub 0.36; erasure at h2 keeps add (0.79).
+- C-T3: ring zero-shot 0.998 / 0.999, permuted ring never reaches level 1 (zero-shot 0.09 / 0.03) -> gate passes; arcs of 3 do not
+  compose (j* = 1, run to MAXSTEPS and marked), L = 12 covers every untrained shift; generator extracted (zero-shot >= 0.5) at update 125,
+  level 1 at 550-600; c-plane removal -> 0.06 (random 2-dim 0.63-0.70); conjugation: accuracy 0.0, modal shift = -c in 12 / 12 shifts,
+  sum probe 0.99 -> 'inverted ability'; T4b in the circle nets: h1 0.26-0.31 with an MLP residue (0.85-0.91), h2 ability kept (0.94).
+- C-T2 (k 2, W 64; no net reached level 1): held-out ring 0.46 / 0.36 < pring 0.55 / 0.52 < rand 0.83 / 0.87 (alignment and geometry
+  effects below 0, as the plan predicts); zero-shot 0.04-0.14 with the modal output a trained shift.
+- C-T5: col arm A_3000 0.44 -> 0.26 after one removal, rand arm stays 0.44, z1 arm 0.30 with the sum probe 0.87 -> 0.76; removed
+  directions overlap the task span at 0.2 (random 0.17). C-T6: trajectory modes are Lissajous-like (|corr| with the cosine template 0.96
+  / 0.85 / 0.7, above the nulls' 5th percentile) -> no 'real' mode; the L = 1 cap reaches level 1 without re-routing (ratios 0.95-1.07).
+  C-T0: no ring code (task-code share 0.21 / 0.24 against null p99 0.23 / 0.24, LOO ring R2 < 0). C-T1: x / y columns keep-4 PCA 0.43 /
+  0.53 against within-span random 0.15 / 0.20; task K = 5 (10 of 11 dims) PCA 0.93 / 0.96.
+- Found and fixed with it: the C-T5 rule's 'never' value of r* is the plan's 25 ('> 24' counts as 25) whatever the number of rounds.
 
 ## 6 Open points
 
-(filled in below)
+- OD-C2's literal reading (library; the coordinator's note) leaves many damage-matched controls unmatched: in the W 64 smoke test 9 of
+  the 10 z1 operations of C-T4 and the h1 eraser had their smallest reaching dimension overshoot the target by more than 0.02 (e.g. block
+  11: r 22), so their specificity is 'not testable' (G45) and, because an overshooting control is more damaging than the operation,
+  'unlearns' (which needs the control's lower bound >= 0.9 x base) cannot pass for them. The same is expected at W 128 / 256, and for the
+  C-T5 dmr arm (z1 verdict 'not testable' when the last round is unmatched). A bisection at the found dimension would be an amendment
+  (plan text governs; not changed here). 'unlearns' is still computed against the unmatched control and flagged (dm_matched) for
+  r2_unlearn_verdict.py to decide.
+- CUDA not testable here (CPU-only torch). Memory is bounded by chunked evaluations (TC.CHUNK), search calls of at most R2_MAXC chains,
+  and C-T1's keep-r ops built per (layer, r) (largest: [55 variants x 12 tasks, W, W - r] floats at W 256 ~ 170 MB plus one regrouped
+  copy). Expected GPU time
+  per session within the plan's estimates (one batched search per round / per cell; C-T7 PC side: one 3,000-step relearning search of
+  240 chains and 25 x 300 + 3,000 PC steps per width).
+- Runner (implementer 9): r2_t3 / r2_t4 / r2_pc steps and file names match (`{work} <stage>`, `unlearn_toy/<stage>.json`,
+  `pc_toy/t7.json`, `pc_toy/cross_pc/w<ws>.json`; env R1PC, R2T1). The current runner does not call `gates` in r2_pc (pc_toy/gates.json
+  comes from r2_report in r2_ana, plan 9.4); `r2_pc_toy.py <work> gates` and gates_from_rows / g_meta_fallback stay available.
+- C-T7 relaxation probes are linear only (the rule's task-identity probe); the family includes both erasure layers (14 items per G-PC
+  width); r2_ana fixes the family by calling ct7_family(t7, widths=<G-PC widths>).
+- cross_pc relies on r2_t1's at5 files being TC.save_nets files with meta['spec'] and meta['row'] (as r2_rgi_toy.at5_groups writes
+  them); BP model lines are recomputed in r2_pc with the library's definitions (they equal r2_t1's for the same nets up to rounding).

@@ -634,7 +634,8 @@ def selftest(root, r2_dir, m="qwen3-1.7b"):
     check("all stages wrote their outputs", all(os.path.exists(P[k]) for k in P), str({k: os.path.exists(v) for k, v in P.items()}))
     M = Model(root, m); fp = fingerprint(M, m)
     # A1: layout, shapes, readings against single unbatched forwards
-    z = np.load(P["geom"], allow_pickle=False); S = STIM.sentences(); unit, neu = sentence_layout(z["s_obj"], z["s_frame"], z["s_family"], z["s_lexeme"])
+    with np.load(P["geom"], allow_pickle=False) as zf: z = {k: zf[k] for k in zf.files}                  # read every array once
+    S = STIM.sentences(); unit, neu = sentence_layout(z["s_obj"], z["s_frame"], z["s_family"], z["s_lexeme"])
     check("A1 shapes and layout", z["dot"].shape == (2040, 28, M.D) and z["obj"].shape == (2040, 28, M.D) and z["lex"].shape == (2040, M.D)
           and unit.shape == (2, 16, 60) and [str(t) for t in z["texts"]] == [s["text"] for s in S])
     rows, _ = a1_rows(M); worst = 0.0
@@ -673,7 +674,8 @@ def selftest(root, r2_dir, m="qwen3-1.7b"):
     for k in ("NMAX", "LQ", "MINQ"): os.environ.pop(k, None)
     _exec_nodes(os.path.join(JU, "dn_delta.py"), "NMAX, LQ, MINQ", "NMAX, LQ, MINQ", ns); _exec_nodes(os.path.join(JU, "dn_delta.py"), "rows = json.load", "assert len({len(t)", ns)
     _exec_nodes(os.path.join(JU, "dn_delta.py"), "def fisher", "def fisher", ns)
-    sel = o7_texts(root, M.tok); d = np.load(P["delta"], allow_pickle=False)
+    sel = o7_texts(root, M.tok)
+    with np.load(P["delta"], allow_pickle=False) as df: d = {k: df[k] for k in df.files}
     check("O7 texts and labels = dn_delta.py's selection", sel["texts"] == ns["texts"] and (sel["labels"] == ns["labels"]).all() and (d["ids"] == np.array(ns["texts"])).all())
     LAST, MEAN = d["last"].astype(np.float64), d["mean"].astype(np.float64); gp = np.random.default_rng(2); ref = {"last": [], "mean": []}
     for l in range(28):

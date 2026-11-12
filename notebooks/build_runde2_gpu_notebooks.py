@@ -32,7 +32,7 @@ TEXT = {
               "Teil B. An Block 14: freie Verstärkungen aus den eingefrorenen Schleifen (B-Q0), Code-Prüfungen, Schadenskurven und alle "
               "θ-Zellen (α-Reihe B-Q3, Temperatur B-Q4, mit den Reserven), der Übertrag in den zweiten Zug (B-Q8), der Potenzschritt "
               "(B-Q6) und der Fluktuations-Dissipations-Anker (B-Q7). An jedem Zusatzblock zuerst die zweite RSI-Schleife r2RSIb (vier "
-              "Runden), dann B-Q0, die Zellen mit Reserve 3, Potenzschritt und B-Q7.", (8.8, 12.8, 17.2)),
+              "Runden), dann B-Q0, die Zellen mit Reserve 3, Potenzschritt und B-Q7. Ein Prozess je Block (r2_theta.py all).", (8.8, 12.8, 17.2)),
     "r2_q3": ("Qwen3-1.7B und Qwen3-0.6B: RGI-Satzgeometrie über alle Blöcke",
               "A1–A5: 2.040 Sätze (Besitzer × Substrat, fünf Verbfamilien, zwei Rahmen) an allen 28 Blöcken, die Gradienten der kausalen "
               "Lesart (A3), die δ-Zustände (O7) und die Pool-Kovarianz (O8), dann die Statistik auf der GPU; danach derselbe Arm für "
@@ -63,7 +63,8 @@ TEXT = {
 }
 NB_NAME = {s: "runde2_" + s[3:] + ".ipynb" for s in R.SESSIONS}        # r2_q1 -> runde2_q1.ipynb
 _LIB = {"stimuli": "r2_stimuli.py check", "rk": "r2_rk.py selftest", "axes": "r2_axes.py selftest", "gen14": "r2_gen_loop.py selftest an Block 14",
-        "gen8": "an Block 8", "toy": "r2_toy_common.py selftest mit den W0-Äquivalenztests und dem Referenzvergleich"}
+        "gen8": "an Block 8", "toy": "r2_toy_common.py selftest mit den W0-Äquivalenztests und dem Referenzvergleich",
+        "sim": "r2_sim.py selftest"}
 LIB_TEXT = {s: ", ".join(_LIB[t] for t in R.LIB_SELFTESTS.get(s, ())) or "keine" for s in R.SESSIONS}
 
 

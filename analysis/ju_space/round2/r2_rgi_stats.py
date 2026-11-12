@@ -612,8 +612,9 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
     gm = json.load(open(P["meta"])); inp = inputs_record(P, gm)
     z = np.load(P["geom"], allow_pickle=False); dz = np.load(P["delta"], allow_pickle=False); pool = GEOM.load_pt(P["pool"])["blocks"]
     cz = GEOM.load_pt(P["causal"]); dr = GEOM.load_pt(P["dirs"])
-    unit, neu = sentence_layout(z["s_obj"], z["s_frame"], z["s_family"], z["s_lexeme"]); NL = z["dot"].shape[1]; D = z["dot"].shape[2]
-    A = dict(dot=z["dot"], obj=z["obj"], lex=z["lex"], last=dz["last"], mean=dz["mean"], W=cz["W"].numpy())
+    unit, neu = sentence_layout(z["s_obj"], z["s_frame"], z["s_family"], z["s_lexeme"])
+    A = dict(dot=z["dot"], obj=z["obj"], lex=z["lex"], last=dz["last"], mean=dz["mean"], W=cz["W"].numpy())   # each array read once (NpzFile is lazy)
+    NL, D = A["dot"].shape[1], A["dot"].shape[2]
     labels = dz["labels"].astype(np.int64); des_d = draw_design(N_DRAWS); des_pt = point_design(); Lam, Psi, _ = weights(des_d); LL, PP = point_operators(des_pt)
     chunk = 64 if dev.type == "cuda" else 8
     ctx = dict(dev=dev, unit=unit, neu=neu, pool=pool, Lam=Lam, Psi=Psi, LL=LL, PP=PP, des_pt=des_pt, chunk=chunk, labels=labels, g_self=dr["g_self_f2"].double())
