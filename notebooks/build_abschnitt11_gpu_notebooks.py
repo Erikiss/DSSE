@@ -20,9 +20,11 @@ SHARDS = {
              "Schleifen (RSI_a, Meer, Zufall) und K5 am Block mit kleinem δ.", "10–20 min"),
     "gpu3": ("δ je Block und RSI-Kennwerte am Block mit großem δ",
              "Wie Teil 2, aber am Block mit großem δ.", "10–20 min"),
-    "gpu4": ("Doppelte Verneinung: Regel A4a an langen Denkspuren",
-             "Teacher-forcing entlang der GSM8K-Denkspuren (bis zu zwölf): Eingriffe in die Q3-Anteile und ihre Q2-Spiegel, Rauschkontrollen, "
-             "Top-k mit Wiederherstellung; Prüfung nach Regel A4a.", "10–20 min"),
+    "gpu4": ("Doppelte Verneinung: Denkspuren und Regel A4a",
+             "Zuerst die Denkspuren: die ersten 24 GSM8K-Testaufgaben, Denken an, Qwens empfohlener Sampler, in Durchgängen zu 8 "
+             "(dieselbe Regel wie geplant, jetzt auf der GPU statt lokal). Dann Teacher-forcing entlang der bis zu zwölf passenden "
+             "Spuren: Eingriffe in die Q3-Anteile und ihre Q2-Spiegel, Rauschkontrollen, Top-k mit Wiederherstellung; Prüfung nach "
+             "Regel A4a.", "10–20 min"),
     "gpu5": ("Kleinversuch Predictive Coding: Backprop mit µP",
              "125 kleine Netze: fünf Breiten × fünf Seeds mit Kontrolle K = 1, die δ-Sonde D2 (acht Stärken), K = 3 und 6, "
              "Gewichtsabfall 0. Bis zu zehn Läufe gleichzeitig auf der GPU.", "10–20 min"),
@@ -130,10 +132,6 @@ if SHARD not in ("gpu5", "gpu6"):
         open(f"{ROOT}/{dst['path']}", "wb").write(raw)
         assert sha256(f"{ROOT}/{dst['path']}") == dst["sha256"], f"Prüfsumme stimmt nicht: {dst['path']}"
     print("Modell und Eingaben geprüft.")
-if SHARD == "gpu4":
-    S = json.load(open(f"{ROOT}/dn_out/dn_sample.json")) if os.path.exists(f"{ROOT}/dn_out/dn_sample.json") else {}
-    assert S.get("trace_set_complete"), "Die Denkspuren sind noch nicht vollständig im Repository. Bitte später starten."
-    print("Denkspuren:", len(S["trace_set"]), "| Länge bis", S.get("L_used"))
 """)
 
 code(r"""
@@ -151,7 +149,7 @@ if SHARD in ("gpu1", "gpu2", "gpu3"):
     selftest([f"{A}/rk_verdict.py", "block", "/content/selftest/b14", "/content/selftest/summary.json"], {})
 elif SHARD == "gpu4":
     os.makedirs("/content/selftest", exist_ok=True)
-    selftest([f"{A}/dn_tf.py", ROOT, f"{ROOT}/dn_out/dn_sample.json", f"{ROOT}/dn_out/dn_text.json", "/content/selftest/tf.json"], dict(MOCK="1"))
+    selftest([f"{A}/dn_tf.py", ROOT, f"{ROOT}/dn_out/mock_sample.json", f"{ROOT}/dn_out/dn_text.json", "/content/selftest/tf.json"], dict(MOCK="1"))
 else:
     shutil.rmtree("/content/selftest_pc", ignore_errors=True)
     for args, extra in [(["bp_mup", "64", "0", "12"], {}), (["bp_mup", "64", "0", "1"], {}), (["bp_mup", "64", "0", "12", "0.1"], {}),

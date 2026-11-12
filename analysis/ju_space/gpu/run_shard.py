@@ -2,14 +2,14 @@
 The notebooks (notebooks/build_abschnitt11_gpu_notebooks.py) set up <root> and call
     python run_shard.py <shard> <root> <work> [<drive_dir>]
 <root>  models/qwen3-1.7b (HF revision pinned and checked), rsi_dl/persona/*.jsonl, ju_out/{corpus_wikitext,axes_pairs}.json,
-        dn_out/{mmlu_topics,dn_text,dn_sample}.json, gpu_pkg/rk_dirs.pt
+        dn_out/{mmlu_topics,dn_text,gsm8k_test,mock_sample}.json, gpu_pkg/rk_dirs.pt
 <work>  local working directory; after every step it is copied to <drive_dir> (Google Drive), so a rerun after a disconnect resumes
         (the notebook copies <drive_dir> back first; every step is skipped when its output exists, and rk_loop.py caches inside).
 Shards
   gpu1  RSI indicators (rk_loop.py) at block 14: pilot with gates, loops, MANIP retry if needed, K5, K6, block summary
   gpu2  delta per block (dn_delta.py), choice of b_lo and b_hi, RSI indicators at b_lo
   gpu3  the same at b_hi
-  gpu4  double negative, rule A4a (dn_tf.py) on the trace set of dn_sample.py
+  gpu4  double negative: traces sampled on the GPU (dn_sample.py, rule unchanged), then rule A4a (dn_tf.py) on that trace set
   gpu5  PC toy (pc_meta.py): BP-muP widths, K 1 controls, delta probe D2, K 3/6, weight decay 0
   gpu6  PC toy: PC-muP (truncated inference, T 20, beta 0.1) and BP-SP widths, K 1 controls"""
 import json, math, os, shutil, subprocess, sys, time
@@ -127,7 +127,11 @@ def main():
     elif shard in ("gpu2", "gpu3"):
         ch = delta(); rk(ch["b_lo"] if shard == "gpu2" else ch["b_hi"], k6=False)
     elif shard == "gpu4":
-        run("dn_tf", [f"{A}/dn_tf.py", root, f"{root}/dn_out/dn_sample.json", f"{root}/dn_out/dn_text.json", f"{work}/dn_tf.json"], out=f"{work}/dn_tf.json")
+        sp = f"{work}/dn_sample.json"                                  # dn_sample.py resumes finished batches; complete when it holds 'trace_set'
+        if not (os.path.exists(sp) and "trace_set" in json.load(open(sp))):
+            run("dn_sample", [f"{A}/dn_sample.py", root, f"{root}/dn_out/gsm8k_test.json", sp])
+        S = json.load(open(sp)); print(f"trace set {S['trace_set']} (complete {S['trace_set_complete']}, L used {S['L_used']})", flush=True)
+        run("dn_tf", [f"{A}/dn_tf.py", root, sp, f"{root}/dn_out/dn_text.json", f"{work}/dn_tf.json"], out=f"{work}/dn_tf.json")
     elif shard in ("gpu5", "gpu6"): pc(shard)
     else: raise SystemExit(f"unknown shard {shard}")
     info.update(seconds=round(time.time() - T0, 1), steps=TIMES); json.dump(info, open(f"{work}/shard_done.json", "w"), indent=1); sync()

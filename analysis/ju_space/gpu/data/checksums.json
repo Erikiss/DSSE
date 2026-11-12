@@ -36,6 +36,14 @@
   "rk_dirs.pt": {
    "path": "gpu_pkg/rk_dirs.pt",
    "sha256": "15483ed5af4724547f25c036d8428842d729601e8f0836f7cef59fefb7155362"
+  },
+  "gsm8k_test.json.xz": {
+   "path": "dn_out/gsm8k_test.json",
+   "sha256": "34afe99e5ec6746176a0336fa847b675f3e2f7d766d43c23f84ad7dea05bc736"
+  },
+  "mock_sample.json.xz": {
+   "path": "dn_out/mock_sample.json",
+   "sha256": "ab7144b78e47a4319cf0052c491e4b7a34ecb13a277364816a68b5a078d9e627"
   }
  },
  "sources": {
@@ -43,7 +51,9 @@
   "axes_pairs": "pairs of judged DSSE responses (Transluce/DSSE on Hugging Face, eval_results), built by extract_axes.py",
   "mmlu_topics": "eight MMLU test subjects (cais/mmlu), built by dn_mmlu_to_json.py",
   "dn_text": "result of dn_text.py (README section 11, stage 1)",
-  "dn_sample": "result of dn_sample.py (traces on GSM8K test)",
-  "rk_dirs": "Pool directions of ufo_pool.pt (rand and cov, blocks 4-26, seeds 0-7) for rk_loop.py's random starts and K6 nulls"
+  "dn_sample": "sampled on the GPU in shard gpu4 by dn_sample.py (not in the package)",
+  "rk_dirs": "Pool directions of ufo_pool.pt (rand and cov, blocks 4-26, seeds 0-7) for rk_loop.py's random starts and K6 nulls",
+  "gsm8k_test": "openai/gsm8k, 'main' test split (MIT)",
+  "mock_sample": "two fake traces for the code self-test of dn_tf.py only"
  }
 }

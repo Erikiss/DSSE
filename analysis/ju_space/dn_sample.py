@@ -8,7 +8,9 @@ Trace set (plan review P07): the first 12 problems whose thinking ends between 3
 qualify, L = 1,536 and the window ends at 1,536. Run once with L = 1,536: with the same seeds and batches the first 1,024 tokens are
 those of a run with L = 1,024, so both windows are evaluated on the same traces. Thinking length counts the '<think>' token.
 torch seed per batch = 1000 * SEED + batch index (stored per trace, with BATCH), so a later run can couple to these draws.
-Usage: python dn_sample.py <root> <gsm8k_test.json> <out.json>      env: NT (3), NPROB (24), L (1536), BATCH (8), SEED (0)"""
+GPU (12 Nov 2026): the traces for A4a are sampled on the A100 of GPU shard gpu4 (DEVICE=cuda); the rule is unchanged. The CPU
+traces of batches 0-1 are kept as a record only and enter nothing.
+Usage: python dn_sample.py <root> <gsm8k_test.json> <out.json>      env: NT (3), NPROB (24), L (1536), BATCH (8), SEED (0), DEVICE"""
 import json, os, re, sys, time
 import torch
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,8 +18,8 @@ from ufo_common import load_model
 
 root, data, out = sys.argv[1], sys.argv[2], sys.argv[3]; torch.set_num_threads(int(os.environ.get("NT", "3"))); t0 = time.time()
 NPROB, L, BATCH, SEED = int(os.environ.get("NPROB", "24")), int(os.environ.get("L", "1536")), int(os.environ.get("BATCH", "8")), int(os.environ.get("SEED", "0"))
-mem = int([l for l in open("/proc/meminfo") if l.startswith("MemAvailable")][0].split()[1]) / 1e6; assert mem >= 9.5, f"only {mem:.1f} GB available"
-tok, model = load_model(root); PAD = tok.pad_token_id; END_THINK = tok.convert_tokens_to_ids("</think>"); IM_END = tok.convert_tokens_to_ids("<|im_end|>")
+mem = int([l for l in open("/proc/meminfo") if l.startswith("MemAvailable")][0].split()[1]) / 1e6; assert mem >= 9.5 or os.environ.get("DEVICE", "cpu") != "cpu", f"only {mem:.1f} GB available"
+tok, model = load_model(root); DEV = next(model.parameters()).device; PAD = tok.pad_token_id; END_THINK = tok.convert_tokens_to_ids("</think>"); IM_END = tok.convert_tokens_to_ids("<|im_end|>")
 probs = json.load(open(data))[:NPROB]
 prompt = lambda q: tok(tok.apply_chat_template([{"role": "user", "content": q}], tokenize=False, add_generation_prompt=True, enable_thinking=True), add_special_tokens=False)["input_ids"]
 gold = lambda a: a.split("####")[-1].strip().replace(",", "")
@@ -35,7 +37,7 @@ for b0 in range(0, NPROB, BATCH):
     ids = torch.full((len(P), T), PAD); am = torch.zeros(len(P), T, dtype=torch.long)
     for i, p in enumerate(P): ids[i, T - len(p):] = torch.tensor(p); am[i, T - len(p):] = 1
     tseed = 1000 * SEED + b0 // BATCH; torch.manual_seed(tseed)
-    with torch.no_grad(): g = model.generate(input_ids=ids, attention_mask=am, max_new_tokens=L, do_sample=True, temperature=0.6, top_k=20, top_p=0.95, pad_token_id=PAD)
+    with torch.no_grad(): g = model.generate(input_ids=ids.to(DEV), attention_mask=am.to(DEV), max_new_tokens=L, do_sample=True, temperature=0.6, top_k=20, top_p=0.95, pad_token_id=PAD).cpu()
     for i, row in enumerate(g[:, T:].tolist()):
         gen = []
         for t in row:
