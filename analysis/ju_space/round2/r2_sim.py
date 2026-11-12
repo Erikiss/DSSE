@@ -346,10 +346,16 @@ def _defs(path, names, ns):
     return ns
 
 
-def selftest(quiet=False):
+def selftest(quiet=False, return_rows=False):
     """Ports against the references on their own small examples: run2 / verdict2 (crit/sim_reg2.py with sim_reg.py's COND and ci) and
     run_A2 (theta_design/sim_gain.py) with few replicates; generalised experiment = scalar_experiment for equal pair counts."""
-    say = (lambda *a: None) if quiet else print; ok_all = True
+    rows = []
+
+    def say(name, ok, info="", **kw):
+        rows.append(dict(check=name, passed=None if ok is None else bool(ok), info=info, **kw))
+        if not quiet:
+            print(f"[{'PASS' if ok else ('FAIL' if ok is not None else 'SKIP')}] {name} {info}")
+    ok_all = True
     p1, p2 = _ref("rgi_design/crit/sim_reg.py"), _ref("rgi_design/crit/sim_reg2.py")
     if p1 and p2:
         ns = dict(np=np, stats=stats); _defs(p1, ["COND", "ci"], ns); _defs(p2, ["S", "COND2", "fit", "verdict2", "run2"], ns)
@@ -363,16 +369,18 @@ def selftest(quiet=False):
             ok = ok and reg2_simulate(f, COND, nsim=12, top=4, ndigits=3) == ns["run2"](ns["S"][name], ns["COND"], nsim=12)
         ok = ok and reg2_simulate(SCENARIOS["perturbation only (pilot-like, -0.6 per unit p)"], COND2, NW=5, nsim=10, seed=4, top=4, ndigits=3) == \
             ns["run2"](ns["S"]["perturbation only (pilot-like, -0.6 per unit p)"], ns["COND2"], NW=5, nsim=10, seed=4)
-        say(f"[{'PASS' if ok else 'FAIL'}] reg2_verdict / reg2_simulate = crit/sim_reg2.verdict2 / run2"); ok_all &= ok
+        say("reg2_verdict / reg2_simulate = crit/sim_reg2.verdict2 / run2 (200 random coefficient sets; 6 scenarios x nsim 12; COND2 NW 5)", ok,
+            mine=reg2_simulate(SCENARIOS["perturbation only (pilot-like, -0.6 per unit p)"], COND, nsim=12, top=4, ndigits=3),
+            ref=ns["run2"](ns["S"]["perturbation only (pilot-like, -0.6 per unit p)"], ns["COND"], nsim=12)); ok_all &= ok
         sim = reg2_simulate(SCENARIOS["true growth 0.10/doubling above natural + perturbation"], nsim=30)
         world = np.repeat(np.arange(8), len(COND) * 3); cond = np.tile(np.repeat([c[0] for c in COND], 3), 8)
         g = np.random.default_rng(3); xx = np.array([dict((c[0], c[1]) for c in COND)[c] for c in cond]) + g.normal(0, 0.15, len(cond)) * (cond != "nat")
         yy = 0.8 + 0.05 * world / 8 + g.normal(0, 0.05, len(cond)); pp = np.abs(g.normal(0.3, 0.03, len(cond))) * (cond != "nat")
         nz = reg2_noise(world, cond, yy, xx, pp)
         ok = abs(nz["s_m"] - 0.05) < 0.015 and abs(nz["jit"] - 0.15) < 0.04 and nz["n_h"] == 3 and len(nz["cond"]) == len(COND) and sum(sim.values()) > 0.999
-        say(f"[{'PASS' if ok else 'FAIL'}] reg2_noise recovers planted s_m / jit; simulate rates sum to 1 ({nz['s_m']:.3f}, {nz['jit']:.3f})"); ok_all &= ok
+        say("reg2_noise recovers planted s_m / jit; simulated rates sum to 1", ok, f"s_m {nz['s_m']:.3f} (0.05), jit {nz['jit']:.3f} (0.15)"); ok_all &= ok
     else:
-        say("[SKIP] sim_reg / sim_reg2 references not found")
+        say("sim_reg / sim_reg2 references not found", None)
     p3 = _ref("theta_design/sim_gain.py")
     if p3:
         argv = sys.argv; ns = dict(__name__="sim_gain_ref", __file__=p3)
@@ -385,17 +393,19 @@ def selftest(quiet=False):
             sys.argv = argv
         mine = run_A2_port(reps=2)
         ok = list(ns["SCEN"]) == list(SCEN) and ref == mine
-        say(f"[{'PASS' if ok else 'FAIL'}] run_A2_port(2) = sim_gain.run_A2 with REPS 2 (all {len(mine)} noise settings x {len(SCEN)} scenarios)"); ok_all &= ok
+        k0 = list(mine)[0]; s0 = list(SCEN)[0]
+        say(f"run_A2_port(2) = sim_gain.run_A2 with REPS 2 (all {len(mine)} noise settings x {len(SCEN)} scenarios, exact)", ok,
+            mine=mine[k0][s0], ref=ref[k0][s0]); ok_all &= ok
         r1, r2 = np.random.default_rng(9), np.random.default_rng(9); G = SCEN["super_mid (lam 2, a* 1.5)"][0]
         a = scalar_experiment(G, GRID, 64, 0.2, 8, 0.5, 0.6, 0.5, r1); b = cells_experiment(G, GRID, 64, np.sqrt(1 / (0.2 ** 2 * 8)) * GRID ** 0.25, 0.5, 0.6, r2)
         ok = all(np.allclose(u, v, rtol=1e-12, atol=1e-12) for u, v in zip(a, b))
         gA = gain_A2([0.5, 1, 2], [256, 128, 128], [0.9, 1.0, 1.2], 0.5, reps=3, B=100)
         band = resolvable_band([0.5, 1, 2], [256, 128, 128], [0.9, 1.0, 1.2], 0.5, reps=20, B=100, g_grid=np.exp(np.linspace(np.log(0.5), np.log(2), 9)))
         ok = ok and set(gA) == set(SCEN) and (band["lo"] is None or band["lo"] < 1) and (band["hi"] is None or band["hi"] > 1)
-        say(f"[{'PASS' if ok else 'FAIL'}] cells_experiment = scalar_experiment (equal pairs); gain_A2 / resolvable_band run (band {band['lo']}, {band['hi']})"); ok_all &= ok
+        say("cells_experiment = scalar_experiment for equal pair counts; gain_A2 / resolvable_band run", ok, f"band ({band['lo']}, {band['hi']})"); ok_all &= ok
     else:
-        say("[SKIP] sim_gain reference not found")
-    return bool(ok_all)
+        say("sim_gain reference not found", None)
+    return (bool(ok_all), rows) if return_rows else bool(ok_all)
 
 
 if __name__ == "__main__":

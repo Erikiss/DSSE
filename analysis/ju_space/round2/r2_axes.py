@@ -1,5 +1,12 @@
-"""Round 2, O2 (plan v2 section 2.4, 9.2): the RGI axis family at every block of B3, the statement and NEG re-reads with their nulls,
-the per-token block-14 dump and the match rates. Runs in the block-14 process of session r2_q1 (before r2_gen_loop.py).
+"""Round 2, O2 and O1's fixed axes (final plan, sections 2.4 and 9.2): the RGI axis family at every block of B3, the statement and NEG
+re-reads with their nulls, the per-token block-14 dump and the match rates. Runs in the block-14 process of session r2_q1 (before
+r2_gen_loop.py). G4 (block 14 included): a block whose round-1 outputs are not final (no summary_b<b>.json) is 'not run (round-1 output
+missing)'; the texts and reads then run in the process of the first final block of B3 (the texts are unsteered and block-independent),
+and the parts that read R1.state[14] (R1 texts in tok14.pt, match rate) are 'not run' if block 14 is not final.
+O1 (critique v2-4): per block, the fixed axes a_A = unit(perp(d_A^0)), a_B = unit(perp(d_B^0)) of this session's unpushed, unablated
+RSI_PRO / RSI_ANTI texts (perp off span(sports, tone, sea, u_neg)) and RGI_PRO / RGI_ANTI texts (perp off the same plus u_TOPIC), with
+g_0 = their gap on these axes (r2_rk.gap_on_fixed_axes; = rk_loop's gap_perp_cross; RGI: = Delta_RGI); C-Q2 / C-Q3 / C-Q4a read
+g_push, g_abl and g_cue on the block-14 axes.
 
 Texts (stage 'texts'): six instructions (r2_stimuli.O2_INSTR: RSI_PRO / RSI_ANTI = rk_loop.INSTR['rsi'], RGI_PRO, RGI_ANTI, TOPIC_PRO,
 TOPIC_ANTI) appended to each of the 64 prompts as rk_loop.text_axis does, generated unsteered once (T 0.7, 40 tokens, Gumbel-max) with
@@ -26,9 +33,9 @@ Statistics (stage 'stats', no model) per block b of B3 (fold = R1.state[b]['axes
   NEG: u_neg recomputed (same flag rule); 2,000 within-pair sign-flip nulls of the 40 differences (seed 24);
   match rate of this session's RSI_PRO / RSI_ANTI texts with R1.state[14]['axis_rsi']['conts'] (22k), with the versions next to R1.meta.
 Outputs (in <r2_dir>): axes/o2_texts.pt (stage texts), local/axes_reads.pt (stage read, local only), axes/tok14.pt (float16),
-axes/r2_axes.pt (texts as token ids; per-block states, per-prompt differences, axes, nulls), axes/r2_axes.json.
+axes/r2_axes.pt (texts as token ids; per-block states, per-prompt differences, axes, nulls, O1 fixed axes), axes/r2_axes.json.
 Usage: python r2_axes.py <root> <r1_dir> <r2_dir> [texts | read | stats | all | selftest]     env DEVICE, NT, MOCK"""
-import json, math, os, random, sys
+import glob, json, math, os, random, shutil, sys
 import numpy as np, torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -89,11 +96,15 @@ def statement_selection(mock):
     return [x["statement"] for x in pos[:nb]], [x["statement"] for x in ng[:nb]]
 
 
-def stage_read(rk, T, r1_dir, B3, P):
+def stage_read(rk, T, r1_dir, B3, P, final14=True):
     """All reads of O2 (820 texts in production): O2 sets at all 28 blocks, statements and NEG at the blocks of B3, R1 RSI / sea texts
-    and the session's RGI texts per token at block 14."""
+    and the session's RGI texts per token at block 14. The R1 texts come from R1.state[14] and are read only if block 14's round-1
+    outputs are final (G4); otherwise tok14.pt holds the session's RGI sets alone and the R1 parts are 'not run'."""
     if os.path.exists(P["reads"]) and os.path.exists(P["tok"]): return torch.load(P["reads"], map_location="cpu", weights_only=False)
-    ST14 = rk.ST; out = dict(B3=list(B3), X28={}, n_prompts=rk.NP); tok = dict(block=14, dtype="float16", sets={}, fold=ST14["axes"]["fold"].clone(), prompts=list(rk.PROMPTS))
+    ST14 = (rk.ST if rk.BL == 14 else R.load_r1_state(r1_dir, 14)) if final14 else None
+    out = dict(B3=list(B3), X28={}, n_prompts=rk.NP, host_block=rk.BL, r1_block14="read" if final14 else "not run (round-1 output missing)")
+    tok = dict(block=14, dtype="float16", sets={}, fold=(ST14 if final14 else rk.ST)["axes"]["fold"].clone(), prompts=list(rk.PROMPTS),
+               r1_sets="read" if final14 else "not run (round-1 output missing)")
     for nm in SETS:
         A = R.read_all_blocks(rk.PIDS, T["sets"][nm], token_blocks=(14,) if nm in ("RGI_PRO", "RGI_ANTI") else ())
         out["X28"][nm] = A["X"].float()
@@ -104,7 +115,7 @@ def stage_read(rk, T, r1_dir, B3, P):
     out["neg"] = dict(pairs=list(rk.NEG_PAIRS), blocks=bl, Xpos=R.read_all_blocks([base] * len(rk.NEG_PAIRS), [rk.enc(a) for a, b in rk.NEG_PAIRS], blocks=bl)["X"].float(),
                       Xneg=R.read_all_blocks([base] * len(rk.NEG_PAIRS), [rk.enc(b) for a, b in rk.NEG_PAIRS], blocks=bl)["X"].float())
     out["r1_read"] = {}
-    for name in ("rsi", "sea"):
+    for name in (("rsi", "sea") if final14 else ()):
         c = ST14[f"axis_{name}"]["conts"]
         for tag, cc, ref in (("PRO", c[0::2], ST14[f"axis_{name}"]["Xp"]), ("ANTI", c[1::2], ST14[f"axis_{name}"]["Xa"])):
             A = R.read_all_blocks(rk.PIDS, cc, blocks=[14], token_blocks=[14]); key = f"R1_{name.upper()}_{tag}"
@@ -186,9 +197,13 @@ def block_stats(b, X, ST_b, stmt, neg, W, dev):
              u_diff=f32(u_diff), u_com=f32(u_com), u_T_perp=f32(uT), u_RSI_session=f32(RS2["u"]), u_RSI_session_perp=f32(RS2["u_perp"]),
              u_S=f32(uS), u_neg=f32(uN), null_u_RGI_perp=f32(nR), null_u_RGI_perpT=f32(nRT), null_u_dir=f32(DIR["null"]), null_u_S_perp=f32(nS),
              null_u_neg=f32(nN), basis_R1=Q1, basis_RGI=Q5, S_states=dict(pro=f32(Sp), anti=f32(Sa)), NEG_states=dict(pos=f32(neg["pos"]), neg=f32(neg["neg"])),
-             GA=GA, auc_RGI=RGI["auc"], boot_disatt=torch.as_tensor(bs))
+             GA=GA, auc_RGI=RGI["auc"], boot_disatt=torch.as_tensor(bs),
+             fixed_axes=dict(RSI=dict(a_A=RS2["a_A"], a_B=RS2["a_B"], g0=RS2["gap_perp_cross"], basis="sports, tone, sea, u_neg (R1 axes of the block)"),
+                             RGI=dict(a_A=RGI["a_A"], a_B=RGI["a_B"], g0=RGI["gap_perp_cross"], basis="sports, tone, sea, u_neg, u_TOPIC")))
     ax_stats = lambda A: dict(auc=A["auc"], paired_win=A["paired_win"], gap_cross=A["gap_cross"], kept=A["kept"])
     J = dict(status="ok", GA=GA, auc_RGI=RGI["auc"], labels=[] if GA else ["RGI axis not resolved"],
+             fixed_axes=dict(RSI=dict(g0=RS2["gap_perp_cross"], kept=RS2["kept"]), RGI=dict(g0=RGI["gap_perp_cross"], kept=RGI["kept"]),
+                             note="O1: a_A, a_B (float64) in r2_axes.pt blocks[b]['fixed_axes']; g(texts) = r2_rk.gap_on_fixed_axes"),
              axes=dict(RSI_session=dict(ax_stats(RS2), gap_perp_cross=RS2["gap_perp_cross"]), RGI=dict(ax_stats(RGI), gap_perp_cross=RGI["gap_perp_cross"], gap_perp=RGI["gap_perp"]),
                        TOPIC=ax_stats(TOP), GI_TOP=ax_stats(GIT), dir=ax_stats(DIR)),
              Delta_T=float(ax["gap_perp_cross"]), g0_RSI=RS2["gap_perp_cross"], Delta_RGI=RGI["gap_perp_cross"], rel=rel,
@@ -210,11 +225,15 @@ def match_rate(a_list, b_list):
 
 
 def stage_stats(r1_dir, info, T, RD, P, dev):
+    """Per block of B3 whose round-1 outputs are final (G4): block_stats; the other blocks 'not run (round-1 output missing)'. Match rate
+    against R1.state[14]'s texts only if block 14 is final."""
     if os.path.exists(P["pt"]) and os.path.exists(P["json"]): return json.load(open(P["json"]))
     B3 = info["B3"]; NP = RD["n_prompts"]; W = R.prompt_bootstrap(NP, B=N_BOOT, seed=BOOT_SEED); blocks_pt, blocks_js = {}, {}
-    ST14 = None
+    ST14 = None; final = {b: R.block_final(r1_dir, b) for b in B3}
     for b in B3:
-        try: ST_b = R.load_r1_state(r1_dir, b)
+        try:
+            if not final[b]: raise R.R1Missing(f"round-1 outputs of block {b} are not final (summary_b{b}.json missing; G4)")
+            ST_b = R.load_r1_state(r1_dir, b)
         except (R.R1Missing, FileNotFoundError) as e:
             blocks_js[str(b)] = dict(status="not run (round-1 output missing)", GA=None, error=str(e)); continue
         if b == 14: ST14 = ST_b
@@ -223,15 +242,18 @@ def stage_stats(r1_dir, info, T, RD, P, dev):
         blocks_pt[b], blocks_js[str(b)] = block_stats(b, X, ST_b, stmt, neg, W, dev)
         R.log(f"O2 block {b}: AUC(u_RGI) {blocks_js[str(b)]['auc_RGI']:.3f} GA {blocks_js[str(b)]['GA']} flags {blocks_js[str(b)]['flags']}")
         del ST_b
-    if ST14 is None: ST14 = R.load_r1_state(r1_dir, 14)
-    c = ST14["axis_rsi"]["conts"]; mr = dict(RSI_PRO=match_rate(T["sets"]["RSI_PRO"], c[0::2]), RSI_ANTI=match_rate(T["sets"]["RSI_ANTI"], c[1::2]))
+    if ST14 is None and final.get(14): ST14 = R.load_r1_state(r1_dir, 14)
+    if ST14 is not None:
+        c = ST14["axis_rsi"]["conts"]; mr = dict(RSI_PRO=match_rate(T["sets"]["RSI_PRO"], c[0::2]), RSI_ANTI=match_rate(T["sets"]["RSI_ANTI"], c[1::2]))
+    else: mr = dict(status="not run (round-1 output missing)")
     meta1 = None; p = os.path.join(r1_dir, "gpu1", "shard_done.json")                  # R1.meta of gpu1 (G47), metadata only
     if os.path.exists(p): m = json.load(open(p)); meta1 = {k: m.get(k) for k in ("gpu", "torch", "transformers", "code_commit")}
     pt = dict(texts=T["sets"], keys=T["keys"], instr=T["instr"], prompts=T["prompts"], key_rule=T["key_rule"], B3=list(B3), blocks=blocks_pt,
               GA={b: v["GA"] for b, v in blocks_pt.items()}, X28={k: v.half() for k, v in RD["X28"].items()}, seeds=dict(SEEDS, boot=BOOT_SEED),
               statements=dict(pro=RD["stmt"]["pro"], anti=RD["stmt"]["anti"]), mock=bool(T["mock"]))
-    js = dict(script="r2_axes.py", plan="v2 section 2.4 (O2)", B3=list(B3), seeds=dict(SEEDS, boot=BOOT_SEED), n_null=N_NULL, n_boot=N_BOOT, ga_threshold=GA_AUC,
-              mock=bool(T["mock"]), key_rule=T["key_rule"], blocks=blocks_js, GA={str(b): v.get("GA") for b, v in blocks_js.items()},
+    js = dict(script="r2_axes.py", plan="final plan (abschnitt11_12_runde2_plan.md) section 2.4 (O1 fixed axes, O2)", B3=list(B3), seeds=dict(SEEDS, boot=BOOT_SEED),
+              n_null=N_NULL, n_boot=N_BOOT, ga_threshold=GA_AUC, mock=bool(T["mock"]), key_rule=T["key_rule"], host_block=RD.get("host_block"),
+              final={str(b): v for b, v in final.items()}, blocks=blocks_js, GA={str(b): v.get("GA") for b, v in blocks_js.items()},
               match_rate=mr, versions=versions(), r1_meta_gpu1=meta1, r1_read_check=RD["r1_read"], block_info=info, finder=list(R.FINDER_LOG))
     R.torch_save(P["pt"], pt); R.write_json(P["json"], js); return js
 
@@ -240,17 +262,35 @@ def stage_stats(r1_dir, info, T, RD, P, dev):
 STAGES = ("texts", "read", "stats")
 
 
+def host_block(r1_dir, info):
+    """The block whose process generates and reads the O2 texts (unsteered: the texts do not depend on the block): the block already
+    open in this process, else 14, else the first other block of B3 - among the blocks whose round-1 outputs are final (G4, block 14
+    included). None if no block of B3 is final."""
+    if R._RK is not None:
+        if R.BLK["b"] not in info["B3"]: raise RuntimeError(f"block {R.BLK['b']} is open in this process but not in B3 {info['B3']}")
+        return R.BLK["b"]
+    return next((b for b in [14] + [x for x in info["B3"] if x != 14] if R.block_final(r1_dir, b)), None)
+
+
 def main(root, r1_dir, r2_dir, stage="all"):
-    """Runs the stages up to 'stage' ('all' = all three); every stage is skipped when its output exists, and the model is loaded
-    (block 14 opened) only when texts or reads have to be made."""
+    """Runs the stages up to 'stage' ('all' = all three); every stage is skipped when its output exists, and the model is loaded (the
+    host block opened, normally 14) only when texts or reads have to be made. Blocks whose round-1 outputs are not final are 'not run
+    (round-1 output missing)' (G4); if no block of B3 is final, r2_axes.json says so and nothing else is written."""
     P = paths(r2_dir); info = R.r1_blocks(r1_dir); upto = 2 if stage == "all" else STAGES.index(stage)
     have_texts = os.path.exists(P["texts"]); have_reads = os.path.exists(P["reads"]) and os.path.exists(P["tok"])
     need_model = (not have_texts) or (upto >= 1 and not have_reads and not (upto == 2 and os.path.exists(P["pt"]) and os.path.exists(P["json"])))
-    rk = R.open_block(root, r1_dir, r2_dir, 14) if need_model else None
+    rk = None
+    if need_model:
+        host = host_block(r1_dir, info)
+        if host is None:
+            js = dict(script="r2_axes.py", status="not run (round-1 output missing)", B3=info["B3"], blocks={str(b): dict(status="not run (round-1 output missing)", GA=None) for b in info["B3"]},
+                      GA={str(b): None for b in info["B3"]}, block_info=info, finder=list(R.FINDER_LOG))
+            R.write_json(P["json"], js); R.log("O2 not run: no block of B3 has final round-1 outputs (G4)"); return js
+        rk = R.open_block(root, r1_dir, r2_dir, host)
     T = stage_texts(rk, P)
     if upto == 0: return None
     if upto == 2 and os.path.exists(P["pt"]) and os.path.exists(P["json"]): return json.load(open(P["json"]))
-    RD = stage_read(rk, T, r1_dir, info["B3"], P)
+    RD = stage_read(rk, T, r1_dir, info["B3"], P, final14=R.block_final(r1_dir, 14))
     if upto == 1: return None
     dev = torch.device("cuda" if (os.environ.get("DEVICE", "cpu") != "cpu" and torch.cuda.is_available()) else "cpu")
     js = stage_stats(r1_dir, info, T, RD, P, dev); R.log(f"O2 done: GA {js['GA']}")
@@ -315,6 +355,28 @@ def selftest(root, r1_dir, r2_dir):
     st = {k: os.path.getmtime(v) for k, v in P.items() if os.path.exists(v)}; main(root, r1_dir, r2_dir, "all")
     check("resume: a second run skips every stage", st == {k: os.path.getmtime(v) for k, v in P.items() if os.path.exists(v)})
     check("seeds and bootstrap recorded", js["seeds"] == dict(SEEDS, boot=BOOT_SEED) and all(v["boot"]["B"] == N_BOOT for v in js["blocks"].values()))
+    ok = True
+    for b, B in pt["blocks"].items():
+        F = B["fixed_axes"]; Jb = js["blocks"][str(b)]
+        for nm, (pro, anti) in (("RSI", ("RSI_PRO", "RSI_ANTI")), ("RGI", ("RGI_PRO", "RGI_ANTI"))):
+            g = R.gap_on_fixed_axes(B["X"][pro], B["X"][anti], B["fold"], F[nm]["a_A"], F[nm]["a_B"])["g"]
+            ok &= abs(g - F[nm]["g0"]) < 1e-6 * max(1.0, abs(g)) and abs(F[nm]["g0"] - Jb["fixed_axes"][nm]["g0"]) < 1e-12
+        ok &= abs(F["RGI"]["g0"] - Jb["Delta_RGI"]) < 1e-12 and abs(F["RSI"]["g0"] - Jb["g0_RSI"]) < 1e-12
+        ok &= float((B["basis_R1"].T @ F["RSI"]["a_A"]).abs().max()) < 1e-9 and float((B["basis_RGI"].T @ F["RGI"]["a_B"]).abs().max()) < 1e-9
+    check("O1 fixed axes: unit, orthogonal to their basis, g on them = g_0 (RSI) and Delta_RGI (RGI)", ok)
+    # G4 with block 14 not final (no summary_b14.json): a separate process (one process = one block) hosts the texts at block 8
+    import subprocess
+    nf = os.path.join(r2_dir, "selftest_nonfinal14"); shutil.rmtree(nf, ignore_errors=True); shutil.copytree(r1_dir, os.path.join(nf, "r1"))
+    for f in glob.glob(os.path.join(nf, "r1", "gpu*", "summary_b14.json")): os.remove(f)
+    pr = subprocess.run([sys.executable, os.path.abspath(__file__), root, os.path.join(nf, "r1"), os.path.join(nf, "r2"), "all"], env=dict(os.environ, MOCK="1"),
+                        capture_output=True, text=True)
+    jn = json.load(open(os.path.join(nf, "r2", "axes", "r2_axes.json"))) if pr.returncode == 0 else {}
+    tn = torch.load(os.path.join(nf, "r2", "axes", "tok14.pt"), map_location="cpu", weights_only=False) if pr.returncode == 0 else {}
+    Tn = torch.load(os.path.join(nf, "r2", "axes", "o2_texts.pt"), map_location="cpu", weights_only=False) if pr.returncode == 0 else {}
+    check("G4: block 14 not final -> block 14 'not run', texts hosted at block 8 and unchanged, R1 block-14 parts 'not run'",
+          pr.returncode == 0 and jn["blocks"]["14"]["status"] == "not run (round-1 output missing)" and jn["blocks"]["8"]["status"] == "ok"
+          and jn["host_block"] == 8 and jn["match_rate"].get("status", "").startswith("not run") and sorted(tn["sets"]) == ["RGI_ANTI", "RGI_PRO"]
+          and Tn["sets"] == pt["texts"] and not os.path.exists(os.path.join(nf, "r2", "rk", "b14")), pr.stderr[-300:] if pr.returncode else jn.get("host_block"))
     ok_all = all(r["ok"] for r in res); R.write_json(os.path.join(r2_dir, "axes", "selftest.json"), dict(ok=ok_all, tests=res))
     print(f"r2_axes selftest: {sum(r['ok'] for r in res)}/{len(res)} passed", flush=True); return ok_all
 

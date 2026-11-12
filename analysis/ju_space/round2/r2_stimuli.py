@@ -1,4 +1,4 @@
-"""Round 2 (plan v2, sections 2.4, 3.1 A1-A3, 4.1 B-Q8, 5.2 C-Q4a / C-Q6, 9.1, Appendices A-C): the frozen stimulus lists and
+"""Round 2 (final plan, sections 2.4, 3.1 A1-A3, 4.1 B-Q8, 5.2 C-Q4a / C-Q6, 9.1, Appendices A-C): the frozen stimulus lists and
 templates, with the token-length asserts of G29 (a failing assert stops r2_q3: the stimuli are wrong).
 
 Contents

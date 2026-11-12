@@ -1,5 +1,7 @@
-"""Round 2, A6 (b) (plan v2 sections 3.1 A6, 9.2; design M8): the GEN loop at block b = env BLOCK (14, b_lo or b_hi), one process per
+"""Round 2, A6 (b) (final plan sections 3.1 A6, 9.2; design M8): the GEN loop at block b = env BLOCK (14, b_lo or b_hi), one process per
 block, in session r2_q1 after r2_axes.py.
+  Finality (G4, block 14 included): if block b's round-1 outputs are not final (no summary_b<b>.json), rgi/dyn_b<b>.json says 'not run
+  (round-1 output missing)' and nothing is opened or generated.
   Gate GA(b) (O2, G28): the loop runs only where the cross-fitted AUC(u_RGI) of block b is >= 0.85 (r2_axes.ga_gate, the function r2_ana
   uses too); otherwise rgi/dyn_b<b>.json says 'not run (AUC gate)' and nothing is generated (OD-A11).
   Loop: rk.run_loop('r2GEN', unit(u_RGI_perp(b)), nseed 1, 4 rounds) with the block's alpha_b and cap_b (open_block sets ASCALE =
@@ -12,7 +14,7 @@ block, in session r2_q1 after r2_axes.py.
   S_4 = cos(d_4, d_3) / sqrt(rel(d_3) rel(d_4)) of the GEN loop (rk_verdict.S4's formula). The A7 dynamics rules are evaluated in r2_ana.
 Outputs (in <r2_dir>): rgi/dyn_b<b>.json, rgi/dyn_b<b>.pt (start, d_1..d_4, per-pair arrays of every evaluation with texts as token ids).
 Usage: python r2_gen_loop.py <root> <r1_dir> <r2_dir> [run | selftest]      env BLOCK, DEVICE, NT, MOCK"""
-import copy, json, math, os, shutil, sys
+import copy, glob, json, math, os, shutil, sys
 import torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -35,11 +37,14 @@ def run(root, r1_dir, r2_dir, b):
     """The GEN loop of block b (skipped when rgi/dyn_b<b>.json exists). Returns the JSON written."""
     js_p, pt_p = out_paths(r2_dir, b)
     if os.path.exists(js_p): R.log(f"GEN loop b{b}: {js_p} exists, skipped"); return json.load(open(js_p))
+    base = dict(script="r2_gen_loop.py", plan="final plan (abschnitt11_12_runde2_plan.md) section 3.1 A6 (b)", block=b, loop=LOOP, nseed=NSEED,
+                rounds=ROUNDS, keys="keyseed('r2GEN' + SUF_b, n, p, s, b)", ga_threshold=GA_AUC, mock=R.MOCK)
+    if not R.block_final(r1_dir, b):
+        js = dict(base, status="not run (round-1 output missing)", GA=None, note=f"summary_b{b}.json missing: block not final (G4)")
+        R.write_json(js_p, js); R.log(f"GEN loop b{b}: not run (round-1 output missing)"); return js
     ax_p = os.path.join(r2_dir, "axes", "r2_axes.pt")
     if not os.path.exists(ax_p): raise SystemExit(f"{ax_p} missing: run r2_axes.py first (same session)")
     AX = torch.load(ax_p, map_location="cpu", weights_only=False); A = AX["blocks"].get(b)
-    base = dict(script="r2_gen_loop.py", plan="v2 section 3.1 A6 (b)", block=b, loop=LOOP, nseed=NSEED, rounds=ROUNDS,
-                keys="keyseed('r2GEN' + SUF_b, n, p, s, b)", ga_threshold=GA_AUC, mock=R.MOCK)
     if A is None:
         js = dict(base, status="not run (round-1 output missing)", GA=None, note="no O2 axes at this block (r2_axes.json gives the reason)")
         R.write_json(js_p, js); return js
@@ -87,6 +92,10 @@ def selftest(root, r1_dir, r2_dir):
     def variant(name, auc):
         d = os.path.join(base, name); X = copy.copy(AX); X["blocks"] = dict(AX["blocks"]); X["blocks"][b] = dict(AX["blocks"][b], auc_RGI=auc, GA=ga_gate(auc))
         R.torch_save(os.path.join(d, "axes", "r2_axes.pt"), X); return d
+    nf = os.path.join(base, "nonfinal"); shutil.copytree(r1_dir, os.path.join(nf, "r1"))
+    for f in glob.glob(os.path.join(nf, "r1", "gpu*", f"summary_b{b}.json")): os.remove(f)
+    js = run(root, os.path.join(nf, "r1"), variant("nonfinal_r2", 0.9), b)
+    check("G4: block not final -> 'not run (round-1 output missing)', no block opened", js["status"] == "not run (round-1 output missing)" and R._RK is None)
     g = variant("gate", 0.5); js = run(root, r1_dir, g, b)
     check("gate closed: 'not run (AUC gate)', nothing generated, no block opened", js["status"] == "not run (AUC gate)" and R._RK is None and not os.path.exists(os.path.join(g, "rk")))
     o = variant("open", 0.9); js = run(root, r1_dir, o, b); rk = R._RK; L = LOOP + rk.SUF

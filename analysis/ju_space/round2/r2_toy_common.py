@@ -60,16 +60,19 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _JU = os.path.dirname(_HERE)
 if _JU not in sys.path:
     sys.path.insert(0, _JU)
-PC_ENV = {"T": "20", "BETA": "0.1", "LR": "1e-3", "MAXSTEPS": "6000"}
+PC_ENV = {"T": "20", "BETA": "0.1", "LR": "1e-3", "MAXSTEPS": "6000"}      # run_shard.PC_ENV and the round-1 MAXSTEPS (W0)
 if "pc_meta" not in sys.modules:
     os.environ.update(PC_ENV)
+    if os.environ.get("QUICK") != "1":
+        os.environ.pop("QUICK", None)                                       # W0: QUICK is unset outside code tests
 import pc_meta as M          # noqa: E402  round-1 code, imported unchanged
 import pc_common as PCC      # noqa: E402
 
 M.T = int(PC_ENV["T"]); PCC.BETA[0] = float(PC_ENV["BETA"]); M.LR = float(PC_ENV["LR"])
 if not M.QUICK:
     M.MAXSTEPS = int(PC_ENV["MAXSTEPS"])
-assert M.T == 20 and PCC.BETA[0] == 0.1 and M.LR == 1e-3 and (M.QUICK or M.MAXSTEPS == 6000)
+assert M.T == 20 and PCC.BETA[0] == 0.1 and M.LR == 1e-3, "pc_meta environment (W0)"
+assert (M.MAXSTEPS, M.AFTER, M.LEVEL1, M.FT_STEPS) == ((200, 50, 0.0, 20) if M.QUICK else (6000, 500, 0.95, 300)), "pc_meta constants (W0)"
 
 DEV = M.DEV
 if DEV.type == "cuda":
@@ -802,9 +805,18 @@ def _adam_q(q, g, m, v, step, lr, b1=BETAS[0], b2=BETAS[1], eps=EPS):
 
 
 # ====================================================================================================================== training
-def task_fisher_b(H, lab, nk):
+def task_fisher_b(H, lab, nk, groups=None):
     """Batched pc_meta.task_fisher: H [B, N, D], integer labels lab [B, N] (nk classes) -> tr(S_between) / tr(S_within) [B]
-    (differentiable; empty classes contribute nothing, as in pc_meta)."""
+    (differentiable; empty classes contribute nothing, as in pc_meta). groups: the index tensors of the non-empty classes when every
+    net of the batch has the same labels; then pc_meta's op sequence (class loop, mean, sum) runs batched over the nets, which gives
+    values and gradients bitwise equal to pc_meta.task_fisher per net on the CPU (W0's regulariser equivalence). Without groups a one-hot
+    formulation is used (equal up to float32 rounding; the sham test of W0 checks the value to 1e-6)."""
+    if groups is not None:
+        mu = H.mean(1); Bt = H.new_zeros(H.shape[0]); Wt = H.new_zeros(H.shape[0])
+        for idx in groups:
+            Hk = H[:, idx]; mk = Hk.mean(1)
+            Bt = Bt + len(idx) * ((mk - mu) ** 2).sum(-1); Wt = Wt + ((Hk - mk.unsqueeze(1)) ** 2).sum((1, 2))
+        return Bt / Wt
     O = Fn.one_hot(lab, nk).to(H.dtype)
     n = O.sum(1)
     mk = (O.transpose(1, 2) @ H) / n.clamp(min=1).unsqueeze(-1)
@@ -825,6 +837,11 @@ def _stack_data(nets, tss):
     ts0 = tss[0]; d["val_mode"] = ts0["val_mode"]; d["ntask"] = ts0["ntask"]
     d["vgroup_of_task"] = np.array([ts0["vgroup"][ts0["vtask"] == k][0] for k in range(ts0["ntask"])])
     d["K"] = int(max(ts["task"].max() for ts in tss)) + 1
+    for key, src_, nk in (("task", "task", d["K"]), ("xlab", "x", P)):     # nets grouped by identical label rows (regulariser)
+        rows = np.stack([ts[src_] for ts in tss]); uniq, inv = np.unique(rows, axis=0, return_inverse=True)
+        d[key + "_groups"] = [(torch.as_tensor(np.nonzero(inv.reshape(-1) == u)[0], device=nets.device),
+                               [torch.as_tensor(np.nonzero(uniq[u] == k)[0], device=nets.device) for k in range(nk) if (uniq[u] == k).any()])
+                              for u in range(len(uniq))]
     return d
 
 
@@ -854,7 +871,8 @@ class TrainResult:
 
 
 def train(specs, *, fixed_steps=None, init_state=None, nets=None, tasksets=None, max_steps=None, after=None, level1=None,
-          extra_after=0, save_first95=False, snapshot_every=None, snapshot=None, task_basis=None, coord_check=True, verbose=False):
+          extra_after=0, save_first95=False, snapshot_every=None, snapshot=None, task_basis=None, coord_check=True, fisher="auto",
+          verbose=False):
     """Batched full-batch AdamW training (W0 / W1; definitions identical to pc_meta.main).
     specs: list of net specs (one architecture; equal training-set sizes). Mode (per batch):
       - checkpoint rule (default): every 50 updates the level-1 accuracy (pooled held-out for W1) is checked; first95 = the first check
@@ -871,7 +889,10 @@ def train(specs, *, fixed_steps=None, init_state=None, nets=None, tasksets=None,
     the nets that were active in that update). task_basis: [B, W * 12, L] orthonormal bases (zero tensor rows for free nets with
     task_basis_mask) restricting the centred update of the 12 task columns after every step (C-T6 cap; the task-mean column stays free).
     save_first95: keep each net's parameters and AdamW state at first95 (for train_late).
-    coord_check: pc_meta's G0 coordinate check at update 10 (mean |h - h_init| on 512 training examples, probe from the net's seed)."""
+    coord_check: pc_meta's G0 coordinate check at update 10 (mean |h - h_init| on 512 training examples, probe from the net's seed).
+    fisher: how the regulariser's Fisher ratio is computed: 'auto' (pc_meta's op sequence, bitwise per net, when all nets of the batch
+    share the labels, e.g. every task regulariser of a W1 batch or a one-world sham batch; else the one-hot form), 'replica' (always
+    pc_meta's op sequence, looping over groups of nets with identical labels), 'onehot'."""
     specs = [full_spec(s) for s in specs]; B = len(specs)
     max_steps = MAXSTEPS if max_steps is None else max_steps; after = AFTER if after is None else after
     lev1 = LEVEL1 if level1 is None else level1
@@ -927,9 +948,18 @@ def train(specs, *, fixed_steps=None, init_state=None, nets=None, tasksets=None,
         loss = ce.sum()
         on = (gam != 0) & ((~late) | (first95 >= 0))
         for sel, labk, nk in ((on & ~sham, "task", d["K"]), (on & sham, "xlab", P)):
-            if sel.any():                                   # only the nets with the regulariser on (no 0 x log 0 terms)
+            if not sel.any():                               # only the nets with the regulariser on (no 0 x log 0 terms)
+                continue
+            grp = d[labk + "_groups"]
+            if fisher == "onehot" or (fisher == "auto" and len(grp) > 1):
                 ii = torch.as_tensor(np.nonzero(sel)[0], device=nets.device); gg = torch.as_tensor(gam[sel], dtype=F32, device=nets.device)
                 loss = loss + (gg * torch.log(task_fisher_b(h2[ii], d[labk][ii], nk))).sum()
+            else:                                           # pc_meta's op sequence per group of nets with identical labels
+                for nidx, cls in grp:
+                    nn_ = nidx.cpu().numpy(); s_ = sel[nn_]
+                    if s_.any():
+                        ii = nidx[torch.as_tensor(s_, device=nets.device)]; gg = torch.as_tensor(gam[nn_[s_]], dtype=F32, device=nets.device)
+                        loss = loss + (gg * torch.log(task_fisher_b(h2[ii], None, nk, cls))).sum()
         grads = torch.autograd.grad(loss, [nets.p[k] for k in pidx])
         for k in pidx:
             nets.p[k].requires_grad_(False)
@@ -1196,8 +1226,9 @@ def column_search(nets, net_of, shots, heldout=None, *, steps=None, lr=FT_LR, ev
     eval_at: steps at which every held-out set is evaluated (B2: FT_EVAL; 0 = before the first step, so steps=0 evaluates q0 =
       'recipe'). budgets: best-of-budget (OD-C1): validation and held-out accuracy every val_every steps up to max(budgets); per budget
       the held-out accuracy at the best validation evaluation within the budget (ties: earliest).
-    Returns dict: acc {name: [C, len(eval_at)]}, A {name: mean over eval_at}, best {budget: dict(val [C], step [C], <name> [C],
-      col [C, W] if keep_cols)}, v [C, W] and q [C, r] at the end (numpy)."""
+    Returns dict: acc {name: [C, len(eval_at)]}, A {name: mean over eval_at}, best {budget: dict(val [C] (best validation accuracy),
+      step [C] (its step), heldout {name: [C]} (held-out accuracy there), col [C, W] (the column there; keep_cols=True))}, v [C, W] and
+      q [C, r] at the end (numpy)."""
     C = len(net_of); gr = _Groups(net_of); G, k = gr.G, gr.kmax
     if heldout is None:
         heldout = {}
@@ -1241,7 +1272,7 @@ def column_search(nets, net_of, shots, heldout=None, *, steps=None, lr=FT_LR, ev
         return qq if v0 is None else v0 + (Bm @ qq.unsqueeze(-1)).squeeze(-1)
 
     acc = {n: [] for n in hos}; best = {b: dict(val=torch.full((G, k), -1.0, device=DEV), step=torch.zeros(G, k, device=DEV),
-                                                **{n: torch.zeros(G, k, device=DEV) for n in hos}) for b in budgets}
+                                                heldout={n: torch.zeros(G, k, device=DEV) for n in hos}) for b in budgets}
     if keep_cols:
         for b in budgets:
             best[b]["col"] = torch.zeros(G, k, nets.W, device=DEV)
@@ -1260,7 +1291,7 @@ def column_search(nets, net_of, shots, heldout=None, *, steps=None, lr=FT_LR, ev
                         upd = va > best[b]["val"]
                         best[b]["val"] = torch.where(upd, va, best[b]["val"]); best[b]["step"] = torch.where(upd, torch.full_like(va, s), best[b]["step"])
                         for n in hos:
-                            best[b][n] = torch.where(upd, hv[n], best[b][n])
+                            best[b]["heldout"][n] = torch.where(upd, hv[n], best[b]["heldout"][n])
                         if keep_cols:
                             best[b]["col"] = torch.where(upd.unsqueeze(-1), v, best[b]["col"])
 
@@ -1290,7 +1321,8 @@ def column_search(nets, net_of, shots, heldout=None, *, steps=None, lr=FT_LR, ev
         evaluate(s)
     out = dict(acc={n: gr.flat(torch.stack(a, -1)).cpu().numpy() if a else np.zeros((C, 0)) for n, a in acc.items()})
     out["A"] = {n: a.mean(1) if a.shape[1] else None for n, a in out["acc"].items()}
-    out["best"] = {b: {kk: gr.flat(vv).cpu().numpy() for kk, vv in d_.items()} for b, d_ in best.items()}
+    out["best"] = {b: {kk: ({n: gr.flat(t).cpu().numpy() for n, t in vv.items()} if kk == "heldout" else gr.flat(vv).cpu().numpy())
+                       for kk, vv in d_.items()} for b, d_ in best.items()}
     out["v"] = gr.flat(col(q)).detach().cpu().numpy(); out["q"] = gr.flat(q).cpu().numpy()
     return out
 
@@ -1347,10 +1379,11 @@ def pc_relax(nets, net_of, cols, sets, eta, T=T_PC, beta=BETA_PC, ops=None, soft
 
 
 @torch.no_grad()
-def pc_relax_inputs(nets, X, y, eta, T=T_PC, beta=BETA_PC):
-    """Closed-form relaxation of whole nets on input features X [B, N, din] with labels y [B, N] (for the equivalence test with
-    pc_meta.pc_relax). Returns (h1, h2, ratio) [B, ...]."""
-    z = nets.z1(X).unsqueeze(1); Y = Fn.one_hot(y, P).to(F32).unsqueeze(1)
+def pc_relax_inputs(nets, X, y, eta, T=T_PC, beta=BETA_PC, soft=None):
+    """Closed-form relaxation of whole nets on input features X [B, N, din] with labels y [B, N] (one-hot output term) or soft target
+    distributions soft [B, N, 17] (W7's soft-target term) (the equivalence tests with pc_meta.pc_relax). Returns (h1, h2, ratio)."""
+    z = nets.z1(X).unsqueeze(1)
+    Y = (Fn.one_hot(y, P).to(F32) if soft is None else torch.as_tensor(soft, dtype=F32, device=DEV)).unsqueeze(1)
     et = torch.as_tensor(np.broadcast_to(np.asarray(eta, dtype=np.float64), (nets.B,)).copy(), dtype=F32, device=DEV).view(-1, 1)
     h1, h2, r = _pc_col_grad(nets, torch.arange(nets.B, device=DEV), z, Y, et, T, beta, None, return_states=True)
     return h1[:, 0], h2[:, 0], r[:, 0]
@@ -2232,7 +2265,7 @@ def ref_defs(key, names, extra_ns=None):
         return None
     src = open(path).read(); tree = ast.parse(src)
     ns = dict(M=M, P=P, NPRE=NPRE, NNEW=NNEW, NSLOT=NSLOT, BASE=BASE, np=np, torch=torch, nn=torch.nn, Fn=Fn, math=math, itertools=itertools,
-              MLP=PCC.MLP, accuracy=PCC.accuracy)
+              MLP=PCC.MLP, accuracy=PCC.accuracy, time=time, os=os, sys=sys, json=json)
     if extra_ns:
         ns.update(extra_ns)
     nodes = [n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.ClassDef)) and n.name in names]
@@ -2262,13 +2295,14 @@ def _rel(a, b):
 
 
 class _Check:
-    """Collects test results; a failing check is reported and the run raises at the end."""
+    """Collects test results with their details (both sides, largest difference) for the committed comparison output (9.5)."""
 
     def __init__(self):
-        self.res, self.t0 = {}, time.time()
+        self.res, self.rows, self.t0 = {}, [], time.time()
 
-    def __call__(self, name, cond, info=""):
+    def __call__(self, name, cond, info="", **detail):
         self.res[name] = bool(cond)
+        self.rows.append(dict(check=name, passed=bool(cond), info=_jsonable(info), **{k: _jsonable(v) for k, v in detail.items()}))
         print(f"[{'PASS' if cond else 'FAIL'}] {name}: {info} ({time.time() - self.t0:.0f}s)", flush=True)
         return bool(cond)
 
@@ -2277,12 +2311,13 @@ def _r1_batch(ws, K=NPRE):
     pre, new, pairs, splits = M.world(ws)
     tr = [M.data(pre[k], k, pairs[splits[k][:144]]) for k in range(K)]; va = [M.data(pre[k], k, pairs[splits[k][144:]]) for k in range(K)]
     X, y = torch.cat([d_[0] for d_ in tr]), torch.cat([d_[1] for d_ in tr])
-    lab = torch.arange(K).repeat_interleave(144).to(DEV); lab_x = torch.cat([torch.as_tensor(pairs[splits[k][:144]][:, 0]) for k in range(K)]).to(DEV)
+    lab = torch.arange(K).repeat_interleave(144).to(DEV)
+    lab_x = torch.cat([torch.as_tensor(pairs[splits[k][:144]][:, 0]) for k in range(K)]).to(DEV)      # crit/sham.py's lab_x
     return X, y, torch.cat([d_[0] for d_ in va]), torch.cat([d_[1] for d_ in va]), lab, lab_x
 
 
 def _ref_train(arm, W, ws, init, steps, gamma=0.0, reg="task", wds=1.0):
-    """Per-net reference: pc_meta.make_opt + pc_meta.bp_update (task regulariser) or crit/sham.py's update (sham)."""
+    """Per-net reference: pc_meta.make_opt + pc_meta.bp_update(gamma, lab) (task regulariser) or crit/sham.py's update (sham)."""
     X, y, _, _, lab, lab_x = _r1_batch(ws)
     torch.manual_seed(init_seed(ws, init)); m = PCC.MLP(2 * P + NSLOT, W, P, param="sp" if arm == "bp_sp" else "mup", base_width=BASE).to(DEV)
     opt = M.make_opt(m, wds)
@@ -2314,18 +2349,41 @@ def _fixtures(work):
     return fx
 
 
+def _pc_relax_autograd_soft(m, x, q, eta_x, steps, beta=BETA_PC):
+    """pc_meta.pc_relax_autograd with the soft-target output term of W7 (beta CE(q, logits) = -beta sum_k q_k log softmax_k): the same
+    construction (feedforward init, per-sample energy pc_energy x B, autograd gradient steps on h1, h2)."""
+    with torch.no_grad():
+        h1, h2 = m.acts(x)
+    h1 = h1.clone().requires_grad_(True); h2 = h2.clone().requires_grad_(True); B = x.shape[0]
+    for p in m.parameters():
+        p.requires_grad_(False)
+    for _ in range(steps):
+        e1 = h1 - torch.tanh(m.l1(x)); e2 = h2 - torch.tanh(m.l2(h1))
+        E = (0.5 * (e1 ** 2).sum(-1).mean() + 0.5 * (e2 ** 2).sum(-1).mean() + beta * Fn.cross_entropy(m.head(h2), q)) * B
+        g1, g2 = torch.autograd.grad(E, (h1, h2))
+        with torch.no_grad():
+            h1 -= eta_x * g1; h2 -= eta_x * g2
+    for p in m.parameters():
+        p.requires_grad_(True)
+    return h1.detach(), h2.detach()
+
+
 def selftest(work=None):
-    """Code tests (QUICK sizes; plan W0's equivalence tests against pc_meta.py and the checks of the ported functions against the
-    reference scripts of Appendix E). Prints one line per check and raises SystemExit(1) if any fails."""
+    """Code tests (QUICK sizes): plan W0's equivalence tests against pc_meta.py and the comparison of the ported functions with the
+    reference scripts of Appendix E (round2/ref/ copies, definitions executed in a namespace with the repository's pc_meta / pc_common =
+    the 9.5 shim). Prints one line per check, writes <work>/ref_comparison_w5.json (both sides and largest differences) and raises
+    SystemExit(1) if a check fails."""
     ck = _Check(); work = work or os.path.join(os.getcwd(), "r2tc_selftest"); os.makedirs(work, exist_ok=True)
-    print(f"r2_toy_common selftest: device {DEV}, QUICK {QUICK}, work {work}", flush=True)
+    print(f"r2_toy_common selftest: device {DEV}, QUICK {QUICK}, torch {torch.__version__}, work {work}", flush=True)
     mup = lambda **kw: dict(W=64, **kw)
+    ck("pc_meta environment set before import and asserted (W0)", M.T == 20 and PCC.BETA[0] == 0.1 and M.LR == 1e-3,
+       f"T {M.T} BETA {PCC.BETA[0]} LR {M.LR} MAXSTEPS {M.MAXSTEPS} QUICK {M.QUICK}")
 
     # ---- (1) init: every kind against its reference constructor (bitwise)
     for s in (mup(ws=0), mup(ws=1, init=2), mup(ws=2, arm="bp_sp")):
         n = Nets.from_specs([s]); torch.manual_seed(init_seed(s["ws"], s.get("init", 0)))
         m = PCC.MLP(2 * P + NSLOT, 64, P, param="sp" if s.get("arm") == "bp_sp" else "mup", base_width=BASE)
-        ck(f"init mlp {net_name(s)}", _state_rel(n, 0, m.state_dict()) == 0.0)
+        e = _state_rel(n, 0, m.state_dict()); ck(f"init {net_name(s)} = pc_common.MLP", e == 0.0, max_rel_diff=e)
     ns = ref_defs("family2", ["Net"])
     if ns:
         n = Nets.from_specs([mup(ws=1, depth=3)]); torch.manual_seed(1); r = ns["Net"]("tanh", 3, 64)
@@ -2335,13 +2393,13 @@ def selftest(work=None):
     if ns:
         n = Nets.from_specs([dict(kind="circle", W=64, ws=3, circ="ring", cK=1)]); fx_ = ns["four"](1); torch.manual_seed(3); r = ns["Net"](fx_, fx_)
         ok = torch.equal(n.p["W1"][0].cpu(), torch.cat([r.Ax, r.Ay, r.Ac], 1)) and torch.equal(n.p["W2"][0].cpu(), r.l2.weight) and np.allclose(four(2), ns["four"](2).numpy())
-        ck("init circle = c3_angle.Net, four()", ok)
+        ck("init circle = c3_angle.Net; four() = c3_angle.four", ok)
     ns = ref_defs("impose2", ["Net", "code_table"])
     if ns:
         ok = all(torch.equal(code_table(kd, k_, 4), ns["code_table"](kd, k_, 4)) for kd in ("ring", "rand") for k_ in (2, 3))
         n = Nets.from_specs([dict(kind="impose", W=64, ws=4, code="rand", ck=3)]); torch.manual_seed(4); r = ns["Net"](64, ns["code_table"]("rand", 3, 4))
         ok = ok and torch.equal(n.p["W1"][0].cpu(), torch.cat([r.Ex, r.A, r.t0[:, None]], 1)) and torch.equal(n.p["W2"][0].cpu(), r.l2.weight)
-        ck("init impose = impose2.Net, code_table ring / rand", ok)
+        ck("init impose = impose2.Net; code_table ring / rand = impose2.code_table", ok)
         ns2 = ref_defs("c2_pring", ["code_table"], {"I": type("I", (), dict(P=P, code_table=staticmethod(ns["code_table"]))), "_orig": ns["code_table"]})
         if ns2:
             ck("code_table pring = c2_pring.code_table", all(torch.equal(code_table("pring", k_, s_), ns2["code_table"]("pring", k_, s_)) for k_ in (2, 4) for s_ in (0, 3)))
@@ -2351,33 +2409,41 @@ def selftest(work=None):
         ok = torch.equal(n.p["W1"][0].cpu(), r.l1.weight[:, :2 * P].detach()) and torch.equal(n.p["U"][0].cpu(), r.U.detach()) and torch.equal(n.p["E"][0].cpu(), r.E.detach())
         ck("init bneck = rgi_bneck.MLPB", ok)
 
-    # ---- (2) batched trainer against pc_meta, 300 updates, 3 nets per parameterisation (W0: weights to 1e-4 relative)
+    # ---- (2) W0: batched trainer against pc_meta, 300 updates (weights to 1e-4 relative)
     for arm in ("bp_mup", "bp_sp"):
         specs = [mup(ws=0, arm=arm), mup(ws=1, init=1, arm=arm), mup(ws=2, arm=arm, wd=3.0)]
         res = train(specs, fixed_steps=300, coord_check=False)
         rels = [_state_rel(res.nets, b, _ref_train(arm, 64, s["ws"], s.get("init", 0), 300, wds=s.get("wd", 1.0)).state_dict()) for b, s in enumerate(specs)]
-        ck(f"trainer = pc_meta 300 updates {arm}", max(rels) <= 1e-4, f"max rel {max(rels):.2e}")
-    specs = [mup(ws=1, gamma=0.003), mup(ws=1, gamma=-0.003), mup(ws=1, gamma=-0.01), mup(ws=1, gamma=0.003, reg="sham")]
+        ck(f"W0 trainer = pc_meta 300 updates ({arm}, 3 nets W 64)", max(rels) <= 1e-4, f"max rel {max(rels):.1e}", max_rel_diff=rels)
+    specs = [mup(ws=0, gamma=0.01), mup(ws=0, init=1, gamma=0.01)]
     res = train(specs, fixed_steps=300, coord_check=False)
-    rels = [_state_rel(res.nets, b, _ref_train("bp_mup", 64, 1, 0, 300, s["gamma"], s.get("reg", "task")).state_dict()) for b, s in enumerate(specs)]
-    ck("trainer = pc_meta / crit/sham.py with regulariser (task +-0.003, -0.01; sham 0.003), 300 updates", max(rels) <= 1e-4, f"rel {np.round(rels, 7).tolist()}")
-    X, y, _, _, lab, lab_x = _r1_batch(0); torch.manual_seed(0); m0 = PCC.MLP(51, 64, P, param="mup", base_width=BASE).to(DEV); h2 = m0.acts(X)[1]
-    hh = h2.detach().clone().requires_grad_(True); hb = h2.detach().clone().requires_grad_(True)
-    fa, fb = M.task_fisher(hh, lab_x, P), task_fisher_b(hb[None], lab_x[None], P)[0]
-    ga = torch.autograd.grad(torch.log(fa), hh)[0]; gb = torch.autograd.grad(torch.log(fb), hb)[0]
-    ck("task_fisher_b = pc_meta.task_fisher (value, gradient of log F)", abs(float(fa) - float(fb)) <= 1e-6 * float(fa) and _rel(gb, ga) <= 1e-5)
+    rels = [_state_rel(res.nets, b, _ref_train("bp_mup", 64, 0, s.get("init", 0), 300, 0.01).state_dict()) for b, s in enumerate(specs)]
+    ck("W0 trainer = pc_meta.bp_update(gamma 0.01, lab), task regulariser, 300 updates", max(rels) <= 1e-4, f"max rel {max(rels):.1e}", max_rel_diff=rels)
+    specs = [mup(ws=1, gamma=0.003), mup(ws=1, gamma=-0.003), mup(ws=1, gamma=-0.01), mup(ws=1, gamma=0.003, reg="sham"), mup(ws=1, gamma=-0.01, reg="sham", init=1)]
+    res = train(specs, fixed_steps=300, coord_check=False)
+    rels = [_state_rel(res.nets, b, _ref_train("bp_mup", 64, 1, s.get("init", 0), 300, s["gamma"], s.get("reg", "task")).state_dict()) for b, s in enumerate(specs)]
+    ck("trainer = pc_meta / crit/sham.py update with the plan's early levels (task +-0.003, -0.01; sham +0.003, -0.01), 300 updates",
+       max(rels) <= 1e-4, f"rel {np.format_float_scientific(max(rels), 1)}", max_rel_diff=rels)
+    X, y, _, _, lab, lab_x = _r1_batch(0); torch.manual_seed(0); m0 = PCC.MLP(51, 64, P, param="mup", base_width=BASE).to(DEV); h2 = m0.acts(X)[1].detach()
+    X1, _, _, _, _, lab_x1 = _r1_batch(1); h2b = m0.acts(X1)[1].detach()
+    ref_t = [float(M.task_fisher(h2, lab_x, P)), float(M.task_fisher(h2b, lab_x1, P))]
+    grp = [torch.as_tensor(np.nonzero(lab_x.cpu().numpy() == k)[0], device=DEV) for k in range(P) if (lab_x == k).any()]
+    rep = float(task_fisher_b(h2[None], None, P, grp)[0]); one = task_fisher_b(torch.stack([h2, h2b]), torch.stack([lab_x, lab_x1]), P).tolist()
+    err = max(abs(rep - ref_t[0]) / ref_t[0], max(abs(a - b) / b for a, b in zip(one, ref_t)))
+    ck("W0 sham Fisher term = crit/sham.py's M.task_fisher(h2, lab_x, 17) on the same batch (1e-6; replica and one-hot forms)", err <= 1e-6,
+       f"rel {err:.1e}", mine=[rep] + one, ref=ref_t, max_rel_diff=err)
 
-    # ---- (3) checkpoint rule: pc_meta QUICK subprocess fixtures and pc_meta.main in-process with a non-trivial LEVEL1
+    # ---- (3) checkpoint rule: pc_meta QUICK subprocess fixtures, and pc_meta.main in-process with a non-trivial LEVEL1
     fx = _fixtures(work)
     res = train([mup(ws=0)], max_steps=200, after=50, level1=0.0)
     sd = torch.load(os.path.join(fx, "models", "bp_mup_W64_s0_K12_g0_wd1_quick.pt")); job = json.load(open(os.path.join(fx, "jobs", "bp_mup_W64_s0_K12_g0_wd1_quick.json")))
-    r = res.rows[0]
-    ck("first95 / checkpoint / weights = pc_meta under QUICK", r["first95"] == job["first95"] and r["checkpoint"] == job["checkpoint"] and _state_rel(res.nets, 0, sd) <= 1e-4,
-       f"{r['first95']}/{r['checkpoint']} vs {job['first95']}/{job['checkpoint']}")
-    ck("coordinate check = pc_meta's G0", np.allclose(r["coord_check"], job["coord_check"], rtol=1e-4, atol=1e-7))
+    r = res.rows[0]; e = _state_rel(res.nets, 0, sd)
+    ck("W0 first95 / checkpoint / weights = pc_meta under QUICK", r["first95"] == job["first95"] and r["checkpoint"] == job["checkpoint"] and e <= 1e-4,
+       f"{r['first95']}/{r['checkpoint']} vs {job['first95']}/{job['checkpoint']}", mine=[r["first95"], r["checkpoint"]], ref=[job["first95"], job["checkpoint"]], max_rel_diff=e)
+    ck("coordinate check = pc_meta's G0 values", np.allclose(r["coord_check"], job["coord_check"], rtol=1e-4, atol=1e-7), mine=r["coord_check"], ref=job["coord_check"])
     mdir = os.path.join(work, "main")
-    if os.path.isdir(mdir):
-        for f_ in sorted(os.listdir(os.path.join(mdir, "jobs"))) if os.path.isdir(os.path.join(mdir, "jobs")) else []:
+    if os.path.isdir(os.path.join(mdir, "jobs")):
+        for f_ in os.listdir(os.path.join(mdir, "jobs")):
             os.remove(os.path.join(mdir, "jobs", f_))
     ftl = (5, 10, 20); argv = sys.argv
     try:
@@ -2391,24 +2457,26 @@ def selftest(work=None):
     rm = train([mup(ws=0)], max_steps=500, after=100, level1=0.3); rs = train([mup(ws=1, arm="bp_sp")], max_steps=500, after=100, level1=0.3)
     ok = rm.rows[0]["first95"] == jm["first95"] and rm.rows[0]["checkpoint"] == jm["checkpoint"] and rs.rows[0]["first95"] is None and js["first95"] is None
     ok = ok and rs.rows[0]["eval_point"] == "maxsteps" and abs(rs.rows[0]["final_heldout"] - js["final_heldout"]) < 1e-6
-    sdm = torch.load(os.path.join(mdir, "models", "bp_mup_W64_s0_K12_g0_wd1.pt"))
-    ck("checkpoint rule = pc_meta.main (LEVEL1 0.3: level-1 net and a maxsteps net)", ok and _state_rel(rm.nets, 0, sdm) <= 1e-4,
-       f"first95 {rm.rows[0]['first95']} vs {jm['first95']}, maxsteps net held-out {rs.rows[0]['final_heldout']:.4f} vs {js['final_heldout']:.4f}")
+    e = _state_rel(rm.nets, 0, torch.load(os.path.join(mdir, "models", "bp_mup_W64_s0_K12_g0_wd1.pt")))
+    ck("checkpoint rule = pc_meta.main with LEVEL1 0.3 (a level-1 net and a MAXSTEPS net)", ok and e <= 1e-4,
+       f"first95 {rm.rows[0]['first95']} vs {jm['first95']}, MAXSTEPS net held-out {rs.rows[0]['final_heldout']:.4f} vs {js['final_heldout']:.4f}",
+       mine=[rm.rows[0]["first95"], rm.rows[0]["checkpoint"], rs.rows[0]["final_heldout"]], ref=[jm["first95"], jm["checkpoint"], js["final_heldout"]], max_rel_diff=e)
     r1 = train([mup(ws=0, K=1)], fixed_steps=j1["checkpoint"], coord_check=False)
-    ck("K = 1 control (fixed steps) = pc_meta.main K 1", _state_rel(r1.nets, 0, torch.load(os.path.join(mdir, "models", "bp_mup_W64_s0_K1_g0_wd1.pt"))) <= 1e-4, f"{j1['checkpoint']} updates")
+    e = _state_rel(r1.nets, 0, torch.load(os.path.join(mdir, "models", "bp_mup_W64_s0_K1_g0_wd1.pt")))
+    ck("K = 1 control (fixed steps) = pc_meta.main K 1", e <= 1e-4, f"{j1['checkpoint']} updates", max_rel_diff=e)
     dl = delta_stats(rm.nets, [0], [M.world(0)[0]])[0]
     err = max(abs(dl[h][k] - jm["delta"][h][k]) for h in ("h1", "h2") for k in dl[h])
-    ck("delta_stats = pc_meta job delta (1e-6)", err <= 1e-6, f"max abs diff {err:.1e}")
+    ck("delta_stats = pc_meta job's delta (1e-6)", err <= 1e-6, f"max abs diff {err:.1e}", mine=dl, ref=jm["delta"], max_abs_diff=err)
     bb = b2(rm.nets, [0], steps=20, eval_at=ftl)
     eA = max(np.abs(bb[ns_]["A"][0] - np.array(jm["finetune"][str(ns_)]["A"])).max() for ns_ in (8, 4))
     eF = max(np.abs(bb[ns_]["F"][0] - np.array(jm["finetune"][str(ns_)]["F"])).max() for ns_ in (8, 4))
-    ck("B2 (A, F) = pc_meta job finetune", eA <= 1 / 281 + 1e-9 and eF <= 1 / 281 + 1e-9 and abs(bb[8]["B2"][0] - jm["finetune"]["8"]["B2"]) <= 1 / 281,
-       f"max |dA| {eA:.4f} |dF| {eF:.4f}")
+    ck("B2 (A, F, B2) = pc_meta job's finetune", eA <= 1 / 281 + 1e-9 and eF <= 1 / 281 + 1e-9 and abs(bb[8]["B2"][0] - jm["finetune"]["8"]["B2"]) <= 1 / 281,
+       f"max |dA| {eA:.4f} |dF| {eF:.4f}", mine=[float(bb[8]["B2"][0]), float(bb[4]["B2"][0])], ref=[jm["finetune"]["8"]["B2"], jm["finetune"]["4"]["B2"]], max_abs_diff=max(eA, eF))
 
-    # ---- (4) batched column search and fresh nets against pc_meta.finetune (300 steps, FT_EVAL of the plan)
+    # ---- (4) W0: batched column search and fresh nets against pc_meta.finetune (300 steps, FT_EVAL of the plan); delta_stats
     ev = (10, 20, 40, 80, 160, 300)
     nb = train([mup(ws=0), mup(ws=1)], fixed_steps=700, coord_check=False).nets; ns_sp = train([mup(ws=2, arm="bp_sp")], fixed_steps=700, coord_check=False).nets
-    tot, good = 0, 0
+    tot = good = 0; mine_l, ref_l = [], []
     for nets_, wsl, arm in ((nb, [0, 1], "bp_mup"), (ns_sp, [2], "bp_sp")):
         A = b2_A(nets_, wsl, steps=300, eval_at=ev)
         for b, ws in enumerate(wsl):
@@ -2417,47 +2485,61 @@ def selftest(work=None):
                 for ns_ in (8, 4):
                     for j in range(NNEW):
                         a_ref, _ = M.finetune(m, arm, 64, new, pairs, splits, j, ns_, "col", ws); tot += 1; good += int(_within([A[ns_][b, j]], [a_ref], 1 / 281)[0])
-    ck("column search = pc_meta.finetune('col') within 1/281 in >= 95 % of chains", good >= 0.95 * tot, f"{good}/{tot}")
-    Fm = fresh_F("bp_mup", 64, [0, 1], steps=300, eval_at=ev); tot = good = 0
+                        mine_l.append(A[ns_][b, j].tolist()); ref_l.append(a_ref)
+    ck("W0 column search = pc_meta.finetune('col') within 1/281 in >= 95 % of chains", good >= 0.95 * tot, f"{good}/{tot}", mine=mine_l, ref=ref_l,
+       max_abs_diff=float(np.abs(np.array(mine_l) - np.array(ref_l)).max()))
+    Fm = fresh_F("bp_mup", 64, [0, 1], steps=300, eval_at=ev); tot = good = 0; mine_l, ref_l = [], []
     with _Patch(M, FT_STEPS=300, FT_EVAL=ev):
         for si, ws in enumerate((0, 1)):
             pre, new, pairs, splits = M.world(ws)
             for ns_ in (8, 4):
                 for j in range(NNEW):
                     f_ref, _ = M.finetune(None, "bp_mup", 64, new, pairs, splits, j, ns_, "fresh", ws); tot += 1; good += int(_within([Fm[ns_][si, j]], [f_ref], 1 / 281)[0])
-    ck("fresh F = pc_meta.finetune('fresh') within 1/281 in >= 95 % of chains", good >= 0.95 * tot, f"{good}/{tot}")
-    dls = delta_stats(nb, [0, 1], [M.world(0)[0], M.world(1)[0]])
-    err = 0.0
+                    mine_l.append(Fm[ns_][si, j].tolist()); ref_l.append(f_ref)
+    ck("fresh F = pc_meta.finetune('fresh') within 1/281 in >= 95 % of chains", good >= 0.95 * tot, f"{good}/{tot}", mine=mine_l, ref=ref_l,
+       max_abs_diff=float(np.abs(np.array(mine_l) - np.array(ref_l)).max()))
+    dls = delta_stats(nb, [0, 1], [M.world(0)[0], M.world(1)[0]]); err = 0.0; refs = []
     for b, ws in enumerate((0, 1)):
-        ref = M.delta_stats(nb.to_mlp(b).to(DEV), M.world(ws)[0], M.world(ws)[2], ws)
+        ref = M.delta_stats(nb.to_mlp(b).to(DEV), M.world(ws)[0], M.world(ws)[2], ws); refs.append(ref)
         err = max(err, max(abs(dls[b][h][k] - ref[h][k]) for h in ("h1", "h2") for k in ref[h]))
-    ck("vectorised delta_stats = pc_meta.delta_stats (1e-6)", err <= 1e-6, f"max abs diff {err:.1e}")
+    ck("W0 vectorised delta_stats = pc_meta.delta_stats (1e-6)", err <= 1e-6, f"max abs diff {err:.1e}", mine=dls, ref=refs, max_abs_diff=err)
 
-    # ---- (5) PC: relaxation, lam_max, PC column search against pc_meta; erasers / soft targets against autograd
+    # ---- (5) PC: lam_max, relaxation (one-hot and soft targets), PC column search; erasers in the energy against autograd
     pcn = load_pc_state_dicts([os.path.join(fx, "models", "pc_mup_W64_s0_K12_g0_wd1_T20_beta0.1_quick.pt")])
-    X, y, _, _, _, _ = _r1_batch(0); m = pcn.to_mlp(0).to(DEV)
+    X, y, _, _, _, _ = _r1_batch(0); m = pcn.to_mlp(0).to(DEV); Xb, yb = X[None].to(DEV), y[None].to(DEV)
     with _BetaCtx(BETA_PC, T_PC):
         torch.manual_seed(5); lam_ref = M.lam_max(m, X, y)
         eta = pc_eta(pcn, 0, X, y, seed=5)
         h1r, h2r, ratio_r, _ = M.pc_relax(m, X, y, 1.0 / lam_ref, T_PC)
-    h1, h2, ratio = pc_relax_inputs(pcn, X[None].to(DEV), y[None].to(DEV), eta)
-    ck("pc_eta = 1 / pc_meta.lam_max; batched relaxation = pc_meta.pc_relax (1e-5)", abs(eta - 1 / lam_ref) <= 1e-12 and _rel(h1[0], h1r) <= 1e-5 and _rel(h2[0], h2r) <= 1e-5
-       and abs(float(ratio[0]) - ratio_r) <= 1e-4 * max(abs(ratio_r), 1e-6), f"h1 {_rel(h1[0], h1r):.1e} h2 {_rel(h2[0], h2r):.1e} ratio {float(ratio[0]):.4f} vs {ratio_r:.4f}")
+    h1, h2, ratio = pc_relax_inputs(pcn, Xb, yb, eta)
+    e = max(_rel(h1[0], h1r), _rel(h2[0], h2r))
+    ck("W0 pc_eta = 1 / pc_meta.lam_max; batched relaxation = pc_meta.pc_relax (1e-5)", abs(eta - 1 / lam_ref) <= 1e-12 and e <= 1e-5
+       and abs(float(ratio[0]) - ratio_r) <= 1e-4 * max(abs(ratio_r), 1e-6), f"states rel {e:.1e}, ratio {float(ratio[0]):.5f} vs {ratio_r:.5f}",
+       mine=[eta, float(ratio[0])], ref=[1 / lam_ref, ratio_r], max_rel_diff=e)
+    s1, s2, _ = pc_relax_inputs(pcn, Xb, yb, eta, soft=Fn.one_hot(yb, P).float())
+    e1_ = max(_rel(s1[0], h1r), _rel(s2[0], h2r))
+    q = torch.softmax(torch.randn(X.shape[0], P, generator=torch.Generator().manual_seed(11)) * 2, -1).to(DEV)
+    a1, a2 = _pc_relax_autograd_soft(m, X.to(DEV), q, eta, T_PC); t1, t2, _ = pc_relax_inputs(pcn, Xb, yb, eta, soft=q[None])
+    e2_ = max(_rel(t1[0], a1), _rel(t2[0], a2))
+    ck("W0 soft-target relaxation (W7): one-hot q = pc_meta.pc_relax, soft q = autograd of the soft-target energy as pc_relax_autograd (1e-5)",
+       e1_ <= 1e-5 and e2_ <= 1e-5, f"rel {e1_:.1e} / {e2_:.1e}", max_rel_diff=[e1_, e2_])
     torch.manual_seed(0); mp = PCC.MLP(51, 64, P, param="mup", base_width=BASE).to(DEV); opt = M.make_opt(mp)
     with _BetaCtx(BETA_PC, T_PC):
-        for s in range(1, 301):
+        for s in range(1, 1001):
             if s % 100 == 1:
                 ex = 1.0 / M.lam_max(mp, X, y)
             M.pc_update(mp, opt, X, y, ex)
     pcn = Nets.from_states([{k: v.detach().cpu() for k, v in mp.state_dict().items()}]); eta = pc_eta(pcn, 0, X, y, seed=1)
-    A = b2_A(pcn, [0], steps=300, eval_at=ev, pc_eta_of=[eta]); pre, new, pairs, splits = M.world(0); tot = good = 0; m = pcn.to_mlp(0).to(DEV)
+    A = b2_A(pcn, [0], steps=300, eval_at=ev, pc_eta_of=[eta]); pre, new, pairs, splits = M.world(0); tot = good = 0; m = pcn.to_mlp(0).to(DEV); mine_l, ref_l = [], []
     with _Patch(M, FT_STEPS=300, FT_EVAL=ev), _BetaCtx(BETA_PC, T_PC):
         for ns_ in (8, 4):
             for j in range(NNEW):
                 a_ref, _ = M.finetune(m, "pc_mup", 64, new, pairs, splits, j, ns_, "col", 0, eta); tot += 1; good += int(_within([A[ns_][0, j]], [a_ref], 1 / 281)[0])
-    ck("PC column search = pc_meta.finetune('col', pc_mup) within 1/281 in >= 95 % of chains", good >= 0.95 * tot, f"{good}/{tot}, accuracies {np.round(A[8][0, :, -1], 3).tolist()}")
+                mine_l.append(A[ns_][0, j].tolist()); ref_l.append(a_ref)
+    ck("PC column search = pc_meta.finetune('col', pc_mup) within 1/281 in >= 95 % of chains", good >= 0.95 * tot, f"{good}/{tot}, final accuracies {np.round(A[8][0, :, -1], 3).tolist()}",
+       mine=mine_l, ref=ref_l, max_abs_diff=float(np.abs(np.array(mine_l) - np.array(ref_l)).max()))
     ok = _check_pc_autograd(pcn, eta)
-    ck("PC energy with erasers at h1 / h2 and soft targets: closed form = autograd (relaxed states, column gradient)", ok[0], ok[1])
+    ck("PC energy with erasers at h1 / h2 and soft targets: closed-form relaxation and column gradient = autograd", ok[0], ok[1])
 
     # ---- (6) W7 search semantics
     net = nb; sets = [new_task_sets(0, j, val=True) for j in range(NNEW)]; no = np.zeros(NNEW, np.int64)
@@ -2466,11 +2548,11 @@ def selftest(work=None):
     okb = True
     for bud in (20, 60):
         nv = bud // 10; va = r["acc"]["val"][:, :nv]; bi = va.argmax(1)
-        okb &= np.allclose(r["best"][bud]["ho"], r["acc"]["ho"][np.arange(NNEW), bi]) and np.allclose(r["best"][bud]["step"], (bi + 1) * 10)
-    ck("best-of-budget = held-out at the first best validation evaluation", okb)
+        okb &= np.allclose(r["best"][bud]["heldout"]["ho"], r["acc"]["ho"][np.arange(NNEW), bi]) and np.allclose(r["best"][bud]["step"], (bi + 1) * 10)
+    ck("best-of-budget = held-out at the first best validation evaluation within the budget", okb)
     cols = np.random.default_rng(0).standard_normal((NNEW, 64)).astype(np.float32)
     rr = column_search(net, no, stack_sets(sets, "shot"), stack_sets(sets, "ho"), steps=0, eval_at=(0,), q0=cols)
-    ck("recipe (steps 0) = cols_accuracy", np.allclose(rr["acc"]["ho"][:, 0], cols_accuracy(net, no, cols, stack_sets(sets, "ho"))))
+    ck("recipe (no learning, steps 0) = cols_accuracy", np.allclose(rr["acc"]["ho"][:, 0], cols_accuracy(net, no, cols, stack_sets(sets, "ho"))))
     Q = random_subspaces(64, 3, NNEW, 1)
     rr = column_search(net, no, stack_sets(sets, "shot"), stack_sets(sets, "ho"), steps=30, eval_at=(30,), remove=Q)
     rk = column_search(net, no, stack_sets(sets, "shot"), stack_sets(sets, "ho"), steps=30, eval_at=(30,), keep=Q)
@@ -2483,68 +2565,68 @@ def selftest(work=None):
         g = dict(m=net.to_mlp(0), C=net.task_cols()[0][:, :NPRE].double().cpu().numpy())
         al, acc_al, _ = learn_alpha(net, no, [new_task_sets(0, j) for j in range(NNEW)])
         al_ref = np.stack([nsl["learn_alpha"](g, 0, j, steps=FT_STEPS) for j in range(NNEW)])
-        ck("anchored search = rgi_lib.learn_alpha", _rel(al, al_ref) <= 1e-3, f"rel {_rel(al, al_ref):.1e}")
-        ok = np.all([_rel(t1_map(*arr, 0.01)[0], ns["t1_map"](*arr, 0.01)[0]) == 0 for arr in [tuple(np.random.default_rng(i).standard_normal((3, 40, 12))[:2]) + (np.random.default_rng(i + 9).standard_normal(40),) for i in range(3)]])
-        CA, CB = np.random.default_rng(5).standard_normal((2, 40, 12))
-        ok = ok and t1_choose_r(CA, CB) == ns["t1_choose_r"](CA, CB)
+        ck("anchored search (alpha) = rgi_lib.learn_alpha", _rel(al, al_ref) <= 1e-3, f"rel {_rel(al, al_ref):.1e}", mine=al[0], ref=al_ref[0], max_rel_diff=_rel(al, al_ref))
+        arrs = [tuple(np.random.default_rng(i).standard_normal((3, 40, 12))[:2]) + (np.random.default_rng(i + 9).standard_normal(40),) for i in range(3)]
+        ok = all(_rel(t1_map(*a_, 0.01)[0], ns["t1_map"](*a_, 0.01)[0]) == 0 for a_ in arrs)
+        CA, CB = np.random.default_rng(5).standard_normal((2, 40, 12)); ok = ok and t1_choose_r(CA, CB) == ns["t1_choose_r"](CA, CB)
         HA, HB = np.random.default_rng(6).standard_normal((2, NPRE * 20, 7))
         Sa, ba = stitch_fit(HA, HB, npair=20); Sb, bb_ = nsl["stitch_fit"](HA, HB, npair=20)
-        ck("t1_map / t1_choose_r / stitch_fit = rgi_pilot / rgi_lib", ok and np.array_equal(Sa, Sb) and ba == bb_)
+        ck("t1_map / t1_choose_r / stitch_fit = rgi_pilot / rgi_lib (exact)", ok and np.array_equal(Sa, Sb) and ba == bb_, mine=[float(ba[0]), float(ba[1])], ref=[float(bb_[0]), float(bb_[1])])
         lam_ref = ref_defs("sham", ["lam"], dict(acc_cols=ns["acc_cols"]))
         if lam_ref:
-            L = lambda_line(net, [0, 1])
-            ok = all(abs(np.mean(L[b]["per_shift"][:NNEW]) - lam_ref["lam"](net.to_mlp(b), ws)) <= 1e-6 for b, ws in enumerate((0, 1)))
-            ck("Lambda (4 new shifts) = crit/sham.lam", ok, f"Lambda {L[0]['Lambda']:.3f} wrong {L[0]['wrong']:.3f} perm {L[0]['perm']:.3f}")
+            L = lambda_line(net, [0, 1]); mine_v = [float(np.mean(L[b]["per_shift"][:NNEW])) for b in range(2)]; ref_v = [lam_ref["lam"](net.to_mlp(b), ws) for b, ws in enumerate((0, 1))]
+            ck("Lambda over the 4 new shifts = crit/sham.lam", max(abs(a - b) for a, b in zip(mine_v, ref_v)) <= 1e-6,
+               f"Lambda (5 shifts) {L[0]['Lambda']:.3f}, null wrong {L[0]['wrong']:.3f}, null perm {L[0]['perm']:.3f}", mine=mine_v, ref=ref_v)
         src = open(ref_path("recipe_depth")).read().splitlines()
         nsr = dict(np=np, NPRE=NPRE, P=P, pairs=PAIRS, rng=np.random.default_rng(7)); exec("\n".join(src[7:9]), nsr)
-        ch, xy_ = recipe_chains()
-        ok = ch == nsr["chains"] and np.array_equal(xy_, nsr["xy"])
-        rd = recipe_depth(net, [0]); C_ = g["C"]; pre = M.world(0)[0]; acc1 = []
+        ch, xy_ = recipe_chains(); ok = ch == nsr["chains"] and np.array_equal(xy_, nsr["xy"])
+        rd = recipe_depth(net, [0, 1]); C_ = g["C"]; pre = M.world(0)[0]; acc1, mine = [], []; Cn = net.task_cols()[0][:, :NPRE]
         for c_ in ch[:20]:
             a_, b_, cc_ = c_[0]; v = C_[:, a_] + C_[:, b_] - C_[:, cc_]; t = (pre[a_] + pre[b_] - pre[cc_]) % P
             acc1.append(ns["acc_cols"](g["m"], xy_, torch.as_tensor((xy_[:, 0] + xy_[:, 1] + t) % P), torch.tensor(v[None], dtype=torch.float32))[0])
-        Cn = net.task_cols()[0][:, :NPRE]; mine = []
-        for c_ in ch[:20]:
-            a_, b_, cc_ = c_[0]; t = (pre[a_] + pre[b_] - pre[cc_]) % P
             mine.append(cols_accuracy(net, [0], (Cn[:, a_] + Cn[:, b_] - Cn[:, cc_])[None], (xy_[:, 0], xy_[:, 1], (xy_[:, 0] + xy_[:, 1] + t) % P))[0])
-        ck("recipe chains / pairs = recipe_depth.py; depth-1 accuracies = rgi_pilot.acc_cols", ok and np.allclose(mine, acc1, atol=1 / 200 + 1e-9), f"rho {np.round(rd[0]['rho'], 3).tolist()}")
+        ck("recipe chains / pairs = recipe_depth.py; depth-1 accuracies = rgi_pilot.acc_cols", ok and np.allclose(mine, acc1, atol=1 / 200 + 1e-9),
+           f"rho {np.round(rd[0]['rho'], 3).tolist()}", mine=mine, ref=acc1)
         nsp = ref_defs("rgi_pool", ["learn_alpha_from"], dict(base_z1=ns["base_z1"]))
         if nsp:
             a40, _, _ = learn_alpha(net, no, [new_task_sets(0, j) for j in range(NNEW)], steps=40, q0=al)
             a40r = np.stack([nsp["learn_alpha_from"](g, 0, j, al[j], 40) for j in range(NNEW)])
-            ck("warm start / round trip refinement = rgi_pool.learn_alpha_from", _rel(a40, a40r) <= 1e-3, f"rel {_rel(a40, a40r):.1e}")
+            ck("warm start / round-trip refinement = rgi_pool.learn_alpha_from", _rel(a40, a40r) <= 1e-3, f"rel {_rel(a40, a40r):.1e}", max_rel_diff=_rel(a40, a40r))
         if nsl:
             nb2 = train([mup(ws=0, init=1)], fixed_steps=700, coord_check=False).nets
-            vA = column_search(net, no, stack_sets([new_task_sets(0, j) for j in range(NNEW)], "shot"), steps=FT_STEPS)["v"]
+            vA = column_search(net, no, stack_sets([new_task_sets(0, j) for j in range(NNEW)], "shot"), steps=300)["v"]
             A_ = dict(m=net.to_mlp(0), v=list(vA.astype(np.float64)), W=64); B_ = dict(m=nb2.to_mlp(0), W=64)
             S_, _ = stitch_fit(all_h2(net, 0), all_h2(nb2, 0))
-            out = t3_t4(net, 0, vA, nb2, 0, [new_task_sets(0, j) for j in range(NNEW)], S=S_)
+            out = t3_t4(net, 0, vA, nb2, 0, [new_task_sets(0, j) for j in range(NNEW)], S=S_, steps=300)     # rgi_lib._fit_col: 300 steps
             v3r, v4r = zip(*[nsl["t34_transfer"](A_, B_, 0, S_, j) for j in range(NNEW)])
-            ck("T3 / T4 columns = rgi_lib.t34_transfer", _rel(out["v3"], np.stack(v3r)) <= 1e-3 and _rel(out["v4"], np.stack(v4r)) <= 1e-3,
-               f"rel v3 {_rel(out['v3'], np.stack(v3r)):.1e} v4 {_rel(out['v4'], np.stack(v4r)):.1e}; T4 acc {np.round(out['t4_acc'], 3).tolist()}")
+            e3, e4 = _rel(out["v3"], np.stack(v3r)), _rel(out["v4"], np.stack(v4r))
+            ck("T3 / T4 columns = rgi_lib.t34_transfer", e3 <= 1e-3 and e4 <= 1e-3, f"rel v3 {e3:.1e} v4 {e4:.1e}; T4 acc {np.round(out['t4_acc'], 3).tolist()}", max_rel_diff=[e3, e4])
 
     # ---- (7) C-T0 / C-T6 ports
     nsc = ref_defs("c1_structure", ["orth", "fourier_cols", "share_by_k", "ring_test", "loo_ring", "spec_rows", "ridge_probe", "mlp_probe"])
     if nsc:
         T_ = net.task_cols()[0][:, :NPRE].double().cpu().numpy().T; cv = np.array(M.world(0)[0], float)
-        a1 = ring_test(T_, cv, np.random.default_rng(1), 50); a2 = nsc["ring_test"](T_, cv, np.random.default_rng(1), 50)
+        a1, a2 = ring_test(T_, cv, np.random.default_rng(1), 50), nsc["ring_test"](T_, cv, np.random.default_rng(1), 50)
         Ma = np.random.default_rng(2).standard_normal((P, 30))
         ok = a1 == a2 and loo_ring(T_, cv, 2) == nsc["loo_ring"](T_, cv, 2) and spec_rows(Ma, np.random.default_rng(3), 50) == nsc["spec_rows"](Ma, np.random.default_rng(3), 50)
         Htr, Hte = np.random.default_rng(4).standard_normal((2, 60, 9)); ytr, yte = np.random.default_rng(5).integers(0, 4, (2, 60))
-        ok = ok and abs(float(ridge_probe(Htr, ytr, Hte, yte, 4, lam=1.0)) - nsc["ridge_probe"](Htr, ytr, Hte, yte, 4, lam=1.0)) < 1e-12
+        rp, rp_ref = float(ridge_probe(Htr, ytr, Hte, yte, 4, lam=1.0)), nsc["ridge_probe"](Htr, ytr, Hte, yte, 4, lam=1.0)
+        ok = ok and abs(rp - rp_ref) < 1e-12
         F2 = np.stack([np.cos(2 * np.pi * 3 * cv / P), np.sin(2 * np.pi * 3 * cv / P)], 1) @ np.random.default_rng(6).standard_normal((2, 20))
         ok = ok and abs(subspace_overlap(F2, cv, 1) - 1) < 1e-9 and subspace_overlap(np.random.default_rng(7).standard_normal((NPRE, 30)), cv, 1) < 1
         st_ = structure_tests(net, 0, 0, nperm=20, nperm_loo=10, nperm_spec=20)
-        ck("ring_test / loo_ring / spec_rows / ridge_probe = c1_structure; overlap(pure Fourier) = 1", ok, f"task-col max share {st_['a_taskcols']['max']:.3f} p99 {st_['a_taskcols']['null_max_p99']:.3f}")
+        ck("ring_test / loo_ring / spec_rows / ridge_probe = c1_structure (exact); overlap(pure Fourier code) = 1", ok,
+           f"task-col max share {st_['a_taskcols']['max']:.3f} (null p99 {st_['a_taskcols']['null_max_p99']:.3f})", mine=[a1["max"], rp], ref=[a2["max"], rp_ref])
     nst = ref_defs("c4_traj", ["modes"])
     if nst:
-        Xs = np.cumsum(np.random.default_rng(8).standard_normal((40, 25)), 0); mine, v5 = trajectory_modes(Xs); ref, rv5 = nst["modes"](Xs)
-        ck("trajectory_modes = c4_traj.modes", all(abs(a["var"] - b["var"]) < 1e-3 and abs(a["lissajous_r"] - b["lissajous_r"]) < 1e-3 and a["emerge_snapshot"] == b["emerge_snapshot"] for a, b in zip(mine, ref)))
+        Xs = np.cumsum(np.random.default_rng(8).standard_normal((40, 25)), 0); mine, _ = trajectory_modes(Xs); ref, _ = nst["modes"](Xs)
+        ck("trajectory_modes = c4_traj.modes", all(abs(a["var"] - b["var"]) < 1e-3 and abs(a["lissajous_r"] - b["lissajous_r"]) < 1e-3 and a["emerge_snapshot"] == b["emerge_snapshot"] for a, b in zip(mine, ref)),
+           mine=[a["var"] for a in mine], ref=[b["var"] for b in ref])
 
     # ---- (8) other worlds' training against their reference scripts (30 updates)
     _check_worlds(ck)
 
-    # ---- (9) late regulariser: crit/sham.py's train (x_late), the main loop's 'late' and the train_late branch
+    # ---- (9) late regulariser: crit/sham.py's train(x_late), the main loop's 'late' and the train_late branch
     nss = ref_defs("sham", ["train", "pdist"], dict(mk=lambda arm, W: PCC.MLP(51, W, P, param="mup", base_width=BASE)))
     with _Patch(M, MAXSTEPS=500, AFTER=100, LEVEL1=0.3):
         if nss:
@@ -2553,49 +2635,63 @@ def selftest(work=None):
         lt = train([mup(ws=0, gamma=-0.01, reg="sham", when="late")], max_steps=500, after=100, level1=0.3, coord_check=False)
         br = train_late(nat, [0], [mup(ws=0, gamma=-0.01, reg="sham", when="late")], n_updates=100)
     if nss:
-        ck("late sham regulariser = crit/sham.py train(x_late); param_distance = sham.pdist", info["first"] == lt.rows[0]["first95"] and _state_rel(lt.nets, 0, m_s.state_dict()) <= 1e-4
-           and abs(param_distance(lt.nets, 0, nat.nets, 0) - nss["pdist"](m_s, m_n)) <= 1e-4, f"rel {_state_rel(lt.nets, 0, m_s.state_dict()):.1e}")
-    ck("train_late branch = main-loop late run", _state_rel(br.nets, 0, lt.nets.state(0)) <= 1e-6 and br.rows[0]["level1"] == (lt.rows[0]["level_acc"] >= 0.3))
+        e = _state_rel(lt.nets, 0, m_s.state_dict()); pdm, pdr = param_distance(lt.nets, 0, nat.nets, 0), nss["pdist"](m_s, m_n)
+        ck("late sham regulariser = crit/sham.py train(x_late); param_distance = sham.pdist", info["first"] == lt.rows[0]["first95"] and e <= 1e-4 and abs(pdm - pdr) <= 1e-4,
+           f"rel {e:.1e}, p {pdm:.4f} vs {pdr:.4f}", mine=[lt.rows[0]["first95"], pdm], ref=[info["first"], pdr], max_rel_diff=e)
+    e = _state_rel(br.nets, 0, lt.nets.state(0))
+    ck("train_late branch from the first95 state = the main loop's late run", e <= 1e-6 and br.rows[0]["level1"] == (lt.rows[0]["level_acc"] >= 0.3), f"rel {e:.1e}")
     with _Patch(M, MAXSTEPS=500, AFTER=100, LEVEL1=0.3):
-        ex = train([mup(ws=0), mup(ws=2, arm="bp_mup")], max_steps=500, after=100, level1=0.3, extra_after=50, snapshot_every=25, snapshot=snap_task_code, coord_check=False)
+        ex = train([mup(ws=0), mup(ws=2)], max_steps=500, after=100, level1=0.3, extra_after=50, snapshot_every=25, snapshot=snap_task_code, coord_check=False)
     ok = _state_rel(ex.nets, 0, nat.nets.state(0)) == 0 and ex.has2[0] and ex.rows[0]["second"] == ex.rows[0]["checkpoint"] + 50 and len(ex.snapshots) >= 1 + ex.rows[0]["checkpoint"] // 25
-    ck("second checkpoint and snapshots", ok, f"second {ex.rows[0]['second']} snapshots {len(ex.snapshots)}")
+    ck("second checkpoint (checkpoint state unchanged) and snapshots", ok, f"second {ex.rows[0]['second']}, snapshots {len(ex.snapshots)}")
     u = torch.randn(64, NPRE, generator=torch.Generator().manual_seed(0)); u = u - u.mean(1, keepdim=True); u = (u / u.norm()).reshape(1, -1, 1)
     capped = train([mup(ws=1)], fixed_steps=60, task_basis=u, coord_check=False); n0 = Nets.from_specs([mup(ws=1)])
     dT = (capped.nets.task_cols()[0][:, :NPRE] - n0.task_cols()[0][:, :NPRE]).double(); dc = (dT - dT.mean(1, keepdim=True)).reshape(-1)
     ub = u.reshape(-1).double().to(dc.device)
-    ck("C-T6 cap: centred task-column change inside the basis", float((dc - ub * (ub @ dc)).norm() / dc.norm()) < 1e-5)
+    ck("C-T6 cap: the centred task-column change lies in the basis", float((dc - ub * (ub @ dc)).norm() / dc.norm()) < 1e-5)
 
     # ---- (10) W6, W8, OD-C2, OD-C16
     w6 = self_train(nb.subset([0]), [0], taus=(0.1, 2.0), rounds=2, tasks=[0], steps=20)
     w6b = self_train(nb.subset([0]), [0], taus=(0.1, 2.0), rounds=2, tasks=[0], steps=20)
-    ck("W6 self-training loop runs, deterministic", w6["A"].shape == (4, 3) and np.array_equal(w6["A"], w6b["A"]) and len(w6_summary(w6)) == 2, f"A {np.round(w6['A'], 3).tolist()}")
+    ck("W6 self-training loop runs and is deterministic", w6["A"].shape == (4, 3) and np.array_equal(w6["A"], w6b["A"]) and len(w6_summary(w6)) == 2, f"A {np.round(w6['A'], 3).tolist()}")
     _, h2_, x_, y_, sh_ = task_states(nb, [0, 1])
     Q_, mu_ = class_mean_eraser(h2_.reshape(2, -1, 64), torch.arange(NPRE).repeat_interleave(P * P), NPRE)
     He = Ops(h2_Q=Q_, h2_mu=mu_).on_h2(h2_.reshape(2, 1, -1, 64))[:, 0].reshape(2, NPRE, P * P, 64)
-    spread = (He.mean(2) - He.mean((1, 2), keepdim=True)[:, :, 0]).abs().max()
-    ck("class-mean eraser: all class means equal after erasure", float(spread) < 1e-5, f"max |class mean - mean| {float(spread):.1e}")
+    spread = float((He.mean(2) - He.mean((1, 2), keepdim=True)[:, :, 0]).abs().max())
+    ck("class-mean eraser: all class means equal after the erasure", spread < 1e-5, f"max |class mean - mean| {spread:.1e}")
     sp0 = sum_probe(nb, [0, 1]); ref_ = z1_ref(nb); Ex_ = nb.x_cols(); Exc = Ex_ - Ex_.mean(-1, keepdim=True)
-    Qx = torch.linalg.qr(Exc[:, :, :P - 1].double())[0].float()
-    spx = sum_probe(nb, [0, 1], ops=block_ops(Qx, ref_))
-    ck("sum probe high on trained nets, destroyed by the x-span block (positive control for generic damage)", sp0.min() > 0.5 and spx.max() < sp0.min() - 0.2, f"base {np.round(sp0, 3).tolist()} x-block {np.round(spx, 3).tolist()}")
-    f_ = task_answer_features(nb, [0, 1]); pr = task_answer_probes(f_, mlp=True)
-    ck("task-identity / answer probes run (linear, MLP)", all(np.all((v >= 0) & (v <= 1)) for v in pr.values()), {k: np.round(v, 2).tolist() for k, v in pr.items()})
-    dm = damage_match(0.37, lambda r, lam: min(1.0, 0.1 * r * lam), 1, 64)
-    ck("OD-C2 damage_match (ladder + bisection at r0)", dm["matched"] and dm["r"] == 4 and abs(dm["drop"] - 0.37) <= 0.02 and damage_match(0.05, lambda r, lam: 0.2 * r * lam, 1, 64)["note"] == "partial removal at r0", dm["ladder"])
+    Qx = torch.linalg.qr(Exc[:, :, :P - 1].double())[0].float(); spx = sum_probe(nb, [0, 1], ops=block_ops(Qx, ref_))
+    ck("sum probe high in trained nets and destroyed by the x-span block (generic-damage positive control)", sp0.min() > 0.5 and spx.max() < sp0.min() - 0.2,
+       f"base {np.round(sp0, 3).tolist()}, x-span block {np.round(spx, 3).tolist()}")
+    pr = task_answer_probes(task_answer_features(nb, [0, 1]), mlp=True)
+    ck("task-identity / pooled-answer probes run (linear, MLP)", all(np.all((v >= 0) & (v <= 1)) for v in pr.values()), {k: np.round(v, 2).tolist() for k, v in pr.items()})
+    dm = damage_match(0.37, lambda r_, lam: min(1.0, 0.1 * r_ * lam), 1, 64)
+    ck("OD-C2 damage_match (ladder; bisection at r0)", dm["matched"] and dm["r"] == 4 and abs(dm["drop"] - 0.37) <= 0.02 and damage_match(0.05, lambda r_, lam: 0.2 * r_ * lam, 1, 64)["note"] == "partial removal at r0", dm["ladder"])
     e_ = np.zeros((4, 10), int); xx = np.zeros((4, 10), int)
     perm_map = modal_shift_map(e_ + np.array([[1], [2], [3], [4]]), xx, xx, [0, 1, 2, 3]); conc = modal_shift_map(e_ + 5, xx, xx, [0, 1, 2, 3])
     ck("OD-C16 modal-shift map labels", perm_map["label"] == "consistent permutation" and conc["label"] == "concentrated")
 
     # ---- (11) I/O
     paths = save_nets(nb, [0, 1], os.path.join(work, "saved")); ld = load_nets(paths)
-    ck("save_nets / load_nets round trip with checksums", all(weight_checksum(ld, i) == weight_checksum(nb, i) for i in range(2)) and net_name(mup(ws=0)) == net_name(dict(W=64, ws=0, init=0)))
+    ck("save_nets / load_nets round trip with checksums; deterministic names", all(weight_checksum(ld, i) == weight_checksum(nb, i) for i in range(2)) and net_name(mup(ws=0)) == net_name(dict(W=64, ws=0, init=0)))
 
     # ---- (12) r2_sim
     import r2_sim
-    ck("r2_sim selftest", r2_sim.selftest(quiet=True))
+    ok, rows = r2_sim.selftest(quiet=True, return_rows=True)
+    for rw in rows:
+        if rw["passed"] is None:
+            print(f"[SKIP] r2_sim: {rw['check']}", flush=True); continue
+        ck("r2_sim: " + rw["check"], rw["passed"], rw.get("info", ""), **{k: v for k, v in rw.items() if k not in ("check", "passed", "info")})
     bad = [k for k, v in ck.res.items() if not v]
-    print(f"r2_toy_common selftest: {len(ck.res) - len(bad)}/{len(ck.res)} passed ({time.time() - ck.t0:.0f}s)" + (f"; FAILED: {bad}" if bad else ""), flush=True)
+    refs = {k: dict(path=ref_path(k), sha256=hashlib.sha256(open(ref_path(k), "rb").read()).hexdigest() if ref_path(k) else None) for k in REF_FILES}
+    plan = os.path.normpath(os.path.join(_JU, "..", "..", "results", "ju_space", "plans", "abschnitt11_12_runde2_plan.md"))
+    out = dict(script="r2_toy_common.py selftest", device=str(DEV), quick=QUICK, torch=torch.__version__, numpy=np.__version__,
+               plan_sha256=hashlib.sha256(open(plan, "rb").read()).hexdigest() if os.path.exists(plan) else None,
+               module_sha256={n: hashlib.sha256(open(p_, "rb").read()).hexdigest() for n, p_ in (("r2_toy_common.py", __file__), ("r2_sim.py", r2_sim.__file__),
+                                                                                                    ("pc_meta.py", M.__file__), ("pc_common.py", PCC.__file__))},
+               references=refs, passed=len(ck.res) - len(bad), total=len(ck.res), failed=bad, checks=ck.rows, seconds=time.time() - ck.t0)
+    path = os.path.join(work, "ref_comparison_w5.json"); json.dump(_jsonable(out), open(path + ".tmp", "w"), indent=1); os.replace(path + ".tmp", path)
+    print(f"r2_toy_common selftest: {len(ck.res) - len(bad)}/{len(ck.res)} passed ({time.time() - ck.t0:.0f}s); comparison output {path}" + (f"; FAILED: {bad}" if bad else ""), flush=True)
     if bad:
         raise SystemExit(1)
     return ck.res

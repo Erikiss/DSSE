@@ -1,23 +1,28 @@
-"""Round 2 (plan v2, sections 2.3 and 9.1): the Qwen machinery shared by every round-2 Qwen script.
+"""Round 2 (final plan, sections 2.3, 2.4 O1 / O3 and 9.1): the Qwen machinery shared by every round-2 Qwen script.
 
 The round-1 code (rk_loop.py, rk_verdict.py, ufo_common.py, rsi_statements.py) is imported unchanged; rk_loop.py runs top-level code
 and parses sys.argv when it is imported, so a block is opened only through open_block (one Python process = one block, because
 rk_loop registers its hooks on block BLOCK at import).
 
 API (every function documented below; 'rk' = the rk_loop module returned by open_block)
-  Round-1 files (OD-G9, OD-G2, OD-G3)
+  Round-1 files (OD-G9, OD-G2, OD-G3, G4)
     find_r1(r1_dir, rel, block=None, required=True) -> path       locate <r1_dir>/gpu*/<rel> by name; duplicates by OD-G9; logged
     FINDER_LOG                                                     every choice made by find_r1 (write it into the output JSON)
+    block_final(r1_dir, b) -> bool                                 G4 / 2.1: summary_b<b>.json exists (block 14 included); parts that
+                                                                   read the round-1 files of a block that is not final are 'not run'
     r1_blocks(r1_dir) -> dict(b_lo, b_hi, B3, flags, ...)          B3 = {14, b_lo, b_hi} (the blocks that ran, OD-G2)
     delta_order(r1_dir, info=None) -> dict(order=[b(1), b(2), b(3)], delta, flags)
     load_r1_state(r1_dir, b), load_r1_json(r1_dir, rel, block=None, required=True), r1_meta(r1_dir, b)
   Opening a block
-    open_block(root, r1_dir, r2_dir, b) -> rk                      copies R1.state[b] to <r2_dir>/rk/b<b>/state.pt (if missing), sets
-                                                                   sys.argv / BLOCK / ASCALE / POOLDIRS / PERSONA and imports rk_loop
+    open_block(root, r1_dir, r2_dir, b) -> rk                      requires block_final; copies R1.state[b] to <r2_dir>/rk/b<b>/state.pt
+                                                                   (if missing), sets sys.argv / BLOCK / ASCALE / POOLDIRS / PERSONA and
+                                                                   imports rk_loop
     BLK                                                            dict(b, alpha (= alpha_b), alpha_scale, suffix, cap, med, paths)
-  State guard (critique 22d)
-    guard_check(), save(), st_put(key, value)                      round-1 keys never modified or deleted; new keys 'r2_*' or
-                                                                   '{ev,dir,dmg,k6}_r2*'; rk.save is replaced by a guarded save
+  State guard (critique 22d, v2-12g)
+    guard_check(), save(), st_put(key, value)                      round-1 keys never modified or deleted; rk_loop's module-level save()
+                                                                   is replaced by a guarded one; new keys 'r2_*', 'ev_r2*', 'dir_r2*',
+                                                                   'dmg_r2*' (loops named 'r2...') or 'k6_r2_*'
+    k6_direction(name, d, H, M0)                                   rk.k6_direction with the round-2 name rule: name 'r2_<dir>'
   Reading
     read_all_blocks(seqs_prompt, conts, batch=32, blocks=None, token_blocks=(), tok_dtype=torch.float16)
     read_windows(seqs_prompt, conts, first_div=None, batch=32, n_first=20)
@@ -25,6 +30,7 @@ API (every function documented below; 'rk' = the rk_loop module returned by open
   Axes and indicators (no model needed)
     unit, cosf, perp_basis(vectors), project_out(V, Q)
     axis_from_texts(Xp, Xa, fold, seed=None, basis=None, n_null=2000)
+    fixed_fold_axes(Xp, Xa, fold, basis) -> (a_A, a_B); gap_on_fixed_axes(Xp, Xa, fold, a_A, a_B) -> dict(g, kept, per_prompt)   (O1)
     axis_rel(diff, keep=None, Q=None, extra=None)
     stats_on_axis(ev, axis, null, n_prompts=None)
     halvings(n_prompts)                                             = rk.HALV for the same prompt count
@@ -37,7 +43,9 @@ API (every function documented below; 'rk' = the rk_loop module returned by open
     leaf_grads(seqs, positions, blocks, scalars_fn, batch=16)
     evaluate_variant(d, alpha, keyfn, ...)
   O3 loop-direction bank, Pool directions
-    loops_of_block(b), o3_bank(ST, loops, b, D=None), load_o3(r1_dir, b), pool_dir(kind, b, i, D=None), k6_null_dirs(b=14, D=None)
+    loops_of_block(b), loop_entry(ST, rows, L, suffix, start), o3_bank(ST, loops, b, D=None, extra=None), load_o3(r1_dir, b, extra=None)
+    (extra: round-2 loops such as B-Q0's r2RSIb, built from the round-2 state and their run_loop rows), pool_dir(kind, b, i, D=None),
+    k6_null_dirs(b=14, D=None)
   Files
     write_json(path, obj), torch_save(path, obj) (atomic: tmp + os.replace), jsonable(obj)
   Code test
@@ -55,7 +63,7 @@ import rk_verdict                                                               
 MOCK = os.environ.get("MOCK") == "1"
 WINDOWS = ("all", "div", "first20")
 LOOPS_14 = ("RSI_a", "RSI_b", "SEA", "SPO", "RND_1", "RND_2"); LOOPS_EXTRA = ("RSI_a", "SEA", "RND_1")      # L(14), L(b_lo) = L(b_hi)
-NEW_KEY = re.compile(r"^(r2_|(ev|dir|dmg|k6)_r2)")                                      # names allowed for new state keys
+NEW_KEY = re.compile(r"^(r2_|(ev|dir|dmg)_r2|k6_r2_)")                                  # names allowed for new state keys (2.3)
 SHARD_OF = {"b14": "gpu1", "b_lo": "gpu2", "b_hi": "gpu3"}                              # the round-1 runner's assignment
 
 
@@ -166,6 +174,13 @@ def find_r1(r1_dir, rel, block=None, required=True):
     rec.update(chosen=os.path.relpath(chosen, r1_dir), reason=why); FINDER_LOG.append(rec); return chosen
 
 
+def block_final(r1_dir, b):
+    """Finality of a block's round-1 rk outputs (2.1, OD-G10, G4): summary_b<b>.json exists (found by name across the shards; written
+    after loops, K5 and K6). Block 14 is included (critique v2-12s): every part at a block that is not final and reads a round-1 file of
+    that block is 'not run (round-1 output missing)'."""
+    return find_r1(r1_dir, f"summary_b{int(b)}.json", int(b), required=False) is not None
+
+
 def load_r1_json(r1_dir, rel, block=None, required=True):
     p = find_r1(r1_dir, rel, block, required); return None if p is None else json.load(open(p))
 
@@ -219,6 +234,8 @@ def pooldirs_path(root=None):
 
 def open_block(root, r1_dir, r2_dir, b):
     """Opens block b for this process and returns the rk_loop module (plan 2.3).
+    - requires the block's round-1 outputs to be final (block_final, G4): otherwise R1Missing is raised before anything is copied or
+      imported, and the caller reports its part as 'not run (round-1 output missing)';
     - copies R1.state[b] (found by find_r1) to <r2_dir>/rk/b<b>/state.pt if that file is missing (an existing copy is kept: resume);
     - reads R1.loops[b]['_meta'] (G10: alpha, alpha_scale, suffix used as is);
     - sets sys.argv = [rk_loop.py, root, <r2_dir>/rk, 'lib'] and env BLOCK = b, ASCALE = repr(alpha_scale_b), POOLDIRS and PERSONA
@@ -226,7 +243,9 @@ def open_block(root, r1_dir, r2_dir, b):
       rk_loop (which loads the model, the copied state as rk.ST and registers its hooks on block b) and restores sys.argv;
     - checks rk.BL == b, rk.SUF == suffix_b, rk.ST['alpha']['alpha'] * rk.ASCALE == alpha_b and the hidden size of the state;
     - installs the state guard: the round-1 keys (= the keys of the round-1 file) are fingerprinted (key set, tensor dtypes / shapes /
-      float64 sums, other leaves by value) and rk.save is replaced by a save that asserts the fingerprint and the naming of new keys.
+      float64 sums, other leaves by value) and rk_loop's module-level save() is replaced by a guarded save that asserts the fingerprint
+      and the naming of new keys before writing (rk's functions look the name up at call time, so the saves inside evaluate,
+      push_damage, run_loop and k6_direction are guarded too).
     Afterwards rk.model, rk.tok, rk.PROMPTS, rk.PIDS, rk.INSTR, rk.keyseed, rk.Gumbel, rk.generate, rk.read, rk.reply_read, rk.damage,
     rk.push_damage, rk.evaluate, rk.stats, rk.run_loop, rk.persona_sets, rk.grads, rk.z_beh, rk.logodds_matching, rk.k6_direction,
     rk.STEER, rk.CAP, rk.HALV are available; BLK holds b, alpha (alpha_b), alpha_scale, suffix, cap, med and the paths.
@@ -239,6 +258,7 @@ def open_block(root, r1_dir, r2_dir, b):
             raise RuntimeError(f"block {b} is open with r1_dir {BLK['r1_dir']} and r2_dir {BLK['r2_dir']}, asked for {r1_dir}, {r2_dir}")
         return _RK
     if "rk_loop" in sys.modules: raise RuntimeError("rk_loop was imported outside r2_rk.open_block")
+    if not block_final(r1_dir, b): raise R1Missing(f"round-1 outputs of block {b} are not final (summary_b{b}.json missing; G4)")
     src = find_r1(r1_dir, f"rk/b{b}/state.pt", b); meta = r1_meta(r1_dir, b)
     if int(meta.get("block", b)) != b: raise RuntimeError(f"loops.json of block {b} says block {meta.get('block')}")
     dst_dir = os.path.join(r2_dir, "rk", f"b{b}"); os.makedirs(dst_dir, exist_ok=True); dst = os.path.join(dst_dir, "state.pt")
@@ -297,7 +317,8 @@ def _install_guard(rk, src, dst_dir):
 
 
 def new_key_ok(k):
-    """Round-2 keys: loop names start with 'r2' (rk's own keys become ev_r2*, dir_r2*, dmg_r2*, k6_r2*); every other key 'r2_'."""
+    """Round-2 keys (2.3): new loop names start with 'r2' (rk's own keys become ev_r2*, dir_r2*, dmg_r2*); a direction passed to
+    rk.k6_direction is named 'r2_<dir>' (entry k6_r2_<dir>); every other new key starts with 'r2_'."""
     return bool(NEW_KEY.match(str(k)))
 
 
@@ -322,6 +343,15 @@ def st_put(key, value, do_save=True):
     if not new_key_ok(key) or key in _GUARD["keys"]: raise StateGuardError(f"{key!r} is not a round-2 key")
     _need().ST[key] = value
     if do_save: save()
+
+
+def k6_direction(name, d, H, M0):
+    """rk.k6_direction (O5: push calibrated to 0.03 nats, Ue_fin, A_fin, V) under the round-2 name rule (2.3, critique v2-12g): the name
+    must be 'r2_<dir>', so the entry is 'k6_r2_<dir>'; a round-1 name such as 'u_T_perp' would silently return the cached round-1 entry
+    and is refused. z_fin is not part of rk.k6_direction's entry (rk.k6 adds it from the null regression; O5's formula)."""
+    rk = _need(); key = f"k6_{name}"
+    if not str(name).startswith("r2_") or key in _GUARD["keys"]: raise StateGuardError(f"K6 direction name {name!r} must be 'r2_<dir>' (2.3)")
+    return rk.k6_direction(name, d, H, M0)
 
 
 # ---------------------------------------------------------------- reading
@@ -443,8 +473,29 @@ def axis_from_texts(Xp, Xa, fold, seed=None, basis=None, n_null=2000):
         out["u_perp"] = project_out(u, Q)
         if n_null: out["null"] = project_out(out["null"], Q)
         out["gap_perp"] = float((diff @ unit(out["u_perp"])).mean())
-        out["gap_perp_cross"] = float(torch.cat([diff[~fold] @ unit(project_out(dA, Q)), diff[fold] @ unit(project_out(dB, Q))]).mean())
+        out["a_A"], out["a_B"] = unit(project_out(dA, Q)), unit(project_out(dB, Q))       # O1's fixed axes when these are the unpushed texts
+        out["gap_perp_cross"] = float(torch.cat([diff[~fold] @ out["a_A"], diff[fold] @ out["a_B"]]).mean())
     return out
+
+
+def fixed_fold_axes(Xp, Xa, fold, basis):
+    """O1 (critique v2-4): the fixed axes of every instructed gap compared with g_0. d_A^0 / d_B^0 = the means over the round-1 fold True
+    / fold False prompts of the per-prompt differences x_pro,p - x_anti,p of the session's unpushed, unablated texts (a prompt with an
+    empty text drops out); a_A = unit(perp(d_A^0)), a_B = unit(perp(d_B^0)), perp = the projection off span(basis) (RSI: sports, tone,
+    sea, u_neg of R1.state[14]['axes']; RGI: the same plus u_TOPIC). Returns (a_A, a_B) float64."""
+    A = axis_from_texts(Xp, Xa, fold, basis=basis, n_null=0); return A["a_A"], A["a_B"]
+
+
+def gap_on_fixed_axes(Xp, Xa, fold, a_A, a_B):
+    """O1's g(texts): the mean over prompts of the per-prompt pro-minus-anti difference of the given texts read on the other fold's
+    fixed axis (fold-False prompts on a_A, fold-True prompts on a_B); a prompt with an empty text drops out, as in rk_loop.axes. For the
+    unpushed texts that defined (a_A, a_B) this is rk_loop's gap_perp_cross estimator (g_0); for pushed, ablated or cued texts it is
+    g_push, g_abl or g_cue. The own-axis gap (re-routing diagnostic) is axis_from_texts(texts, basis=...)['gap_perp_cross'].
+    Returns dict(g, kept, per_prompt [P] float64 (NaN for dropped prompts; prompt bootstrap: weight these per prompt))."""
+    Xp, Xa = torch.as_tensor(Xp).double(), torch.as_tensor(Xa).double(); fold = torch.as_tensor(fold, dtype=torch.bool)
+    keep = ~(torch.isnan(Xp).any(1) | torch.isnan(Xa).any(1)); diff = torch.nan_to_num(Xp - Xa)
+    per = torch.where(fold, diff @ a_B.double(), diff @ a_A.double()); per[~keep] = float("nan")
+    return dict(g=float(per[keep].mean()) if keep.any() else float("nan"), kept=int(keep.sum()), per_prompt=per)
 
 
 def _rel(r):
@@ -773,31 +824,46 @@ def loops_of_block(b):
     return LOOPS_14 if int(b) == 14 else LOOPS_EXTRA
 
 
-def o3_bank(ST, loops, b, D=None, path=None):
-    """O3 loop-direction bank of block b from R1.state[b] (ST) and R1.loops[b] (loops, with '_meta'): for L in L(b):
-    start d_0 (u_T_perp for RSI_a / RSI_b, sea, sports, Pool ('rand', b, 0) / ('rand', b, 1) for RND_1 / RND_2, as rk_loop.loop_specs
-    passed them to run_loop); d[n] = ST['dir_<L><SUF>_<n>'] (n = 1..4); ev[n] = the pairs behind d_n = ST['ev_<L><SUF>_<n-1>'] (delta,
-    ok, prompt_of, xp, xm, first_div, damage_of_push, alpha); rel[n] = loops[L][n-1]['rel'] (critique 7); row[n] = loops[L][n-1] (c, p,
-    A of d_n on u_T_perp, ...). Missing loops are listed in bank['_missing']."""
+def loop_entry(ST, rows, L, suffix, start, rounds=4):
+    """One loop of the O3 bank: dict(name, suffix, start = d_0, d {n: d_n = ST['dir_<L><suffix>_<n>']}, ev {n: the pairs behind d_n =
+    ST['ev_<L><suffix>_<n-1>'] (delta, ok, prompt_of, xp, xm, first_div, damage_of_push, alpha)}, rel {n: rows[n-1]['rel']}, row {n:
+    rows[n-1]}) for n = 1..rounds; None if an entry or a row is missing. A round-1 loop: ST = R1.state[b], rows = R1.loops[b][L]. A
+    round-2 loop run with rk.run_loop (e.g. B-Q0's r2RSIb at an extra block, L_B(b)): ST = the round-2 state <r2_dir>/rk/b<b>/state.pt,
+    rows = its run_loop rows (theta/b<b>_r2RSIb.json), start = the start passed to run_loop (unit(u_T_perp(b)))."""
+    if rows is None or len(rows) < rounds or any(f"dir_{L}{suffix}_{n}" not in ST or f"ev_{L}{suffix}_{n - 1}" not in ST for n in range(1, rounds + 1)):
+        return None
+    e = dict(name=L, suffix=suffix, start=torch.as_tensor(start).double(), d={}, ev={}, rel={}, row={})
+    for n in range(1, rounds + 1):
+        ev = ST[f"ev_{L}{suffix}_{n - 1}"]; e["d"][n] = ST[f"dir_{L}{suffix}_{n}"].double()
+        e["ev"][n] = {k: ev[k] for k in ("delta", "ok", "prompt_of", "xp", "xm", "first_div", "damage_of_push", "alpha") if k in ev}
+        e["rel"][n] = float(rows[n - 1]["rel"]); e["row"][n] = rows[n - 1]
+    return e
+
+
+def o3_bank(ST, loops, b, D=None, path=None, extra=None):
+    """O3 loop-direction bank of block b from R1.state[b] (ST) and R1.loops[b] (loops, with '_meta'): for L in L(b), loop_entry with
+    start d_0 = u_T_perp for RSI_a / RSI_b, sea, sports, Pool ('rand', b, 0) / ('rand', b, 1) for RND_1 / RND_2 (as rk_loop.loop_specs
+    passed them to run_loop); rel(d_n) = loops[L][n-1]['rel'] (critique 7); row[n] = loops[L][n-1] (c, p, A of d_n on u_T_perp, ...).
+    extra = {L: dict(ST=..., rows=..., start=..., suffix=...)}: round-2 loops added under their names (B-Q0's L_B(b) = L(b) plus r2RSIb
+    at the extra blocks; suffix defaults to the block's SUF). Missing loops are listed in bank['_missing']."""
     meta = loops["_meta"]; suf = meta.get("suffix", ""); ax = ST["axes"]; D = D or int(ax["u_T_perp"].shape[0])
     starts = dict(RSI_a=ax["u_T_perp"], RSI_b=ax["u_T_perp"], SEA=ax["sea"], SPO=ax["sports"])
     bank = dict(_meta=dict(meta), _missing=[])
     for L in loops_of_block(b):
-        if L not in loops or len(loops[L]) < 4 or any(f"dir_{L}{suf}_{n}" not in ST or f"ev_{L}{suf}_{n - 1}" not in ST for n in range(1, 5)):
-            bank["_missing"].append(L); continue
-        st = starts[L].double() if L in starts else pool_dir("rand", b, 0 if L == "RND_1" else 1, D=D, path=path)
-        e = dict(name=L, suffix=suf, start=st, d={}, ev={}, rel={}, row={})
-        for n in range(1, 5):
-            ev = ST[f"ev_{L}{suf}_{n - 1}"]; e["d"][n] = ST[f"dir_{L}{suf}_{n}"].double()
-            e["ev"][n] = {k: ev[k] for k in ("delta", "ok", "prompt_of", "xp", "xm", "first_div", "damage_of_push", "alpha") if k in ev}
-            e["rel"][n] = float(loops[L][n - 1]["rel"]); e["row"][n] = loops[L][n - 1]
-        bank[L] = e
+        st = starts[L] if L in starts else pool_dir("rand", b, 0 if L == "RND_1" else 1, D=D, path=path)
+        e = loop_entry(ST, loops.get(L), L, suf, st)
+        if e is None: bank["_missing"].append(L)
+        else: bank[L] = e
+    for L, x in (extra or {}).items():
+        e = loop_entry(x["ST"], x["rows"], L, x.get("suffix", suf), x["start"])
+        if e is None: bank["_missing"].append(L)
+        else: bank[L] = e
     return bank
 
 
-def load_o3(r1_dir, b):
+def load_o3(r1_dir, b, extra=None):
     """o3_bank from the round-1 files of block b (found by find_r1); works without a model (r2_ana)."""
-    loops = load_r1_json(r1_dir, f"rk/b{b}/loops.json", b); return o3_bank(load_r1_state(r1_dir, b), loops, b)
+    loops = load_r1_json(r1_dir, f"rk/b{b}/loops.json", b); return o3_bank(load_r1_state(r1_dir, b), loops, b, extra=extra)
 
 
 # ---------------------------------------------------------------- MOCK round-1 fixture for code tests
@@ -868,6 +934,14 @@ def selftest(root, work):
     info = r1_blocks(r1); order = delta_order(r1, info)
     check("finder: MOCK B3 and delta order", info["B3"] == [14, 8, 20] and order["order"] == [14, 8, 20] and not info["flags"], (info["B3"], order["order"]))
 
+    # finality (G4): a block without summary_b<b>.json is refused before anything is copied or imported
+    nf = os.path.join(work, "r2_selftest_nonfinal"); shutil.rmtree(nf, ignore_errors=True); os.makedirs(os.path.join(nf, "gpu1", "rk", "b14"))
+    for f in ("state.pt", "loops.json"): shutil.copyfile(os.path.join(r1, "gpu1", "rk", "b14", f), os.path.join(nf, "gpu1", "rk", "b14", f))
+    try: open_block(root, nf, os.path.join(nf, "r2"), 14); ok = False
+    except R1Missing: ok = True
+    check("finality: a block without summary is refused (G4), nothing imported", ok and _RK is None and "rk_loop" not in sys.modules
+          and not os.path.exists(os.path.join(nf, "r2")) and block_final(r1, 14) and not block_final(nf, 14))
+
     # open_block, guard
     rk = open_block(root, r1, r2, 14)
     check("open_block: state copied, alpha_b / suffix / cap", os.path.exists(os.path.join(r2, "rk", "b14", "state.pt")) and BLK["suffix"] == rk.SUF and abs(BLK["alpha"] - rk.ST["alpha"]["alpha"] * rk.ASCALE) < 1e-12, BLK)
@@ -878,10 +952,13 @@ def selftest(root, work):
     try: rk.save(); ok = False
     except StateGuardError: ok = True
     rk.ST[k0]["delta"] = old; check("guard: modified round-1 key refused by rk.save", ok)
-    rk.ST["junk"] = 1
-    try: save(); ok = False
-    except StateGuardError: ok = True
-    del rk.ST["junk"]; check("guard: badly named new key refused", ok)
+    ok = True
+    for junk in ("junk", "k6_r2x", "ev_RSI_a_9"):
+        rk.ST[junk] = 1
+        try: save(); ok = False
+        except StateGuardError: pass
+        del rk.ST[junk]
+    check("guard: badly named new keys refused (incl. a K6 entry without 'r2_')", ok and new_key_ok("k6_r2_u_RGI") and new_key_ok("ev_r2RSIb@1.5_0"))
     v = rk.ST.pop("ref")
     try: save(); ok = False
     except StateGuardError: ok = True
@@ -913,6 +990,12 @@ def selftest(root, work):
     check("axis_from_texts reproduces rk axes() (rsi: AUC, gap, u_T_perp, nulls, Delta_T)", ok and e4 < 1e-4 and e5 < 1e-4 and abs(Ar["gap_perp_cross"] - ax["gap_perp_cross"]) < 1e-4 * max(1, abs(ax["gap_perp_cross"])), f"{e4:.1e} {e5:.1e}")
     Sa = rk.ST["axis_sea"]; As = axis_from_texts(Sa["Xp"], Sa["Xa"], ax["fold"], seed=14)
     check("axis_from_texts: sea nulls (seed 14) as rk", float((As["null"].float() - ax["null_sea"]).abs().max()) < 1e-4 * float(ax["null_sea"].abs().max()))
+    aA, aB = fixed_fold_axes(S["Xp"], S["Xa"], ax["fold"], Q); g0 = gap_on_fixed_axes(S["Xp"], S["Xa"], ax["fold"], aA, aB)
+    gs = gap_on_fixed_axes(Sa["Xp"], Sa["Xa"], ax["fold"], aA, aB); dS = Sa["Xp"].double() - Sa["Xa"].double(); fo = ax["fold"]
+    man = float(torch.cat([dS[~fo] @ aA, dS[fo] @ aB]).mean()); own = axis_from_texts(Sa["Xp"], Sa["Xa"], fo, basis=Q, n_null=0)["gap_perp_cross"]
+    check("O1 fixed axes: g_0 = rk's gap_perp_cross (Delta_T); other texts read on the same fixed axes, not their own",
+          abs(g0["g"] - Ar["gap_perp_cross"]) < 1e-12 and abs(g0["g"] - ax["gap_perp_cross"]) < 1e-5 * max(1, abs(ax["gap_perp_cross"])) and abs(gs["g"] - man) < 1e-12 and gs["g"] != own,
+          (g0["g"], ax["gap_perp_cross"], gs["g"], own))
     s1, d1 = rk.stats(ev); s2, d2 = stats_on_axis(ev, ax["u_T_perp"], ax["null_u_T_perp"])
     check("stats_on_axis equals rk.stats on u_T_perp", all(abs(s1[k] - s2[k]) < 1e-12 or (s1[k] != s1[k] and s2[k] != s2[k]) for k in ("c", "p", "Q", "rel", "A", "r")), {k: (s1[k], s2[k]) for k in ("c", "p", "rel")})
     rr = axis_rel(Ar["diff_all"], Ar["keep"], Q=Q); s3, _ = rk.stats(dict(delta=Ar["diff_all"].float(), ok=Ar["keep"], prompt_of=torch.arange(rk.NP)), "sea")
@@ -931,6 +1014,17 @@ def selftest(root, work):
     bank = o3_bank(rk.ST, rk.ST["loops"], 14); e0 = rk.ST["ev_RND_1_0"]
     E2 = evaluate_variant(bank["RND_1"]["start"], e0["alpha"], lambda p, s: rk.keyseed("RND_1" + rk.SUF, 0, p, s, rk.BL), nseed=1, cbar=False)
     check("O3 bank: RND_1 start reproduces round-1 evaluation; d_n, rel", E2["conts"] == e0["conts"] and not bank["_missing"] and torch.equal(bank["RSI_a"]["d"][2], rk.ST["dir_RSI_a_2"].double()) and bank["SEA"]["rel"][3] == rk.ST["loops"]["SEA"][2]["rel"])
+    st2 = unit(ax["u_T_perp"].double()); rows2 = rk.run_loop("r2SELF", st2, 1, rounds=4)              # a round-2 loop, as B-Q0's r2RSIb
+    b2 = o3_bank(rk.ST, rk.ST["loops"], 14, extra={"r2SELF": dict(ST=rk.ST, rows=rows2, start=st2)})
+    check("O3 bank: a round-2 run_loop loop (r2RSIb's path) enters with its own rows", "r2SELF" in b2 and torch.equal(b2["r2SELF"]["d"][4], rk.ST["dir_r2SELF_4"].double())
+          and b2["r2SELF"]["rel"][2] == rows2[1]["rel"] and b2["r2SELF"]["ev"][1]["alpha"] == BLK["alpha"])
+    H = rk.persona_sets()["H30"][:4]; M0 = rk.logodds_matching(H)[0]
+    try: k6_direction("u_T_perp", ax["u_T_perp"], H, M0); ok = False
+    except StateGuardError: ok = True
+    K = k6_direction("r2_selftest", ax["sea"].double(), H, M0)
+    check("k6_direction: round-1 names refused, 'r2_<dir>' stored as 'k6_r2_<dir>' under the guard", ok and "k6_r2_selftest" in rk.ST and math.isfinite(K["Ue_fin"]))
+    for k in [k for k in rk.ST if k.startswith(("ev_r2SELF", "dir_r2SELF", "dmg_r2SELF")) or k == "k6_r2_selftest"]: del rk.ST[k]
+    save()
     Z = evaluate_variant(None, 0.0, lambda p, s: rk.keyseed("r2CHK", "zero", p), prompts=range(4), cbar=False)
     check("evaluate_variant: zero push with shared keys gives identical pairs", all(fd == -1 for fd in Z["first_div"]) and float(Z["windows"]["div"]["delta"].abs().max()) == 0.0)
     M1 = evaluate_variant(-u, al, lambda p, s: rk.keyseed("r2CHK", "mirror", p), prompts=range(4), cbar=False)

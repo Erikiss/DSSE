@@ -16,10 +16,13 @@ abschnitt11_12_runde2_plan.md, sections 6, 7 and 9.5). The notebooks are built b
              synced to Drive (r1 and r2in are copies of Drive files, recorded with sha256 in the manifest).
 <drive_dir>  Google Drive dsse_runs/<session>; the round-1 folders are its siblings dsse_runs/gpu1 ... gpu6 (env R1_SRC overrides).
 
-What a session does, in this order: gates G1 (plan freeze) and G2 (A100); the start conditions of 7.3 (G4, G5, finished wave-1
-sessions); the copy-in of the session's round-1 files (globs over gpu1-gpu6, duplicates by OD-G9) and round-2 inputs; the session
-manifest (plan sha256 and freeze commit, code commit, R1 module sha256 and G3, every copied file with source shard and sha256,
-R1.meta, block set and delta order (G7-G9), versions (G47), Qwen revisions and checksums, reference-file sha256); the steps of the
+What a session does, in this order: gates G1 (plan freeze: the checkout's plan file must have FROZEN_PLAN_SHA256 and the freeze
+commit must be an ancestor of the code commit) and G2 (A100); the start conditions of 7.3 (G4, G5 with R1.final = the operator's
+dsse_runs/r1_finality.json, finished wave-1 sessions); the copy-in of the session's round-1 files (globs over gpu1-gpu6, duplicates by
+OD-G9) and round-2 inputs; the session manifest (plan sha256, freeze commit hash and time, amendments sha256, code commit, R1 module
+sha256 and G3, every copied file with source shard, sha256 and Drive modification time, the Drive modification times of
+dsse_runs/gpu*/logs/*.log and gpu*/summary_b*.json next to the freeze time (os.stat only, section 14), R1.meta, R1.final, block set
+and delta order (G7-G9), versions (G47), Qwen revisions and checksums, reference-file and ref-comparison sha256); the steps of the
 session's table below in order, each skipped when its outputs exist (and the runner recorded its success), each followed by an
 incremental, error-tolerant Drive sync and the time guard (7.4: at >= 20 min after the notebook start the session stops after the
 current step, writes session_partial.json and is continued by a rerun of the notebook); finally session_done.json with the step
@@ -30,9 +33,12 @@ failed, a model checksum failed, or a usage error; 3 time guard (rerun the noteb
 met (wait for round 1 or the wave-1 sessions).
 Env: RUN_DEVICE (cuda; 'cpu' only for local code tests: then G2 and the model checks are skipped and recorded as such), NT,
 R2_T0 (epoch seconds of the notebook's first cell; the time guard counts from it), R2_GUARD_S (1200), R2_STEP_TIMEOUT (3600),
-R1_DECLARED_FINAL (round-1 shards declared final although outputs are missing: 'still missing after two notebook runs', G4/G5),
-R2_DECLARED_NOT_RUN (sessions declared 'not run' after two attempts, for r2_ana), R1_SRC (round-1 source folder);
-for code tests only: R2_REPO (checkout root), R2_SCRIPTS (folder of the round-2 scripts), R2_GIT (git executable)."""
+R2_DECLARED_NOT_RUN (wave-1 sessions declared 'not run' after two attempts, for r2_ana; the runner checks the two attempts),
+R1_SRC (round-1 source folder, default: the parent of <drive_dir>), R2_MOCK_NPAR (parallel pc_meta jobs of the mock tree);
+for code tests only: R2_REPO (checkout root), R2_SCRIPTS (folder of the round-2 scripts), R2_GIT (git executable).
+R1.final (2.1, critique v2-12j) is written by the operator, never by a script: dsse_runs/r1_finality.json =
+  {"gpu4": {"runs": [{"start": "2026-11-12T15:02Z", "end": "2026-11-12T15:24Z"}, {"start": ..., "end": ...}], "final": true}, ...}
+A shard without shard_done.json (G5), or whose block summary is missing (G4), counts as final only with >= 2 runs and "final": true."""
 import datetime, glob, hashlib, importlib.metadata, json, math, os, platform, re, shlex, shutil, signal, subprocess, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -52,15 +58,19 @@ class Step:
     local     the step writes local-only arrays under <work>/local that the steps in needed_by read; they are never synced, so on a new
               machine the step runs again unless all of needed_by are done
     needs     'qwen06': runs only if Qwen3-0.6B was downloaded and its checksum holds (G33)
-    gate_in_script  the script applies its own gate (e.g. GA(b)) and may write no output; exit code 0 is then enough"""
+    gate_in_script  the script applies its own gate and may write no output; exit code 0 is then enough
+    r1_reads  G4: a step at a block whose round-1 summary is final-missing is 'not run (round-1 output missing)' if it reads round-1
+              files of that block ('block', the default for block steps); 'any': it reads several blocks and runs unless all are
+              missing (the script skips the missing ones: env R2_MISSING_BLOCKS); None: it reads no round-1 file (C-Q6)"""
 
     def __init__(self, name, block, script, args, out, after="", opt="", quick_out=None, local=False, needed_by="", needs="", env=None,
-                 gate_in_script=False):
+                 gate_in_script=False, r1_reads="block"):
         self.name, self.block, self.script, self.args = name, block, script, args
         self.out, self.opt = out.split(), opt.split()
         self.quick_out = None if quick_out is None else quick_out.split()
         self.after, self.needed_by = _names(after), _names(needed_by)
         self.local, self.needs, self.env, self.gate_in_script = local, needs, dict(env or {}), gate_in_script
+        self.r1_reads = r1_reads      # G4: 'block' = reads round-1 files of its block; 'any' = of every block of B3; None = none
 
 
 def _names(s):
@@ -73,9 +83,11 @@ M17, M06 = "qwen3-1.7b", "qwen3-0.6b"
 
 
 def _theta_extra(blk):
-    """B-Q0 (directions, kappa, switch), the cells (B-Q1, B-Q5 with reserve 3), the power step (B-Q6) and the FDT anchor (B-Q7) at
-    an extra block."""
-    return [Step("q0_b{b}", blk, "r2_theta.py", QW + " q0", "theta/b{b}_q0.json", opt="theta/b{b}_q0.pt"),
+    """At an extra block: the second RSI loop r2RSIb (B-Q0, critique v2-3; G49: a loop that did not run its 4 rounds is a state that
+    r2_theta.py records in theta/b<b>_r2RSIb.json, while a crash stops the block), B-Q0 (directions, kappa, switch), the cells (B-Q1,
+    B-Q5 with reserve 3), the power step (B-Q6) and the FDT anchor (B-Q7)."""
+    return [Step("rsib_b{b}", blk, "r2_theta.py", QW + " rsib", "theta/b{b}_r2RSIb.json"),
+            Step("q0_b{b}", blk, "r2_theta.py", QW + " q0", "theta/b{b}_q0.json", opt="theta/b{b}_q0.pt", after="rsib_b{b}"),
             Step("cells_b{b}", blk, "r2_theta.py", QW + " cells", "theta/b{b}_cells.json", opt="theta/b{b}_cells.pt", after="q0_b{b}"),
             Step("power_b{b}", blk, "r2_theta.py", QW + " power", "theta/b{b}_power.*", after="cells_b{b}", gate_in_script=True),
             Step("fdt_b{b}", blk, "r2_theta.py", QW + " fdt", "theta/b{b}_fdt.pt", after="q0_b{b}")]
@@ -91,26 +103,27 @@ def _geom(m, extra, needs=""):
 
 
 STEPS = {
-    "r2_q1": [   # O2; C-Q3; C-Q4a; C-Q2; A6(b) GEN loops at the blocks of B3 (GA(b) gate inside r2_gen_loop.py)
-        Step("axes", "14", "r2_axes.py", QW, "axes/r2_axes.json axes/r2_axes.pt axes/tok14.pt"),
+    "r2_q1": [   # block 14: O2; C-Q3; C-Q4a; C-Q2; A6(b) GEN loop; C-Q4b (gated); arm A; C-Q5 pushes; C-Q6; then the GEN loops at
+                 # b_lo and b_hi (plan 7.2; r2_gen_loop.py writes rgi/dyn_b<b>.json also when GA(b) closes the loop)
+        Step("axes", "14", "r2_axes.py", QW, "axes/r2_axes.json axes/r2_axes.pt axes/tok14.pt", r1_reads="any"),
         Step("q3", "14", "r2_unlearn_qwen.py", QW + " q3", "unlearn/q3.json", opt="unlearn/q3.pt", after="axes"),
         Step("q4a", "14", "r2_unlearn_qwen.py", QW + " q4a", "unlearn/q4a.json", opt="unlearn/q4a.pt", after="q3"),
         Step("q2", "14", "r2_unlearn_qwen.py", QW + " q2", "unlearn/q2.json", opt="unlearn/q2.pt", after="axes"),
-        *[Step("gen_b{b}", blk, "r2_gen_loop.py", QW, "rgi/dyn_b{b}.json", opt="rgi/dyn_b{b}.pt", after="axes", gate_in_script=True)
-          for blk in ("14", "b_lo", "b_hi")],
+        Step("gen_b{b}", "14", "r2_gen_loop.py", QW, "rgi/dyn_b{b}.json", opt="rgi/dyn_b{b}.pt", after="axes"),
+        Step("q4b", "14", "r2_unlearn_qwen.py", QW + " q4b", "unlearn/q4b.json", opt="unlearn/q4b.pt"),
+        Step("armA", "14", "r2_unlearn_qwen.py", QW + " armA", "unlearn/armA.json", opt="unlearn/armA.pt"),
+        Step("q5", "14", "r2_unlearn_qwen.py", QW + " q5", "unlearn/q5.json", opt="unlearn/q5.pt"),
+        Step("q6", "14", "r2_unlearn_qwen.py", QW + " q6", "unlearn/q6.json", opt="unlearn/q6.pt", r1_reads=None),
+        *[Step("gen_b{b}", blk, "r2_gen_loop.py", QW, "rgi/dyn_b{b}.json", opt="rgi/dyn_b{b}.pt", after="axes") for blk in ("b_lo", "b_hi")],
     ],
-    "r2_q2": [   # block 14: B-Q0, code checks, cells (B-Q1, B-Q3, B-Q4), turn 2 (B-Q8), power step, FDT; C-Q4b, arm A, C-Q5, C-Q6;
-                 # then each extra block (B-Q0, cells incl. reserve 3, power step, FDT)
+    "r2_q2": [   # Part B only. Block 14: B-Q0, code checks, cells (B-Q1, B-Q3, B-Q4), turn 2 (B-Q8), power step (B-Q6), FDT (B-Q7);
+                 # then each extra block: the r2RSIb loop, B-Q0, cells incl. reserve 3, power step, FDT
         Step("q0_b{b}", "14", "r2_theta.py", QW + " q0", "theta/b{b}_q0.json", opt="theta/b{b}_q0.pt"),
         Step("checks", "14", "r2_theta.py", QW + " checks", "theta/checks.json"),
         Step("cells_b{b}", "14", "r2_theta.py", QW + " cells", "theta/b{b}_cells.json", opt="theta/b{b}_cells.pt", after="q0_b{b}"),
         Step("turn2", "14", "r2_theta.py", QW + " turn2", "theta/b14_turn2.pt", after="cells_b14"),
         Step("power_b{b}", "14", "r2_theta.py", QW + " power", "theta/b{b}_power.*", after="cells_b{b}", gate_in_script=True),
         Step("fdt_b{b}", "14", "r2_theta.py", QW + " fdt", "theta/b{b}_fdt.pt", after="q0_b{b}"),
-        Step("q4b", "14", "r2_unlearn_qwen.py", QW + " q4b", "unlearn/q4b.json", opt="unlearn/q4b.pt"),
-        Step("armA", "14", "r2_unlearn_qwen.py", QW + " armA", "unlearn/armA.json", opt="unlearn/armA.pt"),
-        Step("q5", "14", "r2_unlearn_qwen.py", QW + " q5", "unlearn/q5.json", opt="unlearn/q5.pt"),
-        Step("q6", "14", "r2_unlearn_qwen.py", QW + " q6", "unlearn/q6.json", opt="unlearn/q6.pt"),
         *_theta_extra("b_lo"), *_theta_extra("b_hi"),
     ],
     "r2_q3": _geom(M17, "") + _geom(M06, " --model " + M06, needs="qwen06"),   # A1-A5 for Qwen3-1.7B, then the Qwen3-0.6B arm
@@ -132,27 +145,31 @@ STEPS = {
     "r2_t3": [Step(f"c{st}", None, "r2_unlearn_toy.py", "{work} " + st, f"unlearn_toy/{st}.json")      # C-T0 ... C-T4, C-T6
               for st in ("t0", "t1", "t2", "t3", "t4", "t6")],
     "r2_t4": [Step("ct5", None, "r2_unlearn_toy.py", "{work} t5", "unlearn_toy/t5.json")],               # C-T5
-    "r2_pc": [   # G-meta / G-PC (which widths run), C-T7, AT5 pairs with a PC net (r2_t1's BP nets in {r2in}/r2_t1)
-        Step("gates", None, "r2_pc_toy.py", "{work} gates", "pc_toy/gates.json"),
-        Step("t7", None, "r2_pc_toy.py", "{work} t7", "pc_toy/t7.json", after="gates"),
+    "r2_pc": [   # C-T7 (PC and BP sides at W 128 and 256), AT5 pairs with a PC net at every PC width (r2_t1's BP nets in
+                 # {r2in}/r2_t1); no gate decides what runs: G-meta and G-PC are decided in r2_ana (critique v2-11)
+        Step("t7", None, "r2_pc_toy.py", "{work} t7", "pc_toy/t7.json"),
         Step("cross_pc", None, "r2_pc_toy.py", "{work} cross_pc", " ".join(f"pc_toy/cross_pc/w{ws}.json" for ws in range(5)),
-             quick_out="pc_toy/cross_pc/w*.json", after="gates"),
+             quick_out="pc_toy/cross_pc/w*.json"),
     ],
     "r2_ana": [  # all statistics and verdicts, then the report (each output is mirrored into <r2in>/r2_ana for the later scripts)
         Step("linearity", None, "r2_linearity.py", ANA + "unlearn/q1.json", "unlearn/q1.json"),
         Step("theta_verdict", None, "r2_theta_verdict.py", ANA + "theta_verdict.json", "theta_verdict.json"),
         Step("rgi_verdict", None, "r2_rgi_verdict.py", ANA + "rgi_verdict.json", "rgi_verdict.json"),
         Step("unlearn_verdict", None, "r2_unlearn_verdict.py", ANA + "unlearn_verdict.json", "unlearn_verdict.json", after="linearity"),
-        Step("report", None, "r2_report.py", ANA + "round2_summary.json", "round2_summary.json", opt="r2_manifest.json",
+        Step("report", None, "r2_report.py", ANA + "round2_summary.json", "round2_summary.json", opt="r2_manifest.json pc_toy/gates.json",
              after="linearity,theta_verdict,rgi_verdict,unlearn_verdict"),
     ],
 }
 
-# Copy lists (7.3; globs relative to dsse_runs/; 'gpu*' = gpu1 ... gpu6; {a,b} = alternatives)
+# Copy lists (7.3; globs relative to dsse_runs/; 'gpu*' = gpu1 ... gpu6; {a,b} = alternatives; a name without a shard folder lies in
+# dsse_runs/ itself: r1_finality.json = R1.final, the operator's record of the round-1 notebook runs, 2.1)
 R1_RK = ("gpu*/rk/b*/{state.pt,loops.json,pilot.json,pilot@1.5.json,k5.json,k6.json,manip@*.json}", "gpu*/summary_b*.json",
-         "gpu2/{dn_delta.json,blocks_chosen.json}", "gpu3/{dn_delta.json,blocks_chosen.json}", "gpu*/{shard_done.json,code_commits.txt}")
-R1_PC = ("gpu*/pc/jobs/pc_mup_*.json", "gpu*/pc/models/pc_mup_*.pt", "gpu*/pc_summary_gpu*.json", "gpu*/pc_expected_gpu*.json",
-         "gpu*/pc_missing_gpu*.json", "gpu*/{shard_done.json,code_commits.txt}")
+         "gpu2/{dn_delta.json,blocks_chosen.json}", "gpu3/{dn_delta.json,blocks_chosen.json}", "gpu*/{shard_done.json,code_commits.txt}",
+         "r1_finality.json")
+R1_PC = ("gpu*/pc/jobs/pc_mup_*.json", "gpu*/pc/models/pc_mup_*.pt",
+         "gpu*/pc/jobs/bp_mup_W{128,256}_s*_K12_g0_wd1.json", "gpu*/pc/models/bp_mup_W{128,256}_s*_K12_g0_wd1.pt",   # C-T7's BP side
+         "gpu*/pc_summary_gpu*.json", "gpu*/pc_expected_gpu*.json", "gpu*/pc_missing_gpu*.json", "gpu*/{shard_done.json,code_commits.txt}",
+         "r1_finality.json")
 R1_G46 = ("gpu*/pc/jobs/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}.json",        # G46: the R1 BP cells that round 2 retrains (AT2, AT5,
           "gpu*/pc/models/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}.pt")         # B-T1/B-T2, C-T nets): every BP main cell without regulariser
 R2_ALL = "*"                                                                # r2_ana: every output of the other sessions (see plan_r2)
@@ -175,8 +192,9 @@ STEP_ENV = {"r2_pc": dict(R1PC="{r1}", R2T1="{r2in}/r2_t1")}     # 9.3: R1PC = f
 # ======================================================================================================================================
 # Constants of the freeze and of the inputs
 # ======================================================================================================================================
-FROZEN_PLAN_SHA256 = "32c0832ca0e40f3ac766510246c6ffe67f77ca02056fa5562022b29f6a914b17"   # plan v2 (12 Nov 2026); set from the freeze commit
-FREEZE_COMMIT = None                 # hash of the freeze commit once it exists (else: the commit that added the plan file)
+FROZEN_PLAN_SHA256 = "5e476340dfdb1d827582c869f2dfc08e32ed8e9a9dbebf7642acceb5bb5edc2d"   # the frozen plan (section 14, G1)
+FREEZE_COMMIT = "5b46e38cd800236d2d597044510652cbc48ad50d"   # the commit that added the plan file (checked against git, G1)
+FREEZE_TIME = "2026-11-12T19:47:20Z"                         # its time (UTC); git's commit time is recorded next to it
 PLAN_REL = "results/ju_space/plans/abschnitt11_12_runde2_plan.md"
 AMEND_REL = "results/ju_space/plans/abschnitt11_12_runde2_plan_amendments.md"
 R1_MODULES = ("rk_loop.py", "pc_meta.py", "pc_common.py", "ufo_common.py", "rsi_statements.py")        # 2.1 R1 code freeze
@@ -212,7 +230,9 @@ REF_SHA256 = {   # Appendix E: reference files copied into analysis/ju_space/rou
     "theta_design/crit_tline3.json": "473aeab169878fc55a063ca92257ab40bcc10ca011702c4b0efed50b0844e2b1",
     "theta_design/sim_toy_bracket.py": "60d4a31c135a82a5762def18083f6925ead1eaa53700a12e699155002338234e",
     "theta_design/simC2.json": "551aaf054c197b6daaef15a8e24aebe9ff0fa5c1a51d5305b7feaa74b15b9460",
+    "unlearn_design/impose.py": "353302dcb2f2af8ae9ef41927d2a87053264dd78a97575ac8eaac302ed16d197",
     "unlearn_design/impose2.py": "cda1550cb6bce13bcaf54862bdf7e2a086e73cedda30a102ae3e72a727dd27cc",
+    "unlearn_design/pilot.py": "c874cd03dc128ac491c800542db0792c2db30040f723d3dd9e9244e54543fe45",
     "unlearn_design/critique/c1_structure.py": "8ac1162308b6e6f89f5941024bff52202c68871e6cf3e93feeb202a304f7bba8",
     "unlearn_design/critique/c2_pring.py": "a9d22d4f82c6a06d097135e132c06a485fd2fdf9c50cb39d91b9cc02612a79ee",
     "unlearn_design/critique/c3_angle.py": "ee6f1cc4f64d4000fbaae7b43bc275c5a29344f002ab09cbd407eb6569dbe4bb",
@@ -224,7 +244,14 @@ REF_SHA256 = {   # Appendix E: reference files copied into analysis/ju_space/rou
     "unlearn_design/design_readable.txt": "74013dd312cdebf06a3a0fa85195d43713f607ffc1d0f4a47340d2659e89215f",
     "round2/plan_round2.md": "6b3a91ce96957e1468c2ef0ef4566c5053f527e77467b347da4776f7c0a480f3",
     "round2/plan_round2_critique.md": "96050e4f47f9e1b7f7f408c96ddbb77d7edaed33cdf2cde14c174be81c6e0b0e",
+    "round2/plan_round2_v2.md": "32c0832ca0e40f3ac766510246c6ffe67f77ca02056fa5562022b29f6a914b17",
+    "round2/plan_round2_v2_critique.md": "6e5259e2d904caaf9d80ab01bb7fe4f872e6570a952f2f4cc0db1730221d282a",
 }
+SHIM_SHA256 = {   # Appendix E: the repository's round-1 files that the reference shim (9.5) uses in place of the scratchpad copies
+    "analysis/ju_space/pc_meta.py": "b69e314a2ca442ba56e9e31916578d718f9fdee4ec4bee329d3aa358a27bc0ae",
+    "analysis/ju_space/pc_common.py": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f",
+}
+REF_COMPARISON_GLOBS = ("ref_comparison*", "ref_compare*", "ref_check*", "ref/*comparison*", "ref/*compare*")  # 9.5: committed output
 GUARD_S_DEFAULT = 1200.0             # 7.4 / G48: 20 min
 EXIT_DONE, EXIT_FAILED, EXIT_GATE, EXIT_GUARD, EXIT_WAIT = 0, 1, 2, 3, 4
 NOT_SYNCED = ("local", "r1", "r2in")  # top-level folders of <work> that never go to Drive
@@ -445,11 +472,33 @@ def r1_blocks(src):
     return out
 
 
-def gate_G4(src, blk, decl):
+def r1_final(src):
+    """R1.final: the operator's dsse_runs/r1_finality.json (2.1; never written by a script), or None."""
+    p = os.path.join(src, "r1_finality.json") if src else None
+    rec = load_json(p) if p else None
+    if isinstance(rec, dict) and isinstance(rec.get("shards"), dict):
+        rec = rec["shards"]
+    return rec if isinstance(rec, dict) else None
+
+
+def final_by_record(fin, shard):
+    """(final?, number of recorded runs): a shard counts as final by R1.final with >= 2 notebook runs and 'final': true."""
+    e = (fin or {}).get(shard) or {}
+    runs = e.get("runs") if isinstance(e, dict) else None
+    n = len(runs) if isinstance(runs, list) else 0
+    return bool(isinstance(e, dict) and e.get("final") is True and n >= 2), n
+
+
+R1_FINAL_HINT = ("if it stays missing, record the shard's notebook runs in dsse_runs/r1_finality.json with \"final\": true "
+                 "(at least two runs; section 2.1)")
+
+
+def gate_G4(src, blk, fin):
     """Start condition of r2_q1, r2_q2, r2_ana: sum[14], sum[b_lo], sum[b_hi], gpu2/dn_delta.json, gpu2 and gpu3 blocks_chosen.json
-    exist. A summary of b_lo / b_hi still missing after two notebook runs of its shard (declared by the operator) lets the session
-    start; that block's parts are then 'not run (round-1 output missing)'."""
-    rec = dict(ok=True, waiting=[], final_blocks=[], missing_blocks=[], declared=decl)
+    exist. A summary still missing (block 14's included, critique v2-12s) when R1.final lists two notebook runs of its shard and
+    'final': true lets the session start; every part at that block that reads a round-1 file of the block is then 'not run (round-1
+    output missing)'."""
+    rec = dict(ok=True, waiting=[], final_blocks=[], missing_blocks=[], summaries={})
     for rel in ("gpu2/dn_delta.json", "gpu2/blocks_chosen.json", "gpu3/blocks_chosen.json"):
         if not os.path.isfile(os.path.join(src, rel)):
             rec["ok"] = False; rec["waiting"].append(f"{rel} missing" + (f" (folder dsse_runs/{rel[:4]} not found)" if not os.path.isdir(
@@ -459,34 +508,54 @@ def gate_G4(src, blk, decl):
         if b is None:
             rec["ok"] = False; rec["waiting"].append(f"{role} unknown"); continue
         hit = find_r1(src, f"summary_b{b}.json", prefer=shard)
+        ok_rec, n = final_by_record(fin, shard)
         if hit:
-            rec["final_blocks"].append(b); rec[f"summary_b{b}"] = hit[0]
-        elif role != "b14" and shard in decl:
-            rec["missing_blocks"].append(b); rec[f"summary_b{b}"] = f"missing; {shard} declared final (two notebook runs)"
+            rec["final_blocks"].append(b); rec["summaries"][str(b)] = f"{hit[0]}/summary_b{b}.json"
+        elif ok_rec:
+            rec["missing_blocks"].append(b); rec["summaries"][str(b)] = f"missing; {shard} final by R1.final ({n} runs)"
         else:
             rec["ok"] = False
-            rec["waiting"].append(f"summary_b{b}.json ({role}) missing in dsse_runs/gpu1-gpu6" +
-                                  ("" if role == "b14" else f" (if it is still missing after two runs of {shard}: declare {shard})"))
+            rec["waiting"].append(f"summary_b{b}.json ({role}, {shard}) missing in dsse_runs/gpu1-gpu6; {R1_FINAL_HINT}")
     return rec
 
 
-def gate_G5(src, decl):
-    """Start condition of r2_pc and r2_ana: every shard's PC outputs are final: shard_done.json exists, or pc_missing_<shard>.json
-    stayed the same after two notebook runs (declared by the operator; recorded as 'final with missing jobs')."""
-    rec = dict(ok=True, waiting=[], shards={}, declared=decl)
+def gate_G5(src, fin):
+    """Start condition of r2_pc and r2_ana: every shard's PC outputs are final: shard_done.json exists, else R1.final lists at least
+    two notebook runs of the shard and 'final': true ('final with missing jobs'; the sha256 of pc_missing_<shard>.json is recorded)."""
+    rec = dict(ok=True, waiting=[], shards={})
     for s in SHARDS:
         d = os.path.join(src, s)
+        ok_rec, n = final_by_record(fin, s)
+        pm = os.path.join(d, f"pc_missing_{s}.json")
         if os.path.isfile(os.path.join(d, "shard_done.json")):
             rec["shards"][s] = "final (shard_done.json)"
-        elif os.path.isfile(os.path.join(d, f"pc_missing_{s}.json")) and s in decl:
-            rec["shards"][s] = f"final with missing jobs (declared; pc_missing sha256 {sha256_file(os.path.join(d, f'pc_missing_{s}.json'))})"
+        elif ok_rec and os.path.isdir(d):
+            rec["shards"][s] = f"final with missing jobs (R1.final: {n} runs" + (f"; pc_missing sha256 {sha256_file(pm)})" if os.path.isfile(pm) else ")")
         else:
             rec["ok"] = False
             why = ("folder not found (other account: share it or copy it into this account's dsse_runs)" if not os.path.isdir(d) else
-                   "no shard_done.json" + (" (pc_missing present: declare the shard if it stayed the same after two runs)"
-                                           if os.path.isfile(os.path.join(d, f"pc_missing_{s}.json")) else ""))
+                   f"no shard_done.json; {R1_FINAL_HINT}")
             rec["shards"][s] = "not final: " + why; rec["waiting"].append(f"dsse_runs/{s}: {why}")
     return rec
+
+
+def drive_meta(src, freeze_time):
+    """Section 14 / G1: the Drive modification times of dsse_runs/gpu*/logs/*.log and gpu*/summary_b*.json (os.stat only, nothing is
+    opened), next to the freeze commit's time, and whether the freeze predates the first round-1 summary."""
+    if not (src and os.path.isdir(src)):
+        return dict(available=False, note="dsse_runs not reachable from this session")
+    stat = lambda pat: {f"{s}/{os.path.relpath(p, os.path.join(src, s))}": os.path.getmtime(p)
+                        for s in SHARDS for p in rglob(os.path.join(src, s), pat)}
+    logs, sums = stat("logs/*.log"), stat("summary_b*.json")
+    try:
+        ft = datetime.datetime.fromisoformat(freeze_time.replace("Z", "+00:00")).timestamp() if freeze_time else None
+    except ValueError:
+        ft = None
+    first = min(sums.values()) if sums else None
+    return dict(available=True, freeze_time=freeze_time, logs={k: iso(v) for k, v in sorted(logs.items())},
+                summaries={k: iso(v) for k, v in sorted(sums.items())}, first_summary=iso(first) if first else None,
+                first_log=iso(min(logs.values())) if logs else None,
+                freeze_before_first_summary=None if ft is None or first is None else ft < first)
 
 
 def gate_upstream(src, base, decl):
@@ -515,6 +584,10 @@ def plan_r1(src, patterns, blk=None):
     several do the one with shard_done.json, then the most recent file. Returns (files, choices, skipped)."""
     hits = {}
     for pat in expand(patterns):
+        if not re.match(r"^gpu(\*|\d)/", pat):                       # a file in dsse_runs/ itself (r1_finality.json)
+            for p in rglob(src, pat):
+                hits.setdefault(os.path.relpath(p, src).replace(os.sep, "/"), {})[""] = p
+            continue
         first, rest = pat.split("/", 1)
         for s in (SHARDS if first == "gpu*" else (first,)):
             base = os.path.join(src, s)
@@ -616,7 +689,8 @@ def copy_tree_files(items, dst_root, label, keep_top=(), lock_dirs=True):
     for top, rel, p in items:
         dst = os.path.join(dst_root, top, rel); keep.add(os.path.normpath(dst))
         sha, size, reused = fetch(p, dst); nb += 0 if reused else size
-        recs.append(dict(path=f"{top}/{rel}", source=top, sha256=sha, size=size, drive_mtime=iso(os.path.getmtime(p)), reused=reused))
+        recs.append(dict(path=f"{top}/{rel}" if top else rel, source=top or "dsse_runs", sha256=sha, size=size,
+                         drive_mtime=iso(os.path.getmtime(p)), reused=reused))
     for p in rglob(dst_root, "**/*"):
         if os.path.normpath(p) not in keep and os.path.relpath(p, dst_root).split(os.sep)[0] not in keep_top:
             os.remove(p)
@@ -632,7 +706,7 @@ def copy_tree_files(items, dst_root, label, keep_top=(), lock_dirs=True):
 def gate_G1():
     """Plan freeze: the plan file's sha256 equals FROZEN_PLAN_SHA256, and the freeze commit (the commit that added the plan file; it
     must equal FREEZE_COMMIT when that is set) is an ancestor of the checked-out round-2 code commit. Also the amendments' sha256."""
-    rec = dict(plan=PLAN_REL, expected_sha256=FROZEN_PLAN_SHA256, freeze_commit_constant=FREEZE_COMMIT)
+    rec = dict(plan=PLAN_REL, expected_sha256=FROZEN_PLAN_SHA256, freeze_commit_constant=FREEZE_COMMIT, freeze_time_constant=FREEZE_TIME)
     p = os.path.join(REPO, PLAN_REL)
     rec["sha256"] = sha256_file(p) if os.path.isfile(p) else None
     rec["sha256_ok"] = rec["sha256"] == FROZEN_PLAN_SHA256
@@ -766,20 +840,32 @@ def models_record(ctx):
 
 
 def references_record():
-    """sha256 of the reference files of Appendix E in analysis/ju_space/round2/ref/ (found by content anywhere below ref/)."""
+    """sha256 of the reference files of Appendix E in analysis/ju_space/round2/ref/<path> (a file found elsewhere below ref/ by its
+    content is 'moved'), of the freeze's MISSING.txt, of the two repository modules the reference shim uses (9.5), and of the committed
+    output of the comparison of the ported functions with the references (9.5; found by name in round2/)."""
     have = {}
     for p in rglob(REF_DIR, "**/*"):
         have.setdefault(sha256_file(p), os.path.relpath(p, REF_DIR).replace(os.sep, "/"))
-    files = {rel: dict(expected=sha, found=have.get(sha), status="ok" if sha in have else "missing") for rel, sha in REF_SHA256.items()}
+    files = {}
+    for rel, sha in REF_SHA256.items():
+        p = os.path.join(REF_DIR, rel)
+        got = sha256_file(p) if os.path.isfile(p) else None
+        st = "ok" if got == sha else ("differs" if got else ("moved" if sha in have else "missing"))
+        files[rel] = dict(expected=sha, status=st, **({"found": have[sha]} if st == "moved" else {}), **({"sha256": got} if st == "differs" else {}))
     extra = sorted(v for k, v in have.items() if k not in set(REF_SHA256.values()))
+    shim = {rel: dict(expected=sha, sha256=sha256_file(os.path.join(REPO, rel)) if os.path.isfile(os.path.join(REPO, rel)) else None)
+            for rel, sha in SHIM_SHA256.items()}
+    for r in shim.values():
+        r["ok"] = r["sha256"] == r["expected"]
+    r2 = os.path.dirname(REF_DIR)
+    comp = sorted({p for g in REF_COMPARISON_GLOBS for p in rglob(r2, g)} |
+                  {p for p in rglob(r2, "*") if re.search(r"compar|refcheck", os.path.basename(p), re.I) and not p.endswith((".py", ".pyc"))})
     return dict(dir=os.path.relpath(REF_DIR, REPO), files=files, n_ok=sum(f["status"] == "ok" for f in files.values()),
-                n_missing=sum(f["status"] == "missing" for f in files.values()), not_in_appendix_E=extra)
-
-
-def drive_log_mtimes(src, shards):
-    """Modification times of the round-1 logs on Drive (metadata only, never their content; v2 critique item 2)."""
-    return {f"{s}/{os.path.relpath(p, os.path.join(src, s))}": iso(os.path.getmtime(p))
-            for s in shards for p in rglob(os.path.join(src, s), "logs/*.log")}
+                n_missing=sum(f["status"] != "ok" for f in files.values()), not_in_appendix_E=extra,
+                missing_txt_sha256=sha256_file(os.path.join(REF_DIR, "MISSING.txt")) if os.path.isfile(os.path.join(REF_DIR, "MISSING.txt")) else None,
+                shim_modules=shim,
+                comparison={os.path.relpath(p, REPO): sha256_file(p) for p in comp} or
+                "not found (9.5: the committed output of the ref comparison is expected before the first session)")
 
 
 # ======================================================================================================================================
@@ -880,8 +966,13 @@ def is_done(ctx, rs, by_name, _seen=None):
 
 
 def not_run_reason(ctx, rs):
-    if isinstance(rs.b, int) and ctx.blk and rs.b in ctx.blk.get("missing_blocks", []):
-        return "round-1 output missing"
+    """G4: a part at a block whose round-1 outputs are final-missing is 'not run' if it reads round-1 files of that block; G33."""
+    miss = (ctx.blk or {}).get("missing_blocks") or []
+    if isinstance(rs.b, int) and miss:
+        if rs.st.r1_reads == "block" and rs.b in miss:
+            return "round-1 output missing"
+        if rs.st.r1_reads == "any" and all(b in miss for b in ctx.blk.get("B3", [])):
+            return "round-1 output missing"
     if rs.st.needs == "qwen06" and not (ctx.models.get(M06) or {}).get("ok"):
         return "G33: Qwen3-0.6B download or checksum failed"
     return None
@@ -1088,13 +1179,15 @@ def start_conditions(ctx):
     if needs_src and not (ctx.src and os.path.isdir(ctx.src)):
         res["ok"] = False; res["waiting"].append(f"round-1/round-2 source folder (dsse_runs) not found: {ctx.src}")
         return res
+    fin = r1_final(ctx.src)
+    res["R1_final"] = fin
     if "G4" in meta["start"]:
         ctx.blk = r1_blocks(ctx.src)
-        g4 = gate_G4(ctx.src, ctx.blk, declared("R1_DECLARED_FINAL"))
+        g4 = gate_G4(ctx.src, ctx.blk, fin)
         ctx.blk.update(final_blocks=g4["final_blocks"], missing_blocks=g4["missing_blocks"])
         res["G4"] = g4; res["blocks"] = ctx.blk
     if "G5" in meta["start"]:
-        res["G5"] = gate_G5(ctx.src, declared("R1_DECLARED_FINAL"))
+        res["G5"] = gate_G5(ctx.src, fin)
     if meta["upstream"]:
         res["upstream"] = gate_upstream(ctx.src, ctx.base, declared("R2_DECLARED_NOT_RUN"))
     for k in ("G4", "G5", "upstream"):
@@ -1135,12 +1228,10 @@ def run_session(session, root, work, drive):
         f"{(g1['freeze_commit'] or 'none')[:10]}, ancestor of {ctx.code_commit[:10]}: {g1['freeze_is_ancestor']})")
     say(f"G2 GPU: {g2.get('gpu') or g2.get('note')} -> {'ok' if g2['ok'] else 'FAILED (an A100 is required)'}")
     check = dict(time=iso(), attempt=ctx.attempt, G1=g1, G2=g2)
-    if not g2["ok"] or (not g1["ok"] and not ctx.selftest):
+    if not g1["ok"] or not g2["ok"]:                     # G1: refuse to run with any other plan file (section 14), also in a self-test
         dump_json(dict(check, result="stopped: G1/G2"), os.path.join(ctx.work, "start_check.json")); sync(ctx.work, ctx.drive)
         say("stopped before step 1: " + ("G1 (plan freeze) failed" if not g1["ok"] else "G2 (A100) failed"))
         return EXIT_GATE
-    if not g1["ok"]:
-        say("self-test: G1 failure is reported only")
     # start conditions (7.3)
     sc = start_conditions(ctx)
     check["start"] = sc
@@ -1176,8 +1267,8 @@ def run_session(session, root, work, drive):
     changed = [r["path"] for r in copied if prevrec.get((r["kind"], r["path"])) not in (None, r["sha256"])]
     if changed:
         say(f"WARNING: {len(changed)} input files differ from an earlier attempt of this session: {changed[:5]}")
-    shards_read = sorted({r["source"] for r in copied if r["kind"] == "r1"                 # shards whose data (not only metadata) is read
-                          and r["path"].split("/", 1)[1] not in ("shard_done.json", "code_commits.txt")})
+    shards_read = sorted({r["source"] for r in copied if r["kind"] == "r1" and r["source"] in SHARDS   # shards whose data (not only
+                          and r["path"].split("/", 1)[1] not in ("shard_done.json", "code_commits.txt")})        # metadata) is read
     rmeta = r1_meta(ctx.r1) if meta["r1"] else {}
     g3 = gate_G3(rmeta, shards_read)
     if g3["labels"]:
@@ -1195,17 +1286,26 @@ def run_session(session, root, work, drive):
         while os.path.exists(ctx.manifest_path[:-5] + f"_{k}.json"):
             k += 1
         os.replace(ctx.manifest_path, ctx.manifest_path[:-5] + f"_{k}.json")
+    fin = sc.get("R1_final") if "R1_final" in sc else r1_final(ctx.src)
+    fpath = os.path.join(ctx.src, "r1_finality.json") if ctx.src else None
     manifest = dict(
         session=base, attempt=ctx.attempt, n_attempt=len(attempts), wave=meta["wave"], started=iso(t_attempt), t0=iso(ctx.t0),
-        test_run=ctx.test, selftest=ctx.selftest, plan=g1, code=dict(commit=ctx.code_commit, commits_this_work_dir=(read_text(prev) or "").split(),
-        runner_sha256=sha256_file(os.path.abspath(__file__)), scripts_dir=os.path.relpath(SCRIPTS, REPO) if SCRIPTS.startswith(REPO) else SCRIPTS),
+        test_run=ctx.test, selftest=ctx.selftest, plan=g1,
+        freeze=dict(commit=g1["freeze_commit"], time=g1["freeze_time"], commit_constant=FREEZE_COMMIT, time_constant=FREEZE_TIME,
+                    plan_sha256=g1["sha256"], amendments_sha256=g1["amendments"]["sha256"]),
+        code=dict(commit=ctx.code_commit, commits_this_work_dir=(read_text(prev) or "").split(),
+                  runner_sha256=sha256_file(os.path.abspath(__file__)), scripts_dir=os.path.relpath(SCRIPTS, REPO) if SCRIPTS.startswith(REPO) else SCRIPTS),
         runtime=dict(versions, platform=platform.platform(), cpus=os.cpu_count(), device=ctx.device, nt=ctx.nt), gates=dict(
             G1=dict(ok=g1["ok"]), G2=g2, G3=g3, G4=sc.get("G4"), G5=sc.get("G5"), upstream=sc.get("upstream"),
             G7=(ctx.blk or {}).get("G7"), G8=(ctx.blk or {}).get("G8"), G9=(ctx.blk or {}).get("G9"), G47=g47),
-        blocks=ctx.blk, r1_meta=rmeta, r1_modules=g3["modules"], copied=copied, duplicate_choices=choices, not_copied=skipped,
-        inputs_changed_since_earlier_attempt=changed, drive_log_mtimes=drive_log_mtimes(ctx.src, SHARDS) if meta["r1"] else {},
+        blocks=ctx.blk, r1_meta=rmeta, r1_modules=g3["modules"],
+        r1_final=dict(path="dsse_runs/r1_finality.json", record=fin,
+                      sha256=sha256_file(fpath) if fpath and os.path.isfile(fpath) else None,
+                      drive_mtime=iso(os.path.getmtime(fpath)) if fpath and os.path.isfile(fpath) else None),
+        copied=copied, duplicate_choices=choices, not_copied=skipped, inputs_changed_since_earlier_attempt=changed,
+        drive_metadata=drive_meta(ctx.src, g1["freeze_time"] or FREEZE_TIME),
         models=ctx.models, references=references_record(),
-        declarations=dict(R1_DECLARED_FINAL=declared("R1_DECLARED_FINAL"), R2_DECLARED_NOT_RUN=declared("R2_DECLARED_NOT_RUN")),
+        declarations=dict(R2_DECLARED_NOT_RUN=declared("R2_DECLARED_NOT_RUN")),
         time_guard_s=ctx.guard_s if math.isfinite(ctx.guard_s) else None, steps=[s.name for s in resolve_steps(ctx)])
     dump_json(manifest, ctx.manifest_path)
     say(f"manifest written: {os.path.basename(ctx.manifest_path)} ({len(copied)} copied files; references {manifest['references']['n_ok']}"
@@ -1239,6 +1339,9 @@ def dry_run(session, root, work, drive, verbose=False):
             print(f"start conditions (7.3): {'met' if sc['ok'] else 'NOT met'}")
             for w in sc["waiting"]:
                 print(f"  waiting: {w}")
+            fin = sc.get("R1_final")
+            print("R1.final (dsse_runs/r1_finality.json): " + ("none" if not fin else
+                  ", ".join(f"{s}: {final_by_record(fin, s)[1]} runs, final {(fin.get(s) or {}).get('final')}" for s in sorted(fin))))
             if ctx.blk:
                 print(f"blocks: b_lo {ctx.blk['b_lo']}, b_hi {ctx.blk['b_hi']}, final {ctx.blk.get('final_blocks')}, missing "
                       f"{ctx.blk.get('missing_blocks')}, order {ctx.blk.get('order')}, labels {ctx.blk['labels']}, G7 {ctx.blk['G7']['ok']}, "
@@ -1246,13 +1349,14 @@ def dry_run(session, root, work, drive, verbose=False):
     if meta["r1"]:
         print(f"copy list, round 1 (into {ctx.r1}/<shard>/, read-only):")
         files = plan_r1(ctx.src, meta["r1"], ctx.blk)[0] if src_ok else []
+        full = lambda f: f"{f[0]}/{f[1]}" if f[0] else f[1]
         for pat in meta["r1"]:
-            hits = [f for f in files if any(fnmatch_path(f"{f[0]}/{f[1]}", e) for e in expand([pat]))]
-            print(f"  {pat}: {len(hits)} files" + (f" ({', '.join(f'{s}: {sum(h[0] == s for h in hits)}' for s in sorted({h[0] for h in hits}))})"
+            hits = [f for f in files if any(fnmatch_path(full(f), e) for e in expand([pat]))]
+            print(f"  {pat}: {len(hits)} files" + (f" ({', '.join(f'{s or 'dsse_runs'}: {sum(h[0] == s for h in hits)}' for s in sorted({h[0] for h in hits}))})"
                                                   if hits else ""))
             if verbose:
-                for s, rel, _ in hits:
-                    print(f"      {s}/{rel}")
+                for f in hits:
+                    print(f"      {full(f)}")
     if meta["r2"]:
         print(f"copy list, round 2 (into {ctx.r2in}/<session>/):")
         items = plan_r2(ctx.src, base) if src_ok else []
@@ -1310,9 +1414,9 @@ def sh(cmd, env, log=None):
 def mock_r1(root, dr, parts=("rk", "pc")):
     """A mock dsse_runs tree in the round-1 layout (code tests only, plan section 9): rk_loop.py MOCK=1 at block 14 (pilot and all;
     blocks 8 and 20 are copies with their block number patched, or real MOCK runs with R2_MOCK_FULL=1), rk_verdict.py summaries,
-    a fake dn_delta.json and blocks_chosen.json (b_lo 8, b_hi 20) in gpu2 and gpu3; pc_meta.py QUICK=1 jobs (bp_mup W 128 in gpu5,
-    pc_mup W 256 in gpu2 and W 128 in gpu3, seeds 0-4, renamed without '_quick'), pc_expected / pc_summary files; shard_done.json and
-    code_commits.txt in every shard."""
+    a fake dn_delta.json and blocks_chosen.json (b_lo 8, b_hi 20) in gpu2 and gpu3; pc_meta.py QUICK=1 jobs (bp_mup W 128 and 256 in
+    gpu5, pc_mup W 256 in gpu2 and W 128 in gpu3, seeds 0-4, renamed without '_quick'), pc_expected / pc_summary files; shard_done.json
+    and code_commits.txt in every shard (no r1_finality.json: every mock shard is final by its shard_done.json)."""
     root, dr = os.path.abspath(root), os.path.abspath(dr)
     os.makedirs(dr, exist_ok=True)
     head = git_head()
@@ -1354,7 +1458,8 @@ def mock_r1(root, dr, parts=("rk", "pc")):
         say(f"[mock] rk part ready ({time.time() - t:.0f}s)")
     if "pc" in parts and not os.path.exists(os.path.join(dr, ".mock_pc_ok")):
         t = time.time()
-        jobs = ([("gpu5", "bp_mup", 128, s, {}) for s in range(5)] + [("gpu2", "pc_mup", 256, s, dict(T="20", BETA="0.1")) for s in range(5)]
+        jobs = ([("gpu5", "bp_mup", W, s, {}) for W in (128, 256) for s in range(5)]          # C-T7's BP side, G-meta rows
+                + [("gpu2", "pc_mup", 256, s, dict(T="20", BETA="0.1")) for s in range(5)]
                 + [("gpu3", "pc_mup", 128, s, dict(T="20", BETA="0.1")) for s in range(5)])
         npar = int(os.environ.get("R2_MOCK_NPAR") or max(1, min(6, (os.cpu_count() or 2) - 2)))
         say(f"[mock] {len(jobs)} pc_meta.py QUICK jobs on the CPU, {npar} at a time (round-1 job-pool pattern; a code fixture only)")
@@ -1410,7 +1515,7 @@ def selftest(session, root, st_root):
         if s != base and os.path.exists(os.path.join(dr, s, "session_done.json")):
             continue
         env = dict(os.environ, R2_SELFTEST="1", R1_SRC=dr)
-        for k in ("R2_T0", "R1_DECLARED_FINAL", "R2_DECLARED_NOT_RUN"):
+        for k in ("R2_T0", "R2_DECLARED_NOT_RUN"):
             env.pop(k, None)
         say(f"[selftest] {s}")
         rc = subprocess.run([PY, "-u", os.path.abspath(__file__), s, root, os.path.join(st_root, "work", s), os.path.join(dr, s)], env=env).returncode
