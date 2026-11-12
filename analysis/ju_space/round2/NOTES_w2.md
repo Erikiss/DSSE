@@ -217,7 +217,7 @@ Fixture (in r2_impl/w2/r1): `MOCK=1 BLOCK=14 DEVICE=cpu NT=1 python rk_loop.py <
 blocks_chosen b_lo 8 / b_hi 20 without states, shard_done). O2 by `r2_axes.py ... all` (6 s).
 
 `MOCK=1 python r2_unlearn_qwen.py <root> r2_impl/w2/r1 r2_impl/w2/r2s selftest` from an empty work directory: **63/63 checks passed
-(313 s)**; result in r2_impl/w2/r2s/unlearn/selftest.json. The checks:
+(267 s; final run after the last code change)**; result in r2_impl/w2/r2s/unlearn/selftest.json. The checks:
 - rule functions on synthetic inputs: rule_unlearned (pass, random reference, baseline D, foreign axes, NaN, inverted), rule_suppressed
   (pass, M0 <= 0.1, damage band), rule_cue, restored_share (planted share 0.6 inside its interval; undefined if g_abl = g_0), LIKELY_wh
   (incl. the would-have-read form), G14 attracted loop, G44 gate order, rule_loop (all five outcomes), G16, O5 regression and z_fin,

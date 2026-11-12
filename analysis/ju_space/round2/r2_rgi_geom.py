@@ -426,6 +426,7 @@ def stage_o7(M, P, m, batch=None):
     big = max(np.abs(LAST).max(), np.abs(MEAN).max()); f16 = big < F16_MAX; dt = np.float16 if f16 else np.float32
     summ = dict(n_texts=N, n_per_topic=sel["N"], topics=sel["SUBJ"], counts_min_tokens=sel["counts"], text_tokens=len(texts[0]), head=sel["HEAD"],
                 tail=sel["TAIL"], question_tokens=LQ, min_question_tokens=O7_MINQ, nmax=O7_NMAX, n_perm=O7_NPERM, data=os.path.relpath(sel["data"], M.root),
+                seeds=dict(selection="np.random.default_rng(0) (dn_delta.py)", permutations="np.random.default_rng(2), 50 per block and reading in dn_delta's order"),
                 rule="dn_delta.py: last LQ tokens of questions with >= MINQ tokens; identical length; block outputs by forward hooks",
                 storage="float16" if f16 else "float32 (float16 would overflow)", max_abs_state=float(big),
                 delta={nm: {k: v.tolist() for k, v in r.items()} for nm, r in dl.items()}, seconds=time.time() - t0, batch=batch)
@@ -510,12 +511,13 @@ def stage_dirs(P, m, fp):
     t0 = time.time()
     with np.load(P["geom"], allow_pickle=False) as z:
         unit, _ = sentence_layout(z["s_obj"], z["s_frame"], z["s_family"], z["s_lexeme"]); dr = directions(z["dot"], unit)
-    out = {k: v.float() for k, v in dr.items()}
+    out = {k: v.float() for k, v in dr.items()}; out["g_b"], out["s_b"] = out["g"], out["s"]          # the plan's names (shared storage)
     torch_save(P["dirs"], dict(**out, fingerprint=fp, model_objects=[OBJECTS[o]["text"]["F1"] for o in range(48)], self_objects=SELF_OBJ,
                                definition=dict(c_o="[NL, 48, D]: per model object, mean over IMP lexemes minus mean over DES lexemes of the frame-pooled "
                                                     "'.' states (raw metric)", g="[NL, D] g_b = mean over the 48 c_o (IMP-DES, frames pooled)",
                                                d_self="[NL, D] mean over the 12 SELF objects of c_o", s="[NL, D] s_b = d_self minus its projection on unit(g)",
-                                               g_self_f2="[NL, D] g_SELF: the F2 frame's SELF contrast of IMP-DES (A3 spillover)"),
+                                               g_self_f2="[NL, D] g_SELF: the F2 frame's SELF contrast of IMP-DES (A3 spillover)",
+                                               g_b="= g", s_b="= s", nulls="r2_rgi_stats.sign_flip_nulls(c_o[b]) builds A6's sign-flip nulls of g_b and s_b"),
                                seconds=time.time() - t0))
     log(f"dirs: g_b, s_b, g_SELF per block -> {P['dirs']}")
     return dict(seconds=time.time() - t0, norm_g=out["g"].norm(dim=-1).tolist(), norm_s=out["s"].norm(dim=-1).tolist(),
