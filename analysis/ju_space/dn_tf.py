@@ -137,7 +137,7 @@ for tid in SET:
         kb = {b: float(kl[m].mean()) if m.any() else float("nan") for b, m in bins.items()}
         PER[name].append(dict(problem=tid, dS=Sc - S0, S=Sc, kl_bins=kb, late_early=kb["256-end"] / kb["0-128"] if kb["0-128"] > 0 else float("nan"), kl_mean=float(kl.mean())))
     print(f"trace {tid} ({K} thinking tokens, S0 {S0:.2e}): " + " ".join(f"{n} dS {PER[n][-1]['dS']:+.2f} L/E {PER[n][-1]['late_early']:.2f}" for n, _ in CONDS[:6]) + f" ({time.time() - t0:.0f}s)", flush=True)
-    res["baseline"] = BASEREC; res["per_trace"] = PER; json.dump(res, open(out, "w"), indent=1)
+    res["baseline"] = BASEREC; res["per_trace"] = PER; json.dump(res, open(out + ".part", "w"), indent=1)     # progress only; the final file is written after A4a
 
 # ---------------- rule A4a
 def binom_greater(k, n):      # exact one-sided binomial tail, p = 0.5
@@ -180,5 +180,5 @@ elif passes: verdict = f"for: {passes}"
 elif why: verdict = f"against: {'; '.join(why)}"
 else: verdict = "undecided"
 res["A4a"] = dict(bases=verd, topk=top, against_weak=against_weak, against_mirror=against_mirror, passes=passes, verdict=verdict, traces=NSET, need=NEED)
-res["seconds"] = time.time() - t0; json.dump(res, open(out, "w"), indent=1)
+res["seconds"] = time.time() - t0; json.dump(res, open(out + ".tmp", "w"), indent=1); os.replace(out + ".tmp", out)
 print("A4a:", verdict, {b: (v["a"], v["b"], v["passes"]) for b, v in verd.items()}, {k: v["passes"] for k, v in top.items()}, f"({time.time() - t0:.0f}s)", flush=True)

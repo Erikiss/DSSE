@@ -26,7 +26,9 @@ def gates(bdir):
     goes on at 1.5 alpha)."""
     P = json.load(open(f"{bdir}/pilot.json")); g = dict(P["gates"]); src = "pilot.json"
     if not g["GO1"] and os.path.exists(f"{bdir}/pilot@1.5.json"):
-        P2 = json.load(open(f"{bdir}/pilot@1.5.json")); g = dict(P2["gates"]); src = "pilot@1.5.json"
+        P2 = json.load(open(f"{bdir}/pilot@1.5.json"))
+        if P2["gates"]["GO1"]: g = dict(P2["gates"]); src = "pilot@1.5.json"              # the block then runs at 1.5 alpha
+        else: src = "pilot.json (GO1 failed at alpha and at 1.5 alpha; the block ran at alpha)"
     failed = [k for k in ("GO0", "GO1", "GO2", "GO3") if not g[k]]
     return dict(gates=g, source=src, failed=failed, auc=P["axes"]["auc"], alpha=P["alpha"], SEA_1=P["SEA_1"][0]["sea"])
 
@@ -144,6 +146,7 @@ def abar_bootstrap(bdir, loop="RSI_a", B=300, seed=0):
             m = np.zeros(NP, bool); m[g.permutation(dr)[: len(dr) // 2]] = True; m[g.permutation(ds)[: len(ds) // 2]] = True; halves.append(m)
         bs.append(float(np.mean([one(ev, wts, halves) for ev in evs])))
     bs = [b for b in bs if math.isfinite(b)]
+    if not bs: return dict(A_bar=full, lo=float("nan"), hi=float("nan"), draws=0)
     return dict(A_bar=full, lo=float(np.percentile(bs, 5)), hi=float(np.percentile(bs, 95)), draws=len(bs))
 
 
@@ -152,14 +155,18 @@ def extra_block(bdir):
     ok, s4 = pc_pass(ST, L, suf)
     v = dict(PC_PASS=ok, SEA_S4=s4, alpha_scale=meta.get("alpha_scale", 1.0), p=[L["RSI_a"][n]["p"] for n in range(4)], c=[L["RSI_a"][n]["c"] for n in range(4)], A=[L["RSI_a"][n]["A"] for n in range(4)])
     if os.path.exists(f"{bdir}/pilot.json"): v["gates"] = gates(bdir)
+    v["enters_delta_rule"] = bool(ok) and not (v.get("gates") or {}).get("failed")      # section 8: a pilot NO-GO block is descriptive only
     return v
 
 
 def delta_rule(blocks):
     """blocks: {b: dict(PC_PASS, delta_last, A_bar_RSI_a)} for the blocks that ran. Section 6 with the two-block case of section 8."""
-    ent = sorted([(v["delta_last"], b, v["A_bar_RSI_a"]) for b, v in blocks.items() if v.get("PC_PASS")])
+    ent = sorted([(v["delta_last"], b, v["A_bar_RSI_a"]) for b, v in blocks.items() if v.get("enters_delta_rule", v.get("PC_PASS")) and math.isfinite(v["A_bar_RSI_a"]["lo"])])
     caveat = "Three (or two) blocks cannot separate delta from depth."
-    if len(ent) < 2: return "not decidable (fewer than two blocks passed the positive control). " + caveat
+    out_ = {b: ("pilot gate " + ", ".join(v["gates"]["failed"])) if (v.get("gates") or {}).get("failed") else ("PC_PASS failed" if not v.get("PC_PASS") else "no A_bar interval")
+            for b, v in blocks.items() if b not in {e[1] for e in ent}}
+    caveat += f" Excluded blocks: {out_}." if out_ else ""
+    if len(ent) < 2: return "not decidable (fewer than two blocks passed the positive control and the pilot gates). " + caveat
     (dl, bl, al), (dh, bh, ah) = ent[0], ent[-1]; mid = ent[1] if len(ent) == 3 else None
     if al["lo"] > ah["hi"] and (mid is None or mid[2]["A_bar"] <= al["hi"]): rel = "RSI share falls with delta"
     elif ah["lo"] > al["hi"] and (mid is None or mid[2]["A_bar"] <= ah["hi"]): rel = "RSI share rises with delta"
@@ -183,7 +190,7 @@ def main():
         bdir = f"{rdir}/b{b}"
         if not os.path.exists(f"{bdir}/loops.json"): res["missing"][b] = "loops.json missing (block not run or not finished)"; continue
         v = block_verdict(bdir) if b == 14 else extra_block(bdir)
-        if b == 14: v["PC_PASS"] = v.get("PC_PASS", False)
+        if b == 14: v["PC_PASS"] = v.get("PC_PASS", False); v["enters_delta_rule"] = bool(v["PC_PASS"]) and not (v.get("gates") or {}).get("failed")
         v["delta_last"] = json.load(open(dpath))["blocks"][str(b)]["last"]["delta"]; v["A_bar_RSI_a"] = abar_bootstrap(bdir); res["blocks"][b] = v
     res["delta_rule"] = delta_rule(res["blocks"]); json.dump(res, open(out, "w"), indent=1, default=float)
     print(json.dumps({b: v.get("verdict", "") for b, v in res["blocks"].items()}), res["delta_rule"])

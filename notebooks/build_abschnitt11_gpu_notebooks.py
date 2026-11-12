@@ -14,23 +14,23 @@ SHARDS = {
     "gpu1": ("RSI-Kennwerte an Block 14",
              "Pilot mit den Freigaben GO0–GO3, die sechs Schleifen (RSI_a, RSI_b, Meer, Sport, zwei Zufallsstarts) über vier Runden, "
              "falls nötig die MANIP-Wiederholung bei α·√2, das Verhaltensmaß K5 und das Verhältnis V aus K6; am Ende das Urteil nach "
-             "der eingefrorenen Regel.", "10–20 min"),
+             "der eingefrorenen Regel. Danach der PC-Anteil dieses Teils: PC mit µP bei Breite 512 (fünf Seeds, mit Kontrolle K = 1).", "15–25 min"),
     "gpu2": ("δ je Block und RSI-Kennwerte am Block mit kleinem δ",
              "δ (Abstand der Themenwolken über dem Zufallsboden) für alle 28 Blöcke, Wahl der beiden Zusatzblöcke, dann Pilot, "
-             "Schleifen (RSI_a, Meer, Zufall) und K5 am Block mit kleinem δ.", "10–20 min"),
+             "Schleifen (RSI_a, Meer, Zufall) und K5 am Block mit kleinem δ. Danach PC mit µP bei Breite 256.", "15–25 min"),
     "gpu3": ("δ je Block und RSI-Kennwerte am Block mit großem δ",
-             "Wie Teil 2, aber am Block mit großem δ.", "10–20 min"),
+             "Wie Teil 2, aber am Block mit großem δ. Danach PC mit µP bei Breite 128.", "15–25 min"),
     "gpu4": ("Doppelte Verneinung: Denkspuren und Regel A4a",
              "Zuerst die Denkspuren: die ersten 24 GSM8K-Testaufgaben, Denken an, Qwens empfohlener Sampler, in Durchgängen zu 8 "
              "(dieselbe Regel wie geplant, jetzt auf der GPU statt lokal). Dann Teacher-forcing entlang der bis zu zwölf passenden "
              "Spuren: Eingriffe in die Q3-Anteile und ihre Q2-Spiegel, Rauschkontrollen, Top-k mit Wiederherstellung; Prüfung nach "
-             "Regel A4a.", "10–20 min"),
-    "gpu5": ("Kleinversuch Predictive Coding: Backprop mit µP",
-             "125 kleine Netze: fünf Breiten × fünf Seeds mit Kontrolle K = 1, die δ-Sonde D2 (acht Stärken), K = 3 und 6, "
-             "Gewichtsabfall 0. Bis zu zehn Läufe gleichzeitig auf der GPU.", "10–20 min"),
-    "gpu6": ("Kleinversuch Predictive Coding: PC mit µP und Backprop ohne µP",
-             "PC mit abgeschnittener Inferenz (T = 20, β = 0,1) bei vier Breiten und Backprop in Standard-Parametrisierung bei fünf "
-             "Breiten, je fünf Seeds mit Kontrolle K = 1.", "15–25 min"),
+             "Regel A4a. Danach PC mit µP bei Breite 64.", "15–25 min"),
+    "gpu5": ("Kleinversuch Predictive Coding: Backprop mit µP und δ-Sonde",
+             "90 kleine Netze: Backprop mit µP bei fünf Breiten × fünf Seeds, je mit Kontrolle K = 1, und die δ-Sonde D2 (acht Stärken "
+             "× fünf Seeds). Bis zu zehn Läufe gleichzeitig auf der GPU.", "10–20 min"),
+    "gpu6": ("Kleinversuch Predictive Coding: Backprop ohne µP und Zusätze",
+             "95 kleine Netze: Backprop in Standard-Parametrisierung bei fünf Breiten × fünf Seeds mit Kontrolle K = 1, dazu K = 3 "
+             "und 6 sowie Gewichtsabfall 0 für Backprop mit µP.", "10–20 min"),
 }
 
 CELLS = []
@@ -150,7 +150,7 @@ if SHARD in ("gpu1", "gpu2", "gpu3"):
 elif SHARD == "gpu4":
     os.makedirs("/content/selftest", exist_ok=True)
     selftest([f"{A}/dn_tf.py", ROOT, f"{ROOT}/dn_out/mock_sample.json", f"{ROOT}/dn_out/dn_text.json", "/content/selftest/tf.json"], dict(MOCK="1"))
-else:
+if True:                                                   # every part also runs a share of the PC toy
     shutil.rmtree("/content/selftest_pc", ignore_errors=True)
     for args, extra in [(["bp_mup", "64", "0", "12"], {}), (["bp_mup", "64", "0", "1"], {}), (["bp_mup", "64", "0", "12", "0.1"], {}),
                         (["bp_sp", "64", "0", "12"], {}), (["pc_mup", "64", "0", "12"], dict(T="20", BETA="0.1")),

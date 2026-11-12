@@ -128,3 +128,7 @@ Decisions the plan left open, frozen now:
   uses the K2 halvings for the point estimate and a type-stratified prompt bootstrap for the interval.
 - GPU: the run moves to A100 GPUs (float32, TF32 off). Texts generated on a GPU differ token-wise from CPU texts; nothing from a
   CPU run enters, so this changes no comparison.
+- (Second code review, 12 Nov 2026, still before any real run.) The delta rule admits a block only if SEA passes PC_PASS and
+  none of its pilot gates failed; excluded blocks are listed with the reason. When GO1 fails at alpha and at 1.5 alpha, the gates
+  reported are those of the run at alpha. A zero cross-fitted gap (a degenerate axis; only possible in the code test) gives NaN for
+  Ue instead of an error; an empty bootstrap gives NaN intervals.

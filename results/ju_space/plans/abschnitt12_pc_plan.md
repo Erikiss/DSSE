@@ -101,3 +101,17 @@ Stage 0 BP calibration ~10 min; Stage 1 PC calibration ~20 min; Stage 2 main ~2.
   for delta and delta_ctrl of h2 separately.
 - The main runs move to Colab A100 GPUs (float32, TF32 off). The stage-0 CPU jobs are rerun there; nothing from CPU runs enters.
 - The analysis is pc_analyze.py on the rows of pc_summary.py, both written before the main runs.
+- (Second code review, 12 Nov 2026, before the main runs.) Measurement fixes: the energy monitored for G4 is computed in float64
+  and includes the state after the last inference step (float32 rounding of a small cross-entropy registered as rises); the K = 1
+  control always trains to its K = 12 run's checkpoint, also beyond MAXSTEPS; job files are written atomically; ring uses Spearman
+  with average ranks. The PC inference gradients are written in closed form (identical to autograd up to float32 rounding,
+  1.5e-7 relative in the check; fewer GPU kernels). G4 also applies to the K = 1 PC rows: a K = 1 PC row with more than 1 % energy
+  rises does not enter B2_meta.
+- Analysis fixes: G0 fails on a NaN ratio or fewer than two widths. Overall: BP-muP failing G0 gives 'H not testable'; B2_meta
+  with fewer than two seeds gives 'not available' (not 'code transfer'); 'against H (effective learning rate)' only when BP-muP
+  says CONTRADICTS H and BP-SP falls. PC vs BP is not testable when PC-muP fails G0. When G1 or G2 fails, D1 and D2 are not
+  evaluated. D2: a g whose pilot run has delta at or below its permutation floor is an overshoot and excluded; ties are reported.
+  'PC converging to BP': over at least three PC widths passing G4, Spearman(cos_l2, |B2 gap|) <= -0.8 and |gap| < 0.05 at the width
+  with the highest cosine. Missing jobs are reported against the job lists of the runner.
+- GPU allocation: the 40 PC-muP jobs run on shards gpu1-gpu4 (W 512, 256, 128, 64) after their main work; BP-muP with D2 on gpu5;
+  BP-SP, K 3/6 and weight decay 0 on gpu6. Missing jobs are retried once; a shard with jobs still missing exits with an error.

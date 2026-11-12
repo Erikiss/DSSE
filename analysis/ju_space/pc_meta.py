@@ -81,20 +81,41 @@ def lam_max(m, x, y, iters=20):
     return max(lam, 1e-3)
 
 
-def pc_relax(m, x, y, eta_x, steps):
-    """Feedforward init, then 'steps' gradient steps on the per-sample energy in h1, h2 (weights fixed). Returns the relaxed values,
-    the end/start ratio of the gradient norm and whether the energy rose at any step."""
+def pc_relax_autograd(m, x, y, eta_x, steps):
+    """Reference implementation (autograd), kept for the equivalence test of pc_relax."""
     with torch.no_grad(): h1, h2 = m.acts(x)
-    h1 = h1.clone().requires_grad_(True); h2 = h2.clone().requires_grad_(True); B = x.shape[0]; g0 = gl = None; rose = False; Eprev = None
+    h1 = h1.clone().requires_grad_(True); h2 = h2.clone().requires_grad_(True); B = x.shape[0]; g0 = gl = None
     for p in m.parameters(): p.requires_grad_(False)
     for t in range(steps):
         E = pc_energy(m, x, h1, h2, y) * B; g1, g2 = torch.autograd.grad(E, (h1, h2)); gn = float(torch.sqrt((g1 ** 2).sum() + (g2 ** 2).sum()))
         if g0 is None: g0 = gn
-        if Eprev is not None and float(E) > Eprev + 1e-9 * abs(Eprev): rose = True
-        Eprev = float(E); gl = gn
+        gl = gn
         with torch.no_grad(): h1 -= eta_x * g1; h2 -= eta_x * g2
     for p in m.parameters(): p.requires_grad_(True)
-    return h1.detach(), h2.detach(), (gl / g0 if g0 else 0.0), rose
+    return h1.detach(), h2.detach(), (gl / g0 if g0 else 0.0)
+
+
+def pc_relax(m, x, y, eta_x, steps):
+    """Feedforward init, then 'steps' gradient steps on the per-sample energy E = pc_energy * B in h1, h2 (weights fixed). The
+    gradients are written in closed form (identical to autograd of E, checked against pc_relax_autograd; about a third of the GPU
+    kernels and one host sync per call instead of two per step):
+      dE/dh1 = e1 - (e2 * (1 - a2^2)) @ W2,   dE/dh2 = e2 + beta * mult * (softmax(logits) - onehot(y)) @ W3.
+    Returns the relaxed values, the end/start ratio of the gradient norm and whether the energy rose at any step. The energy is
+    monitored in float64 (float32 rounding of the cross-entropy registered as rises near convergence; review 12 Nov 2026), and the
+    state after the last step is included."""
+    with torch.no_grad():
+        a1 = torch.tanh(m.l1(x)); h1 = a1.clone(); h2 = torch.tanh(m.l2(h1)); W2, b2, W3, b3 = m.l2.weight, m.l2.bias, m.l3.weight, m.l3.bias
+        mult, beta = m.out_mult, BETA[0]; Y = Fn.one_hot(y, W3.shape[0]).to(h2.dtype); Es, gs = [], []
+        for t in range(steps + 1):
+            a2 = torch.tanh(h1 @ W2.T + b2); e1 = h1 - a1; e2 = h2 - a2; logits = (h2 @ W3.T + b3) * mult
+            Es.append(0.5 * (e1.double() ** 2).sum() + 0.5 * (e2.double() ** 2).sum() + beta * Fn.cross_entropy(logits.double(), y, reduction="sum"))
+            if t == steps: break
+            g1 = e1 - (e2 * (1 - a2 ** 2)) @ W2; g2 = e2 + (beta * mult) * ((torch.softmax(logits, -1) - Y) @ W3)
+            gs.append(torch.sqrt((g1.double() ** 2).sum() + (g2.double() ** 2).sum()))
+            h1 = h1 - eta_x * g1; h2 = h2 - eta_x * g2
+        E = torch.stack(Es).cpu().numpy(); G = torch.stack(gs).cpu().numpy() if gs else np.zeros(1)
+    rose = bool(np.any(E[1:] > E[:-1] + 1e-9 * np.abs(E[:-1])))
+    return h1, h2, (float(G[-1] / G[0]) if G[0] > 0 else 0.0), rose
 
 
 def pc_update(m, opt, x, y, eta_x, mask_col=None):
@@ -133,8 +154,8 @@ def delta_stats(m, pre, pairs, seed):
         Hc = H.view(NPRE, len(pairs), -1); Hc = (Hc - Hc.mean(0, keepdim=True)).reshape(len(lab), -1)
         Fc = float(task_fisher(Hc, lab, NPRE)); flc = float(np.mean([float(task_fisher(Hc, lab[torch.randperm(len(lab), generator=g).to(DEV)], NPRE)) for _ in range(50)]))
         C = torch.stack([H[lab == k].mean(0) for k in range(NPRE)]); D = torch.cdist(C, C).cpu().numpy(); cyc = np.array([[min(abs(a - b), P - abs(a - b)) for b in pre] for a in pre])
-        iu = np.triu_indices(NPRE, 1); rd = lambda v: np.argsort(np.argsort(v))
-        ring = float(np.corrcoef(rd(D[iu]), rd(cyc[iu]))[0, 1])
+        iu = np.triu_indices(NPRE, 1)
+        from scipy.stats import spearmanr; ring = float(spearmanr(D[iu], cyc[iu]).correlation)        # Spearman with average ranks for ties
         out[name] = dict(F=F, floor=fl, delta=F - fl, F_ctrl=Fc, floor_ctrl=flc, delta_ctrl=Fc - flc, ring=ring)
     return out
 
@@ -182,7 +203,7 @@ def main():
     first95 = None; ckpt = None; eta_x = None; probe = torch.randperm(len(ytr), generator=torch.Generator().manual_seed(seed))[:512].to(DEV)
     act0 = None
     for s in range(1, MAXSTEPS + AFTER + 1):
-        if s > MAXSTEPS and (first95 is None or K == 1): break
+        if K > 1 and s > MAXSTEPS and first95 is None: break          # the K = 1 control always runs to its target (review 12 Nov 2026)
         if arm == "pc_mup":
             if s % 100 == 1: eta_x = 1.0 / lam_max(m, Xtr, ytr); rec["pc"]["lam"].append((s, 1.0 / eta_x))
             ratio, rose = pc_update(m, opt, Xtr, ytr, eta_x); rec["pc"]["ratio"].append(ratio); rec["pc"]["rose"].append(rose)
@@ -199,7 +220,7 @@ def main():
         if K == 1 and s >= target: ckpt = s; break
     rec.update(first95=first95, checkpoint=ckpt, level1=first95 is not None and ckpt is not None, final_train=accuracy(m, Xtr, ytr), final_heldout=accuracy(m, Xva, yva), pretrain_seconds=time.time() - t0)
     print(f"{name}: first95 {first95} checkpoint {ckpt} train {rec['final_train']:.3f} held-out {rec['final_heldout']:.3f} ({time.time() - t0:.0f}s)", flush=True)
-    if ckpt is None and K > 1: json.dump(rec, open(path, "w")); return
+    if ckpt is None and K > 1: json.dump(rec, open(path + ".tmp", "w")); os.replace(path + ".tmp", path); return
     if K == NPRE: rec["delta"] = delta_stats(m, pre, pairs, seed)
     os.makedirs(f"{out}/models", exist_ok=True); torch.save({k: v.cpu() for k, v in m.state_dict().items()}, f"{out}/models/{name}.pt")   # for the follow-up analyses (primitives, transfer)
     if arm == "pc_mup": eta_x = 1.0 / lam_max(m, Xtr, ytr)
@@ -214,7 +235,7 @@ def main():
     for j in range(NNEW):
         a, mm = finetune(m, arm, W, new, pairs, splits, j, 8, "all", seed); allw.append(a); ret.append(accuracy(mm, Xva, yva))
     ft["all8"] = dict(acc=allw, retention=ret, B2_all=float(np.mean([np.mean(a) - np.mean(f) for a, f in zip(allw, ft[8]["F"])])))
-    rec["finetune"] = ft; rec["seconds"] = time.time() - t0; json.dump(rec, open(path, "w"))
+    rec["finetune"] = ft; rec["seconds"] = time.time() - t0; json.dump(rec, open(path + ".tmp", "w")); os.replace(path + ".tmp", path)   # atomic: a half-written file never counts as done
     print(f"{name}: B2(8) {ft[8]['B2']:.3f} B2(4) {ft[4]['B2']:.3f} B2_all {ft['all8']['B2_all']:.3f} delta h2 {rec.get('delta', {}).get('h2', {}).get('delta', float('nan')):.3f} ({time.time() - t0:.0f}s)", flush=True)
 
 

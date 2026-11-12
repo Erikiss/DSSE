@@ -5,19 +5,21 @@ The notebooks (notebooks/build_abschnitt11_gpu_notebooks.py) set up <root> and c
         dn_out/{mmlu_topics,dn_text,gsm8k_test,mock_sample}.json, gpu_pkg/rk_dirs.pt
 <work>  local working directory; after every step it is copied to <drive_dir> (Google Drive), so a rerun after a disconnect resumes
         (the notebook copies <drive_dir> back first; every step is skipped when its output exists, and rk_loop.py caches inside).
-Shards
-  gpu1  RSI indicators (rk_loop.py) at block 14: pilot with gates, loops, MANIP retry if needed, K5, K6, block summary
-  gpu2  delta per block (dn_delta.py), choice of b_lo and b_hi, RSI indicators at b_lo
-  gpu3  the same at b_hi
-  gpu4  double negative: traces sampled on the GPU (dn_sample.py, rule unchanged), then rule A4a (dn_tf.py) on that trace set
-  gpu5  PC toy (pc_meta.py): BP-muP widths, K 1 controls, delta probe D2, K 3/6, weight decay 0
-  gpu6  PC toy: PC-muP (truncated inference, T 20, beta 0.1) and BP-SP widths, K 1 controls"""
+Shards (the PC toy's slow PC-muP jobs are spread over gpu1-gpu4, after their main work, so that no shard runs much over 20 min)
+  gpu1  RSI indicators (rk_loop.py) at block 14: pilot with gates, loops, MANIP retry if needed, K5, K6, block summary; PC-muP W 512
+  gpu2  delta per block (dn_delta.py), choice of b_lo and b_hi, RSI indicators at b_lo; PC-muP W 256
+  gpu3  the same at b_hi; PC-muP W 128
+  gpu4  double negative: traces sampled on the GPU (dn_sample.py, rule unchanged), then rule A4a (dn_tf.py); PC-muP W 64
+  gpu5  PC toy (pc_meta.py): BP-muP widths 64-1024 with K 1 controls, delta probe D2
+  gpu6  PC toy: BP-SP widths 64-1024 with K 1 controls, K 3/6 and weight decay 0 for BP-muP
+A shard whose PC jobs are still missing after one retry exits non-zero (no shard_done.json); a rerun retries them."""
 import json, math, os, shutil, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__)); A = os.path.dirname(HERE)            # analysis/ju_space
 shard, root, work = sys.argv[1], sys.argv[2], sys.argv[3]; drive = sys.argv[4] if len(sys.argv) > 4 else None
 PY = sys.executable; os.makedirs(f"{work}/logs", exist_ok=True); T0 = time.time(); TIMES = {}
 NPAR = int(os.environ.get("NPAR", str(max(2, min(10, (os.cpu_count() or 4) - 2)))))
+RUN_DEVICE = os.environ.get("RUN_DEVICE", "cuda")                                          # 'cpu' only for local code tests of the runner
 
 
 def sync():
@@ -28,7 +30,7 @@ def sync():
 def run(name, args, env=None, out=None):
     """One step (skipped if 'out' exists): output streamed and logged, then the work directory is copied to Drive."""
     if out and os.path.exists(out): print(f"[skip] {name}: {os.path.basename(out)} exists", flush=True); return
-    e = dict(os.environ, DEVICE="cuda", NT="4", PYTHONUNBUFFERED="1"); e.update(env or {}); t = time.time()
+    e = dict(os.environ, DEVICE=RUN_DEVICE, NT="4", PYTHONUNBUFFERED="1"); e.update(env or {}); t = time.time()
     print(f"[run] {name}", flush=True)
     with open(f"{work}/logs/{name}.log", "a") as lg:
         p = subprocess.Popen([PY, "-u"] + args, env=e, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -72,51 +74,76 @@ def job_name(j):
     """The file name pc_meta.py gives a job (to skip finished jobs without starting Python)."""
     lr, T, beta = float(j["env"].get("LR", "1e-3")), int(j["env"].get("T", "50")), float(j["env"].get("BETA", "1"))
     return (f"{j['arm']}_W{j['W']}_s{j['seed']}_K{j['K']}_g{j['gamma']:g}_wd{j['wd']:g}" + (f"_lr{lr:g}" if lr != 1e-3 else "")
-            + (f"_T{T}" if j["arm"] == "pc_mup" and T != 50 else "") + (f"_beta{beta:g}" if j["arm"] == "pc_mup" and beta != 1 else ""))
+            + (f"_T{T}" if j["arm"] == "pc_mup" and T != 50 else "") + (f"_beta{beta:g}" if j["arm"] == "pc_mup" and beta != 1 else "")
+            + ("_quick" if os.environ.get("QUICK") == "1" else ""))
 
 
 def pc_jobs(which):
     J = []
     def add(arm, W, s, K=12, gamma=0.0, wd=1.0):
         J.append(dict(arm=arm, W=W, seed=s, K=K, gamma=gamma, wd=wd, env=dict(PC_ENV if arm == "pc_mup" else {}, MAXSTEPS="6000")))
-    if which == "gpu5":
+    pcw = dict(gpu1=512, gpu2=256, gpu3=128, gpu4=64)
+    if which in pcw:
+        for s in range(5): add("pc_mup", pcw[which], s); add("pc_mup", pcw[which], s, K=1)
+    elif which == "gpu5":
         for W in (1024, 512, 256, 128, 64):
             for s in range(5): add("bp_mup", W, s); add("bp_mup", W, s, K=1)
         for g in (1.0, 0.3, 0.1, 0.03):
             for s in range(5): add("bp_mup", 256, s, gamma=g); add("bp_mup", 256, s, gamma=-g)
+    elif which == "gpu6":
+        for W in (1024, 512, 256, 128, 64):
+            for s in range(5): add("bp_sp", W, s); add("bp_sp", W, s, K=1)
         for W in (1024, 256, 64):
             for s in range(5):
                 for K in (3, 6): add("bp_mup", W, s, K=K)
                 add("bp_mup", W, s, wd=0.0)
-    else:
-        for W in (512, 256, 128, 64):
-            for s in range(5): add("pc_mup", W, s); add("pc_mup", W, s, K=1)
-        for W in (1024, 512, 256, 128, 64):
-            for s in range(5): add("bp_sp", W, s); add("bp_sp", W, s, K=1)
     return J
+
+
+def job_done(o, j):
+    """A job counts as done only if its JSON loads (pc_meta writes it atomically)."""
+    try: json.load(open(f"{o}/jobs/{job_name(j)}.json")); return True
+    except Exception: return False
+
+
+def k1_expected(o, j):
+    """A K = 1 control is expected only if its K = 12 run reached a checkpoint (otherwise pc_meta exits without a file)."""
+    ref = dict(j, K=12)
+    try: return json.load(open(f"{o}/jobs/{job_name(ref)}.json")).get("checkpoint") is not None
+    except Exception: return False
+
+
+def pc_pool(o, todo):
+    running = []; done = 0; synced = 0; t = time.time()
+    while todo or running:
+        while todo and len(running) < NPAR:
+            j = todo.pop(0); lg = open(f"{work}/logs/pc_{job_name(j)}.log", "a")
+            e = dict(os.environ, DEVICE=RUN_DEVICE, NT="1", PYTHONUNBUFFERED="1", **j["env"])
+            args = [PY, "-u", f"{A}/pc_meta.py", o, j["arm"], str(j["W"]), str(j["seed"]), str(j["K"]), repr(j["gamma"]), repr(j["wd"])]
+            running.append((subprocess.Popen(args, env=e, stdout=lg, stderr=subprocess.STDOUT), j, lg))
+        time.sleep(0.5)
+        for r in list(running):
+            if r[0].poll() is not None:
+                running.remove(r); r[2].close(); done += 1; ok = job_done(o, r[1])
+                note = "ok" if ok else ("no file: K = 12 run without checkpoint" if r[1]["K"] == 1 and not k1_expected(o, r[1]) else f"FAILED rc={r[0].returncode}")
+                print(f"[pc] {done} done ({time.time() - t:.0f}s): {job_name(r[1])} {note}", flush=True)
+        if done - synced >= 20: sync(); synced = done
 
 
 def pc(which):
     o = f"{work}/pc"; os.makedirs(f"{o}/jobs", exist_ok=True); jobs = pc_jobs(which); t = time.time()
-    for phase in (1, 2):                                              # the K = 1 controls need their K = 12 run (same shard)
-        todo = [j for j in jobs if (j["K"] == 1) == (phase == 2) and not os.path.exists(f"{o}/jobs/{job_name(j)}.json")]
-        print(f"[pc] phase {phase}: {len(todo)} jobs, {NPAR} in parallel", flush=True); running = []; done = 0
-        while todo or running:
-            while todo and len(running) < NPAR:
-                j = todo.pop(0); lg = open(f"{work}/logs/pc_{job_name(j)}.log", "a")
-                e = dict(os.environ, DEVICE="cuda", NT="1", PYTHONUNBUFFERED="1", **j["env"])
-                args = [PY, "-u", f"{A}/pc_meta.py", o, j["arm"], str(j["W"]), str(j["seed"]), str(j["K"]), repr(j["gamma"]), repr(j["wd"])]
-                running.append((subprocess.Popen(args, env=e, stdout=lg, stderr=subprocess.STDOUT), j, lg))
-            time.sleep(0.5)
-            for r in list(running):
-                if r[0].poll() is not None:
-                    running.remove(r); r[2].close(); done += 1
-                    ok = os.path.exists(f"{o}/jobs/{job_name(r[1])}.json")
-                    print(f"[pc] {done} done ({time.time() - t:.0f}s): {job_name(r[1])} {'ok' if ok else 'FAILED rc=' + str(r[0].returncode)}", flush=True)
-            if done and done % 20 == 0: sync()
-        sync()
+    json.dump([job_name(j) for j in jobs], open(f"{work}/pc_expected_{which}.json", "w"))
+    for attempt in (1, 2):                                            # one retry of anything missing
+        for phase in (1, 2):                                          # the K = 1 controls need their K = 12 run (same shard)
+            todo = [j for j in jobs if (j["K"] == 1) == (phase == 2) and not job_done(o, j) and (j["K"] != 1 or k1_expected(o, j))]
+            print(f"[pc] attempt {attempt}, phase {phase}: {len(todo)} jobs, {NPAR} in parallel", flush=True)
+            pc_pool(o, todo); sync()
+    missing = [job_name(j) for j in jobs if not job_done(o, j) and (j["K"] != 1 or k1_expected(o, j))]
     TIMES["pc_jobs"] = round(time.time() - t, 1)
     run("pc_summary", [f"{A}/pc_summary.py", o, f"{work}/pc_summary_{which}.json"])
+    if missing:
+        json.dump(missing, open(f"{work}/pc_missing_{which}.json", "w")); sync()
+        raise SystemExit(f"{len(missing)} PC jobs still missing after a retry: {missing[:5]} ...; rerun the notebook to retry them")
 
 
 def main():
@@ -131,9 +158,11 @@ def main():
         if not (os.path.exists(sp) and "trace_set" in json.load(open(sp))):
             run("dn_sample", [f"{A}/dn_sample.py", root, f"{root}/dn_out/gsm8k_test.json", sp])
         S = json.load(open(sp)); print(f"trace set {S['trace_set']} (complete {S['trace_set_complete']}, L used {S['L_used']})", flush=True)
-        run("dn_tf", [f"{A}/dn_tf.py", root, sp, f"{root}/dn_out/dn_text.json", f"{work}/dn_tf.json"], out=f"{work}/dn_tf.json")
-    elif shard in ("gpu5", "gpu6"): pc(shard)
-    else: raise SystemExit(f"unknown shard {shard}")
+        tf = f"{work}/dn_tf.json"
+        if os.path.exists(tf) and "A4a" not in json.load(open(tf)): os.remove(tf)        # a partial file never counts as done
+        run("dn_tf", [f"{A}/dn_tf.py", root, sp, f"{root}/dn_out/dn_text.json", tf], out=tf)
+    elif shard not in ("gpu5", "gpu6"): raise SystemExit(f"unknown shard {shard}")
+    pc(shard)                                                        # every shard runs its share of the PC toy last
     info.update(seconds=round(time.time() - T0, 1), steps=TIMES); json.dump(info, open(f"{work}/shard_done.json", "w"), indent=1); sync()
     print(f"shard {shard} finished in {time.time() - T0:.0f}s", flush=True)
 

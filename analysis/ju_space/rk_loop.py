@@ -201,7 +201,7 @@ def text_axis(name):
     if key in ST: return
     pro_i, anti_i = INSTR[name]; rows = []
     for p in range(NP):
-        for s, ins in ((1, pro_i), (-1, anti_i)): rows.append((enc(chat(PROMPTS[p] + " " + ins)), keyseed("axis", name, p), s))
+        for s, ins in ((1, pro_i), (-1, anti_i)): rows.append((enc(chat(PROMPTS[p] + " " + ins)), keyseed("axis", name, p, s) if MOCK else keyseed("axis", name, p), s))   # MOCK: separate keys, so the code test sees a non-degenerate axis
     conts = generate(rows); Xp = read([PIDS[p] for p in range(NP)], conts[0::2]); Xa = read([PIDS[p] for p in range(NP)], conts[1::2])
     ST[key] = dict(Xp=Xp.float(), Xa=Xa.float(), conts=conts, samples=[tok.decode(c) for c in conts[:4]]); save(); log(f"axis {name}: texts written and read")
 
@@ -295,12 +295,13 @@ def stats(ev, axis_name="u_T_perp"):
     else: rel = max(2 * r / (1 + r), 0.05) if r > -1 else 0.05                   # floor 0.05 (not in the plan; flagged)
     out = dict(c=c, p=p, Q=Q, rel=rel, r=r, rel_floored=bool(math.isfinite(r) and (r <= -1 or 2 * r / (1 + r) < 0.05)), A=c / math.sqrt(rel) if rel == rel else float("nan"), norm=float(d.norm()))
     if axis_name == "u_T_perp":
-        uh = unit(ax); G = ST["axes"]["gap_perp_cross"]; out["Ue"] = float(uh @ d) / G; out["Ue_pair"] = 2 * out["Ue"]    # plan K4; Ue_pair: (x+ - x-) against (x_pro - x_anti)
+        uh = unit(ax); G = ST["axes"]["gap_perp_cross"]; G = G if (math.isfinite(G) and G != 0) else float("nan")      # a zero gap (degenerate axis) gives NaN, not an error
+        out["Ue"] = float(uh @ d) / G; out["Ue_pair"] = 2 * out["Ue"]    # plan K4; Ue_pair: (x+ - x-) against (x_pro - x_anti)
         gb = np.random.default_rng(7); pn = po.numpy(); okn = ok.numpy(); bs = []
         for _ in range(200):
             pick = gb.integers(0, NP, NP); idx = np.concatenate([np.nonzero((pn == q) & okn)[0] for q in pick])
             if len(idx): bs.append(float(uh @ delta[torch.from_numpy(idx)].mean(0)) / G)
-        out["Ue_lo"], out["Ue_hi"] = float(np.percentile(bs, 5)), float(np.percentile(bs, 95))
+        out["Ue_lo"], out["Ue_hi"] = (float(np.percentile(bs, 5)), float(np.percentile(bs, 95))) if bs else (float("nan"), float("nan"))
         uT = ST["axes"]["u_T"].double(); sp = float((ev["xp"].double()[ok] @ uT).mean()); sm = float((ev["xm"].double()[ok] @ uT).mean()); X0 = ST["ref"]["X"].double(); s0 = float((X0[~torch.isnan(X0).any(1)] @ uT).mean())
         out["sigma"] = (sp - s0) / (s0 - sm) if abs(s0 - sm) > 1e-9 else float("nan")
     return out, d

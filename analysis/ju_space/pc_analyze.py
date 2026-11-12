@@ -4,7 +4,7 @@ Usage: python pc_analyze.py <out.json> <summary.json> [<summary.json> ...]
 Conventions (frozen with the amendments): 'CI' = two-sided 95 % t interval over seeds (df = n - 1); 'lower bound' = the lower end
 of that interval; TOST 'zero' = the upper one-sided 95 % t bound below 0.05; B2 = B2 at 8 shots unless stated; main cells =
 K 12, gamma 0, weight-decay scale 1."""
-import json, math, sys
+import json, math, os, sys
 import numpy as np
 
 T975 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228}
@@ -39,7 +39,7 @@ def gates(R):
         rows = [r for r in main_rows(R, arm) if r.get("coord_check")]; Ws = sorted({r["W"] for r in rows}); per = []
         for i in (0, 1):
             vals = [np.mean([r["coord_check"][i] for r in rows if r["W"] == W]) for W in Ws]; per.append(max(vals) / max(min(vals), 1e-12) if vals else float("nan"))
-        G[f"G0_{arm}"] = dict(pass_=all(p < 2 for p in per), ratio_h1=per[0], ratio_h2=per[1], widths=Ws)
+        G[f"G0_{arm}"] = dict(pass_=len(Ws) >= 2 and all(math.isfinite(p) and p < 2 for p in per), ratio_h1=per[0], ratio_h2=per[1], widths=Ws)
     r128 = [cell(R, "bp_mup", 128, s) for s in range(5)]; n1 = sum(1 for r in r128 if r and r["level1"])
     G["G1"] = dict(pass_=n1 >= 4, level1_seeds=n1)
     b = ci([r["B2_8"] for r in r128 if r and r["level1"] and "B2_8" in r]); G["G2"] = dict(pass_=bool(b["mean"] is not None and b["mean"] >= 0.10 and b["lo"] is not None and b["lo"] > 0.03), **b)
@@ -86,6 +86,7 @@ def arm_stats(R, arm, G):
     meta = []
     for s in range(5):
         c12, c1 = cell(R, arm, Wlo, s), cell(R, arm, Wlo, s, K=1)
+        if arm == "pc_mup" and c1 and (c1.get("pc") or {}).get("rose_share", 1.0) > 0.01: res.setdefault("meta_excluded_unstable_K1", []).append(s); continue   # G4 applies to the K = 1 rows too
         if c12 and c1 and c12["level1"] and "B2_8" in c12 and "B2_8" in c1: meta.append(c12["B2_8"] - c1["B2_8"])
     S, Blo, Bhi, Dd, M = ci(sl), ci(b(Wlo)), ci(b(Whi)), ci(D), ci(meta)
     res.update(W_lo=Wlo, W_hi=Whi, slope=S, slope_boot=boot_mean(sl), slopes=sl, B2_lo=Blo, B2_hi=Bhi, D=Dd, B2_meta_lo=M,
@@ -99,18 +100,31 @@ def arm_stats(R, arm, G):
     return res
 
 
-def overall(A):
+def overall(A, G):
     bp, sp = A["bp_mup"], A["bp_sp"]
-    if bp.get("B2_meta_lo", {}).get("lo") is None or bp["B2_meta_lo"]["lo"] <= 0: return "H not tested: B2_meta at W_lo (BP-muP) is not above 0, so any fall is transfer of the (x, y) code"
+    if not G["G0_bp_mup"]["pass_"]: return "H not testable (G0 coordinate check failed for BP-muP)"
+    M = bp.get("B2_meta_lo") or {}
+    if M.get("n", 0) < 2 or M.get("lo") is None: return f"H not tested: B2_meta at W_lo (BP-muP) not available (n = {M.get('n', 0)})"
+    if M["lo"] <= 0: return "H not tested: B2_meta at W_lo (BP-muP) is not above 0, so any fall is transfer of the (x, y) code"
     if bp["verdict"] == "SUPPORTS H": return "H supported (BP-muP)"
-    if sp.get("verdict") in ("SUPPORTS H", "SHRINKS-NOT-VANISHES") and bp["verdict"] not in ("SUPPORTS H", "SHRINKS-NOT-VANISHES"):
+    if bp["verdict"] == "CONTRADICTS H" and sp.get("verdict") in ("SUPPORTS H", "SHRINKS-NOT-VANISHES"):
         return "against H: a fall only under the standard parameterisation is the width-dependent effective learning rate"
     return f"H not supported (BP-muP: {bp['verdict']})"
 
 
 def pc_vs_bp(R, G, A):
+    if not G["G0_pc_mup"]["pass_"]: return dict(verdict="not testable (G0 coordinate check failed for PC-muP)")
     common = [W for W in A["pc_mup"].get("widths", []) if W in A["bp_mup"].get("widths", []) and G["G5"].get(W, {}).get("pass_", False)]
     out = dict(common_widths=common, bp_equivalent_widths=[W for W, g in G["G5"].items() if not g["pass_"]])
+    m2 = lambda arm, W: ci([c["B2_8"] for s in range(5) if (c := cell(R, arm, W, s)) and c["level1"] and "B2_8" in c])["mean"]
+    allw = [W for W in A["pc_mup"].get("widths", []) if W in A["bp_mup"].get("widths", [])]          # every G4-passing PC width, G5 or not
+    tab = {W: dict(B2_gap=(m2("pc_mup", W) or 0) - (m2("bp_mup", W) or 0), cos_l2=G["G5"].get(W, {}).get("cos_l2_early_median")) for W in allw}
+    ok = [W for W in allw if tab[W]["cos_l2"] is not None]
+    if len(ok) >= 3:
+        from scipy.stats import spearmanr
+        rho = float(spearmanr([tab[W]["cos_l2"] for W in ok], [abs(tab[W]["B2_gap"]) for W in ok]).correlation); top = max(ok, key=lambda W: tab[W]["cos_l2"])
+        out["converging_label"] = dict(rho_cos_absgap=rho, gap_at_max_cos=tab[top]["B2_gap"], label="PC converging to BP" if (rho <= -0.8 and abs(tab[top]["B2_gap"]) < 0.05) else "no convergence label")
+    out["gap_and_cosine_all_widths"] = tab
     if len(common) < 2: out["verdict"] = "not testable (fewer than two common widths passing G4 and G5)"; return out
     diff = []
     for s in range(5):
@@ -155,15 +169,17 @@ def d1(R):
 
 
 def d2(R):
-    base = {s: cell(R, "bp_mup", 256, s) for s in range(5)}; dd = lambda r: max(r["delta"]["h2"]["delta"], 1e-6) if r and r.get("delta") else None
+    base = {s: cell(R, "bp_mup", 256, s) for s in range(5)}; dd = lambda r: r["delta"]["h2"]["delta"] if r and r.get("delta") else None
     if not (base[0] and base[0]["level1"] and base[0].get("delta")): return dict(verdict="probe failed (no baseline at W 256, seed 0)")
-    cand = []
+    cand, over = [], []
     for g in G_CAND:
         p, q = cell(R, "bp_mup", 256, 0, gamma=-g), cell(R, "bp_mup", 256, 0, gamma=g)
         if p and q and p["level1"] and q["level1"] and p.get("delta") and q.get("delta"):
+            if min(dd(p), dd(q), dd(base[0])) <= 0: over.append(g); continue           # delta at or below its floor: overshoot, excluded
             rp, rq = dd(p) / dd(base[0]), dd(base[0]) / dd(q); cand.append((max(abs(math.log2(rp) - 1), abs(math.log2(rq) - 1)), g, rp, rq))
-    if not cand: return dict(verdict="probe failed (no g passes level 1 at seed 0)")
-    _, g, rp, rq = min(cand); res = dict(g=g, pilot_ratios=dict(push=rp, pull=rq), candidates=cand)
+    if not cand: return dict(verdict="probe failed (" + ("pull collapses delta below the floor" if over else "no g passes level 1 at seed 0") + ")", overshoot=over)
+    best = min(cand); ties = [c[1] for c in cand if abs(c[0] - best[0]) < 1e-9 and c[1] != best[1]]
+    _, g, rp, rq = best; res = dict(g=g, pilot_ratios=dict(push=rp, pull=rq), candidates=cand, overshoot_excluded=over, tie_with=ties)
     push_ok = pull_ok = 0; sgn = []
     for s in range(5):
         b0, p, q = base[s], cell(R, "bp_mup", 256, s, gamma=-g), cell(R, "bp_mup", 256, s, gamma=g)
@@ -196,15 +212,22 @@ def main():
     out = sys.argv[1]; R = []
     for p in sys.argv[2:]: R += json.load(open(p))
     G = gates(R); res = dict(gates=G, n_rows=len(R), errors=[r for r in R if "error" in r])
-    if not (G["G1"]["pass_"] and G["G2"]["pass_"]): res["overall"] = "world has no testable meta level (G1 or G2 failed)"
+    expected = set()                                   # job lists written by run_shard.py next to each summary
+    for p in sys.argv[2:]:
+        e = os.path.join(os.path.dirname(p), os.path.basename(p).replace("pc_summary_", "pc_expected_"))
+        if e != p and os.path.exists(e): expected |= set(json.load(open(e)))
+    res["missing_jobs"] = sorted(expected - {r.get("name") for r in R}) if expected else "no expected-job lists found"
+    if not (G["G1"]["pass_"] and G["G2"]["pass_"]):
+        res["overall"] = "world has no testable meta level (G1 or G2 failed)"; res["D1"] = res["D2"] = "not evaluated (G1 or G2 failed; the plan stops here)"
     else:
         A = {arm: arm_stats(R, arm, G) for arm in ARMS}
         for arm in ("bp_mup", "pc_mup"):
             if not G[f"G0_{arm}"]["pass_"]: A[arm]["verdict"] = f"not testable (G0 coordinate check failed): {A[arm].get('verdict')}"
-        res.update(arms=A, overall=overall(A), pc_vs_bp=pc_vs_bp(R, G, A))
-    res.update(D1=d1(R), D2=d2(R), extras=extras(R))
+        res.update(arms=A, overall=overall(A, G), pc_vs_bp=pc_vs_bp(R, G, A), D1=d1(R), D2=d2(R))
+    res["extras"] = extras(R)
     json.dump(res, open(out, "w"), indent=1, default=float)
-    print("overall:", res["overall"]); print("arms:", {a: v.get("verdict") for a, v in res.get("arms", {}).items()}); print("D2:", res["D2"].get("verdict"))
+    print("overall:", res["overall"]); print("arms:", {a: v.get("verdict") for a, v in res.get("arms", {}).items()})
+    print("D2:", res["D2"].get("verdict") if isinstance(res["D2"], dict) else res["D2"]); print("missing jobs:", res["missing_jobs"] if isinstance(res["missing_jobs"], str) else len(res["missing_jobs"]))
 
 
 if __name__ == "__main__":
