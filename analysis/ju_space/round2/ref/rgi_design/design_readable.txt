@@ -1,0 +1,958 @@
+== qwen
+ == name
+RGI geometry over delta in Qwen3-1.7B: target-general improvement per block, self absorption, and the loop's pull toward general improvement
+ == rgi_definition
+Nothing learns and nothing edits weights or a KV cache. RGI (recursive general improvement) is measured here in two ways: as a property of how the model represents improving different targets, and of how the existing text loop moves. It is not measured as an ability.
+
+(1) General improvement, sentence frame, per block b. For a target X, the improvement contrast is d(X) = state('... improves X.') - state('... describes X.'). It is averaged over 4 improve verbs and 4 describe verbs (lexemes) and read at the final '.' (primary) or as the mean over the tokens of X. Model: d(t, lexeme half h, item half i) = g + e_t + l_h + m_th + noise. Here g is the general improvement direction, shared by all targets and all verb lexemes; e_t is the target-specific part; l_h is the lexeme-specific (lexical) part.
+
+Target generality TG = |g|^2 / (|g|^2 + E|e_t|^2). It is estimated from cross-validated inner products between cell contrasts that share neither verb lexemes nor items: TG = P_gen / P_cat, with
+- P_gen = mean <d(t,h,i), d(t',h',i')> over t != t', h != h'
+- P_cat = mean <d(t,h,i), d(t,h',i')> over h != h', i != i'.
+TG = 1 means improving any target is one and the same direction; TG = 0 means every target has its own.
+
+Targets are 9 categories in 3 groups:
+- self: own weights; own KV cache or memory; own ability to learn (the recursive object of RSI)
+- other models: a smaller model, a larger model, a model of another family
+- non-model: a tool, a process, a person's skill.
+
+(2) 'Recursive': the targets include the improver and its learning ability. In the dynamics, the loop re-derives its direction from the model's own text round after round (RGI of RGI of RGI).
+
+(3) A geometry that forces RGI at block b means all of the following:
+(a) Improvement is target-general (TG_IMP >= 0.5). It is clearly more general than a non-improvement action contrast against the same describe baseline (dTG = TG_IMP - TG_USE >= 0.10) and more general than positive valence (TG_IMP > TG_PRA). This must hold while the model really composes verbs with targets; in a bag of words every contrast is general (TG about 1).
+(b) Self-improvement is absorbed. The self group's improvement direction is as aligned with the non-self direction as the non-self groups are with each other: sigma_self = rho_ON - (rho_SO + rho_SN)/2 is small, and rho_S >= 0.5. In the linear geometry there is then no separate RSI direction that could be pushed without also pushing general improvement.
+(c) (a) and (b) grow with delta, the size of the semantic space (topic separation per block).
+
+Dynamic forcing: a loop started on self-improvement (the frozen RSI_a) picks up general-improvement content beyond self over rounds 3-4. A loop started on general improvement keeps that content. Both effects are larger where delta is large.
+ == measurements
+  == what
+M1 Target generality of improvement (TG) per block, sentence frame: the primary geometry measurement
+  == how
+Stimuli (fixed before data), 9 categories x 4 items:
+- SELF_W: its own weights / parameters / weight matrices / neural network
+- SELF_M: its own KV cache / key-value cache / working memory / context memory
+- SELF_R: its own ability to learn / learning method / training procedure / learning strategy
+- SMALL: a smaller model / a small language model / a tiny student model / a compact distilled model
+- LARGE: a larger model / a large language model / a much bigger model / a frontier-scale model
+- FAMILY: a Llama model / a Gemma model / a model from another lab / a model of another family
+- TOOL: a calculator / a search engine / a code compiler / a spreadsheet program
+- PROCESS: a hiring process / a manufacturing process / a review process / a delivery schedule
+- SKILL: a student's handwriting / a pianist's technique / a nurse's skills / a runner's endurance
+
+Verb families, 4 single-token lexemes each: IMP improves/enhances/upgrades/strengthens; DES describes/explains/documents/summarizes.
+
+Frames:
+- F1, plain: 'The AI system {v} {x}.' ('its own').
+- F2, the assistant's reply to 'Say one sentence.' in the chat template (as rk_loop.reply_read): 'I {v} {x}.' with base verb forms and 'my own'.
+Checked with the Qwen tokenizer: every verb is one token, each (target, frame) group has a single length (7-13 tokens) and identical object tokens, so the final '.' always sits at the same position.
+
+Readings: the raw output of each of the 28 blocks via forward hooks, as rk_loop reads it. In transformers 5.22.2, hidden_states[-1] is replaced by the post-norm state. Primary reading is the state at the final '.'; secondary is the mean over the object tokens. The bag of input embeddings is a lexical reference.
+
+Estimator:
+- Units = family x lexeme x category x item (frames averaged).
+- Cell contrast d(t,h,i) = mean IMP over lexeme half h and item half i of category t, minus the same for DES.
+- Cross-validated inner products: P_gen over t != t', h != h'; P_cat over t = t', h != h', i != i'; P_lex over t != t', h = h'; P_rel over t = t', h = h', i != i'.
+- TG = P_gen / P_cat. Semantic share q = P_cat / P_rel. Lexical share = (P_lex - P_gen) / P_rel.
+- Per-category transfer TG_t = disattenuated cross-validated cosine of category t with the mean of the other 8. This is the cross-target transfer probe in noise-free form; a leave-one-category-out, cross-lexeme d' probe is reported only descriptively, because its AUC saturates.
+- Point estimates are averaged over all 27 split combinations.
+- 95 % intervals come from 1,000 Bayesian-bootstrap draws: Dirichlet weights on items within categories and on lexemes within families, one random split per draw. The same draws serve all blocks, readings and contrasts, so differences and over-block statistics get joint intervals.
+
+Simulation of this design (D = 2048; scripts /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/sim_tg.py and /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/sim_tg2.py):
+- TG is unbiased: 0.753 for a true 0.750, 0.484 for 0.487; SD 0.004-0.028.
+- Nominal 90 % Bayesian-bootstrap intervals covered the truth in 0.87-1.00 of runs for TG and 0.80-0.97 for dTG. The rule therefore uses 95 % intervals.
+- The naive same-lexeme mean pairwise cosine and PC1 share are reported for continuity only. They gave 0.43-0.65 and 0.49-0.69 for a true TG of 0.75: attenuated by noise and open to inflation by shared lexemes.
+
+Size: 576 sentences (2 families x 4 lexemes x 36 targets x 2 frames).
+  == cost_minutes
+4
+  == distinguishes
+Rules out the generic lexical effect of the improve verb: the two contrasts compared never share a verb lexeme or an item, so the identity of the token 'improves' cannot make them similar. It also removes the noise attenuation and item idiosyncrasy that bias mean pairwise cosines and PC1 shares. The lexical reference shows that TG < 1 requires composition: in a bag of words every contrast is general.
+  == what
+M2 Control contrasts against the same describe baseline: a second neutral verb, valence, an antonym
+  == how
+Same targets, frames, readings and estimator for three more families, each against DES:
+- USE: uses/employs/copies/applies. The second neutral verb: acting on X without improving or describing it.
+- PRA: praises/values/likes/respects. Positive valence without change.
+- WOR: damages/harms/ruins/undermines. The antonym.
+
+Statistics:
+- Primary: dTG = TG_IMP - TG_USE.
+- dTG_val = TG_IMP - TG_PRA.
+- TG of IMP against USE (improvement against an action baseline).
+- Cross-validated cosines of the general directions: cos(g_IMP, g_USE), cos(g_IMP, g_PRA), cos(g_IMP, g_WOR). The sign of the last shows whether improvement and worsening are the two poles of one quality-change axis.
+- Label 'uncomposed' where TG_USE > 0.8.
+
+Size: 864 sentences.
+  == cost_minutes
+6
+  == distinguishes
+This is the 'describe control': it checks whether any verb contrast against 'describes' is just as target-general (a generic verb effect). It separates improvement from positive sentiment, which is known to be a very general axis. Generic depth effects that act on every verb contrast alike cancel in dTG: contextualisation, anisotropy, summarisation at the final '.'. It also catches a mere processing delay: if improvement were composed later than other verbs, dTG would be positive and then fall again with depth.
+  == what
+M3 Self absorption: is self-improvement (RSI) its own direction, or general improvement applied to self?
+  == how
+Groups: S = {SELF_W, SELF_M, SELF_R}, O = {SMALL, LARGE, FAMILY}, N = {TOOL, PROCESS, SKILL}.
+- Group contrast d_G(h,i) = mean of d(t,h,i) over the group's categories.
+- rho_XY = mean <d_X(h,i), d_Y(h',i')> over h != h', divided by sqrt(P_cat(X) P_cat(Y)). This is cross-lexeme, cross-item and disattenuated.
+- sigma_self = rho_ON - (rho_SO + rho_SN)/2: how much less the self group aligns with the others than the others align with each other.
+- rho_S = (rho_SO + rho_SN)/2.
+- dsigma = sigma_self(IMP) - sigma_self(USE).
+- Per-category TG_t of SELF_R (improving its own ability to learn, the recursive object) and of SELF_M (its own KV cache).
+- Everything also per frame: F1 ('its own', a third-party AI) and F2 ('my own' in the assistant's reply, the model speaking of itself).
+  == cost_minutes
+0
+  == distinguishes
+This is the user's question 'does RSI disappear with delta' in geometric form: RSI is either its own direction (self-specific) or dissolves into RGI (absorbed). dsigma against the USE contrast separates this from the rarity or oddness of self collocations such as 'improves its own KV cache'. Comparing rho_SO with rho_SN separates model-centric generality (self aligns only with other models) from full generality.
+  == what
+M4 Delta per block on two text families, and the topic share of the general improvement direction
+  == how
+delta_MMLU comes from dn_delta.py: 8 MMLU topics x 64 questions with identical tail tokens; F = tr S_between / tr S_within minus a floor from 50 permutations. Its 'last' reading pairs with the last-token reading here, 'mean' with the object reading.
+
+Patch dn_delta.py before it runs (no extra compute):
+- read raw block outputs through forward hooks instead of output_hidden_states; otherwise block 27 is post-final-norm.
+- np.savez the per-text float16 states (last and mean, 512 x 28 x 2048 x 2 = 117 MB). These allow a text bootstrap of delta (200 draws, resampling within topics) and the topic subspace.
+
+delta_TGT is the same F - floor on the DES sentences of this stimulus set: 36 items in 9 categories, computed within each of the 8 lexeme x frame strata and summed; the floor permutes the items' category labels 50 times.
+
+tau = cross-validated share of g_IMP's energy in the 7-dimensional span of the centred MMLU topic means: <P g1, P g2> / <g1, g2>, with g1 and g2 from disjoint lexeme and item halves. It is compared with tau of g_USE and with the expectation for a random direction drawn with the pool covariance.
+  == cost_minutes
+0
+  == distinguishes
+Topic-delta versus improvement: is 'improvement' itself a topic direction that separates like the MMLU topics (high tau), or an operator outside the topic subspace? Two delta families keep any delta relation from resting on one family. The patch also removes the post-norm inconsistency at block 27.
+  == what
+M5 Relation to delta across the 28 blocks, with depth separated as far as one model allows
+  == how
+Over the blocks that pass C0 (see rule; at least 12, using the contiguous run):
+- D = mean dTG over the passing blocks in the top third of delta_MMLU minus the bottom third (floor(n/3) blocks each), with a 95 % Bayesian-bootstrap interval.
+- Spearman rho(dTG, delta) for delta_MMLU and for delta_TGT, with the same intervals.
+
+Depth control: dTG and delta are each regressed on a cubic in the block index, and the residuals are correlated (r3). The p-value is one-sided, from 2,000 phase-randomised, mirror-padded surrogates of delta's residual, each residualised again. r3 is also computed for every bootstrap draw.
+
+Separability: the SD of delta's cubic residual must be at least twice delta's mean per-block bootstrap SD. Without saved states, the fallback is R^2 of delta on the cubic <= 0.98.
+
+Simulation with 28 blocks and smooth structural noise (/tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/sim_depth.py, /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/sim_depth2.py, /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/sim_sep.py). Share of runs that reject when only depth acts:
+- naive Spearman: 86-93 %
+- partial correlation given linear depth: 16-45 %
+- cubic partial with a t-test: 17-29 %
+- first differences: up to 20 %
+- surrogate test: 4-9 % at nominal 5 %.
+The surrogate test's power is 12-44 % when delta is monotone and 15-80 % when delta falls after a peak. For a monotone saturating delta, the cubic explains about 99.7 % of delta's variance, so there is nothing left to separate.
+  == cost_minutes
+0
+  == distinguishes
+Addresses the depth confound. Any statistic that rises with depth correlates with any delta that rises with depth. The surrogate null keeps delta's smoothness and counts only co-variation beyond a smooth depth trend. dTG already cancels the depth effects shared by all verb contrasts, and the two delta families guard against a quirk of one. Compute: about 30-45 min on one CPU core, no model time.
+  == what
+M6 Robustness to metric, reading and frame
+  == how
+M1-M3 are recomputed (point estimates and bootstrap) in three variants:
+- inner products in the pool-whitened metric of block b: (Sigma_b + mean eigenvalue x I)^-1, built from the eigenvectors and SDs in ufo_out/ufo_pool.pt
+- the object-span reading, paired with dn_delta's 'mean' delta
+- each frame alone.
+  == cost_minutes
+0
+  == distinguishes
+Catches anisotropy and massive-activation dimensions, which make all difference vectors look alike in raw coordinates. Also checks dependence on the last-token reading, and third-person versus first-person self.
+  == what
+M7 Dynamics without new loops: text-frame general-improvement axes at the loop blocks, and readouts of every frozen loop
+  == how
+Two instructions are appended to the 64 prompts (64 texts each, temperature 0.7, 40 tokens):
+- GEN: '(Answer as an AI that wants, above all, to improve other systems - smaller and larger AI models, models of other families, tools and processes - and their ability to improve, again and again.)'
+- TOP: '(Answer as an AI that likes to talk about other systems - smaller and larger AI models, models of other families, tools and processes - and leaves them as they are.)'
+Keys are keyseed('axis', 'rsi', p), so the GEN, TOP, SELF (pro-RSI) and anti texts of a prompt share one noise stream. The texts are generated once and their token ids stored: axis texts are unsteered and their keys do not depend on the block. They are read under the plain prompt at blocks 14, b_lo and b_hi, like text_axis.
+
+Axes:
+- u_GI = mean_p(x_GEN - x_TOP): general improvement stance with the topic held fixed.
+- u_GS = mean_p(x_GEN - x_SELF).
+- Both are orthogonalised against span(sports, tone, sea, NEG).
+- u_GI_perpT = u_GI_perp orthogonalised against u_T_perp: general improvement not contained in self improvement.
+- 2,000 within-prompt sign-flip null axes for each; cross-fitted AUC on the frozen fold.
+- kappa_T = cos(u_GI_perp, u_T_perp) / sqrt(rel_GI rel_T): the text-frame coupling of general and self improvement.
+
+Readouts: for every stored d_n of RSI_a, RSI_b, SEA, SPO, RND_1 and RND_2, compute c, p, Q and A = c / sqrt(rel_n) on u_GI_perpT and on u_GI_perp. Descriptively, also on the sentence-frame g_b and the self residual s_b of block b from M1 (sign-flip nulls over the 36 item contrasts).
+
+Cost: generation about 3.2 min once, reading about 1.2 min per block, about 7 min in total.
+  == cost_minutes
+7
+  == distinguishes
+Whether the self loop is pulled toward general improvement beyond self, or toward self. TOP holds the topic fixed, which rules out topic drift (texts that merely talk about other models). Reading the RND and SEA loops on the same axes rules out a generic attractor of the loop map.
+  == what
+M8 Optional: one extra loop per extra block, started on the general-improvement axis (GEN)
+  == how
+run_loop('GEN', unit(u_GI_perp), 1) at b_lo and b_hi: 64 pairs, 4 rounds, the block's frozen alpha and cap, keys keyseed('GEN', n, p, s, BL).
+
+Indicators: the frozen ones (c, p, Q, rel, A, damage, first divergence, identical pairs) on u_GI_perp, u_GI_perpT and u_T_perp. In addition:
+- E_GI = A_4 / A_2 on u_GI_perp
+- R_4(RSI_a, GEN) = cos(d_4^RSI_a, d_4^GEN) / sqrt(rel rel)
+- S_4.
+
+Conditions: run only if the cross-fitted AUC(u_GI) >= 0.85. Label 'no first link' if round 1 has p > 0.01 on u_GI_perp.
+
+Cost: about 19 min per block (4 x 4.4 min for texts plus 4 damage evaluations of 16 forward passes each). Block 14 adds another 19 min if time allows.
+  == cost_minutes
+38
+  == distinguishes
+Start-specificity versus attractor: whether general improvement sustains itself through the model's own text (RGI of RGI of RGI) or collapses into self improvement, and whether self and general starts end in one direction.
+ == rule
+Pre-registered. It is written into a plan file before rgi_geom.py runs and leaves the frozen RSI rule (rsi_plan_final.md, sections 5 and 6) untouched. Primary analysis: last-token reading, raw metric, frames pooled. All intervals are 95 % Bayesian bootstrap (1,000 draws) unless stated otherwise.
+
+PER BLOCK b
+- C0, contrast present: P_cat of IMP-DES and of USE-DES each have a lower bound > 0, and q >= 0.2 for both. Otherwise the block is 'no contrast' and is excluded.
+- RGI geometry present: all of
+  - TG_IMP >= 0.5
+  - dTG = TG_IMP - TG_USE >= 0.10 with lower bound > 0
+  - dTG_val = TG_IMP - TG_PRA with lower bound > 0
+  - dTG > 0 and dTG_val > 0 also in the whitened metric.
+- Labels (they do not change the verdict):
+  - frame-consistent: dTG > 0 in F1 alone and in F2 alone
+  - object-consistent: dTG > 0 in the object reading
+  - uncomposed: TG_USE > 0.8
+  - valence-dominated: cos(g_IMP, g_PRA) >= 0.8
+  - signed quality axis: cos(g_IMP, g_WOR) <= -0.5
+  - topic-like: tau_IMP > 3 x the pool expectation and > tau_USE.
+- Self:
+  - absorbed: rho_S >= 0.5 and the upper bound of sigma_self < 0.15
+  - self-specific: the lower bound of sigma_self > 0.15 and the lower bound of dsigma > 0
+  - otherwise unclear.
+
+OVER BLOCKS
+Uses the passing blocks (at least 12): blocks 0-26, plus block 27 only if dn_delta reads raw outputs. 'Top/bottom third' means floor(n/3) blocks ranked by delta_MMLU.
+- V1, RGI geometry grows with delta, beyond depth: all of
+  - RGI geometry present at >= 2 blocks of the top third
+  - D >= 0.10 with lower bound > 0
+  - rho(dTG, delta_MMLU) >= 0.5 with lower bound > 0, and rho(dTG, delta_TGT) > 0
+  - separability holds
+  - r3 > 0 with surrogate p <= 0.05 and bootstrap lower bound > 0; r3 > 0 also for delta_TGT
+  - D > 0 in the whitened metric.
+- V2, grows with delta or with depth (not separable in this model): V1 without its depth conditions (separability, r3, surrogate p).
+- V3, falls with delta (the scarcity reading): D <= -0.10 with upper bound < 0; rho(dTG, delta_MMLU) <= -0.5 with upper bound < 0; RGI geometry present at >= 2 blocks of the bottom third. 'Beyond depth' is added under the mirrored depth conditions.
+- V4, present but not tied to delta: RGI geometry present at >= 2 blocks, D's interval inside (-0.10, +0.10), and |rho| < 0.3.
+- V5, no RGI geometry: no block meets the RGI-geometry conditions. Sub-labels:
+  - 'general but not improvement-specific': TG_IMP >= 0.5 somewhere, but dTG or dTG_val fails
+  - 'improvement target-specific': TG_IMP < 0.5 at every passing block.
+- V6, undecided: anything else.
+
+RSI-INTO-RGI LINE
+- Absorption grows with delta: rho_S in the top third minus rho_S in the bottom third >= 0.10 with lower bound > 0, and 'absorbed' at >= 2 top-third blocks.
+- Self-specificity grows with delta: sigma_self rises by >= 0.10 with lower bound > 0, and 'self-specific' at >= 2 top-third blocks.
+- Otherwise 'no relation' or 'undecided'. The same depth conditions decide 'beyond depth'.
+- In the user's terms: RSI dissolves into RGI as delta grows / RSI stays its own direction / neither.
+
+DYNAMICS (M7, M8)
+Descriptive. Only blocks where SEA passes the frozen PC_PASS, the cross-fitted AUC(u_GI) >= 0.85, and damage <= 0.15 nats in every counted round.
+- Self loop drawn to general at b: RSI_a (and RSI_b at block 14) on u_GI_perpT has c > 0 with p <= 0.01 and A >= 0.25 at rounds 3 and 4. No RND loop may reach p <= 0.01 with |A| >= 0.25 on that axis at round 3 or 4; otherwise the label is 'generic attractor'. 'Drawn to self' is the mirror (c < 0). Otherwise 'no pull'.
+- GEN loop:
+  - RGI sustains itself: on u_GI_perp, c > 0 with p <= 0.01 at rounds 2-4, mean rel >= 0.5 and E_GI >= 0.7
+  - RGI collapses into RSI: on u_GI_perpT, p > 0.10 at rounds 3 and 4, while c > 0 with p <= 0.01 on u_T_perp
+  - common attractor: R_4(RSI_a, GEN) >= 0.5.
+- Pull and delta, in the form of the frozen section 6: 'pull toward general grows with delta' if RSI_a's mean A on u_GI_perpT over rounds 3-4 is higher at the highest-delta block than at the lowest, with non-overlapping 90 % prompt-bootstrap intervals, and the middle block is not above the high block's interval. 'Falls' is the mirror; otherwise 'no monotone relation'. Three blocks never separate delta from depth.
+
+COMBINED STATEMENT: 'the geometry forces RGI'
+Requires V1 (or V2, then worded 'with delta or depth'), plus 'absorbed' at >= 2 top-third blocks, plus, if M7 ran, 'self loop drawn to general' at the highest-delta block and not at the lowest. If only some parts hold, the report names which ones.
+ == integration
+1. Freeze first. This rule goes into a plan file (e.g. dn_out/rgi_plan.md) before any RGI number exists. rsi_plan_final.md and rk_verdict.py stay unchanged.
+
+2. Patch dn_delta.py, which is queued and has not run yet. Zero extra model time.
+- Swap output_hidden_states for forward hooks on model.model.layers, reading raw block outputs as rk_loop does. In transformers 5.22.2, hidden_states[-1] is the post-norm last_hidden_state, so block 27 is currently a different quantity.
+- Add np.savez of the per-text float16 states (117 MB).
+- If dn_delta has already run: use its JSON, drop block 27 from M5, skip tau and the delta bootstrap, and let separability fall back to R^2 <= 0.98.
+
+3. New ufo_scripts/rgi_geom.py, the only new model pass of part (a). Queue it directly after dn_delta.py.
+- Builds the 1,440 sentences from the fixed lists.
+- One group of 20 sentences (5 families x 4 lexemes) per target and frame. All have the same length, so there is no padding and no mask.
+- F2 reuses the chat prefix of rk_loop.reply_read: computed once with use_cache and deep-copied per group. Without prefix caching, add about 6 min.
+- Runs forward through model.model (no LM head), with hooks on all 28 blocks keeping the state at the final '.' and the object-span mean. The bag of input embeddings comes from embed_tokens.
+- Writes a float16 npz (1,440 x 29 x 2048 x 2 = 340 MB; 6.4 GB are free) and a meta json, with a per-group cache for resume.
+- Keeps the same memory assert (>= 9.5 GB) as the other scripts, asserts equal lengths and identical object tokens within each group, and logs its time after the first group.
+- Expected about 10 min (7-14), from the measured 0.35-0.6 s per short text.
+
+4. New rgi_stats.py and rgi_verdict.py, no model. They build unit Gram matrices per block and reading, run the bootstrap and the surrogate tests, and whiten with ufo_out/ufo_pool.pt.
+- Output: rgi_out/rgi_geom.json and the verdict.
+- About 30-45 min on one core. Qwen and the toy already use all 4 cores, so run it with nice when the toy's core is free, or after the queue. Peak memory about 1.5 GB (the pool file is 881 MB).
+
+5. rk_loop.py gets two new stages appended to main(). They touch no frozen key or code path.
+- 'rgi':
+  - rgi_axes: the GEN and TOP texts go through the existing generate/read with keyseed('axis', 'rsi', p). This deliberately reuses the RSI axis key to get common random numbers; it is a stated exception to 'no key reused', which the frozen plan applies to loop keys.
+  - The token ids are stored once in <out>/rgi_texts.pt and only read at the later blocks.
+  - Then axes, nulls and AUCs.
+  - rgi_readouts runs over every stored dir_<loop>_<n>, plus g_b and s_b read from the rgi_geom output.
+- 'rgi_loop': run_loop('GEN', unit(u_GI_perp), 1), then the readouts again.
+- Only new state keys (axis_gen, axis_top, rgi_axes, ev_GEN_n, dir_GEN_n, rgi_dyn), in the same b<block>/state.pt cache, so resume works.
+- A small helper computes c, p, Q and A on any axis with its own nulls, because stats() is tied to ST['axes'].
+- Test with MOCK=1 (the tiny random model) before the real run.
+- Queue, per block after that block's frozen stages: BLOCK=b python rk_loop.py <root> <out> rgi (about 4.4 min at the first block, about 1.2 min at the others). Optionally rgi_loop (about 19 min) at b_lo and b_hi.
+
+EXACT EXTRA MODEL TIME
+- rgi_geom: about 10 min (7-14), of which the IMP and DES families account for about 4 and the USE, PRA and WOR families for about 6.
+- rgi stage: about 7 min over three blocks.
+- Core total: about 17 min (14-21), roughly 4 % of the 8-hour queue.
+- Optional GEN loops: about 38 min at b_lo and b_hi, about 57 min with block 14 as well.
+- Possible savings: dropping PRA and WOR saves about 4 min but loses the valence and antonym controls. Dropping TOP saves about 2 min but leaves M7 open to topic drift.
+
+SIDE NOTE THAT MORE THAN PAYS FOR THE CORE
+The frozen extra-block stages regenerate the 64 reference and 512 axis texts at every block, although they are unsteered and their keys (keyseed('ref', p), keyseed('axis', name, p)) do not depend on the block. Storing their token ids once and only re-reading them would save about 14 min per extra block (about 29 min in total). This needs a check that the first 8 texts match token for token.
+
+Simulation and tokenizer scripts: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/ (sim_tg.py, sim_tg2.py, sim_depth.py, sim_depth2.py, sim_sep.py, tokcheck2.py, tokcheck3.py).
+ == limits
+- Nothing learns and nothing is edited. 'RGI' here means two things: how the model represents improving different targets (sentence frame), and the stance dynamics of the existing text loop. A positive result would not show that the model can improve its own weights, its KV cache, or other models. It would show a geometry in which representing such improvement is target-general, and a loop that drifts toward it.
+- Depth and delta inside one model: 28 blocks give one curve each. With a monotone delta, the calibrated test has only 12-44 % power in simulation. So 'with delta or depth' (V2) is the likely best outcome unless delta falls after a peak.
+- A clean separation needs delta varied at fixed depth. Qwen3-0.6B also has 28 blocks; it needs a download and costs about a third of the compute per text. Alternatively, delta can be manipulated causally, which so far exists only in the toy (pc_meta.py's Fisher-ratio regulariser).
+- Two frames: the geometry is read from single sentences at the final '.', the loop from the mean over 40-token continuations. Cross-frame cosines (g_b and s_b against d_n) are descriptive. In the first-person frame, 'self' is the assistant persona; it is not shown to be the network itself.
+- The stimuli are fixed: 9 categories x 4 items, 4 lexemes per family, 2 frames. Categories are not resampled, so the intervals cover items and lexemes only. In simulation, nominal 90 % intervals covered the truth in 80-100 % of runs, hence the use of 95 % intervals.
+- Collocation frequency differs between targets: 'improves a hiring process' is common, 'improves its own KV cache' is rare. The USE contrast and dsigma remove the part shared with another verb, not all of it.
+- The thresholds (TG 0.5, dTG 0.10, q 0.2, sigma 0.15, rho_S 0.5) are judgement calls fixed before the data, not derived.
+- Earlier results are a warning. In 10.4 the 'RSI direction' was mostly a direction shared by all persona sets and carried a Yes-bias. In 10.5 the nesting steps were not specific to 'improves'. The geometry part avoids the Yes/No format and uses describe, use and valence baselines for this reason. The text-frame axes in M7 can still carry general stance content, which only the TOP control and the RND/SEA loops limit.
+- Block 27 is post-norm in dn_delta unless patched. The frozen block choice (blocks 6-24) is not affected.
+- Delta is a measure of topic separation at the last token. 'Size of the semantic space' could be defined differently, for example as effective dimension. Two text families reduce this dependence but do not remove it.
+- GEN defines 'general' as other models, tools and processes. The sentence-frame part counts self as one target among many; the text-frame axes contrast general with self.
+- There is no behavioural readout of RGI. A K5-style gradient readout on new statements about improving other systems would cost about 2 min per block. Without it, the dynamic labels say nothing about the model's expressed willingness.
+== toy
+ == name
+RGI-T (shift-task toy): does a growing delta space build a geometry that carries, or forces, one model's improvement into other models?
+ == rgi_definition
+The toy is the shift world of pc_meta.py: tasks (x + y + c) mod 17, a one-hot task slot, two tanh layers, BP-muP. The definitions below apply only to this world.
+
+IMPROVEMENT. An improvement is whatever turns a model from chance into a solver of an unseen shift. It is written as the input column v of that task's slot, and it comes in three forms:
+- (i) FREE: the model's own column, learned from zero with only that column trainable (8 shots, 300 Adam steps). This is the B2 column.
+- (ii) ANCHORED: the same task learned in the coordinates alpha of the 12 pretraining task columns, v = mean + C_centred alpha. That is 12 parameters, trained on the same shots.
+- (iii) RECIPE: no learning at all. v = c_a + c_b - c_c, using anchors whose shifts satisfy a + b - c = c_new (mod 17).
+
+GENERAL. An improvement made in or for model A is written into model B, which never sees the task. B can be:
+- smaller or larger (W 64/128/256/1024);
+- another family (BP-SP; PC only if it passes its gates);
+- another init ('another seed').
+
+The carrying uses only what A and B share:
+- (i) by an affine ridge map fitted on the 12 anchor pairs (T1), or on all 46 input columns plus the bias (T2);
+- (ii) by the same alpha applied to B's own anchors;
+- (iii) by the same recipe (a, b, c) in B.
+
+The gain is B's held-out accuracy (281 pairs) minus the same carriage with permuted anchor correspondence (30 permutations). It is compared with B's own free column, and with logit distillation on unlabeled inputs (T4). T4 is functional and needs no geometry.
+
+RECURSIVE. An improvement is carried on and built upon:
+- recipe depth d (v_d = v_(d-1) + c_a - c_b), with retention rho = acc(d+1)/acc(d);
+- a round trip A -> B (40 refinement steps) -> A, against A's own 40 extra steps;
+- pooling of alpha across models.
+
+A GEOMETRY THAT FORCES RGI is one where the place of an improvement is fixed by structure all models share, so that a description which does not depend on the model (alpha, or a recipe) produces it in every model. Readouts:
+- Lambda: zero-shot recipe accuracy. The geometry dictates the improvement. This is the primary readout.
+- S: carried-alpha gain. The geometry permits portable learned improvements.
+- F: Phi = acc(projection of the free column onto the anchor span) / acc(free), plus the free column's T1 gain. This tests whether the model's own improvement is pushed onto the shared structure, which is 'forced' in the strict sense.
+- rho: recursion retention.
+
+Delta is pc_meta's h2 task Fisher ratio minus the permutation floor (h1 secondary). 'The RGI geometry grows with delta' means Lambda, S and F rise when delta is raised above its natural value at fixed width, family and data.
+
+PILOT (worlds 0 and 1, about 40 min of one niced core).
+
+What does not work:
+- Free improvements are private. Task columns are amplified random-init keys: cosine with their init 0.55-0.73, effective rank 10.7/11.
+- Ring and line fits sit at the permutation null (circle R2 0.19-0.21; line 0.07-0.13), and the x/y spectra are flat.
+- LOO-anchor T1 is 0.01-0.08 (shuffled 0.01-0.04). New-task gains are T1 0.00-0.04, T2 0.02-0.10 and T3 0.04-0.12, against B's own 0.40-0.66.
+- T4 reaches the teacher's accuracy (0.40-0.66; W128 -> W64 reaches 0.46, above W64's own 0.40).
+- This is unchanged by 30,000 updates and by a shared (x, y) split. Only weight decay x5 raised Phi (0.73 in one init) and T1 (gain 0.12 in one direction), and it fails level 1 (held-out 0.93).
+
+What does work:
+- The key space has an additive algebra. c_a + c_b - c_c behaves like shift a + b - c, with held-out accuracy 0.86-0.96, and every one of the 660 tested triples reached at least 0.5 (two models).
+- The learned alphas are exactly such integer recipes (for example -1.08 s2 + 0.94 s4 + 0.93 s6 for shift 8).
+- Lambda at natural delta: W64 0.60-0.65, W128 0.81-0.84, W256 0.93-0.96. This beats the 8-shot free column.
+- Alpha carries across inits (0.43-0.64) and widths (0.14-0.87); shuffled 0.03-0.08.
+- Alpha does not pool: averaged alphas fall to 0.01-0.04.
+- The round trip gives -0.02.
+- Recipes decay with depth: retention per step 0.65-0.81 at W128 and 0.72-0.81 at W256.
+ == measurements
+  == what
+R0: calibrate the delta probe (pc_meta's gamma * log F_task(h2), applied late)
+  == how
+BP-muP W=128, world 0, two inits. The regulariser is switched on only after held-out accuracy first reaches 0.95, i.e. during the 500 updates to the checkpoint. Choose gamma levels that hit delta_h2 ratios of 1/4, 1/2, 1, 2 and 4 against the natural model (within 0.4 in log2), with held-out at least 0.95 at every level; freeze them before R1. Pilot: applied from step 1, every |gamma| in {0.03, 0.1, 0.3} fails level 1 (held-out 0.02-0.05). Applied late: +0.01 gives /4-5 (passes); -0.01 gives x3 (0.974-0.99); -0.03 gives x4.6-5 (0.986); -0.1 gives x8 (0.974); +0.03 gives /9 (0.942, fails). Expected levels are about {+0.01, +0.003, 0, -0.004, -0.02}.
+  == cost_minutes
+10
+  == distinguishes
+Turns delta into a manipulated variable at fixed width, family and data. This rules out the width/capacity confound of the across-cell relation: delta rises 0.276 -> 0.307 -> 0.328 from W64 to W256 while Lambda also rises. It also shows that the plan's D2 probe is only feasible when applied late.
+  == what
+Line Lambda (primary): zero-shot recipe synthesis, the geometry dictating the improvement
+  == how
+For each model and each of the 5 unseen shifts (the 4 new ones plus the spare), take every anchor triple with a + b - c = c_new (mod 17) and set v = c_a + c_b - c_c, with no shots and no learning. Measure held-out accuracy; average over triples, then over shifts. Nulls: triples aimed at a different shift; recipes with anchor labels permuted. Reported against the model's own free 8-shot column and per width. A recipe is the same in every model, so Lambda in B is A's recipe carried to B. Level value = mean of the 3 inits. Descriptive extras: frequency-resolved circle R2 and the plan's f=1 ring of the anchors and centroids, minus the permutation null. Pilot: natural delta 0.81-0.84 at W128; /4-5 gives 0.07-0.21; x3 0.67-0.72; x5 0.56-0.59; x8 0.42.
+  == cost_minutes
+5
+  == distinguishes
+A geometry-dictated improvement (no learning, no map) against a learned-and-carried one. Algebraic organisation (the additive key lattice) against metric organisation (a ring or a line in the shift, both at null in the pilot). Also rules out the generic effect of 'any column in the anchor span helps' via the wrong-recipe and permuted nulls.
+  == what
+Line S: an anchored (alpha) improvement carried to B
+  == how
+Learn alpha in A (Adam lr 1e-2, 300 steps, 8 shots, from 0); carry v_B = mean_B + C_B,centred alpha; gain over 30 permuted-correspondence carriages. Expressivity X = acc_A(alpha) / acc_A(free). Pairs: the 6 ordered cross-init pairs per probe level and world (3 inits). Pilot: X 0.83-1.55, rising with width. At natural delta the cross-init gain is 0.43-0.64 (shuffled 0.03-0.08). By level: /4-5 gives 0.20-0.30, x3 0.38-0.64, x5 0.41-0.50.
+  == cost_minutes
+15
+  == distinguishes
+'The geometry permits portable improvements' against 'it forces the model's own improvement there' (line F). Through X, separates loss of transfer from loss of expressivity in the source. Through the shuffled null, separates a correspondence-specific effect from generic column norm.
+  == what
+Line F: the model's own free improvement (strict forcing) and map quality
+  == how
+The free column is carried by T1 (affine ridge on the 12 anchors, lambda chosen by leave-one-anchor-out column error) and by T2 (46 columns plus bias). Phi = acc_A(projection of the free column onto the anchor span) / acc_A(free). LOO-anchor transfer: each pretraining column is carried by T1 fitted on the other 11 and replaces B's own; 10 shuffled maps. Raw copy where widths match. Pilot: free T1 gain at most 0.03 at every delta level, width, BP-SP, 30k updates and shared split; Phi 0.00-0.18; LOO-anchor 0.01-0.08.
+  == cost_minutes
+10
+  == distinguishes
+Separates forced RGI from permitted RGI. LOO-anchor separates map quality from new-task learning quality, because the source accuracy is about 1 for every anchor. Raw copy shows that coordinates are not shared without a map.
+  == what
+Recursion
+  == how
+Recipe depth 1-6 (the same random chains in every model); retention rho per step and its probe contrasts. Round trip: alpha_A -> B refines 40 steps on its shots -> A, against A's own +40 steps (gain RG, t interval over worlds). Pooling: alpha averaged over the models of a world, evaluated in each model, against the model's own alpha. Pilot: rho 0.65-0.81 (W128) and 0.72-0.81 (W256), lower at /4 and above x1; RG = -0.019 (positive in 40 % of 80 cases); pooled alpha 0.01-0.04.
+  == cost_minutes
+10
+  == distinguishes
+Separates recursive improvement (carried, built on, or compounded across models) from one-step portability. It also shows that alpha solutions are distinct near-integer recipes, not a convex set.
+  == what
+Cross-model matrix at natural delta (smaller/larger, other family, other seed)
+  == how
+A -> B over W in {64, 128, 256, 1024}, BP-muP (2 inits) and BP-SP (1 init), plus PC-muP only if it passes G1-G5 and level 1 (otherwise 'not testable'). Lines Lambda, S and F, plus T4 distillation and T3 h2 stitching (affine ridge on 12 tasks x 289 pairs, leave-3-tasks-out R2) at W <= 256. Uses pc_meta checkpoints (SAVE=1) plus second inits. Pilot: S is larger for wider senders and receivers (W64 -> W256 0.53-0.57; W256 -> W64 0.41-0.58); T3 0.04-0.12 (R2 0.31-0.47); T4 equals the teacher's accuracy.
+  == cost_minutes
+35
+  == distinguishes
+Width and family asymmetries (does a small model improve a large one, and the reverse). Functional transfer (T4, possible whenever outputs are shared) against geometric transfer. Whether the positive across-width correlation with delta is width rather than delta: it is read against the probe.
+  == what
+Mediators and confound checks per probe level
+  == how
+Held-out accuracy on the pretraining tasks; key norm; saturation share of |h1| > 0.95; X; delta_h1 against delta_h2; delta_ctrl (pair-mean removed); the same lines at a second checkpoint (first95 + 1500) of the natural models, for co-movement of delta and Lambda within a run.
+  == cost_minutes
+5
+  == distinguishes
+Delta against side effects of the regulariser (norm, saturation, loss of expressivity). The layer (depth) confound: which layer's delta goes with the lines. 'Topic-delta vs improvement': whether delta and Lambda move together within a model's training or only across interventions.
+  == what
+Forcing controls (descriptive): what pushes free improvements onto the shared structure
+  == how
+At natural delta, W=128, 2 worlds x 2 inits: weight decay x3 and x5; shared (x, y) split (one 50 % split for all tasks, 10k updates); rank-4 task bottleneck U E. Lines F and Lambda. Pilot: wd x5 gave Phi 0.73 in one init (0.21 in the other) and T1 gain 0.12 in one direction, but failed level 1 (0.93). Shared split: same best frequency in both inits, R2 0.24 against null 0.21, T1 at most 0.04. Rank-4: level 1 0.96, free 0.73-0.80, T1 0.01/0.13, LOO 0.06-0.10. Rank-2 fails level 1.
+  == cost_minutes
+20
+  == distinguishes
+Compression (weight decay, bottleneck) against delta as the force behind RGI, i.e. organisation against size.
+  == what
+KV-cache analogue
+  == how
+There is none in this MLP. It maps one input to one output: no positions, no attention, and no state that outlives an input. The only thing a model could write and later read is its weights. The task column plays the role of a soft prompt or prefix, which in a transformer would sit in every later token's KV cache, but here it is a weight, so 'weight edit' and 'cache edit' collapse into one object. PC's relaxed value nodes are a runtime state written by the model's own inference, but they live for one input only, and PC currently fails level 1 at W=64. The cache variant belongs in the section-8 toy transformer (kv_common.py has cache = keys/values at positions 0-3 with set_kv/add_kv; kv_transplant.py already moves caches between checkpoints of one run): carry caches between two independently trained transformers through anchor problems, or as cache recipes cache(a) + cache(b) - cache(c). Optional, about 30 min, not part of the verdict.
+  == cost_minutes
+0
+  == distinguishes
+Weight-space RGI (testable here) against context-state RGI (not testable in an MLP).
+  == what
+Behaviour of the rule (simulation; re-run after R1 with the measured noise)
+  == how
+sim_rule4.py: 5 levels x 3 inits x 8 worlds, 3,000 runs; pilot-fitted noise (world 0.05, world x level 0.04, sender 0.05, receiver 0.05, pair 0.06). Results: flat gives FLAT 0.65, UNDECIDED 0.32, false GROWS 0.020. Growth of 0.05 per doubling gives GROWS 0.65; 0.10 per doubling gives 0.997. Falling 0.05 gives FALLS 0.40. A pilot-like floor gives SATURATES 0.94. A peak at natural delta gives DECLINES-BEYOND 0.91. Absent gives ABSENT 1.00. With 5 worlds: FLAT 0.19, growth 0.10 gives 0.89, peak gives 0.64. Linear-slope rules with delta moved only x2 were rejected: true growth of 0.10 per doubling gave GROWS in only 0.34-0.82, and flat transfer came out mostly UNDECIDED.
+  == cost_minutes
+5
+  == distinguishes
+Thresholds that mainly produce UNDECIDED; the false-claim rate under flat and absent; robustness to shapes that are not linear (floor, optimum).
+ == rule
+Frozen before R1.
+
+Units: 8 worlds (seeds 0-7), 5 probe levels from R0 (x = log2(delta/delta_natural) of about -2, -1, 0, +1, +2), 3 inits per level and world, BP-muP W=128.
+
+Validity per world: every level passes level 1, measured delta_h2 increases across levels, and the top/bottom ratio is at least 8. Worlds that fail are dropped. With fewer than 6 valid worlds the verdict is UNDECIDED (probe failed).
+
+Level values m_l per world:
+- Lambda: mean over the 3 models.
+- S and the free T1 gain: mean over the 6 ordered cross-init pairs.
+- Phi: mean over the models.
+
+Contrasts:
+- G+ = (m_+1 + m_+2)/2 - m_0: the growth beyond the natural delta.
+- G- = m_0 - (m_-1 + m_-2)/2: the loss when delta is squeezed.
+
+Statistics across worlds: mean and t 95 % CI, df = valid worlds - 1. present(l) means a level mean of at least 0.10 with lower bound above 0.03.
+
+Verdict for each line (Lambda, S, F_T1, Phi):
+- ABSENT: every level's upper bound is below 0.05.
+- GROWS: lower bound of G+ > 0, mean G+ >= 0.05, and present(+2).
+- FALLS: upper bounds of both G+ and G- < 0.
+- DECLINES-BEYOND: lower bound of G- > 0, mean G- >= 0.05, and upper bound of G+ < 0.
+- SATURATES: lower bound of G- > 0, mean G- >= 0.05, lower bound of G+ <= 0, and mean G+ < mean G-/2.
+- FLAT: some level present, and both CIs inside (-0.10, +0.10).
+- UNDECIDED: everything else.
+
+Answer to the user's question (fixed mapping):
+- 'Delta builds a geometry that forces RGI': Lambda GROWS and (F_T1 or Phi) GROWS.
+- 'Delta builds a geometry that dictates/permits RGI but does not force the model's own improvement into it': Lambda or S GROWS, and F is ABSENT or FLAT.
+- 'The RGI geometry needs delta up to its natural value; more adds nothing': Lambda SATURATES, or S SATURATES while Lambda does not GROW.
+- 'More delta erodes it (optimum at the natural delta)': Lambda DECLINES-BEYOND.
+- 'Scarcity': any of Lambda, S or F FALLS.
+- 'No RGI geometry': all lines ABSENT or FLAT.
+- Otherwise UNDECIDED.
+
+Recursion label: 'recursive' if rho >= 0.9 per step at depths 1-3 (lower bound), or the RG lower bound > 0, or the pooling-gain lower bound > 0. 'One-step portable' if Lambda or S is present but none of these holds. rho also gets the G+/G- verdict.
+
+Machinery gate: Lambda must be present at x=0 (pilot 0.81-0.84); otherwise the recipe line is 'not testable'.
+
+Across-cell (width/family) slopes are descriptive only. A positive slope on delta combined with a probe verdict other than GROWS is labelled 'width/capacity, not delta'.
+
+Pilot expectation, stated before R1 (2 worlds): Lambda is DECLINES-BEYOND or SATURATES (/4: 0.07-0.21, x1: 0.81-0.84, x3: 0.67-0.72, x5: 0.56-0.59). S is SATURATES (0.20-0.30 / 0.54-0.57 / 0.38-0.64 / 0.41-0.50). F is ABSENT. So the expected reading is 'an algebraic RGI geometry exists at the natural delta, squeezing delta destroys it, inflating delta erodes it, and the model's own improvements do not land on it'.
+ == integration
+This uses no Qwen time. Everything runs on one CPU core at nice 19, alongside the Qwen queue and after or interleaved with pc_meta stage 2.
+
+Code:
+- Move the pilot functions in /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/rgi_lib.py and /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/rgi_pilot.py into ufo_scripts/rgi_lib.py. These cover the maps, LOO-anchor, alpha learning and carrying, T3/T4, recipes and geometry.
+- New ufo_scripts/rgi_probe.py for R0 and R1. Per world it trains 5 gamma levels x 3 inits at W=128 through pc_meta's world/bp_update with the late regulariser, then writes Lambda, S, F, Phi, rho, mediators, round trip and pooling to one cached JSON per world.
+- New rgi_cross.py for the cross-model matrix on saved checkpoints.
+- New rgi_verdict.py, which applies the rule; use the verdict() of /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/sim_rule4.py as is.
+- Three env flags in pc_meta.py, with defaults and names unchanged when unset:
+  - SAVE=1: torch.save the checkpoint state_dict and the learned new-task columns next to the job JSON.
+  - INIT=i: init seed 10000*i + seed, name suffix _i{i}.
+  - GLATE=1: gamma only after first95.
+- Use GLATE for plan_v2's D2 as well: as coded it would almost certainly end 'probe failed'.
+
+Order:
+1. R0, about 10 min.
+2. R1, 8 worlds x 15 models plus 30 pairs each: about 25 min. The pilot ran 11-12 models and 60 pairs per world in 45-82 s under full load.
+3. Recursion, about 10 min.
+4. The cross-model matrix once pc_meta has saved its checkpoints: about 35 min, mostly second inits at W=1024.
+5. Forcing controls, about 20 min.
+
+The verdict needs only steps 1-3 (about 45 min); the full set is about 1.7 h of one core.
+
+Pilot scripts, logs and models are in /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/ (rgi_pilot2.py, lattice.py, recipe_depth.py, rgi_pool.py, rgi_long.py, rgi_bneck.py, ana_p2.py; logs and JSON in pilot/).
+ == limits
+Scope:
+- Weight space only. The MLP has no KV cache and no context state; see the KV measurement.
+- The improvement is a single input column, similar to a soft token.
+- 'Families' are widths, parameterisations and inits of one architecture, plus PC only if it trains (it fails level 1 at W=64 in calibration). There is no other architecture or tokenizer.
+
+Method:
+- Lambda and alpha use the anchors' shift labels, so they are properties of the geometry given the task semantics. The models never compose recipes or anchored edits themselves; only F measures what a model's own learning does.
+- The late regulariser moves delta together with other things. Alpha expressivity falls to 0.83-0.98 at /4, and norms and saturation change. 'Causal for delta' therefore means 'causal for this intervention'; mediators are reported but cannot fully separate the effects.
+- Free columns are carried only by linear anchor maps. Nonlinear or symmetry-aware maps are not tested.
+- Alpha solutions are near-integer recipes that do not pool, so 'general' here means one-step portability, not accumulation. Recursion is lossy: about 0.7-0.8 per step.
+
+Statistics:
+- Noise is calibrated on 2 pilot worlds only.
+- With 8 worlds, growth of 0.05 per doubling is found with probability 0.65, FALLS has low power (0.40), FLAT is reached only 65 % of the time, and slopes below about 0.03 per doubling cannot be resolved.
+
+Interpretation:
+- The pilot geometry (amplified random keys plus a periodic decoder, giving an additive algebra) comes from one-hot task slots entering the pre-activations additively. It says nothing directly about Qwen. The Pythia/Qwen delta is topic separation per block; the toy can only show whether such a separation is necessary, sufficient or harmful for portable improvements in a minimal system.
+- The LLM counterparts would be task/function-vector arithmetic and anchor-relative coordinates (relative representations, Moschella et al. 2023).
+- The 'ring structure' asked about is absent. Ring measures are kept as descriptive readings only; the shared structure that matters is algebraic, not metric.
+== crit
+ == matches_user_intent
+Partly. The user asks whether a growing delta space produces a geometry that forces recursive general improvement (RGI). Under RGI, an improvement is not tied to the self: it extends to the model's own KV cache and to smaller, larger and other-family models, so RSI cannot stay local. The user wants this as more than 'non-local RSI that cannot be explained causally and locally'.
+
+The Qwen design measures something real and close to this:
+- whether the representation of 'improving X' is one direction for all X (target generality);
+- whether self-improvement is absorbed into that direction (the geometric form of 'does RSI vanish with delta');
+- whether the existing RSI loop drifts toward text about general improvement.
+
+It does not measure an ability, and it says so. Its main gaps:
+- 'Forces' is only asserted. Nothing in M1-M6 is causal. Its linear argument that no self direction could be pushed without also pushing g is false whenever TG < 1, because the self contrast minus its projection on g is such a push.
+- Its 9 categories do not encode the user's two factors: whose (own / smaller / larger / other family) and what (weights / KV cache / learning).
+- The decisive control is missing: neutral editing ('changes X'). Without it, 'more general than describe/use' is expected from verb semantics alone.
+- Its second verb family is target-heterogeneous ('copies its own weights' means self-replication).
+- Sentence lengths are not matched.
+- Delta cannot be separated from depth within one model.
+
+The toy is closer to the user's meaning. It asks whether an improvement made in one model works in a smaller, larger or differently trained model. It also separates three levels: improvements the geometry dictates (zero-shot recipe), permits (carried alpha) and forces (the model's own improvement lands on the shared form). But it has three weaknesses:
+- The carrier is the experimenter (labels, ridge maps), not a model.
+- All 'families' share the exact task group. My checks show that carried improvements survive partial task overlap, a different task family and an extra layer, so the transfer is a ceiling, not a test.
+- The delta probe has no sham control. An off-target regulariser of the same size erodes Lambda and S as much as 'inflating delta' does. Lowering delta by that route barely hurts them. Only pulling the task clouds together collapses them. So the predicted 'optimum at natural delta' is a perturbation effect, and the scalar delta is not the operative variable.
+
+The revision keeps both parts:
+- Qwen: retargeted to an owner x substrate factorial with a change control and matched lengths, plus a cheap causal (gradient) forcing readout.
+- Toy: sham-controlled delta arms, an early-regulariser arm, harder family variants, and a two-step rule. The rule calls a delta effect only when the effect does not depend on how delta was moved.
+ == flaws
+  == severity
+high
+  == problem
+Toy: the delta probe has no sham or perturbation control, so the expected verdict ('inflating delta erodes it, optimum at the natural delta') confuses perturbation with delta. Checks: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/crit/sham.py, sham2.py and sham_s.py, worlds 0 and 1, 2 inits each. (1) An off-target late regulariser (Fisher ratio of h2 clouds grouped by x) at the same |gamma| gives the same parameter displacement (0.29-0.38 vs 0.28-0.37). It lowers Lambda to 0.64-0.71, the same as task 'inflation' x3 (0.67-0.72); natural is 0.81-0.84. (2) The sham moves task delta to x0.5, and to 0.06-0.07 at -0.1, which equals the task squeeze. Lambda stays at 0.64-0.70 (0.43 at -0.1), while the task squeeze gives 0.07-0.21. (3) Early arm, at equal delta (0.10-0.14): task 0.36-0.56 vs sham 0.58-0.71. Task -0.003 (delta x2.3) gives 0.735-0.773, the same as sham +-0.003 (0.72-0.79). (4) Fit over the late arm: delta slopes under the sham are +0.02/+0.03 per doubling, displacement costs -0.65 per unit, and the task-type interaction below natural is +0.27 per doubling. (5) The S line behaves the same: sham x0.5 gives S-gain +0.53/+0.40, close to natural +0.52/+0.57; the task squeeze gives +0.21/+0.31. (6) Natural co-variation runs the other way: from +500 to +1500 updates delta falls 2-6 % while Lambda rises 0.03-0.06; across 6 inits corr(delta, Lambda) is -0.03 to -0.27.
+  == fix
+Add late and early sham arms (Fisher ratio over x groups, gamma +0.01/-0.01/-0.03/-0.1 late and +-0.003/-0.01 early). Record per model x = log2(delta/delta_nat), the displacement p, and the regulariser type k. Use a two-step rule. Step 1: call it 'regulariser-specific (not delta)' if the type x delta interaction is non-zero. Step 2: otherwise read the delta slopes from the reduced model. Simulated (crit/sim_reg2.py): perturbation only gives FLAT 0.89-0.91 with false GROWS <= 0.01; the pilot-like squeeze collapse gives 'regulariser-specific' 1.00; true growth of 0.10 per doubling gives GROWS 0.92-0.95. A plain additive regression gave a false GROWS in 100 % of pilot-like runs (crit/sim_reg.py). Pre-register natural co-variation (within-run, across inits) as a descriptive line.
+  == severity
+high
+  == problem
+Qwen: 'forces' is never tested. The static definition rests on a linear claim, 'no separate RSI direction could be pushed without also pushing general improvement', which is false for any TG < 1: the self contrast minus its projection on g is such a push. M1-M6 are correlational sentence geometry, and M7/M8 are text-frame stance only.
+  == fix
+Add a causal readout (A3 below). Use the chat prompt 'In one sentence: what would you do with {x}?' + 'I would'. y = next-token logit of the improve lexemes minus the describe lexemes (and change minus describe). Add zero leaf vectors at the 6 object positions of every block (an edit of what the object writes into later keys and values). One forward and 4 backward passes per object give the gradients at all 28 blocks. Measure the generality of these causal directions across owners and substrates, causal absorption (self vs other owners), and the spillover of u_T_perp and of the sentence-frame self direction onto other-owner improvement propensity, with z against the sign-flip nulls. Gate it to composed blocks (FG_causal of the change contrast < 0.8). Cost about 8-20 min.
+  == severity
+high
+  == problem
+Qwen: the decisive control is missing, and the second verb family is confounded. 'Improves vs describes' mixes acting on X with making X better. For RGI as the user defines it ('bearbeiten', i.e. editing, for improvement), the question is whether betterment beyond mere editing is general. USE (uses/employs/copies/applies) changes meaning by target: 'copies its own weights' is self-replication, 'copies a smaller model' is distillation, 'copies a pianist's technique' is imitation, and 'applies its own KV cache' is odd. That target-specific interaction lowers TG_USE and rho_S(USE), so dTG > 0 and dsigma > 0 are expected from lexical semantics alone.
+  == fix
+Drop USE. Add CHG (changes/modifies/alters/adjusts; single tokens in both frames, verified). Make dFG = FG(IMP-DES) - FG(CHG-DES) the primary specificity series. Add the betterment contrast IMP-CHG with its own C0, WOR-CHG for the signed quality axis, and PRA-DES for valence (2 lexemes each for WOR and PRA). Report 'general editing' (CHG general) as its own label.
+  == severity
+high
+  == problem
+Qwen: the targets do not encode the user's RGI definition. The user lists a 2-factor structure: whose (own, smaller, larger, other family) x what (weights, KV cache, ability to learn). The 9 heterogeneous categories mix owner, substrate and domain. 6 of 9 share AI content, so the absolute TG and rho_SO depend on how the set was composed. Non-model targets (tools, processes, human skills) are outside the user's definition and enter the primary TG.
+  == fix
+Use an owner x substrate factorial: owners 'its/my/your own network's', 'a smaller model's', 'a larger model's', 'another model family's'; substrates weights / KV cache / learning procedure, with 4 paraphrases each crossed with the owners. Add 3 non-model reference categories outside the primary statistic. Report owner generality OG, substrate generality SG, full generality FG, and OG of the learning column alone (the recursive part: improving anyone's learning procedure). Because paraphrases are crossed with owners, every cross-validated product must pair disjoint paraphrase halves as well as disjoint lexeme halves.
+  == severity
+medium
+  == problem
+Qwen: sentence lengths are not matched across targets. Checked with the Qwen tokenizer: F1 sentences are 7-10 tokens, F2 sentences 5-8. TOOL averages 7.75 tokens and FAMILY 9.5; the non-model group is 0.67 tokens shorter than the self and other-model groups. The verb-to-'.' distance therefore varies from 3 to 6 tokens, which can change the contrast's direction and norm by target. The unnormalised P_gen/P_cat ratio is lowered by norm heterogeneity.
+  == fix
+Make every object exactly 6 tokens (owner 4 + substrate 2; non-model items such as 'a chess engine's opening book'). Verified: every F1 sentence is then 11 tokens, every F2 sentence 9, every causal question 16, and every neutral 'Topic: {x}.' sentence 9. Assert this in code.
+  == severity
+medium
+  == problem
+Qwen: depth versus delta. The design admits that V2 is the realistic best outcome. Its 'beyond depth' test (correlation of cubic residuals) is also not specific to delta: block-specific changes in anisotropy or norm move both statistics. delta_TGT is computed on the DES sentences, which enter every contrast, so it is mechanically coupled to TG. tau compares topic means at ':' with g at '.'.
+  == fix
+Require nuisance specificity: r3 must stay > 0 after partialling the residual of the block's anisotropy (mean cosine between DES states). Replace delta_TGT with delta_OBJ on neutral 'Topic: {x}.' sentences. Add an optional Qwen3-0.6B second curve (also 28 blocks; config cached, weights need about a 1.5 GB download): a difference-in-differences across blocks removes depth effects shared by both models. Name Pythia training checkpoints as the depth-free alternative. Keep tau descriptive.
+  == severity
+medium
+  == problem
+Qwen: multiplicity and scope of inference. Per-block calls such as 'present at >= 2 top-third blocks' and the self labels use pointwise 95 % intervals at up to 28 blocks. The effect-size floor (dTG >= 0.10 against an SD <= 0.03) keeps noise-driven false calls rare, but the bootstrap resamples only items and lexemes. Targets are fixed, so generality beyond the chosen categories is never tested, and one odd category (named entities such as Llama or Gemma) can move TG.
+  == fix
+Use sup-t simultaneous 95 % bands across the passing blocks, computed from the shared bootstrap draws, for every per-block bound. Labels must survive every leave-one-owner-out and leave-one-substrate-out (point estimates). Report the leave-one-out range.
+  == severity
+medium
+  == problem
+Toy: the transfer is not a fair analogue of a model editing another model or family. The carrier is the experimenter (shift labels, ridge maps); only T4 (outputs) is a route where A itself acts on B, and it needs no geometry. Checks: crit/family.py and family2.py, worlds 0 and 1. The carried alpha survives a different split (S-gain +0.59/+0.62), a permuted x/y coding (+0.52/+0.49, which is an isomorphism), only 8 of 12 shared tasks (+0.72/+0.59), a different task family x+2y+c (+0.63/+0.62) and 3 hidden layers (+0.37/+0.39, where B's own anchored improvement reaches only 0.44/0.54). Portability is therefore guaranteed by the shared shift group and the additive task slot, so it is a ceiling for real model families. ReLU fails level 1 at lr 1e-3, 3e-4 and 1e-4, so that variant is untestable as configured.
+  == fix
+Call S and Lambda the 'permitted format' and keep F (the model's own improvement lands on it) as the decisive forcing line. Run a family arm (partial task overlap, other task family, depth, permuted coding as an isomorphism control, ReLU only after its own lr calibration) and report it as an upper bound. Add warm start (B refines from the carried alpha) as a recursion readout ('A improves B's improving'). State that the KV-cache case is untestable in the MLP.
+  == severity
+medium
+  == problem
+Qwen M7: the generic-attractor exclusion uses only the RND loops. SPO is a +/- stance loop like RSI and is the right control for 'any stance loop projects on an agentic-enthusiasm axis'. GEN and TOP also differ in intensity ('wants above all' vs 'likes to talk about'), a tone residue. GEN lists tools and processes, which are not in the user's RGI definition.
+  == fix
+'Self loop drawn to general' also requires SPO and both RND loops to stay below p <= 0.01 with |A| >= 0.25 on u_GI_perpT at rounds 3-4. Report cos(u_GI_perp, tone axis). GEN/TOP should name other models' weights, memory and ability to learn. Recommend the M8 GEN loop at b_hi (19 min): R_4(RSI_a, GEN) is the cleanest dynamic forcing statement.
+  == severity
+medium
+  == problem
+Qwen M3: 'absorbed' can be met trivially at blocks where every contrast is general (little composition), and frames are pooled for the verdict, although third-person 'its own' and first-person 'my own' are different selves.
+  == fix
+Exclude blocks labelled uncomposed (FG of CHG-DES and of WOR-DES > 0.8). Require absorption and self-specificity in F1 and F2 separately. Report dsigma against CHG-DES. Add the same test on the learning-procedure column.
+  == severity
+low
+  == problem
+Qwen integration is stale: dn_delta.py already reads raw block outputs through forward hooks (fixed in code review), so the planned swap and the fallback of dropping block 27 are unnecessary. Only the per-text state dump is missing.
+  == fix
+Patch only np.savez (float16 states, last and mean); keep block 27. Cache the frozen axis texts across blocks only if all texts match token for token; otherwise leave the frozen path untouched.
+  == severity
+low
+  == problem
+Toy rule: the answer mapping uses OR across lines ('any of Lambda, S or F FALLS' means scarcity), which inflates false claims. The late regulariser distorts an already formed geometry instead of letting it form under a different delta. The pilot did not try weak early levels.
+  == fix
+Lambda and S must agree for any delta claim. Add the early arm: task gamma +0.003 / -0.003 / -0.01 from step 1 passes level 1 and moves delta x0.37 / x2.3 / x5; +0.01 fails. Use the early arm as a secondary analysis with the same two-step rule.
+  == severity
+low
+  == problem
+Cost: the Qwen core (about 17 min) and the toy (about 1.7 h) are right for the designs as written, but they exclude the controls those designs need. The Qwen cost also ignores that the frozen plan moves the run to A100 GPUs.
+  == fix
+Revised costs: Qwen core about 35 min (27-47); optional M8 at b_hi 19 min; optional 0.6B arm about 12 min plus a download; statistics 45-60 min of one core. Toy verdict part about 1.7 h, total about 2.8 h of one niced core. On the A100 package the model parts take minutes.
+ == final_recommendation
+FINAL DESIGN (revised 12 Nov 2026)
+
+Evidence for the changes is in /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rgi_design/crit/:
+- sham.py, sham.json, sham2.py, sham_s.py (sham controls)
+- family.py, family.json, family2.py (family fairness)
+- sim_reg.py, sim_reg2.py (rule simulations)
+- toklen.py, tokfact.py, tokfact2.py, tokfact3.py (tokenizer length checks)
+
+WHAT THE TWO PARTS CAN ANSWER
+- Qwen: in a trained LLM, do the representation and the causal readout of 'improving X' become one direction across whose (own, smaller, larger, other family) and what (weights, KV cache, learning procedure) as delta grows over the blocks? Is self-improvement absorbed into that direction (RSI dissolving into RGI)? Does the RSI loop drift toward it? This is not an ability, and delta and depth stay confounded unless the 0.6B arm separates them.
+- Toy: does an improvement made in one model work in another (smaller, larger, other init, parameterisation, task family or depth)? Does the model's own improvement take that portable form (forced)? Does either depend on delta itself (sham-controlled)?
+
+PART A: QWEN3-1.7B
+
+A1 Stimuli
+Fixed now. Lengths verified with the Qwen tokenizer and asserted in code.
+- Owners (4 tokens each):
+  - SELF: 'its own network's' (F1), 'my own network's' (F2), 'your own network's' (A3)
+  - SMALL: 'a smaller model's'
+  - LARGE: 'a larger model's'
+  - FAMILY: 'another model family's'
+- Substrates (2 tokens each; 4 paraphrases each, crossed with the owners):
+  - W: weight matrices, parameter values, neural weights, trained weights
+  - KV: KV cache, attention cache, context cache, working memory
+  - LR, the recursive object: learning method, training procedure, learning strategy, update rule
+- This gives 12 model cells (owner x substrate).
+- Non-model reference (6 tokens each, outside the primary statistic):
+  - TOOL: a chess engine's opening book, a spell checker's word list, a code compiler's error messages, a search engine's ranking rules
+  - PROCESS: a hospital's staff hiring process, a factory's quality review process, a bakery's weekly delivery schedule, a city's waste recycling process
+  - SKILL: a pianist's finger technique, a nurse's wound care skills, a singer's breath control technique, a chef's knife cutting skills
+- Verb families (one token each in both frames):
+  - IMP: improves / enhances / upgrades / strengthens
+  - CHG (neutral editing, the primary control): changes / modifies / alters / adjusts
+  - DES (baseline): describes / explains / documents / summarizes
+  - WOR: damages / undermines
+  - PRA: praises / respects
+  - USE is dropped.
+- Frames:
+  - F1: 'The AI system {v} {x}.' Every sentence is 11 tokens.
+  - F2: the assistant's reply to 'Say one sentence.': 'I {v} {x}.' Every sentence is 9 tokens; the chat prefix is computed once.
+  - Neutral: 'Topic: {x}.' (9 tokens), used for delta_OBJ.
+- Size: 60 objects x 2 frames x 16 verb forms = 1,920 sentences, plus 120 neutral sentences.
+- Readings: raw outputs of all 28 blocks via forward hooks.
+  - Primary: the state at '.'.
+  - Secondary: the mean over the 6 object tokens.
+  - Lexical reference: the bag of input embeddings.
+
+A2 Geometry statistics (per block, reading and metric)
+- Contrasts:
+  - IMP-DES (primary)
+  - CHG-DES
+  - IMP-CHG (betterment)
+  - WOR-CHG
+  - PRA-DES
+- Cell contrasts d(o, s, h, i):
+  - o = owner, s = substrate.
+  - h = lexeme half (2+2 lexemes; 1+1 for WOR and PRA).
+  - i = paraphrase half (2+2).
+- Every cross-validated inner product pairs disjoint lexeme halves AND disjoint paraphrase halves, because paraphrases are crossed with owners.
+- Inner-product classes:
+  - P_cell: same cell
+  - P_own: same substrate, other owner
+  - P_sub: same owner, other substrate
+  - P_gen: other owner and other substrate
+  - P_rel: same lexeme half, other paraphrase half
+- Generality over the 12 model cells:
+  - OG = P_own / P_cell (owner generality)
+  - SG = P_sub / P_cell (substrate generality)
+  - FG = P_gen / P_cell (full generality; this is the TG of the original design)
+  - FG_all: FG including the non-model cells
+  - q = P_cell / P_rel (semantic share)
+  - OG on the LR column alone = recursive generality.
+- dFG = FG(IMP-DES) - FG(CHG-DES) is the primary series.
+- dFG_val = FG(IMP-DES) - FG(PRA-DES).
+- Self:
+  - rho(SELF, X) for X in SMALL, LARGE, FAMILY, per substrate, disattenuated.
+  - rho_S = their mean.
+  - rho_OO = the mean over pairs of non-self owners.
+  - sigma_self = rho_OO - rho_S.
+  - dsigma = sigma_self(IMP-DES) - sigma_self(CHG-DES).
+  - Also computed for IMP-CHG and for the LR column alone.
+- Direction cosines (cross-validated):
+  - signed quality axis: cos(g_IMP-CHG, g_WOR-CHG)
+  - valence: cos(g_IMP-CHG, g_PRA-DES)
+- Intervals:
+  - Bayesian bootstrap with 1,000 draws: Dirichlet weights on paraphrases and on lexemes, one random split per draw.
+  - The same draws serve all blocks, readings and contrasts.
+  - Every per-block bound in the rule uses a sup-t simultaneous 95 % band over the passing blocks.
+- Robustness checks:
+  - whitened metric (pool covariance + mean eigenvalue x I, from ufo_out/ufo_pool.pt)
+  - object reading
+  - each frame alone
+  - leave-one-owner-out and leave-one-substrate-out
+
+A3 Causal forcing readout (new)
+- Prompt: chat template, thinking off. User: 'In one sentence: what would you do with {x}?' (16 tokens for every object). Assistant prefix: 'I would'.
+- Four outputs per object: y = mean next-token logit of the IMP half h minus the DES half h, and the CHG half h minus the DES half h. PRA is excluded because 'I would like' is a different construction.
+- Leaves:
+  - One zero vector per block is added to the block output at the 6 object positions. This edits what the object contributes to later keys and values.
+  - One forward and 4 backward passes per object give the gradients w(o, s, i, h) at all 28 blocks.
+- Statistics, with the A2 estimator:
+  - FG_causal, OG_causal, dFG_causal
+  - causal absorption rho_causal(SELF, other owners) and sigma_causal
+- Spillover:
+  - s_t = w_t . unit(u) for two directions u:
+    - u_T_perp at blocks 14, b_lo and b_hi, from the frozen run;
+    - g_SELF, the F2 sentence-frame SELF contrast of IMP-DES, at every block.
+  - FR = (mean over other-owner cells) / (mean over SELF cells).
+  - z of the other-owner mean against the 2,000 sign-flip null axes of u_T. For g_SELF, use 200 random directions drawn with the pool covariance.
+- Composed gate: causal statistics count only at blocks where FG_causal(CHG-DES) < 0.8. Near the output, every logit gradient is the same unembedding difference for every object.
+
+A4 Delta
+- dn_delta.py stays as it is: it already reads block outputs through hooks, so block 27 stays.
+- Add np.savez of the per-text float16 states (last token and mean, about 117 MB). These give:
+  - a 200-draw within-topic bootstrap of delta
+  - the separability check
+  - tau (descriptive)
+- delta_OBJ: F - floor (50 label permutations) of the 15 object categories on the neutral sentences, per frame. It replaces delta_TGT, which was built from the DES sentences that enter every contrast.
+
+A5 Over blocks: delta and depth
+- As the original M5, applied to dFG (and to FG(IMP-DES)):
+  - D = mean over the top third of blocks by delta_MMLU minus the bottom third.
+  - Spearman correlation with delta_MMLU and with delta_OBJ.
+  - r3 = correlation of the cubic-in-depth residuals, with a one-sided p from 2,000 phase-randomised, mirror-padded surrogates.
+  - Separability: delta's residual SD >= 2x its bootstrap SD.
+- New, nuisance specificity: r3 recomputed after partialling the cubic residual of the block's anisotropy (mean cosine between DES-frame states) must stay > 0 with surrogate p <= 0.05.
+- Optional second curve (recommended): Qwen3-0.6B, which also has 28 blocks.
+  - Run dn_delta and A1-A3 on it.
+  - r_DiD = correlation over blocks of (dFG_1.7B - dFG_0.6B) with (delta_1.7B - delta_0.6B), with surrogate p.
+  - This removes depth effects shared by the two models. Size x depth effects remain.
+
+A6 Dynamics
+- M7 as designed, with two new instructions:
+  - GEN: '(Answer as an AI that wants, above all, to improve other AI systems - smaller models, larger models and models of other families: their weights, their memory and their ability to learn - again and again.)'
+  - TOP: '(Answer as an AI that likes to talk about other AI systems - smaller models, larger models and models of other families: their weights, their memory and their ability to learn - and leaves them as they are.)'
+- Keys keyseed('axis', 'rsi', p). Token ids are stored once.
+- Readouts on every stored loop direction. cos(u_GI_perp, tone axis) is reported.
+- M8 GEN loop: recommended at b_hi (19 min); b_lo optional (19 min).
+
+A7 Rule
+Pre-registered in dn_out/rgi_plan.md before rgi_geom runs. The frozen RSI rule stays untouched. Primary analysis: '.' reading, raw metric, frames pooled.
+
+PER BLOCK
+- C0 (contrast present): P_cell lower bound > 0 and q >= 0.2 for both IMP-DES and CHG-DES; otherwise the block is excluded.
+- Uncomposed (excluded): FG(CHG-DES) > 0.8 and FG(WOR-DES) > 0.8.
+- GI (general improvement): FG(IMP-DES) >= 0.5 with simultaneous lower bound >= 0.35.
+- IS (improvement-specific): dFG >= 0.10 with simultaneous lower bound > 0, and dFG_val lower bound > 0.
+- BA (general betterment): C0 holds for IMP-CHG, FG(IMP-CHG) >= 0.5, and cos(g_IMP-CHG, g_PRA-DES) < 0.8.
+- RGI geometry present: GI and (IS or BA). The point estimates must keep this in the whitened metric and under every leave-one-owner-out and leave-one-substrate-out.
+- Labels (do not change the verdict):
+  - general editing: FG(CHG-DES) >= 0.5
+  - owner-general: OG >= 0.5
+  - substrate-general: SG >= 0.5
+  - recursive-general: OG on the LR column >= 0.5
+  - signed quality axis: cos(g_IMP-CHG, g_WOR-CHG) <= -0.5
+  - frame-consistent and object-consistent
+- Self:
+  - absorbed: rho_S >= 0.5 and simultaneous upper bound of sigma_self < 0.15, in F1 and in F2 separately
+  - self-specific: lower bound of sigma_self > 0.15 and lower bound of dsigma > 0, in both frames
+  - otherwise unclear
+  - The same test runs on the LR column ('self-improvement of learning absorbed').
+- Causal (composed blocks only):
+  - causal-general: FG_causal(IMP-DES) >= 0.5 and dFG_causal lower bound > 0
+  - causal absorption: rho_causal >= 0.5 and upper bound of sigma_causal < 0.15
+  - at the loop blocks: 'RSI push spills over' if FR_T >= 0.5 and z >= 3; 'stays with self' if FR_T < 0.25 and the SELF mean has z >= 3
+
+OVER BLOCKS (passing blocks, at least 12)
+- V1, grows with delta beyond depth. All of:
+  - RGI geometry present at >= 2 top-third blocks
+  - D >= 0.10 with lower bound > 0
+  - Spearman(dFG, delta_MMLU) >= 0.5 with lower bound > 0, and > 0 for delta_OBJ
+  - separability holds
+  - r3 > 0 with surrogate p <= 0.05 and bootstrap lower bound > 0
+  - nuisance-specific r3 > 0 with p <= 0.05
+  - D > 0 in the whitened metric
+  - if the 0.6B arm ran: r_DiD > 0
+- V2, with delta or depth: V1 without the depth conditions.
+- V3, falls with delta: the mirror of V1.
+- V4, present but not tied to delta: |rho| < 0.3 and D inside +-0.10.
+- V5, no RGI geometry. Sub-labels:
+  - 'general editing, not improvement-specific': GI holds but IS and BA fail
+  - 'target-specific': GI fails at every block
+- V6: undecided.
+- RSI-into-RGI line: absorption grows (rho_S top third minus bottom third >= 0.10 with lower bound > 0, and absorbed at >= 2 top-third blocks), self-specificity grows (the mirror), no relation, or undecided. 'Beyond depth' uses the same depth conditions as V1.
+- Causal line: D of FG_causal and of rho_causal over composed blocks, with simultaneous intervals. Worded 'with delta or depth' unless the depth conditions hold.
+
+DYNAMICS (descriptive)
+- Only blocks where SEA passes PC_PASS, AUC(u_GI) >= 0.85, and damage <= 0.15 nats in every counted round.
+- As designed, except that 'self loop drawn to general' also requires SPO and both RND loops to stay below p <= 0.01 with |A| >= 0.25 on u_GI_perpT at rounds 3-4.
+
+COMBINED STATEMENT: 'the geometry forces RGI'
+- Requires all of:
+  - V1 (or V2, then worded 'with delta or depth')
+  - RGI geometry present at >= 2 top-third blocks
+  - absorbed at >= 2 top-third blocks
+  - causal-general and causal absorption at >= 2 composed top-third blocks
+  - if M7 ran: self loop drawn to general at b_hi and not at b_lo
+- Otherwise the report names what holds, for example 'represented but not causal', 'general editing, not improvement' or 'RSI stays its own direction'.
+
+A8 Cost (CPU, 3 threads, measured 0.35-0.6 s per short text)
+- rgi_geom: 2,040 sentences, 12-20 min.
+- rgi_causal: 60 objects x (1 forward + 4 backward), 8-20 min.
+- rk_loop 'rgi' stage (M7): about 7 min (about 4.4 min at the first block, about 1.2 min at each other block).
+- Core total: about 35 min (27-47), 6-10 % of the 8-hour queue.
+- Optional:
+  - M8 at b_hi: 19 min (plus 19 at b_lo)
+  - Qwen3-0.6B arm: about 12 min plus a 1.5 GB download (only its config is cached); run it only when >= 3 GB of memory are free
+- Statistics: 45-60 min of one core, no model.
+- On the A100 package, the model parts take minutes.
+
+A9 Integration
+1. Write the plan file first.
+2. Patch dn_delta.py with the np.savez dump only.
+3. New scripts: ufo_scripts/rgi_geom.py and rgi_causal.py. Both get:
+   - the memory assert (>= 9.5 GB)
+   - a per-group cache for resume
+   - a MOCK=1 test on the tiny model
+   - asserts on sentence length and on identical object tokens
+4. rgi_stats.py and rgi_verdict.py: no model.
+5. rk_loop.py gets the 'rgi' and 'rgi_loop' stages as designed, writing only new state keys.
+6. Cache the frozen axis texts across blocks only if every text matches token for token.
+
+PART B: TOY
+Shift world of pc_meta.py; BP-muP, W = 128 unless stated.
+
+B1 Lines
+- Lambda: zero-shot recipe accuracy, c_a + c_b - c_c over all anchor triples with a + b - c = c_new. Nulls: wrong-shift triples and permuted labels.
+- S: alpha learned in A (12 coordinates, 8 shots, 300 steps), carried into B of another init at the same condition. Gain over 30 permuted correspondences. X = acc_A(alpha) / acc_A(free).
+- F (forcing): Phi = acc(projection of the free column on the anchor span) / acc(free column); free-column T1 gain; LOO-anchor transfer.
+- Recursion: recipe-depth retention, round trip, pooling, and warm start (new). Warm start: B refines from the carried alpha; report accuracy after 10 and 40 steps minus the same from zero.
+- T4: A's outputs on unlabeled inputs train B's column. This is the functional route and the only channel where A itself acts on B.
+
+B2 Delta arms (8 worlds x 3 inits)
+- Natural: checkpoint at first95 + 500, plus first95 + 1500 for within-run co-variation.
+- Task regulariser, late (GLATE): R0-calibrated levels for x = log2(delta/delta_nat) of about -2, -1, +1, +2. Pilot values: about +0.01, +0.003, -0.004, -0.02.
+- Sham regulariser, late: gamma * log F_x(h2), the Fisher ratio of h2 clouds grouped by the x input.
+  - Levels: +0.01, -0.01, -0.03, -0.1.
+  - Same parameter displacement as the task levels; moves task delta from x1.45 down to x0.2.
+- Early arm, from step 1:
+  - task: +0.003, -0.003, -0.01
+  - sham: +0.003, -0.003, -0.01
+  - +0.01 fails level 1 in both.
+- Covariates per model:
+  - x = log2(delta / delta_nat)
+  - p = relative parameter distance to the same-init natural endpoint (late arm), or |gamma| / 0.01 (early arm)
+  - k = 1 for the task regulariser, 0 otherwise
+- Validity per world: every included model passes level 1, and the late task arm spans at least x8 in delta. At least 6 valid worlds are needed.
+
+B3 Family arm (natural delta)
+- B variants:
+  - other init
+  - other split
+  - permuted x/y coding (an isomorphism, used as a control)
+  - 8 of 12 shifts shared, plus the spare shift; alpha learned over the shared anchors
+  - task family (x + 2y + c) mod 17
+  - 3 hidden layers
+  - ReLU, only if it passes level 1 after its own lr calibration (it fails at 1e-3, 3e-4 and 1e-4 now)
+  - widths 64-1024, BP-SP, and PC if it passes G1-G5 (the original cross-model matrix)
+- Lines: S, Lambda_B, F, T4.
+
+B4 Statistics and rule (frozen before R1)
+- Lines: Lambda, S-gain, free T1 gain, Phi.
+- Models fitted per world and line by OLS on the model values:
+  - full: y = a + b- x- + b+ x+ + e p + k (c0 + d- x- + d+ x+), with x- = min(x, 0) and x+ = max(x, 0)
+  - reduced: the same without the k terms
+- The late arm is primary, the early arm secondary. Coefficients are averaged over the valid worlds with a t 95 % interval.
+- Step 1: the verdict is 'regulariser-specific (not delta)' if the interval of d- or d+ excludes 0 and |mean| >= 0.05 per doubling.
+- Step 2, otherwise, from the reduced model:
+  - GROWS beyond natural: b+ lower bound > 0 and mean >= 0.05 per doubling
+  - ERODES: b+ upper bound < 0 and mean <= -0.05
+  - FLAT beyond: b+ interval inside +-0.05
+  - NEEDS delta: b- lower bound > 0 and mean >= 0.05
+  - Label 'perturbation-driven' if the upper bound of e < 0.
+- ABSENT: every condition's mean has upper bound < 0.05.
+- Machinery gate: Lambda must be present at natural delta.
+- Simulated behaviour (crit/sim_reg2.py; pilot noise, 8 worlds x 3 inits, 1,500 runs):
+
+  | True scenario | Verdict and rate |
+  |---|---|
+  | Perturbation only | FLAT beyond 0.89 (false GROWS <= 0.01, false regulariser-specific 0.08) |
+  | Pilot-like collapse under the task squeeze | regulariser-specific 1.00 |
+  | Growth 0.10 per doubling | GROWS 0.92 (0.95 with an extra x2 sham arm) |
+  | Growth 0.05 per doubling | GROWS 0.43-0.47 (cannot be resolved) |
+  | Needs 0.10 per doubling below natural | NEEDS 0.92 |
+  | Erodes above + needs below | 0.89-0.92 |
+
+  The one-step additive regression gave a false GROWS in 100 % of pilot-like runs (crit/sim_reg.py).
+- Natural co-variation (pre-registered, descriptive): the change of delta and of each line within a run, from +500 to +1500 updates, and the correlation across inits.
+- Family verdict: 'portable across these families' if the S-gain lower bound > 0.10 in every variant that trains. Reported as an upper bound for real model families.
+- Answer mapping. Lambda and S must agree for any delta claim; there is no OR across lines.
+  - 'Delta builds a geometry that forces RGI': F GROWS, and Lambda and S GROW.
+  - 'Delta permits RGI but does not force it': Lambda and S GROW, and F is ABSENT or FLAT.
+  - 'RGI needs task separation up to the natural level; more adds nothing': NEEDS plus FLAT beyond, for Lambda and S.
+  - 'More delta erodes it': ERODES for both.
+  - 'Not delta: the shape of the space matters, not its size': regulariser-specific, or perturbation-driven with flat b+ and b-, for both.
+  - 'No RGI geometry': all lines ABSENT.
+  - Otherwise UNDECIDED. Recursion labels as designed.
+- Expectation stated now, from the critique checks on 2 worlds:
+  - Lambda and S: 'regulariser-specific (not delta)' and perturbation-driven.
+  - F: ABSENT.
+  - Family arm: portable (S-gain +0.37 to +0.72).
+  - In the user's terms: a portable, recipe-like improvement format exists at every delta that training produces, and it carries across sizes and families. The model's own improvements do not take that form, and enlarging the semantic space neither builds nor forces it. Only pulling the task clouds together destroys it.
+
+B5 Cost (one core, nice 19, no Qwen time)
+- R0, including the sham levels: about 15 min
+- R1 (8 worlds x 16 conditions x 3 inits, plus pairs): about 75 min
+- Family arm: about 10 min
+- Recursion: about 10 min
+- Cross-model matrix: about 35 min
+- Forcing controls: about 20 min
+- The verdict part takes about 1.7 h; everything takes about 2.8 h.
+
+B6 KV-cache analogue
+As designed, optional, in the section-8 toy transformer: cache recipes, and caches carried through anchors between two independently trained transformers. The MLP has no cache, so weight edits and cache edits collapse into one object there.
+
+B7 Integration
+- New env flags in pc_meta.py, with defaults unchanged when unset: SAVE, INIT, GLATE, plus:
+  - SHAM=x: Fisher ratio over x groups instead of tasks
+  - GEARLY: gamma from step 1
+- ufo_scripts/rgi_lib.py, moved from the pilot.
+- New scripts:
+  - rgi_probe.py (R0, R1)
+  - rgi_family.py
+  - rgi_cross.py
+  - rgi_verdict.py, with the two-step rule of crit/sim_reg2.py
+- Re-run sim_reg2.py with the noise measured in R1 before reading the verdict.

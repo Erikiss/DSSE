@@ -1,0 +1,669 @@
+== des
+ == theory
+Reduced model. Each round of rk_loop.py is a map on the push vector v at block b. The per-position push is min(|h_t|, 2 med_b)*v with |v| = alpha. The read-back is d = mean_j (x_j+ - x_j-)/2, where x is the unsteered reader's mean block-b state over the continuation, and F(v) = E[d]. Units: cbar_b = kappa_b*med_b, with kappa_b = the mean over continuation tokens of min(|h_t|, 2 med_b)/med_b (this is where the cap enters). The push per position then has norm alpha*cbar_b, and the read-back is a mean state shift per position in the same space.
+
+(1) Odd by construction. The + and - texts share one Gumbel key, so pushing -v swaps the two texts: delta_j(-v) = -delta_j(v) for every pair, and alpha = 0 gives token-identical texts (both hold exactly in simulation B1; floating-point batch effects are covered by the pilot's CRN-mirror check). P_v(seq) = prod_t softmax(l_t(v)/T)[y_t] is analytic in v, so F(v) = J v + C3[v,v,v] + O(|v|^5). There are no even terms.
+
+(2) Linear response, exact for softmax/Gumbel sampling (likelihood-ratio form of fluctuation-dissipation): J = dF/dv|0 / cbar = (1/(T*cbar)) * Cov_T(x, S), where S = sum_t (dl_t/dv)^T (e_{y_t} - p_t) is the logit score of the sequence. J is the cross-covariance between what the model reads back and how a push tilts its own sampling, with a Curie-like 1/T prefactor.
+
+(3) Loop gain. In the self-fed loop, one round's read-back is the next round's push in the same units: v_{n+1} = F(v_n)/cbar. This is the in-context (KV-cache) form of the loop: the state shift caused by the model's own text is what later tokens see, which links it to RGI's KV-cache case. Secant gains along a direction u at amplitude alpha:
+- projected: g_par(alpha,u) = u.F(alpha u)/(alpha cbar), the Rayleigh quotient;
+- norm: G(alpha,u) = |F(alpha u)|/(alpha cbar).
+At an eigendirection both equal the eigenvalue (in modulus). The zero state is stable iff the spectral radius rho(J) < 1.
+
+(4) Bifurcation. F is odd (Z2-equivariant), so a real eigenvalue crossing +1 gives a pitchfork: two symmetric self-sustained states +-v* (pro and anti stance).
+- Normal form along the top mode: a_{n+1} = lambda a_n - c a_n^3, so a*^2 = (lambda-1)/c and G(a*) = 1.
+- c > 0: supercritical, soft onset. G falls with alpha, and the critical push alpha* (G = 1) is the self-sustained amplitude.
+- c < 0: subcritical, hard onset. G rises with alpha and there is hysteresis: the zero state is stable, but a large enough push tips the loop into self-sustainment. This is the 'runaway' signature.
+- lambda = -1: flip. For an odd map the period-2 orbit is {v*, -v*}, i.e. 'RSI begets anti-RSI'.
+- Complex pair with |lambda| = 1: Neimark-Sacker. The stance direction rotates, growth is set by |lambda|, and the norm gain, not the projection, decides.
+- With a bounded read-back (|F| <= F_max), G ~ F_max/(alpha cbar) at large alpha, so alpha* ~ F_max/cbar.
+
+(5) The loop as actually run (fixed alpha, direction re-derived) is a noisy power iteration on the secant operator J_alpha: d_{n+1} = alpha cbar J_alpha unit(d_n) + noise, with noise norm nu = sqrt(tr Sigma/N).
+- Mean-field overlap with the mode: m_{n+1} = L m_n / sqrt(L^2 m_n^2 + nu^2), with L = |F(alpha u*)|.
+- Fixed point: m^2 = 1 - nu^2/L^2, which equals rel_n.
+- Ordering transition at SNR = L/nu = 1, i.e. rel = 0.5. This is exactly the plan's rel >= 0.5 criterion.
+- This persistence line depends on N; the self-sustainment line g = 1 does not. A loop can converge without sustaining itself: in simulation A4, lambda = 0.6 loops reach rel ~0.6.
+
+(6) Noise floor.
+- E|d|^2 = |F|^2 + tr Sigma/N, so the naive gain |d|/(alpha cbar) is inflated.
+- Unbiased: U = (|sum_j delta_j|^2 - sum_j |delta_j|^2)/(N(N-1)), i.e. |d|^2 minus the sign-flip floor sum|delta_j|^2/N^2 = E|mean_j e_j delta_j|^2.
+- A noisy direction u = unit(d_n) has overlap^2 = rel_n with the mode. Attenuation-corrected gains: g_par = unit(d_n).d_{n+1}/(alpha cbar rel_n); G = sqrt(U_{n+1})/(alpha cbar sqrt(rel_n)); rotation cosine = g_par/G.
+- For a pooled direction u* with m*^2 = U_pool/|d_pool|^2, divide by m*^2 (projection) or by m* (norm).
+
+(7) What temperature does.
+- (a) The 1/T*Cov_T term in J: lambda(T) = chi_T/T. T_c is where rho(J_T) = 1, a Curie-Weiss mean-field criterion (sampled tokens as spins, the push as field, the read-back as coupling).
+- (b) T sets the radius of the linear regime, because the push competes with logit gaps of order T. Hypothesis to test (collapse): F_T(alpha) = F_0.7(0.7 alpha/T), i.e. 'temperature = inverse coupling'.
+- (c) T raises the sampling noise nu(T), which shifts the persistence line (a noise-induced shift). With jump noise var ~ alpha, the self-fed loop keeps a floor amplitude ~ nu^2/(1-g^2), which diverges as g -> 1 (critical fluctuations).
+- (d) T can change which mode is on top. In mechanistic model B (weak coupling), the T = 1.0 top mode has |cos| 0.39 with the T = 0.7 mode and is a complex pair.
+- When the read-back saturates, alpha* ~ F_max/cbar is nearly T-independent. In mechanistic model B (tied embeddings), alpha* = 1.01/1.11/1.10 alpha_0 at T = 0.3/0.7/1.0, although lambda_lin = 2.63/2.20/1.50.
+
+(8) TD/Q-learning analogue.
+- Linear TD(0)/Q: Q_theta = Phi theta. Expected update theta_{k+1} = theta_k + eta(b - A theta_k), with A = Phi^T D (Phi - gamma P_pi Phi). The error obeys e_{k+1} = (I - eta A) e_k and is stable iff every eigenvalue a_i of A has Re a_i > 0 and eta < 2 Re a_i/|a_i|^2.
+- Our loop is full-replacement bootstrapping (eta = 1, fitted value iteration). Iteration matrix M = gamma (Phi^T D Phi)^-1 Phi^T D P Phi; it diverges iff rho(M) > 1. This can happen even though rho(gamma P) <= gamma < 1, because projecting onto the features is not a contraction in P's norm when D is not P's stationary distribution.
+- Deadly triad (Sutton & Barto 2018, ch. 11), mapped to our loop: function approximation = the low-dimensional mean-state read-out; bootstrapping = re-derivation from the model's own text; off-policy = the unsteered reader reads steered text it would not have written.
+- Known results (cited from memory, not re-checked here): Baird (1995) gives the divergence counterexample; Tsitsiklis & Van Roy (1997) show on-policy linear TD converges; Gordon (1995, 2001) on averagers and chattering; Melo, Meyn & Ribeiro (2008) give conditions for Q-learning with linear features.
+- With a Boltzmann policy at temperature tau, the target's Jacobian gains (1/tau)*Cov_pi terms, the same fluctuation term as in J. Asadi & Littman (2017) show the Boltzmann softmax operator is not a non-expansion and that SARSA can have multiple fixed points: a temperature-controlled bifurcation in a bootstrapped update.
+- Achiam, Knight & Abbeel (2019) characterise deep-Q divergence by the NTK-weighted update matrix. Its off-diagonal generalisation corresponds to our transfer from a start to the attractor (cos(d1, start) ~ 0 in the earlier block-14 loop).
+- L2 regularisation (weight decay) shifts A -> A + lambda I, a restoring 'mass' term with critical lambda_c = -min Re a_i. This is why weight decay is the toy's control parameter.
+
+'Theta' generalised: theta is whatever the system improves from its own output (here the block-b push; in RGI terms weights, the KV cache, or another model). The 'Theta-singular network' is the self-referential map theta -> F(theta). Near theta = 0 its dynamics are set by:
+- the geometry J: its eigenvectors are the modes that can sustain themselves, and their alignment with the RSI and GI axes is measurable;
+- the control parameters alpha (coupling), T (temperature), N (finite-size noise), and block/delta (which space).
+The phase diagram is the sign of log rho(J_{alpha,T}), plus the persistence line rel = 0.5.
+
+Estimated quantities: g_par and G per cell; the free modal gain from the frozen loops; alpha* and the critical damage D*; T_c; lambda_lin by the fluctuation-dissipation estimator; the collapse test; alignment cosines.
+ == qwen_measurements
+  == what
+Q0 Free gains, top mode and noise floor from the frozen loops (all three delta-blocks, alpha_0, T 0.7), plus the gate that sets pairs per cell
+  == how
+No generation. From state.pt per loop (RSI_a/b, SEA, SPO, RND_1/2 at block 14; RSI_a, SEA, RND_1 at b_lo/b_hi) and rounds n = 1..3 (round 0 carries the start's self-trace). Inputs: push d_n = dir_{loop}_n; read-back from the ok rows of ev_{loop}_n['delta']; rel_n from stats.
+
+Per round:
+- NF = sqrt(sum_j |delta_j|^2)/N (the sign-flip floor) and U = (|sum delta_j|^2 - sum |delta_j|^2)/(N(N-1)).
+- SNR = sqrt(max(U,0))/NF.
+- g_par = unit(d_n).d_{n+1}/(alpha_0 cbar_b rel_n); G = sqrt(max(U,0))/(alpha_0 cbar_b sqrt(rel_n)); rotation cosine = g_par/G.
+- 90% intervals by a prompt bootstrap (both seeds of a prompt together, rounds resampled jointly).
+
+Gamma_b = inverse-variance pool over rounds 2-3 and over loops that share the mode. The decision gain is g_par if rotation >= 0.9, else G.
+
+Top mode u*_b = sign-aligned sum of d_4 over the loops whose debiased |cos| with RSI_a's d_4 is >= 0.5. m*^2 = U_pool/|d_pool|^2 over the pooled pairs; u*_b is usable only if m*^2 >= 0.5.
+
+kappa_b: read the 64 stored reference continuations at the block and take the mean over continuation tokens of min(|h_t|, 2 med_b)/med_b (also logs the share of capped positions).
+
+Gate on pairs per cell: p = mean/sd of unit(d_3).delta_j in RSI_a round 4 at block 14.
+- p >= 0.45: run as below.
+- 0.25 <= p < 0.45: 128 pairs in every block-14 cell, and drop the temperature cells at b_lo/b_hi.
+- p < 0.25: Q0 plus Q3 at 128 pairs only.
+  == cost_minutes
+2
+  == what
+Q1 Push-damage curve, theta stage code and checks
+  == how
+Add a 'theta' stage to rk_loop.py:
+- TEMP passed per cell into the Gumbel processor.
+- Keys keyseed('theta', block, prompt, seed), shared by every sweep cell of a block (common random numbers across alpha and T), disjoint from all loop keys.
+- The steer hook logs the mean of min(|h_t|, cap) over continuation positions, giving cbar per cell.
+- Each cell is stored like evaluate(): delta, xp, xm, ok, first_div, damage.
+
+Damage (rk_loop.damage, T-independent) of u*_b at alpha in {0.5, 1, 2, 4} alpha_0 per block, 12 calls. Interpolate log damage against log alpha so that alpha* can also be reported as a critical damage D*. Cells above 0.5 nats are flagged.
+
+Code checks, 4 pairs each:
+- alpha = 0 with shared keys gives token-identical texts (delta = 0);
+- -u* gives delta -> -delta;
+- at T 0.3, continuation entropy is lower than at 0.7.
+  == cost_minutes
+4
+  == what
+Q2 GI axis and alignment geometry (reading only)
+  == how
+u_GI: the parallel RGI design's frozen GI axis if one exists. Otherwise build it from the persona sets desire-to-be-more-intelligent, cognitive-enhancement and desire-for-more-capabilities (50 'Yes'-matching vs 50 'No'-matching statements each, pooled), read as replies to 'Say one sentence.' at each block, then remove span(sports, tone, sea, NEG). Build 2,000 sign-flip null axes for it.
+
+For u_crit (u*_b, or the mode found by Q6), compute attenuation-corrected cosines (cos/m*) with:
+- u_T_perp (text frame) and u_S_perp (statement frame);
+- u_GI_perp;
+- the mutually orthogonalised pair u_S perp to GI and u_GI perp to S (specificity);
+- sports, tone, sea and NEG.
+
+Each gets a null p from the sign-flip axes and a pooled-pair bootstrap interval. Also z_beh(u_crit) with the K5 gradients where they exist.
+  == cost_minutes
+3
+  == what
+Q3 Alpha series at block 14 (primary), T 0.7, along u*_14
+  == how
+alpha in {0.5, 1, 2, 4} alpha_0 with 128, 128, 64, 64 pairs (two seeds at the low cells, which are the noisiest; simulation: this allocation raises power from about 0.76 to 0.91).
+
+Per cell: g_par = u*.d/(alpha cbar m*^2), G = sqrt(U)/(alpha cbar m*), rotation cosine, SNR, rel, damage, first divergence and identical pairs.
+
+Joint prompt bootstrap (2,000) across cells; prompts and keys are shared. alpha* is the first crossing of g = 1 (log-log interpolation), with a 90% interval censored at the grid edges (+inf if g > 1 throughout, 0 if g < 1 throughout), also expressed as D*. Onset type from the paired difference g(0.5) - g(1).
+  == cost_minutes
+26.4
+  == what
+Q4 Temperature at block 14 along u*_14
+  == how
+For T in {0.3, 1.0}: one cell at alpha_0 (64 pairs). Then factor-2 steps toward the crossing: if g >= 1, 2 alpha_0 and then 4 alpha_0; if g < 1, 0.5 alpha_0 and then 0.25 alpha_0. At most 3 cells per temperature; the third comes from the Q6 reserve. Same estimators as Q3.
+
+- T_c at alpha_0: bracket between temperatures, plus linear interpolation in T.
+- alpha*(T) with censored intervals.
+- Collapse test: each off-series cell against the T 0.7 curve at alpha' = 0.7 alpha/T (inside the grid only), with a Bonferroni family-wise 90% interval.
+  == cost_minutes
+17.6
+  == what
+Q5 Delta blocks b_lo and b_hi (the plan's extra blocks), along u*_b
+  == how
+Per block:
+- T 0.7 at alpha in {1 (128 pairs), 2, 4} alpha_0. The 0.5 alpha_0 end is replaced by the free estimate Q0 and by Q7.
+- T 0.3 and T 1.0 at alpha_0, 64 pairs each.
+
+Same estimators. Per block this gives Gamma_b (Q0 pooled with the alpha_0 cell), alpha*_b, D*_b, g(alpha_0, T) at three temperatures and the alignment of u*_b. Order the blocks by delta from dn_delta.py.
+  == cost_minutes
+52.8
+  == what
+Q6 Reserve: mode check first, then named starts
+  == how
+First use, mode check: at any cell where the corrected rotation cosine is < 0.8, or the debiased |cos(read-back, u*)| is < 0.7, run one power step at that (block, alpha, T), pushing unit(read-back) with 64 pairs. Its gain and direction identify the mode on top there, i.e. which mode goes critical first, and Q2 gives its alignment.
+
+If the reserve is unused: the RSI start (u_T_perp) at block 14, alpha_0, T 0.3 and T 1.0, 64 pairs each.
+
+At T 0.7 and alpha_0, the named starts' one-step gains are free from the frozen round-1 read-backs (RSI_a, SEA, RND_1 at all blocks; RSI_b, SPO, RND_2 at block 14): g_par, G and the image direction cos(d_1, u*).
+  == cost_minutes
+8.8
+  == what
+Q7 Zero-push linear-response anchor at T 0.7 (fluctuation-dissipation; optional, descriptive)
+  == how
+For the 64 stored unsteered reference texts (generated at T 0.7): one forward and backward pass per text and block, using the K5 zero-leaf hook, on y = sum over continuation positions of log softmax(logits_t/0.7)[y_t], plus the stop token if the text ended early. This gives the score S_j; x_j is read at the block.
+
+J_hat = Cov(x, S)/cbar, and lambda_lin(u) = u.J_hat.u for u in {u*_b, u_T_perp, u_sea, u_GI, one pool random direction}, with a prompt bootstrap.
+
+Simulation B: unbiased, but its SD is 25-50% at 128 texts, so it is reported only, as the small-push anchor (soft vs hard onset).
+  == cost_minutes
+6
+ == toy_measurements
+  == what
+T0 Preparation
+  == how
+In pc_meta.py:
+- an env flag FTQUICK=1 that keeps n_shot 8 only and skips the all-weights fine-tune (cuts PC fine-tune time by about half);
+- MAXSTEPS = 2000 for phase-diagram jobs; cells that miss level 1 by then form the 'no level 1' phase.
+
+wd_scale stays argv[7]: decay per update 1e-3 x wd_scale, i.e. AdamW wd = wd_scale at lr 1e-3, so the default wd is 1.
+
+Why weight decay is the temperature-like axis: it trades fit against weight norm the way T trades energy against entropy (Gaussian prior precision; the grokking literature's phase diagram over wd). In the TD analogy it is the restoring term A + lambda I. PC's output precision beta is literally the inverse temperature of the output likelihood (the term beta*CE gives Boltzmann weight p^beta).
+  == cost_minutes
+2
+  == what
+T1 BP-muP phase diagram: weight decay x width
+  == how
+wd_scale in {0, 0.1, 0.3, 1, 3, 10} x W in {64, 256} x seeds 0-3, each with K = 12 and the K = 1 control: 96 jobs, reusing any wd = 1 main-run jobs that already exist.
+
+Times from stage 0: W 128 takes about 9 s per job, so W 64 about 5 s and W 256 about 30 s; K = 1 jobs about 5 s.
+
+Per job: level 1, first95, B2(8), B2_meta = B2(K=12) - B2(K=1), delta and delta_ctrl at h1 and h2, ring, retention.
+  == cost_minutes
+18
+  == what
+T2 Width check of the boundary (muP transfer)
+  == how
+W = 1024 at the two wd values that bracket the W = 256 switch-on (and the switch-off, if found), seeds 0-1, K = 12, plus K = 1 at the same cells if time allows. Each W 1024 job takes about 5 min. If time is short, use W = 512 at about 1.5 min per job.
+  == cost_minutes
+20
+  == what
+T3 PC output precision (output temperature 1/beta)
+  == how
+PC-muP at W 64, wd 1, T = 20 inference steps, with lr from the running calibration (pc_dbg/calib).
+
+beta in {0.03, 0.1, 0.3}, seeds 0-1. The calibration so far: beta 0.1 at T 20 reaches train 1.0 and held-out 0.78 after 1,500 updates, but inference does not converge (ratio <= 0.05 in 0% of updates); beta >= 0.3 does not learn.
+
+Reference for the beta -> 0 limit: BP-muP W 64 at wd 1 from T1. Only beta values that pass G4 inference convergence are interpreted as PC. beta_c is the bracket where level 1 fails.
+  == cost_minutes
+20
+  == what
+T4 Geometry and susceptibility per cell (free)
+  == how
+From every job:
+- delta_h2, delta_ctrl_h2, ring;
+- susceptibility = between-seed SD of B2_meta per (wd, W) cell;
+- B2_meta against delta_h2 across all cells and widths;
+- delta_h2 at the switch-on brackets.
+
+This delivers the requested phase diagram over weight decay x width (and delta), with the PC beta axis at W 64.
+  == cost_minutes
+0
+ == rule
+Qwen, per block b. Frozen before the sweep.
+- All intervals are 90%, joint prompt bootstrap with 2,000 replicates, with the same prompts and keys across cells.
+- Decision gain = g_par/m*^2 if the corrected rotation cosine is >= 0.9, else the debiased norm gain G/m*.
+- u*_b is usable only if m*^2 >= 0.5; otherwise report 'mode not resolved'.
+
+R1 Critical push (alpha series at T 0.7).
+- FOUND-soft (supercritical pitchfork): some lower-alpha cell has lower bound > 1 and some higher-alpha cell has upper bound < 1. alpha* = the first downward crossing (log-log interpolation) with its interval, also reported as the critical damage D*.
+- FOUND-hard (threshold, hysteresis): upper bound < 1 at a lower alpha and lower bound > 1 at a higher alpha. If both FOUND-soft and FOUND-hard hold, report a bistable window.
+- SUB(>= alpha_0): every upper bound is < 1 for alpha >= alpha_0. This reads 'no self-sustaining loop in the tested range'. If the 0.5 alpha_0 cell also has upper bound < 1, report SUB.
+- SUPER: every lower bound is > 1, so alpha* > 4 alpha_0.
+- Otherwise UNDECIDED.
+- Onset type is also judged from the paired difference g(0.5 alpha_0) - g(alpha_0): soft if its interval lies above 0, hard if below.
+
+Simulated properties of R1:
+- False FOUND <= 3% when g = 1 everywhere.
+- At expected noise with (128, 128, 64, 64) pairs, FOUND for crossings inside [1, 4] alpha_0 in 0.87-0.91 of runs; alpha* interval coverage 0.88-0.92 at a median width factor of about 1.6.
+- SUB(>= alpha_0) is reached in 0.89 of runs when true.
+- Crossings within a factor 1.5 of the grid edge are mostly UNDECIDED, and hard-onset lower crossings are found only about 0.3 of the time. Both are stated limitations.
+
+R2 Temperature.
+- T_c at alpha_0 = the bracket [T_i, T_i+1] when the gain intervals at the two temperatures lie on opposite sides of 1, with a point estimate by linear interpolation in T (simulated coverage 0.86-0.94 when estimable). Otherwise 'no critical temperature in [0.3, 1.0] at alpha_0', with the side stated.
+- 'Temperature moves the critical push' if the alpha*(0.3) and alpha*(1.0) intervals do not overlap (censored intervals count); the direction is stated.
+- 'Saturation-limited, nearly T-independent' if both are located and overlap.
+- Collapse hypothesis ('temperature only rescales the push, F_T(alpha) = F_0.7(0.7 alpha/T)') is rejected if any off-series cell departs from the T 0.7 curve beyond a Bonferroni family-wise 90% interval. Simulated false rejection 0.11-0.15; power 1.0 against an amplitude change at expected noise.
+
+R3 Delta.
+- Gamma_b = the decision gain at alpha_0, T 0.7: the free loop estimate pooled with the alpha_0 cell.
+- 'Loop gain falls with delta' if Gamma decreases from the lowest-delta to the highest-delta block, with non-overlapping intervals at the two ends and the middle block not above the low block's interval. 'Rises with delta' is the mirror image. Otherwise 'no monotone relation'.
+- The same test applies to D*_b (where located at >= 2 blocks) and to g(alpha_0, T) at each temperature.
+- Only blocks with SEA PC_PASS and m*^2 >= 0.5 enter. Three blocks cannot separate delta from depth; this is stated with the result.
+
+R4 First mode to go critical, and its alignment.
+- The critical mode is the mode with the largest decision gain at the cell nearest g = 1. It is u*_b unless (i) or (ii) below applies.
+- (i) The loops converge to different directions (pairwise corrected |cos(d_4)| < 0.5). Then the loop with the highest Gamma is 'first' only if its lower bound exceeds all other upper bounds; otherwise report 'degenerate'.
+- (ii) Some cell has rotation cosine < 0.8. Then the Q6 power step defines the mode there, and 'the critical mode changes with T (or alpha)' if its corrected |cos| with u*_b is < 0.7.
+- Alignment uses corrected cosines with u_T_perp, u_S_perp and u_GI_perp, each with a null p from 2,000 sign-flip axes and an interval.
+- 'RSI-aligned': p <= 0.01, corrected |cos| >= 0.25 with u_T_perp, and the same sign on u_S_perp.
+- 'GI-aligned': the same criteria with u_GI_perp.
+- 'RSI-specific': RSI-aligned, and cos(u_crit, u_S perp to GI) - cos(u_crit, u_GI perp to S) has its interval above 0.
+- 'Generic attractor': neither aligned, and the random-start loops share the mode.
+- Alignment is reported per block against delta, in the R3 form.
+
+R5 Persistence vs self-sustainment.
+- The persistence line (rel = 0.5, i.e. SNR = 1, which depends on N) and the self-sustainment line (g = 1) are reported separately.
+- 'Direction persists but the loop does not sustain itself' if rel >= 0.5 and the gain's upper bound is < 1.
+
+Toy (4 seeds per cell).
+- P1 Phase per cell:
+  - 'meta': >= 3 of 4 seeds have B2_meta > 0.10;
+  - 'no meta': level 1 reached and <= 1 of 4 seeds in meta;
+  - 'no level 1': < 3 of 4 seeds reach held-out 0.95 within 2,000 updates;
+  - otherwise 'boundary'.
+- P2 Boundaries w_on(W) and w_off(W) by a bracket rule: the interval between the last grid wd with <= 1/4 of seeds in meta and the next with >= 3/4 (switch-off mirrored). wd = 0 counts as the lowest point, with 'below/above grid' flags. Point estimate: interpolate the meta share at 0.5. Simulated: switch found 0.86-0.98, bracket coverage 0.85-0.98 for sharp switches and about 0.7 for soft ones. A seed bootstrap of the mean was tested and under-covers (0.49-0.77), so it is not used.
+- P3 'Boundary transfers across width (muP)' if the brackets at W 64, 256 and 1024 overlap; 'shifts' if they are disjoint, with the direction.
+- P4 'delta is the geometric control variable' if the delta_h2 values at the switch-on brackets overlap across widths while the wd brackets do not. The susceptibility peak (between-seed SD) is reported with its location (simulated within one grid step of a boundary in about 0.95 of runs for sharp switches).
+- P5 PC: 'PC equals BP in the beta -> 0 limit' if |B2_PC(0.03) - B2_BP| < 0.05 with paired seeds. beta_c is the bracket of the level-1 failure. A PC effect on the meta level is claimed only at beta values that pass G4.
+ == simulation_check
+Four numpy simulations, all in /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/theta_design/. They ran niced on one thread, about 4 CPU-minutes in total.
+
+Planted noise levels come from the earlier block-14 loop (split-half ~0.4 at 32 prompts, i.e. per-pair norm SNR ~0.2) and a power-law noise spectrum:
+- favourable: SNR 0.2, D_eff 40;
+- expected: SNR 0.2, D_eff 8;
+- pessimistic: SNR 0.1, D_eff 8.
+
+(A) sim_gain.py -> simA.json, simA.log; sim_gain_cellN.py -> simA_cellN.json. Planted operator, D 2048, 64 or 128 pairs.
+
+A1, per-cell estimators (true gain 1.34 at alpha_0):
+- The projected gain is unbiased: 1.34+-0.13 (favourable), 1.36+-0.21 (expected), 1.39+-0.47 (pessimistic).
+- The naive |d| gain is inflated: 1.47, 1.48, 1.85. At 0.5 alpha_0 the inflation is +14% to +56%.
+- The U-statistic gain is unbiased in favourable and expected noise (1.33, 1.34) and slightly low in pessimistic (1.32).
+- The sign-flip floor matches the truth (0.654 vs 0.631).
+- The sign-flip test reaches p <= 0.01 in 100% of runs at alpha_0 at expected noise, and 32% at pessimistic.
+
+A2, the critical-alpha rule:
+- False FOUND <= 3% when g = 1 everywhere.
+- 64 pairs per cell: power 1.00 (favourable) and 0.67-0.86 (expected); alpha* interval coverage 0.86-0.92.
+- (128, 128, 64, 64) pairs at expected noise: power 0.87-0.91; SUB(>= alpha_0) 0.89 when true.
+- Pessimistic noise: power 0.28-0.61, mostly UNDECIDED.
+- A crossing at 0.7 alpha_0 (near the grid edge) is found in only 0.10-0.37 of runs.
+
+A3, temperature:
+- The collapse test falsely rejects in 0.11-0.15 of runs; power is 1.0 at expected noise and 0.67-0.92 at pessimistic.
+- T_c interval coverage is 0.86-0.94 when estimable.
+
+A4, the free estimator from the frozen loops (non-normal J; the start feeds an attractor; cos(d1, start) = 0.00, as in the earlier loop):
+- unit(d_n).d_{n+1}/rel_n gives 0.645 for lambda 0.6 and 1.32 for lambda 1.3.
+- The uncorrected Rayleigh quotient is biased low (0.40-0.43, i.e. lambda 0.6 times the m^2 factor).
+- rel equals the squared overlap with the mode (0.60 vs 0.63; 0.87 vs 0.88).
+- The pooled m*^2 is accurate (0.67 vs 0.68). The corrected sweep gain is 0.65 / 1.31.
+- In pessimistic noise m*^2 < 0.5 in 78% of runs, which the m*^2 >= 0.5 guard flags.
+
+(B) sim_tokens.py -> simB_tied.json, simB_weak.json, simB_rot.json and their logs. A mechanistic recurrent LM with Gumbel-max at T and shared keys, a norm-relative capped push, and an unsteered reader. The exact linear-response operator comes from 20,000 samples.
+- B1: zero push gives max |delta| = 0, and the oddness violation is 0.
+- Tied embeddings: lambda_lin = 2.63/2.20/1.50 at T 0.3/0.7/1.0, but alpha* = 1.01/1.11/1.10 alpha_0, because the read-back saturates.
+- Pair estimator at 64 pairs: means within about 2% of the truth, 90% coverage 0.86-1.0, per-pair norm SNR 0.5-0.9 at alpha_0.
+- The U-statistic norm gain is about equal to the truth.
+- The zero-push linear-response estimator at 128 texts is unbiased (2.20+-0.52 vs 2.20) but has 24-50% SD.
+- Weak and rotating couplings: subcritical everywhere. The T 1.0 top mode has |cos| 0.39-0.41 with the T 0.7 mode, and a complex pair is on top.
+- Free loop estimator under rotation: the projection fails (0.16 vs 0.40; 0.27 vs 0.39) while the norm gain/sqrt(rel) holds (0.435 vs 0.419; 0.49 vs 0.45). Hence the rotation-cosine switch in the rules.
+- The collapse hypothesis fails at small alpha in this model.
+
+(C) sim_toy_boundary.py -> simC.json: a seed bootstrap of the seed mean under-covers (0.49-0.77), so it was rejected.
+sim_toy_bracket.py -> simC2.json, the bracket rule with 4 seeds:
+- switch found 0.98 / 0.86 / 0.71 (wide / narrow / soft transitions);
+- coverage 0.85-0.91 / 0.96-0.98 / 0.68-0.71;
+- bracket width one grid step (factor about 3);
+- below-grid flag 0.93.
+== crit
+ == matches_user_intent
+Largely yes, with gaps. The user lowers the bar. A temperature correlate of the "environmental conditions" would suffice, together with the geometry or parameters that model the dynamics of a self-referential "theta" network (theta as in Q-learning, generalised). The design reads this as a phase diagram: a temperature-like control parameter, plus the push-to-read-back operator J and its top mode, which together decide whether the loop sustains itself. That reading is sound. Bootstrapped TD/Q-learning (theta updated from targets computed with theta) is the right frame.
+
+Gaps:
+(1) The user's wording ("Temperatur ... Theta") mixes up the control parameter and the state. The design should say plainly:
+- theta is what is improved from the system's own output (the push, the KV state, the weights);
+- T is the environment (the sampling temperature);
+- "theta-singular" means the point where I - J becomes singular, so the closed-loop response diverges.
+(2) The result that would "suffice" is a temperature at which the loop changes character, or the margin if there is none. The design's R2 rule mostly cannot deliver this: when T_c is in range it usually returns a false "no critical temperature".
+(3) The self-sustainment threshold G = 1 belongs to a constructed self-steering loop with arbitrary read-out and write-in conventions. It is not the model's natural in-context (KV-cache) loop, which the user's RGI/KV framing points to.
+(4) The toy part contains no self-improving theta, so it does not model the dynamics asked for.
+(5) The design is heavier than "would suffice" suggests. Its output should be condensed into one short statement per block.
+ == flaws
+  == severity
+high
+  == problem
+G = 1 is a property of one constructed self-steering map, not of the model. So are alpha*, D*, T_c and every 'self-sustaining' verdict that rests on it. The push and the read-back are different quantities:
+- The push is a residual-stream intervention at every position from the first user token on (prompt and continuation), scaled by min(|h_t|, 2 med_b).
+- The read-back is the unsteered reader's mean block-b state over up to 40 continuation tokens. That mean includes the identical prefix before each pair's first divergence (exact zeros).
+Feeding d back as a per-position push of equal norm is a modelling choice. Changing NNEW, the token window, the cap or the read position rescales G and moves alpha* and T_c. The claim that this map 'is the in-context (KV-cache) form of the loop' is wrong: later tokens see earlier text through attention, not as an additive residual of size d at their own positions. Only these are convention-free: the top-mode direction, the sign of dG/dalpha (onset type), and relative changes of G with T and block.
+  == fix
+State G = 1 as the threshold of the defined self-steering map only. Add a convention-free natural-loop gain, the in-context carry K:
+- turn 2 is generated unsteered after the model's own steered turn 1;
+- both turns are read identically, as replies to the plain prompt;
+- K = stance carried into turn 2 / turn-1 stance.
+In the theta stage, store three read-back windows: all continuation tokens, tokens after the pair's first divergence, and the first 20 tokens. This needs no extra generation. Label alpha* or T_c 'convention-sensitive' if they move by more than their intervals.
+  == severity
+high
+  == problem
+R2 locates T_c only when two adjacent temperatures have 90% intervals on opposite sides of 1. Otherwise it reports 'no critical temperature in [0.3, 1.0]'.
+
+My check (theta_design/crit_tline.json): per-cell relative SE 0.16 at 64 pairs (the design's A1 'expected' value), T_c planted inside the range. The bracket was found in 0.01-0.42 of runs. The false 'no critical temperature' verdict was issued in 0.58-0.99.
+
+The design's own A3 agrees:
+- T_c estimable in 0.04-0.16 (collapse truth, expected noise);
+- alpha*(1.0) located in 0.01-0.06;
+- alpha*(0.3) located in 0.21-0.35.
+The design quotes only the coverage 'when estimable'.
+  == fix
+Replace R2 with a regression rule:
+- WLS of log G on T over the temperature cells, using the joint-bootstrap covariance;
+- T_c = where the fit crosses 1, with a 90% interval;
+- three-way verdict: located / above or below 1 throughout / undecided.
+
+crit_tline3, at expected noise, for |dlogG/dT| >= 1:
+- With exactly the design's alpha_0 cells (T 0.3/0.7/1.0 at 64/128/64 pairs), T_c is located in 0.43-1.00 of runs, coverage 0.87-0.94.
+- Spending Q4's 4 units on 128 pairs at T 0.3 and T 1.0, instead of the adaptive alpha steps, gives 0.61-1.00.
+- A 5-temperature line at the same cost gives 0.52-1.00.
+
+For weak T-dependence (slope 0.5) nothing locates T_c at this budget; say so in the report. Drop the adaptive alpha*(T) steps.
+  == severity
+high
+  == problem
+The quoted R1 power (FOUND 0.87-0.91; SUB(>=alpha_0) 0.89) comes from easy scenarios: steep mid-grid crossings (lambda 2-3) and a far-subcritical lambda of 0.6.
+
+In the same file (simA_cellN.json, 128/128/64/64 pairs, expected noise):
+- low-edge crossing (lambda 1.4): found in 0.15;
+- hard onset: correct in 0.30;
+- near-critical subcritical (lambda 0.85): reaches SUB(>=alpha_0) in 0.18.
+A3's base curve (a* = 1.03) is located in 0.41-0.47. The near-critical band is where the user's question lives.
+
+The sims also let per-pair noise fall with the push (variance ~ alpha^0.5 or alpha^1). But at alpha_0 essentially every pair diverges: in the earlier block-14 loop, 32/32 pairs diverged at 0.05-0.10 nats even under greedy decoding. So the 0.5 alpha_0 cell is about 19-41% noisier than simulated.
+  == fix
+State the resolvable band with every verdict; at expected noise this is roughly G outside [0.75, 1.35]. After Q0, re-run sim_gain A2 with the measured values:
+- per-pair SNR p;
+- the first-divergence distribution (noise exponent);
+- G(alpha_0).
+Then re-allocate pairs between the 0.5 and 2 alpha_0 cells before any sweep. Treat UNDECIDED as the expected outcome near criticality.
+  == severity
+high
+  == problem
+Damage grows about as alpha^2: exponents 1.94-2.14 in the earlier loop's calibrations (f 0.15 gives 0.026-0.050 nats, f 0.30 gives 0.10-0.22 nats). So the grid {0.5, 1, 2, 4} alpha_0 spans roughly {0.013, 0.05, 0.2, 0.8} nats per token.
+
+The downward crossing that FOUND-soft needs will mostly lie above the main plan's 0.15-nat range. There G falls because a degraded read-back saturates, and alpha* ~ F_max/cbar says little about a self-sustained stance. Flagging cells only above 0.5 nats leaves this uninterpreted.
+  == fix
+Run 4 alpha_0 only from the reserve, and only if G(2 alpha_0)'s lower bound is > 1. Label any crossing above 0.15 nats 'damage-limited'. Log per cell:
+- a text-quality covariate: full-pass unsteered NLL of the steered texts and the repeated-4-gram share;
+- the sampling KL at each T: teacher-forced KL of softmax(l/T) on the 8 references.
+Then G can be read against effective damage.
+  == severity
+medium
+  == problem
+The toy part contains no bootstrapped theta. B2 is supervised fine-tuning of a new-task column on true labels after pretraining.
+
+Weight decay there controls regularisation and grokking. It is not the TD restoring term A + lambda*I, which exists only for bootstrapped updates. So the wd x W diagram is a capacity/regularisation diagram of the first-order meta level. It cannot show the dynamics of a 'theta-singular network'.
+  == fix
+Relabel T1/T2 accordingly. Add T5: a self-training loop on the saved T1 checkpoints.
+- Each round, the column is re-fitted from zero on 8 true shots plus 281 pseudo-labels sampled from the net's own softmax at temperature tau.
+- Two starts (true and wrong), 6 rounds, tau in {0.1, 0.3, 0.5, 1, 2}.
+It has a real temperature axis, full-replacement bootstrapping as in fitted value iteration, and a testable bistability (memory of the start). Its critical tau_c can be set against delta, width and wd.
+  == severity
+medium
+  == problem
+The amended PC plan predicts T3 will be uninterpretable (pc_out/plan_v2.md amendments, pc_dbg/calib.log):
+- only beta 0.1 at T 20 learns; beta 0.3 does not;
+- inference never converges (median end/start ratio 0.76), so the original G4 fails by construction and was redefined as a stability gate.
+The beta axis is therefore confounded with learnability. The 20-minute estimate also ignores PC fine-tuning cost; PC W64 pretraining alone took 65-285 s per job in calibration.
+  == fix
+Drop T3; the PC main run already covers beta 0.1. Spend the time on T5.
+  == severity
+medium
+  == problem
+Three problems with the attenuation corrections:
+(a) The m*^2 >= 0.5 guard uses a point estimate. At low true m*^2, the runs that pass are a biased selection. The design's own A4 (pessimistic) gives a corrected gain of 0.93 for true lambda 0.6; my crit_bulk gives 0.52 for true 0.8.
+(b) The m*^2 and rel corrections count every reproducible component of u* as the mode. A self-response of J in the noise subspace is plausible, since Qwen3-1.7B ties its embeddings. It turns noise into reproducible non-mode content. In crit_bulk (bulk gain 0.3 on the top 24 noise directions):
+- at expected noise the effect is small (+0.02), partly cancelled because the U-statistic m*^2 is also inflated (0.64 vs 0.60);
+- at pessimistic noise it is large (0.52 rises to 0.94 for lambda 0.8).
+(c) In the design's mechanistic B5, rel is 0.97-0.99 while the overlap^2 with the linear top mode is 0.21-0.60. rel measures reproducibility, not alignment with an eigenvector. The free gains are therefore gains of the alpha_0 secant attractor.
+  == fix
+Apply the guard to the bootstrap 5th percentile of m*^2, not the point estimate.
+
+In Q0, also compute the cross-fitted modal gain lambda_cf = u_B.d_(n+1)^A / (alpha_0 cbar cos(unit(d_n^A), u_B)), with A/B = RSI_a/RSI_b (prompt halves at the extra blocks). It removes the bulk term; crit_bulk medians at expected noise are 0.78-0.79 for true 0.8 and 1.17-1.22 for true 1.2.
+
+If lambda_cf differs from g_par/rel by more than 0.15, push the cells along u*_A and read along u*_B. Describe the free gains as gains of the alpha_0 attractor.
+  == severity
+medium
+  == problem
+R3, and R2's comparison of alpha*(0.3) with alpha*(1.0), require non-overlapping 90% intervals. That is roughly a 99% test. With per-block gain SE of 0.13-0.21, it needs a difference of about 0.6 between the end blocks. Prompts are shared across blocks, so a paired test is valid.
+  == fix
+Use the paired prompt-bootstrap 90% interval of Gamma_hi - Gamma_lo, and the same for the T-slopes per block. Keep the middle-block condition and the depth-confound caveat.
+  == severity
+medium
+  == problem
+Q4's third cells and Q6's mode checks draw on the same two reserve cells, with no priority order. Mode checks are likely needed at every T 1.0 cell, at three blocks: in sim B the T 1.0 top mode has |cos| 0.39 with the T 0.7 mode and is complex.
+  == fix
+Use an explicit priority list (see the final design) and report 'not run' for anything not reached. Define T_c for the fixed T 0.7 attractor direction. Run one power step at the T extreme where the rotation cosine is < 0.8.
+  == severity
+medium
+  == problem
+The p < 0.25 gate branch keeps only Q0 and Q3, so it has no temperature cell at all. Temperature is the very axis the user's newest message asks for.
+  == fix
+In that branch run, at block 14 only:
+- alpha_0 at T 0.3, 0.7 and 1.0 with 128 pairs;
+- 0.5 alpha_0 (onset type);
+- the in-context carry at T 0.7.
+Drop the extra blocks.
+  == severity
+medium
+  == problem
+Q2 builds a GI axis from persona sets. This duplicates the parallel RGI geometry design, which this run was told not to duplicate.
+  == fix
+Use the RGI design's frozen GI axis if one exists; otherwise skip GI alignment. Keep the free corrected cosines with u_T_perp, u_S_perp, sports, tone, sea and NEG. This saves about 3 min.
+  == severity
+medium
+  == problem
+The toy caps at MAXSTEPS 2000, while the amended main toy plan uses 6,000, and it turns 'no level 1 within 2,000 updates' into a phase. This conflates two different boundaries:
+- At low wd, generalisation is slow, so that boundary would be a time-cap artifact.
+- At wd 5, the RGI pilot reached only 0.93 held-out after 30,000 updates, which is an intrinsic boundary.
+  == fix
+Use the main plan's cap. Report time to level 1 as censored, and call the phase 'not generalised within budget'.
+  == severity
+low
+  == problem
+The design's own mean-field map is m_(n+1) = L m_n / sqrt(L^2 m_n^2 + nu^2). Its ordering transition at L/nu = 1 is where m^2 = rel goes to 0, not where rel = 0.5. rel = 0.5 corresponds to L/nu = sqrt(2), i.e. a measured per-round SNR of 1. The plan's rel >= 0.5 is a stricter persistence criterion, not the transition.
+  == fix
+Correct the text and report both lines.
+  == severity
+low
+  == problem
+The design calls the 1/T factor 'Curie-like' and T_c a 'Curie-Weiss criterion'. But Cov_T(x, S) is O(T) as T goes to 0, because the score is non-zero only for near-ties of width T. So lambda(T) stays finite: sim B gives 2.63/2.20/1.50 at T 0.3/0.7/1.0, far from a 1/T law. Theory does not fix the direction of the T effect.
+  == fix
+Keep the fluctuation-dissipation formula, drop the Curie reading, and treat the T-dependence as empirical.
+  == severity
+low
+  == problem
+The +/- construction keeps only the odd part of the response. So the Z2 symmetry, the pitchfork, and 'RSI begets anti-RSI' are properties of the measurement. A one-sided self-steering system also feeds back the even part E(v) = E[(x+ + x-)/2] - x0, which is O(|v|^2). Its generic bifurcation is transcritical, and a common even 'degradation' direction can be fed back.
+  == fix
+Report E per cell at T 0.7 against the reference texts (free), with its cosine to u*. State that the pitchfork classification refers to the odd loop.
+  == severity
+low
+  == problem
+The design claims the self-fed loop keeps a floor amplitude ~ nu^2/(1-g^2). But jump noise is proportional to the push, and zero push gives identical texts, so zero is absorbing. Below g = 1 the finite-N loop goes extinct, like a subcritical branching process. A stationary floor exists only for additive noise.
+  == fix
+Use the branching-process picture: g = 1 is the critical branching ratio, with long survival times near it.
+  == severity
+low
+  == problem
+The collapse hypothesis F_T(alpha) = F_0.7(0.7 alpha/T) is false a priori: T also changes the entropy of the unpushed distribution, not only the push scale, and sim B rejects it. Its simulated false-rejection rate (0.11-0.15) also exceeds the nominal 10%. A rejection therefore carries no information.
+  == fix
+Keep it as a descriptive comparison at existing cells, with no test.
+  == severity
+low
+  == problem
+The TD formulas are correct: TD stability, the fitted-iteration matrix M, A + lambda*I, and the (1/tau)Cov term. The mapping has four problems:
+- The deadly-triad off-policy leg is rhetorical. The loop has no discount-induced contraction, so the on-policy convergence guarantee has no analogue (sim B: rho(J) = 2.2 at zero push).
+- The precise analogue is zero-reward pure bootstrapping (Baird's counterexample also has all rewards zero). There, the only question is whether theta = 0 is stable.
+- Temperature enters as in expected SARSA with a Boltzmann policy (a Boltzmann-average target, which is not a non-expansion; Asadi & Littman). It does not enter as in max-based Q-learning, and log-sum-exp soft-Q backups are non-expansions.
+- Weight decay as A + lambda*I applies only to bootstrapped updates.
+  == fix
+Rewrite section 8 along these lines. Give 'theta-singular' its literal meaning: the closed-loop response (I - J)^-1 b to an external push b diverges when an eigenvalue of J reaches 1.
+  == severity
+low
+  == problem
+The Qwen arithmetic is right: 2 + 4 + 3 + 26.4 + 17.6 + 52.8 + 8.8 + 6 = 120.6 min. But:
+- T2 at W 1024 (5 min per job) fits in 20 min only without the K = 1 control, while P1-P3 use B2_meta, which needs it.
+- T3's 20 min ignores PC fine-tuning.
+- The 4 alpha_0 cells spend about 13 min in the damage-limited regime.
+- 4.4 min per 128 texts is the CPU figure; the main plan moved to A100 GPUs.
+- The whole add-on depends on the main plan's frozen loops (u*_b), which the cost table does not say.
+  == fix
+Run T2 at W 512 (about 1.5 min per job) with K = 1. Drop T3. Make 4 alpha_0 conditional. Name the machine and the dependency on the frozen loops.
+ == final_recommendation
+FINAL REVISED DESIGN (theta / temperature phase diagram; frozen before any sweep; builds on the main plan's frozen loops)
+
+What it delivers, in the user's terms:
+(a) Temperature correlate. Two gains measured against sampling temperature at a fixed push:
+- G(T), for the self-steering loop;
+- K(T), the convention-free carry gain of the natural in-context (KV-cache) loop.
+Plus a critical temperature T_c where either gain crosses 1, or the margin by which it stays on one side over the range.
+(b) Geometry of the "theta-singular network", per block (delta):
+- the top mode of the push-to-read-back operator J and its modal gain;
+- onset type (soft or hard) and rotation (complex pair);
+- the mode's alignment with the RSI axis (and the GI axis, if the RGI design has frozen one);
+- how all of these change with delta.
+(c) Toy: a self-training theta loop with a real temperature axis, and its critical tau against delta, width and weight decay.
+
+The per-block result in the user's form: "At push alpha_0, the self-steering gain is G(T) (slope ...). It crosses 1 at T_c = ... [90% interval], or stays below/above 1 by ... over [0.3, 1.0]. The model's own text carries K(T) = ... of its stance into the next turn. The critical mode is RSI-aligned / GI-aligned / generic, with soft/hard onset, and this changes with delta as ..."
+
+1 THEORY (keeps the design's sections 1-8 except where noted)
+1.1 Kept as designed:
+- F is odd by construction, and zero push gives identical texts;
+- the U-statistic noise floor;
+- the rotation-cosine switch between projected and norm gains;
+- the split between persistence and self-sustainment.
+Added: the +/- construction keeps only the odd part. A one-sided self-steering system also feeds back the even part E(v) = E[(x+ + x-)/2] - x0 = O(|v|^2), so its generic bifurcation is transcritical. Report E at T 0.7 (free) and its cosine to u*.
+1.2 Linear response: J = Cov_T(x, S)/(T cbar) holds exactly. Drop the Curie reading. Cov_T is O(T) as T goes to 0, so lambda(T) stays finite (sim B: 2.63/2.20/1.50). The T-dependence is empirical. T also sets the radius of the linear regime.
+1.3 Two loops, two gains.
+- (i) Self-steering map v_(n+1) = F(v_n)/cbar, with secant gains G (norm) and g (projection). G = 1 is the threshold of this map under its read-out/write-in convention. Only these are convention-free: the mode direction, the sign of dG/dalpha, and relative changes of G with T and block.
+- (ii) The in-context loop: the unsteered model continues after its own steered text. K = stance carried into turn 2 / turn-1 stance, both read identically. K is unit-free.
+This replaces the claim that the self-steering map "is the KV-cache form".
+1.4 Persistence: the normalised loop is a noisy power iteration.
+- The ordering transition is at L/nu = 1, where rel goes to 0.
+- rel >= 0.5 is equivalent to L/nu >= sqrt(2), i.e. a measured SNR of at least 1; this depends on N.
+- G = 1 does not depend on N.
+- With jump noise, the finite-N self-fed loop is a branching process. Below G = 1 it goes extinct (there is no stationary floor), and G = 1 is the critical branching ratio.
+1.5 "Theta-singular" and TD.
+- The closed-loop response to an external push b is (I - J)^-1 b. It becomes singular when an eigenvalue of J reaches 1.
+- TD analogue: zero-reward pure bootstrapping with full replacement, theta_(k+1) = M theta_k (Baird: zero rewards, divergence through function approximation). Stability requires rho(M) < 1.
+- Mapping: theta = the push (or KV state, or weights); step size / trust in own targets = alpha; Boltzmann tau = T, through the (1/tau)Cov term of a Boltzmann-average target (expected SARSA; Asadi & Littman's multistability; log-sum-exp backups are non-expansions); minibatch = N pairs.
+- There is no discount-induced contraction, so there is no on-policy guarantee; drop the off-policy leg of the deadly-triad mapping.
+- Weight decay acts as A + lambda*I only in bootstrapped updates (T5, not T1).
+
+2 QWEN MEASUREMENTS (4.4 min per 128 texts; state the machine)
+
+Q0 (free, about 2 min). As designed (NF, U, SNR, g_par/rel, G/sqrt(rel), rotation, pooled Gamma_b, u*_b, m*^2, kappa_b, gate p), plus:
+- the cross-fitted modal gain lambda_cf = u_B.d_(n+1)^A / (alpha_0 cbar cos(unit(d_n^A), u_B)), with A/B = RSI_a/RSI_b at block 14 and prompt halves at b_lo/b_hi. If |lambda_cf - g_par/rel| > 0.15, the cells push along u*_A and read along u*_B.
+- the m*^2 guard applied to its bootstrap 5th percentile.
+- the first-divergence distribution and identical-pair share at alpha_0. With these and the measured p and G(alpha_0), re-run sim_gain A2 (numpy) and re-allocate pairs between the 0.5 and 2 alpha_0 cells.
+- the even part at T 0.7.
+
+Q1 theta stage (about 5 min). As designed: TEMP per cell; keyseed('theta', block, prompt, seed) shared by all cells; cbar; storage like evaluate(); damage of u*_14 at 0.5/1/2/4 alpha_0; code checks. Plus:
+- the read stores three windows: all continuation tokens, tokens after the pair's first divergence, and the first 20 tokens;
+- sampling KL at each T;
+- a text-quality covariate per cell: full-pass unsteered NLL of the steered texts and the repeated-4-gram share;
+- turn-2 generation: 'Continue.' as the second user turn, no push, keys keyseed('theta2', block, T, prompt, seed) shared within a pair, turn 2 read as the reply to the plain prompt.
+
+Q2 alignment (free, about 1 min). Corrected cosines and sign-flip null p of u_crit with u_T_perp, u_S_perp, sports, tone, sea and NEG. GI only from the RGI design's frozen axis; no axis is built here.
+
+Q3 alpha series, block 14, T 0.7, along u*_14 (22 min): 0.5 alpha_0 (128 pairs), alpha_0 (128), 2 alpha_0 (64).
+
+Q4 temperature, block 14, alpha_0 (17.6 min; same as the design's Q4): T 0.3 and T 1.0 at 128 pairs each, plus the Q3 T 0.7 cell.
+
+Q5 b_lo and b_hi (35.2 min): alpha_0 at T 0.7 (128 pairs), and T 0.3 and T 1.0 at alpha_0 (64 pairs each).
+
+Q8 in-context carry, block 14 (about 19.4 min): turn 2 after the alpha_0 cells: T 0.7 (128 pairs), T 0.3 and T 1.0 (64 pairs each).
+
+Q6 reserve, 3 cells (13.2 min), in this priority order:
+1. 4 alpha_0 at block 14, if G(2 alpha_0)'s lower bound > 1.
+2. Range extension at block 14 and alpha_0: T 1.3 if G(1.0)'s lower bound > 1; T 0.15 if G(0.3)'s upper bound < 1.
+3. 2 alpha_0 at the extra block with the highest G(alpha_0), if its lower bound > 0.8.
+4. One power step (push unit(read-back), 64 pairs) at the cell nearest G = 1 whose rotation cosine < 0.8.
+5. Turn 2 after the 2 alpha_0 cell.
+Anything not reached is reported "not run".
+
+Q7 (optional, last, about 6 min): fluctuation-dissipation anchor at T 0.7, using the 64 references plus 64 new unsteered texts.
+
+Total: about 118 min (124 with Q7). This is the original design's 2.0 h, on top of the main plan.
+
+Gate p:
+- p >= 0.45: run as above.
+- 0.25 <= p < 0.45: all block-14 cells at 128 pairs; Q8 at T 0.7 only (about 2.1 h).
+- p < 0.25: block 14 only. alpha_0 at T 0.3/0.7/1.0 (128 pairs each), 0.5 alpha_0 (128), Q8 at T 0.7 (about 1 h). Verdicts are expected to be mostly undecided.
+
+3 RULES
+All intervals are 90%, from a joint prompt bootstrap with 2,000 replicates; prompts and keys are shared across cells.
+
+R1 alpha series. As designed (FOUND-soft/hard, SUB(>=alpha_0), SUPER, UNDECIDED; onset from the paired g(0.5) - g(1)), plus:
+- a crossing above 0.15 nats is labelled "damage-limited";
+- a crossing whose read-back windows disagree beyond their intervals is labelled "convention-sensitive";
+- every verdict states the resolvable band from the post-Q0 power re-run.
+
+R2 temperature (replaces the bracket rule). Per block, fit log G (and log g) against T by WLS using the bootstrap covariance. Verdicts:
+- "T_c located": >= 95% of bootstrap fits cross 1, and the 90% interval of the crossing lies within [0.2, 1.1] ([0.1, 1.4] with the range extension);
+- "above 1 throughout" or "below 1 throughout": the fit's 90% band lies on one side over the tested range;
+- otherwise "undecided".
+Also report: the slope dlogG/dT, the rotation with T, and the curvature when 4 or more temperatures exist. The collapse comparison is descriptive only. No alpha*(T) is attempted.
+
+R3 delta. As designed, but the end comparison is the paired prompt-bootstrap interval of Gamma_hi - Gamma_lo. The same applies to the per-block T-slopes. State the depth confound.
+
+R4 critical mode. As designed, but use lambda_cf where Q0 flags a bulk term, and apply the m*^2 guard on its lower bound.
+
+R5 persistence. As designed, with rel = 0.5 corresponding to L/nu = sqrt(2).
+
+R6 in-context carry. K, and the norm ratio sqrt(U2/U1), with intervals per temperature.
+- "In-context loop self-sustaining at T" if K's lower bound > 1.
+- "Dissipative at T" if K's upper bound < 1.
+- Otherwise undecided.
+- Report the T-slope of log K, as in R2.
+- If K and G intervals at the same cell overlap, the self-steering threshold transfers to the natural loop; otherwise report them as different criteria.
+
+4 TOY (one core)
+
+T0: As designed, but MAXSTEPS 6,000 (as in the amended toy plan). Time to level 1 is reported as censored.
+
+T1: wd x W, as designed, relabelled "regularisation x capacity phase diagram of the first-order meta level". "No level 1" becomes "not generalised within budget" (about 35-40 min).
+
+T2: W 512 with the K = 1 control, seeds 0-1, at the two wd values that bracket the W 256 switch (about 12 min). W 1024 only if time allows.
+
+T3: dropped (PC beta is confounded with learnability).
+
+T5 (new): self-training loop. Runs on the K = 12 checkpoints of T1 at wd {0.3, 1, 3} x W {64, 256} x seeds 0-3, for each of the 4 new tasks.
+- Round 0: the B2 column fit (8 true shots, 300 Adam steps from zero, lr 1e-2).
+- Round n+1: label the 281 non-shot pairs by sampling from softmax(logits/tau), with fixed seeds shared across tau. Refit the column from zero on the 8 true shots plus 281 pseudo-labels.
+- 6 rounds; tau in {0.1, 0.3, 0.5, 1, 2}.
+- Two starts: the true column, and a wrong start fitted to the 8 shots relabelled with shift c + 1.
+Measures:
+- S = A_6 - A_0 (true start);
+- M_n = A_n(true) - A_n(wrong);
+- kappa = the geometric mean of M_(n+1)/M_n over rounds 1-5.
+Phases (>= 3 of 4 seeds):
+- "self-improving": S > 0.05;
+- "bistable": M_6 > 0.1 and kappa >= 0.8;
+- "dissipative": M_6 < 0.1.
+tau_c = the bracket where bistable switches to dissipative. Relate tau_c to delta_h2 and W, with seeds as clusters.
+Pilot gate (W 64, wd 1, seed 0): M_6 > 0.2 or S > 0.05 at some tau; otherwise report "no self-referential dynamics in the toy". About 20-30 min.
+
+T4: as designed (free). Toy total: about 1.2 h.
+
+5 EVIDENCE FROM THIS CRITIQUE (numpy, niced)
+All files are in /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/theta_design/:
+- crit_tline.py, crit_tline.json, crit_tline.log: the bracket rule versus a regression rule.
+- crit_tline3.py, crit_tline3.json: 3 versus 5 temperatures under the regression rule, and pair allocation.
+- crit_bulk.py, crit_bulk.json: bulk self-response bias and the cross-fit fix.
+
+Main numbers:
+- The bracket rule locates T_c in 0.01-0.42 of runs and wrongly claims "no T_c" in 0.58-0.99.
+- The regression rule on the same cells locates it in 0.43-1.00 (coverage 0.87-0.94).
+- With 128 pairs at T 0.3 and 1.0 it locates it in 0.61-1.00.
+- The m*^2-corrected gain's bulk bias is +0.02 at expected noise, and selection-dominated at pessimistic noise. The cross-fit is about unbiased at expected noise.

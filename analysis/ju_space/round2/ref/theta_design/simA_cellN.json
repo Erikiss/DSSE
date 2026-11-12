@@ -1,0 +1,354 @@
+{
+ "expected (SNR 0.2, D_eff 8) | pairs (64, 64, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.76,
+   "p_found_any": 0.76,
+   "p_sub_from_a0": 0.005
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.11,
+   "p_found_any": 0.11,
+   "p_sub_from_a0": 0.2175
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.8575,
+   "p_found_any": 0.8575,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.2825,
+   "p_found_any": 0.0,
+   "p_sub_from_a0": 0.7075
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.04,
+   "p_found_any": 0.0325,
+   "p_sub_from_a0": 0.1325
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.15,
+   "p_found_any": 0.7075,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.995,
+   "p_found_any": 0.0025,
+   "p_sub_from_a0": 0.0025
+  }
+ },
+ "expected (SNR 0.2, D_eff 8) | pairs (128, 64, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.9225,
+   "p_found_any": 0.9225,
+   "p_sub_from_a0": 0.0
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.1725,
+   "p_found_any": 0.1725,
+   "p_sub_from_a0": 0.2125
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.86,
+   "p_found_any": 0.86,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.3775,
+   "p_found_any": 0.0025,
+   "p_sub_from_a0": 0.705
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.025,
+   "p_found_any": 0.0275,
+   "p_sub_from_a0": 0.145
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.2525,
+   "p_found_any": 0.7425,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.99,
+   "p_found_any": 0.005,
+   "p_sub_from_a0": 0.0
+  }
+ },
+ "expected (SNR 0.2, D_eff 8) | pairs (192, 64, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.9725,
+   "p_found_any": 0.9725,
+   "p_sub_from_a0": 0.0
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.19,
+   "p_found_any": 0.19,
+   "p_sub_from_a0": 0.225
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.8275,
+   "p_found_any": 0.8275,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.4625,
+   "p_found_any": 0.0,
+   "p_sub_from_a0": 0.66
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.035,
+   "p_found_any": 0.025,
+   "p_sub_from_a0": 0.1525
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.3275,
+   "p_found_any": 0.8,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.9975,
+   "p_found_any": 0.0025,
+   "p_sub_from_a0": 0.0075
+  }
+ },
+ "expected (SNR 0.2, D_eff 8) | pairs (128, 128, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.9125,
+   "p_found_any": 0.9125,
+   "p_sub_from_a0": 0.0
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.1475,
+   "p_found_any": 0.1475,
+   "p_sub_from_a0": 0.355
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.87,
+   "p_found_any": 0.87,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.475,
+   "p_found_any": 0.0,
+   "p_sub_from_a0": 0.89
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.0475,
+   "p_found_any": 0.01,
+   "p_sub_from_a0": 0.18
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.3025,
+   "p_found_any": 0.8675,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.99,
+   "p_found_any": 0.0025,
+   "p_sub_from_a0": 0.0
+  }
+ },
+ "pessimistic (SNR 0.1, D_eff 8) | pairs (64, 64, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.4225,
+   "p_found_any": 0.4225,
+   "p_sub_from_a0": 0.0025
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.0975,
+   "p_found_any": 0.0975,
+   "p_sub_from_a0": 0.11
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.435,
+   "p_found_any": 0.435,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.08,
+   "p_found_any": 0.0275,
+   "p_sub_from_a0": 0.2675
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.02,
+   "p_found_any": 0.0175,
+   "p_sub_from_a0": 0.045
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.0075,
+   "p_found_any": 0.1925,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.99,
+   "p_found_any": 0.005,
+   "p_sub_from_a0": 0.0025
+  }
+ },
+ "pessimistic (SNR 0.1, D_eff 8) | pairs (128, 64, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.51,
+   "p_found_any": 0.51,
+   "p_sub_from_a0": 0.005
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.1125,
+   "p_found_any": 0.1125,
+   "p_sub_from_a0": 0.0925
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.455,
+   "p_found_any": 0.455,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.055,
+   "p_found_any": 0.0125,
+   "p_sub_from_a0": 0.2225
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.01,
+   "p_found_any": 0.0325,
+   "p_sub_from_a0": 0.06
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.0225,
+   "p_found_any": 0.2075,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.99,
+   "p_found_any": 0.01,
+   "p_sub_from_a0": 0.01
+  }
+ },
+ "pessimistic (SNR 0.1, D_eff 8) | pairs (192, 64, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.6075,
+   "p_found_any": 0.6075,
+   "p_sub_from_a0": 0.01
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.14,
+   "p_found_any": 0.14,
+   "p_sub_from_a0": 0.1025
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.435,
+   "p_found_any": 0.435,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.0875,
+   "p_found_any": 0.0125,
+   "p_sub_from_a0": 0.25
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.0075,
+   "p_found_any": 0.0425,
+   "p_sub_from_a0": 0.05
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.0425,
+   "p_found_any": 0.2075,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.995,
+   "p_found_any": 0.005,
+   "p_sub_from_a0": 0.0
+  }
+ },
+ "pessimistic (SNR 0.1, D_eff 8) | pairs (128, 128, 64, 64)": {
+  "super_mid (lam 2, a* 1.5)": {
+   "truth": "found_down",
+   "p_correct": 0.55,
+   "p_found_any": 0.55,
+   "p_sub_from_a0": 0.0025
+  },
+  "super_low (lam 1.4, a* 0.7)": {
+   "truth": "found_down",
+   "p_correct": 0.1225,
+   "p_found_any": 0.1225,
+   "p_sub_from_a0": 0.11
+  },
+  "super_high (lam 3, a* 3)": {
+   "truth": "found_down",
+   "p_correct": 0.4525,
+   "p_found_any": 0.4525,
+   "p_sub_from_a0": 0.0
+  },
+  "sub (lam 0.6)": {
+   "truth": "sub",
+   "p_correct": 0.135,
+   "p_found_any": 0.015,
+   "p_sub_from_a0": 0.395
+  },
+  "sub_near (lam 0.85)": {
+   "truth": "sub",
+   "p_correct": 0.0175,
+   "p_found_any": 0.0275,
+   "p_sub_from_a0": 0.05
+  },
+  "threshold (hysteresis)": {
+   "truth": "found_both",
+   "p_correct": 0.0425,
+   "p_found_any": 0.305,
+   "p_sub_from_a0": 0.0
+  },
+  "flat critical (g = 1)": {
+   "truth": "undecided",
+   "p_correct": 0.99,
+   "p_found_any": 0.005,
+   "p_sub_from_a0": 0.005
+  }
+ }
+}
