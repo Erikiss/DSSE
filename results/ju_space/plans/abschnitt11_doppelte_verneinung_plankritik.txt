@@ -1,0 +1,300 @@
+VERDICT:
+Both parts of the plan aim at what the user asked about. As written, though, Part A would mostly measure two things this model already fixes: the mirror symmetry between Q2 and Q3, and the mean of the Q3 write. Part B1 would loop a direction that section 10 showed is not about RSI. One model load (about 8 minutes at 2 threads, the 902 positions of the 16 main texts plus one thinking trace) settles much of this before any run.
+
+Q2 and Q3 are equally common in every block (Q3/(Q2+Q3) = 0.494-0.505) and equally harmful to remove. Zeroing Q3 in all blocks gives KL 2.92 and raises cross-entropy from 3.63 to 6.49; zeroing Q2 gives KL 2.86. Replacing Q3 by its per-unit mean leaves KL 0.43, so 85% of the damage is the mean. Replacing it by its mean at the live Q3 positions leaves KL 0.19. A random set matched to Q3 in count and |a| costs only 0.96, because its signs are mixed. Zeroing Q3 in blocks 0-9, 10-18 and 19-27 gives KL 1.41, 0.32 and 0.016. Keeping the top 50% by |a| costs KL 0.056 and keeps 41-52% of the Q3 entries (78-94% of their |a|-mass). Restoring the dropped Q3 or the dropped Q2 entries halves that KL equally (0.027 and 0.029).
+
+What follows from this:
+- 'Q3 zeroed in all blocks' leaves no reasoning to sustain.
+- The planned sparsity grid of 2-20% is the regime where section 6.1 found the model broken.
+- Every Q3 claim needs the same test with Q2, on a basis that preserves the mean.
+
+A4 has further problems. It uses greedy decoding, which Qwen's model card explicitly advises against in thinking mode (endless repetition). Its 512-token budget is one the baseline will often hit: the check trace had only reached the second of four steps of a simple problem after 256 tokens. With N = 8 binary outcomes, only extreme effects can be seen. The slide itself also argues against the plan's reading that timing matters: time-reversed activations and another problem's activations largely work. What fails is one contiguous block, statistically matched surrogates and a constant.
+
+Recommendation, by part:
+- Text gate, about 30 minutes. Q3 against Q2, mean-preserving, per block group; fix the sparsity level k* in advance.
+- A4, rebuilt. Primary measures are teacher-forced along sampled long traces: KL by position bin, and the pressure to emit '</think>'. Bases are interventions that leave short text nearly intact: Q3 zeroed in blocks 19-27, Q3 at its conditional mean, top-k at k*. The slide's decisive contrasts are included. Free generation only confirms, for 3-4 conditions.
+- B1. Keep it with fixes: start directions on text tokens (the nesting step of 10.5 for 'improves' against 'describes'), a noise ceiling, a step size calibrated per direction, batched generation. State plainly that it can only show that the model reads its steered text back as the same direction. Nothing learns.
+- B2. Drop as specified. Its outcome is set by generation 0's accuracy, its test problems get pseudo-labels, and it costs about 10 times the plan's estimate. An optional version comparing a chain with one direct step can follow if the user wants the learning reading of Q2. Neither version has a meta-level.
+
+Budget: about 3 hours for the unconditional stages, about 5.5 hours with the conditional ones, plus about 2.5 hours on all 4 cores for the optional toy runs.
+
+POINTS:
+[P01] (high) Reading of the slide
+  PROBLEM: The slide shows only the replacement conditions, not the base: we cannot tell whether Q3 was zeroed in a full model or the model was sparsified by |a| (the plan assumes the latter), nor which units and layers count as 'Q3 activations'. The plan's summary 'it matters when they occur' is not what the slide shows. Own activations time-reversed (13/17) and another problem's activations reversed (10/15) mostly work. What fails is one contiguous 25% block (1/17, against 9/17 for scattered), statistically matched surrogates (0/15 to 7/17) and a per-neuron constant (4/15). So the slide points to 'real Q3 vectors present throughout the trace', not to alignment with the content. 'Replayed (control) 17/17' is most likely an exact replay, i.e. an implementation check that cannot fail.
+  FIX: State both readings and test both bases where they are usable (P04, P05). Build the replacement conditions around the slide's decisive contrasts: scattered vs contiguous 25%; another problem's Q3; joint position shuffle (each position keeps its vector) vs per-unit independent shuffle (each unit keeps its values, cross-unit structure destroyed); per-unit mean. Treat exact own replay as a check that must give zero change. Compare with the slide only at its clearly separated extremes; neighbouring bars (3/17, 5/17, 7/17) overlap within their Wilson intervals.
+[P02] (high) Q2 and Q3 are mirror halves in this model (algebra and measurement)
+  PROBLEM: For g < 0, a = silu(g)*u with silu(g) between -0.28 and 0. So Q2 and Q3 are the u > 0 and u < 0 halves of one small, nearly linear leak. Because g and u are nearly uncorrelated (9.4: median 0.06-0.19), the two halves must be equally common and equally large. Measured: Q3/(Q2+Q3) = 0.494-0.505 in all 28 blocks. Top-k survival of Q2 and Q3 agrees within 0.007 at every k. The Q3/Q2 write RMS ratio is 0.94-1.07. Zeroing gives KL 2.92 (Q3) vs 2.86 (Q2); restoring after top-50% gives 0.027 vs 0.029. On the one trace, zeroing Q2 raised the mean probability of '</think>' far more than zeroing Q3 (3.3e-3 vs 1.1e-5; baseline 9e-11). A Q3 result without the identical Q2 result cannot be called 'double-negative'.
+  FIX: Run every Q3 condition also with Q2 (same blocks, same replacement). Call an effect Q3-specific only if it is at least twice the Q2 effect on a mean-preserving basis (rules A-gate, A4a, A4c). If Q2 does the same, report it as an effect of the negative-gate leak (the mechanism of README 7.4), not of the double negative.
+[P03] (high) Zeroing Q3 mostly moves the mean of the MLP write
+  PROBLEM: Q3 activations are all positive, so zeroing them shifts the MLP write by -sum_i E[a_i*1(Q3)]*w_i at every position. Per block, 26-76% of the energy of the Q3 write is its constant mean over positions. On the 902 positions:
+- Q3 -> per-unit mean: KL 0.43 instead of 2.92 (85% of the damage is the mean).
+- Q3 -> its per-unit mean at the live Q3 positions: KL 0.19.
+- Matched random set (same count, same |a| bins, drawn from non-Q3 entries, 99.7% matched): KL 0.96.
+The matched set costs less only because its signs are mixed, so its mean shift partly cancels. 'Q3 matters more than random activations of the same size' would be an artifact of sign coherence.
+  FIX: Use mean-preserving replacements as the bases for every question about the information in Q3: Q3 -> per-unit mean (at every position) and Q3 -> conditional mean at live Q3 positions. Take the means from pool texts, not from the text being evaluated. Draw matched random sets within the same sign and mean-preserve them too. Report zeroing only as a descriptive row.
+[P04] (high) Zeroing Q3 is not a usable base for reasoning tests
+  PROBLEM: Zeroing Q3 in all blocks raises cross-entropy on short text from 3.63 to 6.49 nats (KL 2.92; same top token at 44% of positions). By block group: 0-9 KL 1.41 (CE 4.87), 10-18 KL 0.32 (CE 3.82), 19-27 KL 0.016 (CE 3.61). README 7.4 already showed that silencing all negative-gate units in blocks 1-9 destroys the model (3.49 -> 13.55). A model this damaged has no long reasoning to sustain, so a collapse says nothing about the role of Q3 in reasoning.
+  FIX: Admit as A4 bases only interventions whose short-text damage is small, i.e. a CE increase of at most 0.06 nats (about the paper's +0.054):
+- Q3 zeroed in blocks 19-27;
+- Q3 at its conditional mean (+0.05);
+- top-k at k*;
+- Q3 at its per-unit mean (+0.16), as a moderate level.
+Keep 'zero Q3, all blocks' and 'blocks 0-9' as descriptive rows only.
+[P05] (high) A3: the sparsity grid is in the broken regime, and the overlap premise fails at moderate k
+  PROBLEM: README 6.1: keeping 4 / 7.8 / 12.5 / 25 / 50% raises the loss by +2.93 / +1.49 / +0.70 / +0.17 / +0.02 nats. So k in {2, 5, 10, 20}% is far beyond the paper's +0.054. Here top-50% costs KL 0.056 (CE +0.009), and on the thinking trace only 0.004-0.017.
+
+At k = 50%, 41-52% of Q3 entries survive (78-94% of their |a|-mass). Only at k <= 12.5% are 88-99.7% removed (by count). In blocks 1-9, Q2+Q3 make up 84-97.5% of all entries, so top-k there is mostly Q2 and Q3 at any k.
+
+At small k, 'sparsified + Q3' is roughly 'full model minus Q2' and 'sparsified + Q2' is roughly 'minus Q3'. A3 then reduces to the mirror comparison of P02.
+  FIX: Use k in {50, 40, 35, 30, 25}%. Fix k* in advance as the smallest k with a CE increase <= 0.06 nats on the 902 positions, and add 25% as a stronger level. Report per block the share of Q3 and Q2 entries, and of their |a|-mass, that top-k keeps. Compare '+Q3' with '+Q2' at equal counts, and add '+Q3 time-shuffled'.
+[P06] (high) A4: greedy decoding in thinking mode
+  PROBLEM: Qwen3-1.7B's model card says for thinking mode: 'DO NOT use greedy decoding, as it can lead to performance degradation and endless repetitions'. generation_config.json defaults to sampling (T 0.6, top-k 20, top-p 0.95). A baseline that loops counts as 'staying long' under the plan's criterion. And any intervention that changes one token produces a different greedy trace from that token on.
+  FIX: Use the recommended sampler with seeds shared across conditions (same seed, same batch order, so draws stay coupled until the distributions differ) and two seeds per problem. Count a run as degenerate if more than 0.3 of the 4-grams in its last 256 tokens are repeats. Measure the natural collapse rate between the two baseline seeds.
+[P07] (high) A4: budget and the 'stays long' criterion
+  PROBLEM: With L = 512 and 'stays long = at least half the baseline length', every run that does not stop before the budget counts as long. If the baseline itself is cut at 512, the test only asks 'did it stop before 256 tokens'. The check trace (an own three-step word problem, greedy) had computed the trees per field and was starting the second of four steps after 256 tokens; it never reached '</think>'.
+  FIX: Pre-run the seed-0 baseline on the GSM8K test problems in order, and keep the first 12 whose thinking ends between 300 and 1,024 tokens. Use L = 1,024 (1,536 if fewer than 12 of 24 qualify). Classify every run as normal (ends at >= 0.5 x the baseline length), short, degenerate, or truncated but fluent. Report answer correctness separately.
+[P08] (high) A4: statistical power
+  PROBLEM: N = 8 binary outcomes per condition separate only extreme differences (8/8 against <= 2/8); even the slide's bars overlap except at the extremes. Ten conditions of free generation at 512 tokens cost 2.5 hours for that little resolution.
+  FIX: Make teacher-forced, continuous measures along sampled baseline traces primary (rules A4a and A4b): KL in position bins of the thinking part, and the stop pressure S = sum over t of P(the sampler emits '</think>' at t). Each costs one forward pass per trace and condition (about 13-17 s for 1,100 tokens) and needs no generation. Use free generation (A4c) only for the 3-4 conditions that A4a/A4b single out: 12 problems x 2 seeds, paired exact McNemar tests.
+[P09] (medium) Replay at diverging positions
+  PROBLEM: In free generation, replaying the baseline's Q3 'position by position' puts one token's activations onto another as soon as the text differs. That silently turns 'own replay' into 'replay of another trajectory'. Conversely, if the base replaces only Q3 (by zero or by its mean), exact own replay at every position reproduces the baseline token for token: 17/17 by construction.
+  FIX: Run all replay conditions teacher-forced along the baseline trace, where alignment is exact. In free generation, use only 'live' conditions (computed from the current run), or record the first divergence position and count replay after it as foreign. Use exact own replay as an implementation check; it must give KL 0.
+[P10] (medium) First positions and time reversal
+  PROBLEM: Positions 0-3 hold the attention sink with very large activations (the reason ufo_common skips them). Interventions there change the sink. Reversing the whole sequence would move the sink's Q3 vector to the end and the prompt's Q3 vectors into the thinking part.
+  FIX: Intervene from position 4 on. Reverse, shuffle, scatter and place blocks only within the thinking part; the prompt gets the base intervention only.
+[P11] (medium) Matched random control (A2)
+  PROBLEM: In blocks 1-9 only 2.5-16% of entries are in Q1 or Q4. A random set matched to Q3 in count and |a| is therefore drawn mostly from Q2 there, a partial Q2 control rather than an independent one. Without mean preservation it also measures sign coherence (P03). Measured over all blocks: KL 0.96.
+  FIX: Draw matched random sets separately within positive and within negative activations, mean-preserve them, and report per block group. Keep Q2 as the main control.
+[P12] (medium) A1: undefined measures and two missing descriptions
+  PROBLEM: 'Share of the variance of the MLP write carried by each quadrant' is undefined, because quadrant writes are not orthogonal. Two descriptions are missing: how much of Q3 survives top-k, and whether Q3 membership persists over time (all the slide's surrogates are about time structure).
+  FIX: Report per block:
+- RMS of the quadrant write over RMS of the full write (Q3: 0.32 in block 0, 0.44-0.48 in 1-9, 0.18-0.38 in 10-18, 0.04-0.14 in 19-27);
+- projection share sum<w_q, w>/sum|w|^2, which adds to 1 over quadrants (Q3: 0.19-0.29 in 1-9, <= 0.03 in 19-27);
+- share of the quadrant write's energy that is its mean (Q3: 0.26-0.76);
+- coherence |sum a_i w_i|^2 / sum a_i^2 |w_i|^2 (1.04-1.64; block 27: 2.77);
+- top-k survival by count and by |a|-mass;
+- per-unit lag-1 and lag-16 autocorrelation of Q3 membership on traces (one trace: 0.08-0.30 and -0.01 to 0.04).
+[P13] (medium) All units versus the paper's units
+  PROBLEM: Here 'Q3 activations' means every Q3 entry of every unit in a block. That may be a far larger intervention than the paper's, which may concern particular neurons or a 'pole' of neurons, in a model whose router silences about 96.5% of a layer.
+  FIX: Say so in the write-up. Optional: a unit-level version that mean-replaces Q3 only in the 1% and 5% of units with the largest share of Q3 write energy, against the same for Q2.
+[P14] (high) B1: the persona start direction is not about RSI
+  PROBLEM: Section 10.4: the persona RSI direction has cosine 0.84-0.91 with the sibling sets, 0.89 with sports and 0.93-0.97 with the mean of all seven, and it mainly shifts a general preference for 'Yes'. Loops started from RSI, sports and the shared mean start from nearly the same direction, so they cannot differ for RSI reasons.
+  FIX: Draw no RSI conclusion from the persona start. Add two start directions on text tokens that differ only in what Q2 is about:
+- the nesting step of 10.5 for 'improves' ('improves the way it improves X' minus 'improves X', state at block 14 averaged over the tokens after the shared prefix);
+- the same step for 'describes', as the control.
+An RSI-specific statement needs the improve start to pass, the describe start to fail, and cos(d3_improve, d3_describe) < 0.8. Keep the persona start (pre-registered) and the shared mean; drop the sports start as redundant.
+[P15] (high) B1: the loop changes the population of tokens
+  PROBLEM: d0 is a contrast at the answer token of Yes/No persona questions, while d1-d3 are means over continuation tokens of neutral prompts. cos(d3, d0) >= 0.5 may be out of reach for that reason alone. 'Against' by cos(d3, d0) < 0.2 could then come from the change of population, not from the loop.
+  FIX: Judge persistence within the loop: cos(d3, d1) and cos(d3, d2), each against the 95th percentile of the random-start loops. For the persona start, use cos(d3, d0) only relative to the random starts' 95th percentile. Keep T3a's absolute cos(d3, d_start) >= 0.5 only for the text-token starts.
+[P16] (medium) B1: noise, divergence and step size
+  PROBLEM: A prompt whose steered continuation equals the unsteered one contributes exactly zero to d_{n+1}. After divergence the two texts differ in content, so d_{n+1} is a mean of large, mostly unrelated differences. Random 'covariance' directions already cause damage 0.13 at f = 0.3 (10.4), above the 0.05-0.10 window.
+  FIX: Require at least 16 of 32 diverging continuations and a split-half cosine of d_{n+1} over prompts >= 0.5 at every iteration; otherwise undecided. Calibrate f for every direction and every iteration to damage 0.05-0.10 on the four texts (three bisection steps). Save sample continuations per iteration for inspection; draw no claims from reading them.
+[P17] (medium) B1: budget
+  PROBLEM: 20 random starts x 3 iterations x 16 prompts x 40 tokens = 38,400 generated tokens, plus 15,360 for four named starts. That is about 3 hours at 4.8 tokens/s unbatched, not 40 minutes.
+  FIX: Generate in batches. Measured at 2 threads: 16 prompts x 40 tokens with a steering hook at block 14 took 32.6 s (19.6 tokens/s), against 3.5 tokens/s for a single prompt. Read the unsteered continuations once for all loops. About 1.25 hours in total.
+[P18] (high) B2: decided at its ends by construction, test problems pseudo-labelled, budget too low
+  PROBLEM: If generation 0 generalises (>= 99% on unseen problems), generation 1 trains on all-true labels and the chain saturates after one step. If generation 0 is at chance, its pseudo-labels are noise and generation 1 resembles the permuted-label control of 7.10. Only a partly correct generation 0 is informative, and grokking here is abrupt (7.10: 0.28 at step 10,000, 1.00 at step 12,000).
+
+'Accuracy on unseen problems' is contaminated when the pseudo-labelled problems are the test problems.
+
+Cost: about 100 s per 1,000 steps on one thread (kv_base_s0: 1,314 s for 13,500 steps, grokked at 13,000), and smaller p needs more steps. 4 seeds x 3 p x (4 generations + controls) is 84-156 networks, about 25-45 core-hours, not 2 minutes each.
+
+It is self-training: no level improves how the level below learns, so it does not touch meta-learning.
+  FIX: Drop B2 as specified. If the user wants the learning reading of Q2, run B2' (rule below) after Part A and B1:
+- a held-out set that is never pseudo-labelled;
+- generation 0 tuned to partial accuracy;
+- the chain against one direct step with the same total budget;
+- a noise-matched control.
+About 8 core-hours (2-2.5 h on 4 cores), never alongside a Qwen run.
+[P19] (medium) What any outcome in Qwen3-1.7B means for the paper
+  PROBLEM: The paper's text cannot be read here: Goodfire's site is excluded, and an arXiv API title search found no entry. Its model is a 35B mixture of experts with a router, and our 'Q3' covers all units. A positive result shows a property of this dense 1.7B model; a negative one does not contradict the paper.
+  FIX: Phrase section 11 as 'the double-negative question asked of Qwen3-1.7B', not as a replication.
+[P20] (medium) Multiple comparisons
+  PROBLEM: 3-4 bases x about 10 replacements x block groups x several measures will produce some 'effects' by chance, especially with 12 traces.
+  FIX: Pre-register the primary contrasts: the A-gate ratios; the stop pressure and late/early KL ratio of A4a against the Q2 mirror; the two difference contrasts of A4b; the McNemar tests of A4c. Everything else is descriptive.
+[P21] (low) Plan text detail
+  PROBLEM: The plan gives 57-87% negative gate inputs outside blocks 1-9. README 9.4 has 75% for block 0 and 89% for block 27.
+  FIX: Write 57-89%.
+
+RULES:
+* A-gate: Q3 against its mirror Q2 on short text, per block group (with the A1 descriptions)
+  TESTS: In Qwen3-1.7B the double-negative activations (g < 0, u < 0) carry something that the equally many, equally large Q2 activations (g < 0, u > 0) do not.
+  FOR: In at least one block group (0-9, 10-18, 19-27), both of these hold:
+- KL(Q3 -> per-unit mean) >= 2 x KL(Q2 -> per-unit mean);
+- KL(Q3 -> conditional mean at live Q3 positions) >= 2 x KL(Q2 -> conditional mean).
+Each ratio's 95% bootstrap interval of the log ratio over texts (2,000 resamples) must exclude 0, on the 16 main texts and again on 16 held-out pool texts.
+  AGAINST: In every block group both ratios lie between 0.67 and 1.5. Zeroing ratios are reported but do not count, because zeroing moves the mean write (85% of the zero-Q3 KL on the 902 positions is the mean; zero Q3 2.92 against zero Q2 2.86).
+  UNDECIDED: All other cases.
+  MINIMUM: 16 main texts (902 valid positions) plus 16 held-out pool texts (8 wiki, 8 chat). Interventions from position 4, chat-template tokens excluded. Conditions for all blocks and for each of three block groups: Q3->0, Q2->0, Q3->mean, Q2->mean, Q3->conditional mean, Q2->conditional mean, matched random within sign (mean-preserved). Per-unit means from pool texts, not from the text being evaluated. Implementation check: mode 'none' reproduces the original logits exactly. Also run the k sweep {50, 40, 35, 30, 25}% with +Q3 and +Q2, and fix k* = smallest k with a CE increase <= 0.06 nats. About 30 min including loading.
+* A4a (primary): do late positions of long reasoning depend on Q3 more than on Q2? Teacher-forced along sampled traces.
+  TESTS: Removing the information in Q3, at a strength that leaves short text nearly intact, pushes long reasoning toward ending or derails it late, and removing Q2 the same way does not.
+  FOR: For at least one base B (Q3 zeroed in blocks 19-27; Q3 at its conditional mean, all blocks; Q3 at its per-unit mean, all blocks), (a) or (b) holds:
+(a) stop pressure: dS = S_B - S_baseline >= 1.0 in >= 9 of 12 traces, where S = sum over thinking positions before the baseline's own '</think>' of the probability that Qwen's recommended sampler (T 0.6, top-k 20, top-p 0.95) emits '</think>' there, given the baseline prefix;
+(b) late damage: the median over traces of KL[256, end) / KL[0, 128) is >= 2, the ratio is > 1 in >= 9 of 12 traces, and it is >= 1.5 x the same ratio for Gaussian noise on the MLP output of the same blocks, scaled to B's short-text KL.
+In either case the Q2 mirror must reach at most half of B's median dS or late-bin KL (paired sign test over traces, p < 0.05).
+
+For top-k (at k* and at 25%): top-k alone meets (a) or (b), and restoring Q3 removes at least twice as much of the effect as restoring Q2 (paired over traces).
+  AGAINST: Either of these:
+- for every base, dS < 0.3 in >= 9 of 12 traces and the median late/early KL ratio is <= 1.2;
+- the Q2 mirror reaches at least two thirds of B's effect. That would make it the negative-gate leak, not the double negative.
+  UNDECIDED: All other cases, and whenever fewer than 9 traces qualify.
+  MINIMUM: 12 sampled seed-0 traces: the first GSM8K test problems whose thinking ends between 300 and 1,024 tokens. Chat template with thinking on; interventions from position 4. Per base: B, its Q2 mirror, the noise control. Plus top-k at k* and at 25%, each with +Q3 and with +Q2. About 12 conditions x 12 traces x 13-17 s = about 35 min, plus about 25 min to sample the traces in batches of 8.
+* A4b: which replacement of Q3 restores late positions? Teacher-forced, on the base B that passed A4a.
+  TESTS: Long reasoning is sustained by real Q3 activation vectors present throughout the trace (the slide's pattern), not by their statistics, their exact timing or their mean.
+  FOR: Restoration is R_c = 1 - (late-bin KL or dS under c) / (the same under B), taking the median over traces. All of these hold:
+- R(scattered 25%) - R(contiguous 25%) >= 0.3;
+- R(joint position shuffle) - R(per-unit independent shuffle) >= 0.3;
+- each difference goes the same way in >= 9 of 12 traces (sign test p < 0.05);
+- R(another problem's Q3) >= 0.5.
+  AGAINST: Both differences are <= 0.1, or every real-activation condition other than exact own replay has R <= 0.3 (only exact replay helps).
+  UNDECIDED: All other cases.
+  MINIMUM: Same 12 traces. Conditions sit on top of B: Q3 entries are replaced where stated, everything else stays as in B.
+- own real Q3 (check: must give KL 0 and dS 0);
+- own Q3 time-reversed within the thinking part (prompt and positions < 4 excluded);
+- another problem's Q3, aligned by thinking-position index, the shorter one padded with B;
+- scattered 25% of thinking positions;
+- one contiguous 25% block (3 random starts, averaged);
+- joint position shuffle;
+- per-unit independent shuffle;
+- 64-token block shuffle;
+- optional: low-rank (top-8 PCA of the Q3 vectors).
+About 35 min.
+* A4c: free generation, confirmatory; only after 'for' in A4a
+  TESTS: In free generation, base B shortens or derails long reasoning; restoring Q3 (live, or by the best replacement from A4b) prevents this, and restoring Q2 does not.
+  FOR: Baseline units are (problem, seed) pairs whose baseline thinking ends between 300 and 1,024 tokens. A run 'stays long' if it ends thinking at >= 0.5 x the baseline length for the same problem and seed, or reaches 1,024 tokens with <= 0.3 repeated 4-grams in its last 256 tokens. 'For' needs all of these:
+- B stays long in <= 50% of the baseline units (exact McNemar p < 0.05 against the baseline);
+- the restoring condition stays long in >= 80% (McNemar p < 0.05 against B);
+- the Q2 mirror stays long in <= 50%.
+  AGAINST: B stays long in >= 80% of the baseline units.
+  UNDECIDED: All other cases. Also undecided if fewer than 16 baseline units exist, or if the natural collapse rate is above 15% (seed 1 shorter than 0.5 x seed 0 for the same problem, no intervention).
+  MINIMUM: 12 problems x 2 seeds, shared across conditions (same seed, same batch order). Recommended sampling, L = 1,024. Batches of at most 12, because the float32 KV cache takes 0.23 MB per token and sequence (12 x 1,100 tokens is about 3 GB). Conditions: baseline seed 1 (seed 0 exists from A4a), B, B + best restoring condition, B + Q2 mirror. Degenerate runs are reported separately and count as not staying long. About 1.5-2 h.
+* B1: closed loop through the model's own text (T3a' with fixes)
+  TESTS: 'RSI of RSI of RSI' read as repeated re-derivation: a direction re-derived three times from text the model writes under it keeps its identity, more than random directions do. Nothing is learned and no weights change.
+  FOR: For a named start s, all of these hold:
+(1) noise ceiling met at every iteration: split-half cosine of d_n over prompts >= 0.5, and at least 16 of 32 continuations diverge;
+(2) cos(d3, d1) >= 0.5 and above the 95th percentile of the same quantity in the 20 random-start loops;
+(3) cos(d3, d_s) above the random starts' 95th percentile, and also >= 0.5 for the text-token starts;
+(4) d3 keeps >= 50% of the start's effect per unit norm (persona start: log-odds on the 30 held-out RSI statements, as in 10.4; text starts: shift of the projection of continuation states on d_s);
+(5) cos(d_n, mean random-start d_n) < 0.5 for n = 1, 2, 3.
+An RSI-specific statement additionally needs the improve-nesting start to pass, the describe-nesting start to fail, and cos(d3_improve, d3_describe) < 0.8.
+  AGAINST: For that start, any of these: cos(d3, d1) < 0.2; cos(d3, d1) not above the random-start 95th percentile; d1-d3 aligned (cosine >= 0.5) with the mean random-start direction, i.e. the loop converges on text degraded by steering.
+  UNDECIDED: All other cases, including a failed noise ceiling.
+  MINIMUM: Starts:
+- improve-nesting step of 10.5 (block 14, averaged over the tokens after the shared prefix, 24 objects);
+- describe-nesting step;
+- the persona RSI direction d0 of 10.4, rebuilt from rsi_followup.json.states.pt;
+- the shared mean of the seven persona directions;
+- 20 random directions (10 isotropic, 10 with the covariance of real states), on 16 prompts.
+Steering at block 14 from the user message on. f calibrated per direction and iteration to damage 0.05-0.10 on the four texts of 10.4. 32 neutral prompts, chat template with thinking off, 40 new greedy tokens, 3 iterations. Batched generation; unsteered continuations read once. About 54k generated tokens (about 45 min at about 20 tokens/s batched), plus reading passes, calibration and steering-effect tests (about 30 min).
+* B2' (optional): transitivity of a distillation chain in the modular-division toy
+  TESTS: Improvement carries through a chain of teacher-student generations: each generation gains on problems none of them was trained on, and three chained steps beat one direct step with the same total budget. This is self-training, not meta-learning.
+  FOR: In >= 3 of 4 seeds each, all of these hold:
+- accuracy on the held-out set H rises by >= 0.05 at each of the three steps;
+- the chain beats the direct control by >= 0.05;
+- each generation beats the noise-matched control (random errors at the previous generation's error rate).
+  AGAINST: In >= 3 of 4 seeds: generation 1 <= generation 0 + 0.02; or generations 2 and 3 stay within +-0.03 of generation 1 (saturation) or fall below it (decay).
+  UNDECIDED: All other cases. Also undecided if one pilot seed finds no setting in which generation 0 reaches 0.3-0.7 on H at an affordable step budget.
+  MINIMUM: H = 20% of the 9,312 problems, never labelled or pseudo-labelled. The labelled fraction p of the rest and the step budget S are chosen on one pilot seed so that generation 0 is partial. 4 seeds x generations 0-3, plus three controls: direct (one network trained for 3S on generation 0's pseudo-labels), noise-matched, and true labels only (4S). About 100 s per 1,000 steps per network on one thread, so about 17 min per network at S = 10,000. 28 networks: about 8 core-hours, 2-2.5 h on 4 cores, never alongside a Qwen run.
+
+FACTS_CHECKED:
+- Qwen3-1.7B model card (huggingface.co, README.md, lines 132 and 275): for thinking mode use T 0.6, top-p 0.95, top-k 20, min-p 0, and 'DO NOT use greedy decoding, as it can lead to performance degradation and endless repetitions'. The local generation_config.json defaults to do_sample true, temperature 0.6, top_k 20, top_p 0.95.
+- arXiv API title search for 'Neurons as an Interpretable Basis' returned no entry. No Goodfire domain and no YouTube page was accessed.
+- One model load, 494 s at 2 threads with nice 10 (/tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/plan11_tmp/rev_dn_check.py). Unchanged cross-entropy on the 902 valid positions of the 16 main texts: 3.631, the same as README 9.4.
+- Quadrant counts: Q3/(Q2+Q3) = 0.494-0.505 in every block, and Q1 is about equal to Q4. Q2+Q3 share of all entries: 75% (block 0), 84-97.5% (blocks 1-9), 57-77% (10-18), 74-89% (19-27). On the thinking trace, the Q3 share is 0.49 / 0.44 / 0.30 / 0.39 / 0.46 in blocks 1 / 8 / 14 / 20 / 27.
+- Size of Q3 activations: median |a| of Q3 against Q1 is 0.017 vs 0.015 (block 0), 0.014 vs 0.065 (block 1), 0.11 vs 0.20 (block 14), 0.16 vs 0.97 (block 20), 0.12 vs 3.06 (block 27). Q3 share of the sum of a^2: 0.12 (block 0), 0.15-0.22 (1-9), 0.02-0.10 (10-18), 0.0004-0.013 (19-27).
+- Top-k by |a|, per position and block, keeps this share of Q3 entries (share of their |a|-mass in brackets): 50%: 0.41-0.52 (0.78-0.94); 25%: 0.12-0.25 (0.37-0.71); 12.5%: 0.02-0.12 (0.09-0.50); 7.8%: 0.003-0.07 (0.02-0.37). Q2 matches Q3 within 0.007 at every block and k.
+- Q3 write per block:
+- RMS over the full MLP write: 0.32 (block 0), 0.44-0.48 (1-9), 0.18-0.38 (10-18), 0.04-0.14 (19-27);
+- projection share: 0.13, 0.19-0.29, 0.03-0.20, 0.00-0.03;
+- share of its energy that is its mean over positions: 0.26-0.76;
+- coherence ratio: 1.04-1.64 (block 27: 2.77).
+The Q3/Q2 write RMS ratio is 0.94-1.07.
+- Text ablations on the 902 positions (KL / CE / share of same top token):
+- zero Q3, all blocks: 2.92 / 6.49 / 0.44;
+- zero Q2: 2.86 / 6.16 / 0.36;
+- Q3 -> per-unit mean (mean taken from the same texts): 0.43 / 3.79 / 0.71;
+- Q3 -> conditional mean at live Q3 positions: 0.19 / 3.68 / 0.81;
+- zero Q3 in blocks 0-9: 1.41 / 4.87; in 10-18: 0.32 / 3.82; in 19-27: 0.016 / 3.61;
+- top-50%: 0.056 / 3.640;
+- top-50% + Q3: 0.027 / 3.632;
+- top-50% + Q2: 0.029 / 3.615;
+- random set matched to Q3 in count and |a| bins (99.7% matched): 0.96 / 4.34.
+- One thinking trace (own three-step apple problem, greedy, 256 new tokens): 3.42 tokens/s at 2 threads; no '</think>' within 256 tokens (it was starting the second of four steps); 0.095 of 4-grams repeated.
+- Teacher-forced on that trace, interventions from position 4, KL by thirds of the generated part:
+- zero Q3: 2.29 / 2.11 / 1.29;
+- zero Q2: 1.26 / 1.61 / 0.94;
+- Q3 -> mean: 0.41 / 0.66 / 0.61;
+- top-50%: 0.014 / 0.017 / 0.004;
+- top-50% + Q3: 0.015 / 0.009 / 0.005;
+- top-50% + Q2: 0.007 / 0.011 / 0.002.
+Mean P('</think>') over generated positions: baseline 9.0e-11, zero Q3 1.1e-5, zero Q2 3.3e-3, Q3 -> mean 1.6e-6, top-k variants about 1e-10.
+- Temporal structure on that trace: per-unit lag-1 autocorrelation of Q3 membership 0.08-0.30 across blocks (mean 0.21); lag 16: -0.01 to 0.04. Units that are in Q3 at >= 95% of positions: <= 5% per block, except block 27 (18%).
+- Generation speed at 2 threads with nice 10:
+- plain greedy: 3.42 tokens/s;
+- MLP replaced, Q3 zeroed: 3.28;
+- top-50% sparsification: 3.15;
+- one prompt with a steering hook at block 14: 3.49;
+- 16 prompts x 40 tokens batched with the hook: 19.6 tokens/s (32.6 s).
+With Q3 zeroed, the first 48 thinking tokens were still fluent but repetitive.
+- Memory: float32 KV cache is 0.23 MB per token and sequence (28 blocks, 8 key-value heads x 128). 12 sequences x 1,100 tokens is about 3.0 GB, on top of about 6.9 GB of weights. The machine has 4 CPUs and 15 GB RAM.
+- Toy model: about 97 s per 1,000 steps on one thread (kv_base_s0 grokked at 13,000 steps, 1,314 s for 13,500 steps). README 7.10: held-out accuracy 0.28 at step 10,000 and 1.00 at 12,000.
+- The section-10 answer-token states are stored (/tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rsi_out/res/rsi_followup.json.states.pt; blocks 14 and 18; seven sets). d0 and the shared mean direction can be rebuilt without the model; rsi_direction.py did not save the directions themselves.
+- README facts relied upon: 6.1 sparsity table (+2.93 / +1.49 / +0.70 / +0.17 / +0.02 nats at 4 / 7.8 / 12.5 / 25 / 50%); 7.4 (silencing the negative-gate units in blocks 1-9 takes the loss from 3.49 to 13.55); 9.4 (negative gate shares 75% / 95-98% / 84-90% / 57-77% / 78-87% / 89%; g-u correlation median 0.06-0.19); 10.4 (cosines 0.84-0.98; damage at f = 0.3 is 0.065-0.078 for set directions, mean 0.08 for isotropic random and 0.13 for covariance random directions); 10.5 (S 0.26-0.34 for 'improves' against 0.28-0.45 for 'describes'); crit.json rule T3a'.
+
+DROP:
+- A3's sparsity grid {2, 5, 10, 20}%: README 6.1 puts it at +0.70 nats or worse, where the model is broken. At k <= 12.5%, also drop the '+Q3 vs +Q2' comparison, which there reduces to the mirror comparison of A2.
+- 'Q3 zeroed in all blocks' and 'Q3 zeroed in blocks 0-9' as bases for reasoning tests (short-text KL 2.92 and 1.41); keep them only as descriptive rows.
+- Greedy decoding in thinking mode; L = 512 with 'stays long = half the baseline' and no degeneracy criterion; N = 8 binary outcomes as the main evidence.
+- Position-indexed replay in free generation as evidence; keep exact own replay only as an implementation check.
+- A random control whose signs are not matched to Q3, and any 'Q3 vs random' claim made without mean preservation.
+- B1's sports start (cosine 0.89 with the RSI start, so redundant), and the absolute cos(d3, d0) >= 0.5 criterion for the answer-token start.
+- B2 as specified: its outcome is set by generation 0's accuracy, its test problems are pseudo-labelled, and it needs about 25-45 core-hours instead of 'about 2 minutes per network'.
+
+ADD:
+- A Q2 mirror for every Q3 condition. Mean-preserving replacements (per-unit mean; conditional mean at live Q3 positions), with means taken from pool texts. Matched random sets drawn within the same sign and mean-preserved.
+- Bases for the reasoning tests that leave short text nearly intact: Q3 zeroed in blocks 19-27 (KL 0.016), Q3 at its conditional mean (KL 0.19, +0.05 nats), top-k at k* (fixed in stage 1), and Q3 at its per-unit mean (+0.16) as a moderate level.
+- Teacher-forced primary measures along sampled long traces: KL in position bins of the thinking part; stop pressure S under Qwen's recommended sampler; a Gaussian-noise control matched in short-text KL.
+- The slide's decisive contrasts: another problem's Q3; joint position shuffle against per-unit independent shuffle; scattered against contiguous 25% (three block positions); per-unit mean; optional low-rank version.
+- Sampled decoding with seeds shared across conditions; two seeds per problem; problems selected by baseline thinking length (300-1,024 tokens); outcome classes including 'degenerate'; the natural collapse rate between seeds.
+- A1 additions: top-k survival of Q3 and Q2, by count and by |a|-mass; mean share and coherence of the quadrant writes; temporal persistence of Q3 membership on traces.
+- A held-out replication of the text gate on 16 pool texts. Implementation checks: mode 'none' must equal the original MLP, and exact own replay must give KL 0.
+- B1 changes: start directions on text tokens from the nesting steps of 10.5 ('improves' against 'describes'); a noise ceiling (split-half cosine and number of diverging prompts); f calibrated per direction and iteration; batched generation; the RSI-specificity condition; sample continuations saved per iteration.
+- Optional B2': the chain against one direct step with the same budget, a held-out set that is never pseudo-labelled, noise-matched pseudo-labels, and a partly correct generation 0.
+- Optional unit-level version: mean-replace Q3 only in the 1% and 5% of units with the largest Q3 write energy, against the same for Q2.
+
+ORDER_OF_PRIORITY:
+- Stage 1, text gate (Qwen, about 30 min including loading, 3 threads). A1 descriptions on the 16 main and 16 pool texts; the A-gate (Q3 and Q2 x zero / per-unit mean / conditional mean, for all blocks and for three block groups; matched random within sign); the k sweep {50, 40, 35, 30, 25}% with +Q3 and +Q2; implementation checks. This decides which bases go to A4 and fixes k*.
+- Stage 2, B1 closed loop (Qwen, about 1.25 h, batched generation). Four named starts, 20 random starts, three iterations. It does not depend on Part A and comes early because the user ranks Q2 first.
+- Stage 3, traces and A4a (Qwen, about 1 h). Sample seed-0 baselines for the first 16-24 GSM8K test problems (batches of 8, L = 1,024, about 25 min). Then run 12 traces x about 12 conditions teacher-forced (about 35 min).
+- Stage 4, A4b replacements (Qwen, about 35 min). Only if A4a counts for.
+- Stage 5, A4c free generation (Qwen, about 1.5-2 h). Only if A4a counts for. Conditions: baseline seed 1, B, best replacement, Q2 mirror; 12 problems x 2 seeds; batches of at most 12.
+- Stage 6, B2' on the toy model (optional, about 8 core-hours = 2-2.5 h on 4 cores, never alongside a Qwen run). Only if the user wants the learning reading of Q2.
+- Totals: stages 1-3 about 3 h; with stages 4-5 about 5.5 h; with stage 6 about 8 h. One Qwen process at a time at 2-3 threads, with batches sized for 14 GB (weights about 6.9 GB; KV cache 0.23 MB per token and sequence).
+
+CANNOT_BE_TESTED_HERE:
+- The paper's experiment and its definitions. Its text cannot be read here: Goodfire's site is excluded and no arXiv entry was found. So the base condition, the units and layers, the sparsity level, the decoding, the problem set, and the slide's 'burst atoms', 'G1v2' and 'G3' all stay unknown.
+- Anything about Qwen3.6-35B-A3B, or about mixture-of-experts layers with a router. A result in the dense Qwen3-1.7B neither confirms nor refutes the paper.
+- Long reasoning at the lengths and problem counts a thinking model normally works with. On this CPU the practical limit is about 25 runs of at most about 1,000-1,500 tokens per condition: 3.4-4.8 tokens/s per sequence, and at most about 12 sequences per batch in 14 GB.
+- RSI, meta-learning, 'transitivity of meta-learning' and distillation in Qwen3-1.7B. The model is frozen here and nothing in it learns. B1 can only show that the model reads its steered text back as the same direction.
+- A genuine meta-level in the toy model. The training loop is fixed and sits outside the network, so B2' is self-training, not learning to learn.
+- Whether Q3 activations or units are interpretable (no atlas, no labels), and how their role arose in training (only one checkpoint exists).
+- Statements about networks in general: there is one dense model, one tokenizer and one toy task.
+
+NOT_CHECKED:
+- Q2 -> per-unit mean and Q2 -> conditional mean on text, and mean replacement per block group. The main contrast of the A-gate is therefore still unmeasured; only one model load was allowed.
+- The per-unit means in the check came from the same 16 texts that were evaluated.
+- Held-out texts. Any trace beyond one greedy 256-token trace of one own problem. How long sampled thinking runs on GSM8K problems. Whether greedy decoding starts looping later in this model.
+- Batched generation with per-sequence MLP interventions, left padding and seed coupling. Speed at long context and at 3 threads; all speeds were measured at 2 threads with nice 10.
+- Downloading GSM8K through the proxy.
+- Grokking of the toy at labelled fractions below 0.5 with weight decay 0.3. The B2' cost is extrapolated from the p = 0.5 logs.
+- Literature on chained self-distillation, iterated learning and model collapse, and on activation sparsity and long reasoning (left to the literature review).
+- Whether 'reasoning stays long' in the paper means stopping early, looping, or both.
+
+FILES:
+- /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/plan11_tmp/rev_dn_check.py
+- /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/plan11_tmp/rev_dn_check.json
+- /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/plan11_tmp/rev_dn_check.log
+- /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/dn_out/plan.md
+- /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rsi_out/review/crit.json
+- /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/rsi_out/res/rsi_followup.json.states.pt
+- /home/user/DSSE/results/ju_space/README.md

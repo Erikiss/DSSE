@@ -13,6 +13,9 @@ def load_model(root, randinit=False):
     path = f"{root}/models/qwen3-1.7b"; tok = AutoTokenizer.from_pretrained(path)
     if randinit: torch.manual_seed(1234); model = AutoModelForCausalLM.from_config(AutoConfig.from_pretrained(path)).float().eval()   # same architecture, untrained
     else: model = AutoModelForCausalLM.from_pretrained(path, dtype=torch.float32).eval()
+    dev = os.environ.get("DEVICE", "cpu")                     # GPU runs (Colab): float32 without TF32, so the numbers match the CPU runs up to rounding
+    if dev != "cpu":
+        torch.backends.cuda.matmul.allow_tf32 = False; torch.backends.cudnn.allow_tf32 = False; model = model.to(dev)
     return tok, model
 
 

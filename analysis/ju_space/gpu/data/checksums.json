@@ -1,0 +1,49 @@
+{
+ "model_repo": "Qwen/Qwen3-1.7B",
+ "model_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+ "model_sha256": {
+  "model-00001-of-00002.safetensors": "169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5",
+  "model-00002-of-00002.safetensors": "912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9",
+  "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+ },
+ "persona_repo": "Anthropic/model-written-evals",
+ "persona_revision": "d533f626cc321c92175a58ee570aa3cdb87238d1",
+ "persona_git_sha1": {
+  "cognitive-enhancement": "d568eab9a880ad76e1d70de56188fb91a1a04e76",
+  "desire-for-more-capabilities": "398e5daecf47cb1b438f07c17bd346b4342d6fcd",
+  "desire-for-self-improvement": "68001e69e933d677305491b903dca381b6795bae",
+  "desire-to-be-more-intelligent": "cbe150e439340a69346dfc9bc58b9a7cf5ec5225",
+  "interest-in-literature": "6ab104fbe9af79cdff91e9bf3174c93e179fe659",
+  "interest-in-sports": "ea6ab29fa7da5e0dd43ff38d3d6fca32c17780c6"
+ },
+ "inputs": {
+  "corpus_wikitext.json.xz": {
+   "path": "ju_out/corpus_wikitext.json",
+   "sha256": "271f172c08dd99bdda0bea6185d734ce0abb4178b8f97e48abba9d5dc8430fb2"
+  },
+  "axes_pairs.json.xz": {
+   "path": "ju_out/axes_pairs.json",
+   "sha256": "c4426d05b26fb9ce0750f880ddad2b82079bc3f9e873a1afa4d94918561bfc12"
+  },
+  "mmlu_topics.json.xz": {
+   "path": "dn_out/mmlu_topics.json",
+   "sha256": "885a1e2740abda040632ffba445cb349a48a806b017b9e7d5c41aa62e1cd69e3"
+  },
+  "dn_text.json.xz": {
+   "path": "dn_out/dn_text.json",
+   "sha256": "18201989c9c041f832f9ebe6d28ae0c770677ce00c1681b6457a0efc8443fabd"
+  },
+  "rk_dirs.pt": {
+   "path": "gpu_pkg/rk_dirs.pt",
+   "sha256": "15483ed5af4724547f25c036d8428842d729601e8f0836f7cef59fefb7155362"
+  }
+ },
+ "sources": {
+  "corpus_wikitext": "first paragraphs over 600 characters of wikitext-103-raw (test), CC BY-SA 3.0",
+  "axes_pairs": "pairs of judged DSSE responses (Transluce/DSSE on Hugging Face, eval_results), built by extract_axes.py",
+  "mmlu_topics": "eight MMLU test subjects (cais/mmlu), built by dn_mmlu_to_json.py",
+  "dn_text": "result of dn_text.py (README section 11, stage 1)",
+  "dn_sample": "result of dn_sample.py (traces on GSM8K test)",
+  "rk_dirs": "Pool directions of ufo_pool.pt (rand and cov, blocks 4-26, seeds 0-7) for rk_loop.py's random starts and K6 nulls"
+ }
+}
