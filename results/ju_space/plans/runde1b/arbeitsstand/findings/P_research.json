@@ -1,0 +1,501 @@
+[
+ {
+  "label": "research:pythia",
+  "result": {
+   "report_md": "# Pythia-1.4B as a second model for round 1b: facts, tools, what transfers, and a small bridge to the Timaeus susceptibility atlas\n\nDate: 13 Nov 2026. No model was run. Every source is listed in refs with how it was checked; anything not opened is marked (unverified). Numbers marked est. are my own arithmetic.\n\n## 0 Answers in brief\n\n1. **Model facts (verified).** Pythia-1.4B has 24 blocks, width 2,048, 16 heads × 128, and parallel attention + MLP. Rotary is applied to 25 % of each head's dims, with base 10,000. The MLP is GELU, 2,048→8,192, so 24 × 8,192 = 196,608 neurons. LayerNorm eps is 1e-5. Embedding and unembedding are untied. There are 50,304 vocabulary rows from a 50,257-token BPE. Context is 2,048 tokens. The model has 1,414,647,808 parameters, 1,208,602,624 of them non-embedding. It was trained in fp16 mixed precision and released as fp16 on `main`. It comes in a standard and a deduped variant, each with 154 checkpoints. Licence: Apache-2.0.\n2. **Tools.**\n   - Lenses: a tuned lens exists only for the deduped variant. No J-lens exists for Pythia-1.4B; Neuronpedia has one for pythia-70m-deduped only. Fitting one costs about 8-13 min in bf16 with 100 prompts, or 1.7-2.1 h in fp32 (est.).\n   - SAEs: EleutherAI has none for 1.4B. One unvetted third-party layer-12 SAE exists.\n   - TriviaQA: 5-shot exact match is 18.46 % (lm-eval, Pythia-deduped-1.4B, H2O-Danube report).\n   - Arithmetic: no number for 1.4B was found. The Pythia paper says sizes below 1B \"are unable to perform well even in later stages of training\".\n3. **Portability of the round-1b cores.**\n   - Runs meaningfully: the H-neuron line (K2/K3, K8b's TriviaQA arm, L1, L3), the routing measures (K10a/b, K9, K7a) and R4's FDT linear response, which is mechanically portable.\n   - Does not run: part D's core, because Pythia has no context above its 2,048-token training window and no assistant identity.\n   - Does not run: the chain-lens arm (K4/K6/K10c, L5, L2b). There is no J-lens, the arithmetic items are likely too hard, and digits are BPE-merged.\n   - R's verdicts: they are tied to Qwen's round-1/2 axes and files.\n4. **H-neuron emergence over checkpoints.**\n   - It is cheap: about 1.25 A100-h fp32 for 8 checkpoints, after about 1 h to define the set at step 143,000 (est.).\n   - It is new. The H-Neurons paper's \"origin in pre-training\" rests only on instruct→base transfer at the end of pre-training. It examines no intermediate checkpoints, and no checkpoint study of H-neurons was found.\n5. **Atlas link.**\n   - Timaeus has released no data: no cluster assignments, susceptibility vectors, Aux model or centroids. The Cluster Explorer is view-only.\n   - timaeus.co has no terms of use, so only normal page reads were used here, and no automated access is planned.\n   - A join without recomputation needs data from Timaeus. Asking for it is the user's decision.\n   - The bridge therefore records our quantities in the atlas's coordinates: the same model, the same Pile subsets and the same 410-component index. Any later join is then a table merge.\n\n## 1 How sources were accessed\n\n- **timaeus.co.**\n  - The footer links only a privacy policy. That policy says nothing about automated access, scraping or reuse.\n  - robots.txt reads 'User-agent: * Allow: /'.\n- **clusters.timaeus.co.** robots.txt returns 404, and no terms or licence are shown.\n- **What I did.** I treated the terms as unclear and used only normal page reads:\n  - WebFetch of the posts;\n  - one headless render of the explorer landing page, in the same way a browser views it: one page view, no clicks, no direct data or API requests.\n- **Hugging Face.** The terms of service are silent on automated access. I read pages only. The round already downloads its models from Hugging Face in Colab. The bridge would add about 9 Pythia revisions, about 26 GB as fp16 `.bin`, under the same practice. This is flagged for the user.\n- **Downloaded files.** arXiv PDFs and the explorer render are stored as untrusted data in their own directories (section 10). They were read with pdftotext and `python3 -I`.\n\n## 2 Pythia-1.4B facts (verified)\n\n| Item | Value | Source |\n|---|---|---|\n| Blocks, width, heads | 24; 2,048; 16 heads × 128 | config.json; Pythia Table 1; Gurnee 2023 Table 1 |\n| Block form | parallel attention + MLP (`use_parallel_residual` true); flash attention in training | config; Pythia §2.3 |\n| Position | rotary, `rotary_pct` 0.25 (32 of 128 head dims), base 10,000; `max_position_embeddings` 2,048; seq-length 2,048 | config; Pythia Table 6 |\n| MLP | `dense_h_to_4h` 2,048→8,192, GELU (`hidden_act` gelu), `dense_4h_to_h` with biases; 196,608 neurons | config; Gurnee 2023 |\n| Norms, embeddings | LayerNorm eps 1e-5; untied `embed_in` / `embed_out` | config; Pythia §2.3 |\n| Vocabulary | GPT-NeoX-20B BPE trained on the Pile, 50,257 tokens; repeated-space tokens up to 24; no digit-splitting rule described; 50,304 rows in the model (padded) | GPT-NeoX-20B §3.2; config |\n| BOS / EOS | both token 0 | config |\n| Parameters | 1,208,602,624 non-embedding; 1,414,647,808 total | Pythia Table 1; safetensors index metadata |\n| Training data | 299,892,736,000 tokens: 143,000 steps × 1,024 × 2,048. Standard: just under 1 epoch of the Pile. Deduped: about 1.5 epochs of a 207B-token Pile | model card; GitHub README |\n| Checkpoints | 154 per model: step0; 1, 2, 4, …, 512; then every 1,000 steps to 143,000. Branch `step143000` = `main` | model card; README |\n| Precision | fp16 mixed precision (all sizes except pythia-1b, which used bf16); `torch_dtype` float16 | README; Pythia Table 6; config |\n| Released files, standard variant | `main`: `model.safetensors` 2.93 GB (fp16). Step branches (`step8000`, `step143000`): `pytorch_model.bin` 2.93 GB, plus two safetensors shards with total_size 5,658,591,232 B, i.e. 4 B per parameter (fp32-sized) | HF file trees; index.json |\n| Released files, deduped `step8000` | `model.safetensors` 2.83 GB, `pytorch_model.bin` 2.93 GB, `optimizer.pt` 18.4 GB | HF file tree |\n| Training cost | 7,120 A100-h for one 1.4B run (64 GPUs) | Pythia Table 5 |\n| Versions | Renamed Jan 2023 (old 1.3B = 1.4B); suite retrained Apr 2023. v0: 4M batch, 71,500 steps. Extra seeds 1-9 exist only for 14M-410M, so 1.4B has one seed | README; model card |\n| Licence | Apache-2.0 | model card |\n\nConsequences for our code:\n\n- **Layer-0 MLP.** Under the parallel residual, the layer-0 MLP sees only the current token (Gurnee 2023 note this for Pythia). An H member in layer 0 is therefore a token detector.\n- **Hook points.**\n  - Block output: `hidden_states[l+1]`.\n  - MLP activation z: the GELU output at `dense_4h_to_h`'s input.\n  - CETT_j,t = |z_j,t| ‖W_out[:, j]‖ / ‖W_out z_t‖, with the bias excluded, as in K's definition.\n  - Per-head outputs: at `attention.dense`'s input, 16 × 128.\n- **Vocabulary rows.** The 47 padded rows (50,304 − 50,257; the exact `len(tokenizer)` is unverified) must be masked in every Gumbel draw.\n- **KV cache.** There is no grouped-query attention, so the cache is 393,216 B per token in fp32, against 229,376 B for Qwen3-1.7B. At 2,048 tokens, batch 32 needs 25.8 GB of cache (est.).\n- **Compute.**\n  - Per-token cost through the blocks is 2.417 GFLOP against Qwen's 2.819. With full logits it is 2.62 against 3.44 GFLOP.\n  - fp32 weights are 5.66 GB against about 6.9 GB.\n  - I scale the round-2 planned rates by ×0.85 (est.). PY0 measures the real rates in about 5 min.\n\n## 3 The susceptibility atlas: what exists, what a join would need\n\n- **Definition** ('How to Scale Susceptibilities').\n  - χ^φ_xy = −Cov_β[φ(w), ℓ_xy(w) − L(w)]: the response of a posterior expectation to upweighting token y in context x.\n  - φ_C is a component-restricted observable over a slice where the other weights are clamped. Estimating it needs a restricted chain per component plus an unrestricted chain.\n- **Spectroscopy at Scale** (Murfet et al., 21 Apr 2026).\n  - Components: H = 410 (384 heads, 24 MLP layers, embedding, unembedding).\n  - Data: 4.25M ground-truth token sequences sampled uniformly from Pile subsets. Aux models upsample these to 46M vectors.\n  - Clusters: 57,236, from PageRank-based clustering after PCA whitening.\n  - Compute: 4,800 H200-hours, which is the same order as Pythia-1.4B's own 7,120 A100-h of training.\n  - Not stated: the checkpoint, whether the deduped variant was used, and the context length.\n  - Data release: none beyond the explorer and the devinterp code (MIT).\n- **The 57,236-cluster map is the Aux run.**\n  - The explorer render reads 'Susceptibilities › pythia-1.4b › 46M › Aux … 57236 clusters'.\n  - The definitions post: clusters for 1.4B rose \"from 249 to 57,236 with 46M tokens and PC whitening\".\n- **The Aux model.**\n  - A one-layer encoder-decoder with a 16× hidden layer. Input: residual activations at layers 5, 11, 17 and 23. Output: the 410-PC basis. Mean per-PC Pearson 0.714.\n  - CKA with activations: about 0.15 for ground truth, about 0.275 for Aux. 50-NN Jaccard with activations: 0.05 against 0.19. The authors read this as susceptibility and activation information being largely orthogonal.\n  - A row-normalisation bug removed one direction, and the clustering is being re-run. Any join must pin a run version.\n- **Towards Spectroscopy** (arXiv 2601.12703).\n  - Pythia-14M: 510 clusters, about half matching SAE features.\n  - Sampling: 60,000 sequences from each of 13 Pile subsets.\n  - Pythia-1.4B settings: pSGLD with γ 300, nβ 10, ε 1e-5, batch 16, 4 chains, 100 draws, 160 steps between draws.\n  - Hardware: 10 nodes × 4 H200, at most 5 days.\n- **Explorer.** Client-rendered, with cluster lists by top tokens (e.g. C10064, 8,675 tokens: ' had', ' has', ' have' …). Only 'Copy IDs' and 'Embed'; no export, licence or terms.\n- **Public inputs we can share.** Timaeus's Hugging Face datasets `timaeus/pile-<subset>`: pile-cc, github, pubmed_abstracts, uspto_backgrounds, nih_exporter, wikipedia_en, arxiv, freelaw and others. Each has 100,000 rows from `monology/pile-uncopyrighted`. No licence is stated on the card. That these are exactly the atlas's 13 subsets is (unverified).\n- **Why no recomputation, even a spot check.** Each of the 410 components needs its own restricted chain (64,000 SGLD steps at the 1.4B settings). That fixed cost does not shrink with fewer probe tokens. This is my inference; the user excluded recomputation anyway.\n- **What a join needs from Timaeus**, any one of these, requested by the user:\n  - (a) the variant, revision and context length used;\n  - (b) a token sample with cluster IDs and/or ground-truth vectors, keyed by subset, document and position;\n  - (c) the Aux weights plus cluster centroids. With (c), every token we measure gets a predicted 410-PC vector and a cluster label from one forward pass.\n\n## 4 Tools for Pythia-1.4B\n\n- **Tuned lens** (Belrose et al., arXiv 2303.08112).\n  - AlignmentResearch/tuned-lens has `pythia-1.4b-deduped` and `-deduped-v0`, but nothing for the standard 1.4B.\n  - Recipe: 250 SGD-Nesterov steps × 2^18 tokens on Pile validation chunks of 2,048; under 1 h on 8×A40.\n  - v6 (Nov 2025) says the earlier lenses were \"severely undertrained\", and that Muon is much faster.\n  - A refit for the standard variant would cost about 3-5 A100-h in bf16 (est.). Not proposed.\n- **J-lens.**\n  - Neuronpedia has only pythia-70m-deduped (1,000 prompts).\n  - anthropics/jacobian-lens: Apache-2.0, a \"reference implementation, not maintained\". About 100 prompts is usable; the paper recipe is 1,000 × 128. HF decoders \"adapt cleanly\"; GPT-NeoX is not named, so the adapter is (unverified).\n  - Fit cost, scaled from the project's verified Qwen3-1.7B estimate by 0.857 (est.): 466 prompts take 39-60 min in bf16 or 7.7-10.3 h in fp32; 100 prompts take 8-13 min in bf16 or 1.7-2.1 h in fp32.\n- **SAEs.**\n  - EleutherAI: pythia-70m, 160m, 410m (and 70m/160m deduped). None for 1.4B.\n  - Third party: Vadim21221, resid_post layer 12, 65,536 latents, top-k (Jul 2025). Unvetted.\n- **Neuron studies on Pythia.**\n  - Gurnee et al. 2023: sparse probing on Pythia v0 70M-6.9B, 1.4B included (196,608 neurons). Dedicated contextual neurons in middle layers. Tracking neurons over checkpoints is named as future work.\n  - Gurnee et al. 2024 (Universal Neurons): the main study is GPT-2 seeds. Pythia-160M shows a universality rate of 1.26 %. Prediction/suppression neurons were replicated on five Pythia models, 410M-6.9B.\n  - Position neurons were found in GPT-2 layers 0-2 (learned absolute positions). Pythia uses rotary, so transfer is (unverified).\n  - Stolfo et al. 2024: entropy and token-frequency neurons in Pythia 410M and 1B. About 40 % of the entropy-neuron effect runs through the null-space route in Pythia, against about 80 % in GPT-2.\n- **Hallucination work on Pythia and on base models.**\n  - Roy et al. 2026 (arXiv 2604.13068), Pythia-1.4B on a 500-question TriviaQA validation split:\n    - greedy accuracy 33.3 %;\n    - residual-probe AUC 0.726 against an output-confidence AUC of 0.749;\n    - best layer at 47 % depth;\n    - a pre-generation signal, AUC 0.663 at position 0 against 0.580 at position 4, p = 0.012, the only one of their seven models to survive Holm;\n    - steering correction 0 %.\n    The paper is internally inconsistent (e.g. Pythia-6.9B's gap is −0.157 in the text but −0.101 in Table 2), so treat these numbers with caution.\n  - SenD (Mohammadzadeh et al., ACL 2025): hallucination metrics such as EigenScore fluctuate across Pythia training checkpoints. It works on embedding indices, not H-neurons.\n  - Yu et al. 2024: Pythia-6.9B only, no checkpoints (v2).\n  - H-Neurons (Gao et al., arXiv 2512.01797):\n    - models: Mistral-7B-v0.3, Mistral-Small-3.1-24B, Gemma-3-4B/27B, Llama-3.1-8B, Llama-3.3-70B; no Pythia;\n    - protocol: 10 samples at T 1.0, top-k 50, top-p 0.9; 1,000 + 1,000 items; GPT-4o answer spans;\n    - \"origin\" means that classifiers trained on instruct models, applied to base models (prompt suffix '\\nAnswer:', stop at newline), have AUROC above chance (no values in the text), plus a weight-drift rank analysis;\n    - no intermediate checkpoints.\n- **TriviaQA accuracy.**\n  - 5-shot EM 18.46 % for Pythia-deduped-1.4B (H2O-Danube report, lm-eval).\n  - The Pythia paper's TriviaQA study (4-shot 'Q: x \\n A: y', EM, over checkpoints) covers deduped 160M, 1.0B, 2.8B and 12B, not 1.4B, and gives figures only.\n  - Jain et al. 2023 evaluate pythia-1.4b zero-shot, with values in figures only.\n  - There is no TriviaQA in the Pythia model card or in the GitHub eval list.\n- **Arithmetic.**\n  - The Pythia paper used deduped 160M, 1.0B, 2.8B and 12B; x1 ∈ [0, 99], x2 ∈ [1, 50]; 'Q:What is x1 # x2 ? A:'; k ∈ {0, 4, 16}. Sizes below 1B were unable to perform well even with 16 shots.\n  - Table 4 gives only the gap between frequent and rare operands. For 1.0B at step 143,000 it is 15.2 / 12.8 / 12.2 points at k = 0 / 4 / 16.\n  - No Pythia-1.4B number was found. K's ACH-short items (2-3 chained operations) are likely beyond it; PY0 measures this.\n\n## 5 Which round-1b core measurements run on Pythia-1.4B (2,048 tokens, base model, no template)\n\nCosts are Pythia-scaled planned A100-minutes in fp32 with TF32 off: the part's planned figure × 0.85 (est.).\n\n| Part : item (core) | On Pythia? | Why / what changes | Cost |\n|---|---|---|---|\n| R0, R1, R8.1, R9.5 | no | They read Qwen round-1/2 files | – |\n| R2 corrected loop, PC, SENS, V_RSI | mechanics yes, verdicts no | Prompts plus 40-token continuations are far below 2,048. But every rule needs Qwen's AX1, u*_b and REF-R16, and P256 are chat requests. A Pythia version needs new axes, PC and SENS: a new study, not a replication | about 51 per block |\n| R3.3 dose series; R4 FDT Jacobian, λ_RSI vs λ_max | yes (mechanics) | R4.1's J_b = Cov(x, S)/c̄ is model-agnostic. The word-set read directions and the full-space Arnoldi mode need no Qwen axes. Its verdicts become descriptive on Pythia | about 28 per block (R3 + R4); R4-lite about 12 |\n| R5 lens readout | partly | No J-lens. The tuned lens exists for the deduped variant only | fit 8-13 (bf16, 100 prompts) |\n| R6 latent loop, carry over turns | partly | No chat turns; a 'Question/Answer' transcript within 2,048 is possible, but B-Q8 does not apply | about 54 |\n| R7 low-damage erasure | mechanics only | Needs R's axes | about 19 |\n| D1-a/b/c/d/e/f (L0 about 1,000 vs about 32,000), D2 (300 vs 32K), D3 (0 vs 28,672), D5-a (4,096) | no | 'Context held above its natural measure' has no counterpart. Pythia trained only on 2,048-token windows; positions ≥ 2,048 are untrained, so effects would be confounded with position extrapolation (the reason the plan stops at Qwen's native window). A within-window 256 vs 2,048 contrast tests a different claim | – |\n| D4 role beside the retained assistant | no | A base model has no assistant identity | – |\n| D1-r, D1-v at L0 | yes, but no H-DUAL test | Short context only; GPT-NeoX BPE changes the segmentations | about 10-20 |\n| K1 label bank | yes, with checks | Digits are BPE-merged, not one token each. Frame token counts change. NE refusal labels degenerate (base models rarely refuse) | CPU |\n| K2 H_tq | yes | Base QA frame. CI = consistently wrong. Yield depends on about 18 % 5-shot EM | about 55-80 (section 7) |\n| K2 H_ar, K8c, ACH arms | doubtful | They need correct and wrong exact-label arithmetic; PY0 measures the yield | – |\n| K3a/b/c | yes | Stored features; NE transfer likely 'not testable' | about 2 |\n| K3d (HALL vs COMP) | partly | HALL portable; COMP families (FP, MC, SY) are chat-shaped | 34 (lite 17) |\n| K3e, K4j, K4, K4p, K6, K10c, L2b, L5 | no (as designed) | No J-lens (a fit is possible). ACH-short is likely too hard. Single-operation items have no intermediates to read | – |\n| K5a | no | Qwen3.5-2B calibration only | – |\n| K8a | partly | Lengths {512, 2,048}; 4,096 is dropped | about 10 |\n| K8b TQA arm | yes | 8 turns are about 300-500 tokens | 9-18 |\n| K7a, K9, K10a, K10b | yes | Use N_H and random sources; Qwen-named channels are dropped. K10b's head map indexes the atlas's 384 heads | 5, 22, 15, 5 |\n| L1 | yes, if H validated and yield allows | Needs about 600 + 600 unselected items | about 52 |\n| L2a | no (not recommended) | Only up to 2,048, 4 doublings short of 32,768. PG19 is Pile training text (memorisation) | – |\n| L3a/b, L3c, L3d | yes | Own text, five turns within 2,048. L3c needs L's population machinery | about 52; 13 |\n| L4 duet | possible, not recommended | Transcript format; the G-duet format gate is uncertain for a base model | about 30 |\n\nPortable core in all: the H line (K2, K3, K8b-TQA, L1, L3) plus routing (K7a, K9, K10a/b). That is about 5 A100-h if all were run. The bridge below takes a subset.\n\n## 6 Q4: can H-neuron emergence be traced over Pythia checkpoints cheaply?\n\nYes.\n\n- **Why it is cheap.** Per checkpoint the work is a download of about 2.93 GB, teacher-forced CETT on about 1,000 fixed texts, and greedy plus 4 samples on 1,200 questions: about 2 min of work and 1.5 min of I/O (est.). Neuron coordinates are the same parameter slots throughout one run, so identity is defined.\n- **Caveats.**\n  - Own-label classes need knowledge, so early checkpoints have no 'consistently correct' class. The fixed-text test (the final model's answers read by the step-s model) carries the early steps. It measures whether the coordinates separate the final model's true answers from its false ones, not the step-s model's own hallucination. Answer log-prob and entropy at step s are covariates.\n  - There is one seed, and only the base model. Gao's drift analysis concerns post-training, which Pythia lacks.\n  - A re-identification at mid checkpoints separates 'the same coordinates' from 'migrating coordinates'.\n- **Novelty.** Gao et al. test origin only at the end of pre-training. SenD tracks hallucination metrics over Pythia checkpoints, but not neurons. Gurnee 2023 names neuron tracking over checkpoints as future work. No H-neuron checkpoint study was found.\n\n## 7 Proposed tier-2 bridge arm 'PY'\n\n### 7.1 Placement and conventions\n- **Model and data.**\n  - Model: EleutherAI/pythia-1.4b, pinned to the atlas's variant. The default is the standard variant, matching the explorer label 'pythia-1.4b' (unverified). Revision `main` = step143000, sha256 recorded, fp16 cast to fp32.\n  - No Qwen data are needed. PY uses K1's frozen TriviaQA splits and scorers and the round's code with a GPT-NeoX hook adapter.\n- **Sessions.**\n  - Two sessions: r1b_PY_S1 and r1b_PY_S2, in either account, starting after r1b_K_S1 (so K2's code path is first proven on Qwen).\n  - Keys use the new prefix 'r1bPY_' in SO-KEYS.\n  - The round's numerics, hygiene (SG1-SG6), time guard and the K.4 statistics apply (90 % bootstrap, 2,000 replicates, new seed).\n- **Labels.** Every PY result is round-level 'exploratory', outside the CF families. It is printed side by side with its Qwen counterpart (K2/K3a with PY1, K8b-TQA with PY4, K10b with PY5) and never pooled.\n- **Frame.** 5-shot 'Question: {q}\\nAnswer: {a}\\n\\n' with fixed train exemplars disjoint from every split. The target is 'Question: {q}\\nAnswer:', stopping at the newline (Gao's base suffix; the frame of the 18.46 % reference). The exact lm-eval template is (unverified).\n- **Damage reference REF-K16-PY.** REF-K16's texts re-tokenised.\n\n### 7.2 Items\n\n**PY0 Instrument** (engineering; nothing analysed)\n- Checks:\n  - parity of eager against SDPA logits within 1e-4 relative on 8 Pile passages × 1,024 tokens, with the memory-efficient kernel asserted;\n  - the padded vocabulary rows masked;\n  - frame token counts and number tokenisation recorded;\n  - max |Δw| between `main` fp16 and the step143000 fp32 shards. This decides which file type all checkpoints load from. Whether the shards hold more than upcast fp16 is (unverified).\n- Probes:\n  - rates;\n  - yield on 1,000 S1 questions with greedy + 10 samples;\n  - a descriptive probe of 500 single-operation two-digit items × 5.\n- Gates G-PY0a (parity) and G-PY0b (mask): PY stops if either fails. Cost: 12 min.\n\n**PY1 H-neurons in Pythia-1.4B** (K2, K3a, K3b, K3c)\n- What: does Gao's protocol find a sparse set beyond damage-matched random sets in a Pile-only base model with a GELU MLP and parallel residual?\n- How: K2 verbatim except for the following.\n  - Two-stage screening.\n    - Greedy on up to 30,000 S1 questions, in blocks of 1,000, until CC ≥ 1,512 and CI ≥ 1,000.\n    - 10 samples (T 1.0, top-k 50, top-p 0.9) on every greedy-correct question and on 30 % of greedy-wrong questions.\n    - A fully sampled random block of 1,000 estimates how many CC items have a wrong greedy answer. If that share is > 10 %, the label 'two-stage screening lossy' applies.\n  - Allocation: S_fit 1,000 + 1,000; S_sess 512 CC (for PY4); test S3, 1,000 questions × 1 sample.\n  - Features: CETT over 196,608 neurons, with few-shot exemplar tokens excluded from the 'other' vector.\n  - Selection and controls: L1 path, C*, Dg1-Dg3, the permutation null, and RS39 / RS39mc on REF-K16-PY. G-K1 and G-K22 as in K.\n- Rule: K2, K3a, K3b and K3c strings verbatim with the suffix ' (Pythia-1.4B)'. The NE transfer reads 'not testable (base model rarely refuses)' if there are fewer than 100 refusals or hedges.\n- MDE: AUROC margin ≈ 0.08-0.10.\n- Shows / cannot show: shows whether the H premise holds in a second model family; cannot show over-compliance in the instruct sense.\n- Cost: about 55 min (about 80 with full screening).\n\n**PY1d (optional) K3d-lite**\n- HALL: TQA S4a error and NE fabricated-answer rate. Compliance: MC.\n- Doses: H at α ∈ {0, 1, 3}; RS39 at α 3.\n- Strings as K3d. Cost: 17 min.\n\n**PY2 Checkpoint trace** (Pythia only; answers Q4)\n- Checkpoints: s ∈ {0, 1000, 4000, 8000, 16000, 33000, 66000, 103000}, plus 143000. All are loaded from one file type and REF statistics are recomputed per s.\n- (a) Fixed text: the 1,000 S3 items with the step-143000 answers teacher-forced.\n  - Frozen step-143000 detectors of H and of each RS39 set (Gao-style transfer, no refit).\n  - A refit L2 detector on H's coordinates with the step-143000 labels.\n  - ΔAUROC adjusted for the answer's log-prob and entropy at s.\n- (b) Own labels: 1,200 disjoint questions, greedy + 4 samples. Classes 5/5 correct against 0/5. 'not decidable (yield at s)' if fewer than 150 per class. Greedy EM recorded.\n- (c) Drift: 1 − the mean cosine of each H member's input row and output column with step 143000, ranked within its layer.\n- (d) Re-identification at s ∈ {33000, 66000} with own labels; Jaccard with H(143000).\n- Rules:\n  - Per checkpoint: 'H readable at step s (fixed text)' iff the 90 % item-bootstrap lower bound of AUROC_H − mean AUROC_RS39 is ≥ 0.05 and AUROC_H exceeds all 39 sets. 'not readable at step s' iff the upper bound is < 0.05. Otherwise 'undecided'.\n  - The same strings for own labels.\n  - s*_fix and s*_own are the earliest checkpoints from which the positive string holds at every later checkpoint.\n  - The one primary trace string (a single test):\n    - 'H signal established by mid-training' iff s*_own ≤ 66000;\n    - 'H signal emerges late' iff s*_own ∈ {103000, 143000};\n    - 'not decidable (yield)' if the own-label test is not decidable at 66000.\n  - Identity:\n    - 'same coordinates' if Jaccard at 66000 is ≥ the 5th percentile of H(143000)'s bootstrap Jaccard;\n    - 'migrating coordinates' if it is ≤ the 95th percentile of layer-matched random sets;\n    - otherwise 'partial'.\n  - Descriptive: s_know (EM reaches 50 % of its final value), 'abrupt' or 'gradual', drift ranks.\n  - Step 0 is the untrained floor.\n  - If PY1 fails G-K2, PY2 runs a dense L2 probe on all CETT features, labelled 'descriptive (no validated H-set)'.\n- MDE: about 0.06-0.08 with fixed text; about 0.10 at 300 + 300 own labels.\n- Cost: about 75 min, including about 12 min of downloads.\n\n**PY3 Atlas-keyed per-token records** (transfer infrastructure)\n- How: 13 timaeus/pile-* subsets × the first 32 rows with ≥ 1,024 tokens × the first 1,024 tokens, about 0.43M tokens. Per token:\n  - the key (subset, row, position) and the token id;\n  - ℓ_xy, entropy, a_H(t), and a for 5 RS39 sets;\n  - a direct-logit-attribution vector in the atlas's component order: 384 heads (layer-major), 24 MLP layers and the embedding path, with the final-LN scale frozen. The unembedding slot has no activation-side counterpart.\n  - Storage: fp16, about 350 MB.\n- Rule: descriptive.\n- PY3b (conditional on Timaeus data):\n  - per-component Pearson r between DLA_C and χ_C, with a token-shuffle null and BH q 0.10;\n  - CKA next to Timaeus's 0.15 baseline;\n  - enrichment of high-a_H tokens per cluster, against a token-identity-matched permutation;\n  - each done for both the ground-truth (4.25M) and the Aux (46M) clusterings.\n- PY3c (conditional on the Aux weights and centroids): cluster labels for PY1 and PY4 tokens.\n- Shows / cannot show: makes the outputs joinable. It says nothing about susceptibilities without Timaeus data. DLA is a first-order, same-position activation attribution, not a susceptibility.\n- Cost: about 13 min.\n\n**PY4 H carry over turns** (K8b TQA arm)\n- How: 192 sessions × 8 turns as a running Q/A transcript, with T 0.7, CRN twins, H α 3 FULL against RS19, TOKEN and KV routes, K_H as a ratio of sums, and PI specificity. Everything stays within 2,048 tokens.\n- Rule: K8b's TQA strings with ' (TQA, Pythia-1.4B)'. G-K8 and G-K16 apply.\n- Cost: 9-18 min.\n\n**PY5 K10b on Pythia**\n- How: blocks {5, 12, 15} (Qwen's 6, 14, 18 × 24/28), Δ ∈ {1, 4}, on 64 own continuations of Pile openers. Targets: a_H and the top PC at block 19. A head map for the 384 heads.\n- Rule: K10b's strings with ' (Pythia-1.4B)'; the map is exploratory.\n- Cost: 5 min.\n\n**PY7 (optional) R4-lite at block 12**\n- How:\n  - 128 Pile openers × 16 seeds × 40 tokens at T 0.7.\n  - J_12 = Cov(x, S)/c̄ within prompts.\n  - A cross-fitted full-space top mode with 200 permutations.\n  - λ along 4 topic word sets and 20 neutral sets.\n  - R4.3's direct-push check.\n- Rule: descriptive. It tells whether Pythia also has one dominant generic loop mode, round 2's 'generic attractor'.\n- Cost: about 12 min.\n\n### 7.3 Cost, sessions and drop order\n- **Sessions.**\n  - r1b_PY_S1: setup 4 + PY0 8 + PY1 51 + PY3 9 + PY4 18 + PY5 5 = 95 min; 124 with PY1d and PY7.\n  - r1b_PY_S2: PY2, 75 min.\n- **Totals** (A100-h, fp32, TF32 off, est.):\n  - minimal (PY0, PY1, PY2, PY3): about 2.5 h;\n  - standard (+ PY4, PY5): about 2.9 h;\n  - full (+ PY1d, PY7): about 3.3 h.\n- **Drop order:** PY7, PY1d, PY5, PY4, then PY2(d). PY0, PY1, PY2(a-c) and PY3 are never dropped.\n- **Funding:** as its own tier-2 line, which is the user's budget decision (question Q1).\n\n### 7.4 Outcomes that count against, and limits\n- **Against:**\n  - 'H-neurons not replicated (detection at random-set level) (Pythia-1.4B)';\n  - 'H signal emerges late' or 'not readable' at every checkpoint before step 143,000;\n  - 'migrating coordinates';\n  - a 'dissipative' carry or 'generic persistence (not H-specific)' in PY4.\n- **Never tested on Pythia:** the length-artifact half of H-CHAIN (no lens arm), H-DUAL, and RSI. None of these Pythia results refutes a Qwen verdict.\n\n## 8 What transfers conceptually (an analogy, not an identity)\n\n| Ours (activation space, inference) | Atlas (weight space, local posterior) | Relation |\n|---|---|---|\n| Push at block b: an external field on activations | Upweighting (x, y) in q: an external field on the data | both are fields, in different spaces |\n| R4.1 J_b = Cov_w(x, S)/c̄ over Gumbel text samples | χ = −Cov_β[φ_C, ℓ_xy − L] over SGLD weight draws | the same fluctuation-dissipation identity ('the derivative of an expectation equals a covariance', Ising post); a different random variable |\n| G, K: attenuation per step and per turn | The Ising post: influence 'attenuated at each step by a factor depending on β' | analogy only |\n| H-neurons: single MLP coordinates | MLP components are whole layers | map H to its layers |\n| K10b head routing | 384 head components | the same index set; different quantities |\n| PY3 DLA vectors (410-dim per token) | 410-dim susceptibility vectors | joinable; expect low alignment (their CKA of activations with ground truth is about 0.15) |\n\n## 9 Unverified or open\n- The atlas's Pythia variant, revision and context length. Whether timaeus/pile-* are its exact 13 subsets.\n- Whether the step branches' fp32 shards are upcast fp16 or the original master weights.\n- The exact `len(tokenizer)` and the digit segmentation.\n- Pythia-1.4B's CC/CI yield at T 1.0, and its arithmetic accuracy.\n- GPT-NeoX SDPA support in transformers 5.22.2, and the jlens adapter for GPT-NeoX.\n- The licence of the tuned-lens files.\n- The licence of the Timaeus Hugging Face datasets.\n- That Wu et al. 2024 used Pythia (abstract opened; the body was not re-checked).\n- The ×0.85 rate factor (PY0 measures it).\n\n## 10 Files written (untrusted copies and extracted text)\n/tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/pythia_bridge/ contains:\n- dl_explorer/explorer.json: the single render;\n- dl_2304_01373/paper.pdf (Pythia) and txt_2304_01373.txt;\n- dl_2604_13068/paper.pdf (Roy et al.) and txt_2604_13068.txt;\n- dl_2306_13651/paper.pdf (Jain et al.) and txt_2306_13651.txt;\n- dl_2204_06745/paper.pdf (GPT-NeoX-20B) and txt_2204_06745.txt;\n- dl_2305_01610/paper.pdf (Gurnee 2023) and txt_2305_01610.txt.\n",
+   "refs": [
+    {
+     "title": "Pythia: A Suite for Analyzing Large Language Models Across Training and Scaling (Biderman et al., ICML 2023, PMLR 202)",
+     "url": "https://arxiv.org/abs/2304.01373",
+     "finding": "16 models (70M-12B), 154 checkpoints each. 1.4B: 1,208,602,624 non-embedding params, 24 layers, width 2,048, 16 heads, LR 2e-4. Batch 1,024 x 2,048; flash attention, rotary, parallel attention+MLP, untied embeddings. Table 6: fp16 enabled, rotary-pct 0.25, seq-length 2,048. Table 5: 7,120 A100-h for the 1.4B run. Sec. 3.3 / App. C.2: TriviaQA (4-shot 'Q: x \\n A: y', EM) and arithmetic (x1 in [0,99], x2 in [1,50], k in {0,4,16}) on the deduped 160M/1.0B/2.8B/12B only. 'Models at sizes below 1 billion are unable to perform well'. Table 4: multiplication frequency gaps; 1.0B at step 143000: 15.2/12.8/12.2.",
+     "how_checked": "arXiv abs page via WebFetch; PDF text via pdftotext (own directory): Table 1, Sec. 2.3-2.4, 3.3, App. C.2, D, E read"
+    },
+    {
+     "title": "EleutherAI/pythia-1.4b model card (Hugging Face)",
+     "url": "https://huggingface.co/EleutherAI/pythia-1.4b",
+     "finding": "Table row 1.4B as in the paper. 154 checkpoints (step0, 10 log-spaced, 143 evenly spaced); branch 143000 = main. 299,892,736,000 tokens. Just under 1 epoch standard; about 1.5 epochs deduped. GPT-NeoX-20B tokenizer. Jan-2023 rename and retrain; v0 still available. Not instruction-tuned. Apache-2.0. Evaluations listed: LAMBADA, PIQA, WinoGrande, ARC-Easy, SciQ (no TriviaQA).",
+     "how_checked": "WebFetch of the model card page"
+    },
+    {
+     "title": "EleutherAI/pythia-1.4b config.json (main), and pythia-1.4b-deduped config.json",
+     "url": "https://huggingface.co/EleutherAI/pythia-1.4b/blob/main/config.json",
+     "finding": "GPTNeoXForCausalLM; hidden 2048; intermediate 8192; gelu; 16 heads; 24 layers; rotary_pct 0.25; rotary_emb_base 10000; max_position_embeddings 2048; layer_norm_eps 1e-5; vocab_size 50304; bos=eos=0; tie_word_embeddings false; torch_dtype float16; use_parallel_residual true. The deduped config has identical keys and values.",
+     "how_checked": "WebFetch of both config pages"
+    },
+    {
+     "title": "EleutherAI/pythia-1.4b file trees (main, step8000, step143000) and step8000 model.safetensors.index.json",
+     "url": "https://huggingface.co/EleutherAI/pythia-1.4b/tree/step8000",
+     "finding": "main: model.safetensors 2.93 GB plus pytorch_model.bin 2.93 GB. step8000 and step143000: two safetensors shards (4.99 GB + 671 MB) plus pytorch_model.bin 2.93 GB. index metadata: total_parameters 1,414,647,808, total_size 5,658,591,232 B (4 B per parameter, fp32-sized).",
+     "how_checked": "WebFetch of the three tree pages and the index json"
+    },
+    {
+     "title": "EleutherAI/pythia-1.4b-deduped file tree at step8000",
+     "url": "https://huggingface.co/EleutherAI/pythia-1.4b-deduped/tree/step8000",
+     "finding": "model.safetensors 2.83 GB, pytorch_model.bin 2.93 GB, optimizer.pt 18.4 GB (24.2 GB in total)",
+     "how_checked": "WebFetch of the tree page"
+    },
+    {
+     "title": "EleutherAI/pythia GitHub README",
+     "url": "https://github.com/EleutherAI/pythia",
+     "finding": "Mixed precision fp16 for all models except pythia-1b (bf16). Sequence length 2048 (samples of 2049). 207B tokens per deduped epoch, about 1.5 epochs. v0: 4M batch, 71,500 steps. Extra seeds 1-9 only for 14M-410M. Evals at evals/pythia-v1 (ARC, BLiMP, LAMBADA, LogiQA, MMLU, PiQA, SciQ, Wikitext, Winogrande, WSC). Dataloader reconstruction tools.",
+     "how_checked": "WebFetch of the repository page"
+    },
+    {
+     "title": "GPT-NeoX-20B: An Open-Source Autoregressive Language Model (Black et al. 2022), Sec. 3.2",
+     "url": "https://arxiv.org/abs/2204.06745",
+     "finding": "BPE tokenizer trained on the Pile, vocabulary 50,257, consistent space handling, repeated-space tokens up to 24. No digit-splitting rule is described.",
+     "how_checked": "PDF via WebFetch, text via pdftotext (own directory), Sec. 3.2 read"
+    },
+    {
+     "title": "Spectroscopy at Scale: Finding Interpretable Structure in Pythia-1.4B (Murfet, Gordon, Adam, Wang, Hoogland, Baker, Snell, van Wingerden, Newgas, Snikkers, Hitchcock; timaeus.co, 21 Apr 2026)",
+     "url": "https://timaeus.co/research/2026-04-21-spectroscopy-main",
+     "finding": "Components H = 410 (384 heads, 24 MLP layers, embedding, unembedding). 4.25M ground-truth token sequences from Pile subsets, upsampled to 46M by Aux models. 57,236 clusters (PageRank-based, PCA whitening). 4,800 H200-hours. Cluster Explorer and devinterp linked. Checkpoint and dedup not stated. No data release. Named clusters include 'Kinds of Numbers' (C11414), US Presidents, Nationalities.",
+     "how_checked": "WebFetch (normal page read; site has no terms of use) twice with targeted questions"
+    },
+    {
+     "title": "How to Scale Susceptibilities (Gordon et al., timaeus.co, 21 Apr 2026)",
+     "url": "https://timaeus.co/research/2026-04-21-spectroscopy-definitions",
+     "finding": "chi_xy = -Cov_beta[phi(w), l_xy(w) - L(w)]. phi_C is restricted to the component slice (restricted plus unrestricted chains). Aux model: one-layer encoder-decoder, 16x hidden, inputs are residuals at layers 5, 11, 17, 23, outputs are the 410-PC basis, mean per-PC Pearson 0.714. CKA with activations: GT about 0.15, Aux about 0.275. 50-NN Jaccard: 0.05 vs 0.19. Clusters 249 -> 57,236 with 46M tokens and PC whitening. Row-normalisation bug; re-clustering under way.",
+     "how_checked": "WebFetch (normal page read)"
+    },
+    {
+     "title": "Interpreting the Ising Model (Gordon, Hitchcock, Murfet; timaeus.co, 21 Apr 2026)",
+     "url": "https://timaeus.co/research/2026-04-21-spectroscopy-ising",
+     "finding": "Primer: susceptibility = covariance ('the derivative of an expectation equals a covariance'). External field maps to data reweighting; Hamiltonian to population loss; walls to internal structure. A field's influence is attenuated per step by a factor depending on beta. No language-model results.",
+     "how_checked": "WebFetch (normal page read)"
+    },
+    {
+     "title": "Towards Spectroscopy: Susceptibility Clusters in Language Models (Gordon, Baker, Wang, Snell, van Wingerden, Murfet; arXiv 2601.12703, 19 Jan 2026, CC BY 4.0)",
+     "url": "https://arxiv.org/abs/2601.12703",
+     "finding": "Pythia-14M: 510 clusters, about half match SAE features. 60,000 sequences from each of 13 Pile subsets. pSGLD with RMSProp. Pythia-1.4B settings: gamma 300, n*beta 10, eps 1e-5, batch 16, 4 chains, 100 draws, 160 steps between draws; 410 components; 249 clusters in that paper; 10 nodes x 4 H200, at most 5 days; GPU-hours not logged. Pythia-14M clusters have conductance below 1 in models from 31M to 1.4B.",
+     "how_checked": "arXiv abs and HTML (two WebFetch passes covering the whole page)"
+    },
+    {
+     "title": "Timaeus Cluster Explorer (pythia-1.4b, 46M, Aux run)",
+     "url": "https://clusters.timaeus.co/explorer?run=clusters%2Fpythia-1.4b-46m-aux-pcs%2F",
+     "finding": "Client-rendered. The render shows 'Susceptibilities > pythia-1.4b > 46M > Aux' and '57236 clusters' with token counts and top tokens. No export, licence or terms; only 'Copy IDs' and 'Embed'. No robots.txt on clusters.timaeus.co (404).",
+     "how_checked": "WebFetch (static shell), then one headless-browser render of the landing page (one page view, no clicks), read with python3 -I"
+    },
+    {
+     "title": "timaeus.co privacy policy, robots.txt and research index",
+     "url": "https://timaeus.co/privacy-policy",
+     "finding": "No terms-of-use page exists; the privacy policy is silent on automated access and reuse; robots.txt 'User-agent: * Allow: /'. The research index lists the 21 Apr 2026 posts.",
+     "how_checked": "WebFetch of the home page footer, privacy policy, robots.txt and research index"
+    },
+    {
+     "title": "timaeus-research/devinterp (GitHub)",
+     "url": "https://github.com/timaeus-research/devinterp",
+     "finding": "MIT licence. SGLD with per-token loss storage, LLC, susceptibilities (optionally component-restricted), Bayesian influence functions. No released Aux models, cluster data or Pythia susceptibility datasets.",
+     "how_checked": "WebFetch of the repository page"
+    },
+    {
+     "title": "Timaeus Hugging Face datasets (search 'timaeus/pile') and the timaeus/pile-wikipedia_en card",
+     "url": "https://huggingface.co/datasets?search=timaeus%2Fpile",
+     "finding": "Public datasets timaeus/pile-<subset> (pile-cc, stackexchange, pubmed_abstracts, github, wikipedia_en, uspto_backgrounds, pubmed_central, freelaw, arxiv, dm_mathematics, nih_exporter, hackernews, enron_emails, europarl, philpapers, gutenberg_pg-19, ...). 100,000 rows each, streamed from monology/pile-uncopyrighted. Licence not stated on the card.",
+     "how_checked": "WebFetch of the search page and one dataset card"
+    },
+    {
+     "title": "Eliciting Latent Predictions from Transformers with the Tuned Lens (Belrose et al.; arXiv 2303.08112, v6 11 Nov 2025)",
+     "url": "https://arxiv.org/abs/2303.08112",
+     "finding": "Affine translator per block. Recipe: SGD-Nesterov, 250 steps x 2^18 tokens, Pile validation chunks of 2048; a full probe set in under 1 h on one 8xA40 node. v6: Muon much faster and earlier lenses 'severely undertrained'.",
+     "how_checked": "arXiv abs and HTML v6 via WebFetch"
+    },
+    {
+     "title": "AlignmentResearch/tuned-lens Space, lens/EleutherAI listing",
+     "url": "https://huggingface.co/spaces/AlignmentResearch/tuned-lens/tree/main/lens/EleutherAI",
+     "finding": "Lenses for pythia-1.4b-deduped and pythia-1.4b-deduped-v0 (and other deduped sizes). None for the standard pythia-1.4b.",
+     "how_checked": "WebFetch of the directory listing"
+    },
+    {
+     "title": "neuronpedia/jacobian-lens (Hugging Face)",
+     "url": "https://huggingface.co/neuronpedia/jacobian-lens",
+     "finding": "The only Pythia J-lens is pythia-70m-deduped (1,000 prompts). No J++ or R-lens for any Pythia. Format: logits = unembed(h @ J[l].T).",
+     "how_checked": "WebFetch today; plus the README copy saved earlier in this session (scratchpad r1b/vchk/np/README.md, tree.json)"
+    },
+    {
+     "title": "anthropics/jacobian-lens (GitHub)",
+     "url": "https://github.com/anthropics/jacobian-lens",
+     "finding": "Apache-2.0 code; 'Reference implementation. Not maintained'. Recipe 1000 x 128; '~100 prompts is usable'. Fitting time dominated by the backward pass. Examples use Qwen; HF decoders 'adapt cleanly'; GPT-NeoX not named.",
+     "how_checked": "WebFetch of the repository page"
+    },
+    {
+     "title": "EleutherAI SAE releases (HF model search) and third-party Pythia-1.4B SAEs",
+     "url": "https://huggingface.co/models?search=EleutherAI%2Fsae-pythia",
+     "finding": "EleutherAI: sae-pythia-70m-32k, 160m-32k, 410m-65k, 70m-deduped-32k, 160m-deduped-32k; none for 1.4B. Third party: Vadim21221 resid_post layer-12 SAEs for pythia-1.4b (65,536 latents, topk and fractal topk, Jul 2025).",
+     "how_checked": "WebFetch of two HF search pages (EleutherAI/sae-pythia; 'pythia-1.4b sae')"
+    },
+    {
+     "title": "Finding Neurons in a Haystack: Case Studies with Sparse Probing (Gurnee, Nanda, Pauly, Harvey, Troitskii, Bertsimas; 2023)",
+     "url": "https://arxiv.org/abs/2305.01610",
+     "finding": "Pythia (v0) 70M-6.9B; 1.4B has 24 layers, d 2048, 16 heads x 128, 196,608 neurons. Dedicated contextual neurons in middle layers. Pythia's parallel attention makes layer 0 purely a function of the current token. Tracking neurons over checkpoints is named as future work.",
+     "how_checked": "arXiv abs via WebFetch; PDF text via pdftotext (Sec. 4, App. B.1 Table 1, footnotes)"
+    },
+    {
+     "title": "Universal Neurons in GPT2 Language Models (Gurnee et al. 2024)",
+     "url": "https://arxiv.org/abs/2401.12181",
+     "finding": "Main study: GPT-2 seeds; 1-5 % of neurons universal. Pythia-160M universality 1.26 %. Prediction/suppression analysis repeated on five Pythia models, 410M-6.9B. Position neurons found in GPT-2 layers 0-2.",
+     "how_checked": "arXiv abs and HTML via WebFetch"
+    },
+    {
+     "title": "Confidence Regulation Neurons in Language Models (Stolfo et al., NeurIPS 2024)",
+     "url": "https://arxiv.org/abs/2406.16254",
+     "finding": "Entropy and token-frequency neurons, analyses repeated on Pythia 410M and 1B. In Pythia and Gemma about 40 % of the entropy-neuron effect runs through the null-space route, against about 80 % in GPT-2, LLaMA2-7B and Phi-2.",
+     "how_checked": "arXiv abs and HTML via WebFetch"
+    },
+    {
+     "title": "H-Neurons: On the Existence, Impact, and Origin of Hallucination-Associated Neurons in LLMs (Gao, Chen, Xiao, Chen, Liu, Sun; arXiv 2512.01797 v2)",
+     "url": "https://arxiv.org/abs/2512.01797",
+     "finding": "Under 0.1 % of neurons predict hallucination; causally linked to over-compliance. Models: Mistral-7B-v0.3, Mistral-Small-3.1-24B, Gemma-3-4B/27B, Llama-3.1-8B, Llama-3.3-70B. 'Origin' rests on instruct-trained classifiers applied to base models without retraining (suffix '\\nAnswer:', stop at newline; AUROC above chance, no values in text) plus drift ranks. No intermediate checkpoints, no Pythia. Protocol: 10 samples, T 1.0, top-k 50, top-p 0.9; 1,000 + 1,000 items.",
+     "how_checked": "arXiv abs and HTML v2 via WebFetch (origin section, protocol)"
+    },
+    {
+     "title": "Detection Without Correction: A Robust Asymmetry in Activation-Based Hallucination Probing (Roy, Misra, Singh, Roy; arXiv 2604.13068 v2)",
+     "url": "https://arxiv.org/abs/2604.13068",
+     "finding": "Pythia-1.4B on 500 TriviaQA validation questions: greedy EM 33.3 %; probe AUC 0.726 vs confidence 0.749; pre-generation signal pos-0 0.663 vs pos-4 0.580 (p = 0.012, the only model surviving Holm); best layer at 47 % depth; steering correction 0 %. Internal inconsistencies (Pythia-6.9B gap -0.157 in text vs -0.101 in Table 2).",
+     "how_checked": "arXiv abs via WebFetch; PDF text via pdftotext (Tables 1-3, Sec. 3, App. A)"
+    },
+    {
+     "title": "Hallucination Detox: Sensitivity Dropout (SenD) for Large Language Model Training (Mohammadzadeh et al., ACL 2025)",
+     "url": "https://arxiv.org/abs/2410.15460",
+     "finding": "Pythia-suite hallucination metrics (EigenScore family) vary substantially over training checkpoints. SenD drops high-variability embedding indices. Not neuron sets.",
+     "how_checked": "arXiv abs via WebFetch"
+    },
+    {
+     "title": "Mechanistic Understanding and Mitigation of Language Model Non-Factual Hallucinations (Yu, Cao, Cheung, Dong; arXiv 2403.18167 v2)",
+     "url": "https://arxiv.org/abs/2403.18167",
+     "finding": "Pythia-6.9B (with Llama-2, GPT-J). ParaRel accuracy 0.248. No checkpoint analysis in v2.",
+     "how_checked": "arXiv abs and HTML v2 via WebFetch"
+    },
+    {
+     "title": "H2O-Danube-1.8B Technical Report (arXiv 2401.16818 v2)",
+     "url": "https://arxiv.org/abs/2401.16818",
+     "finding": "Pythia-deduped 1.4B row: ARC-e 56.57, ARC-c 29.86, BoolQ 56.76, HellaSwag 54.40, OpenBookQA 33.20, PIQA 72.36, TriviaQA 18.46 (5-shot EM, lm-eval), WinoGrande 56.20",
+     "how_checked": "arXiv HTML v2 via WebFetch (Table 1 headers and row, evaluation text)"
+    },
+    {
+     "title": "Bring Your Own Data! Self-Supervised Evaluation for Large Language Models (Jain et al. 2023)",
+     "url": "https://arxiv.org/abs/2306.13651",
+     "finding": "EleutherAI/pythia-1.4b evaluated zero-shot on TriviaQA unfiltered-web-dev ('Question: ...\\nAnswer:', containment). Values shown only in figures.",
+     "how_checked": "PDF via WebFetch, text via pdftotext (appendix on TriviaQA accuracy)"
+    },
+    {
+     "title": "Hugging Face Terms of Service",
+     "url": "https://huggingface.co/terms-of-service",
+     "finding": "No clause on automated access, scraping, rate limits or bulk downloads; Hub API not mentioned",
+     "how_checked": "WebFetch"
+    },
+    {
+     "title": "Do language models plan ahead for future tokens? (Wu, Morris, Levine; COLM 2024)",
+     "url": "https://arxiv.org/abs/2404.00859",
+     "finding": "Myopic training separates pre-caching from breadcrumbs; pre-caching grows with scale. The abstract does not name Pythia; Pythia use in the body is (unverified).",
+     "how_checked": "arXiv abs via WebFetch only"
+    },
+    {
+     "title": "hallucinations-leaderboard results, EleutherAI folder",
+     "url": "https://huggingface.co/datasets/hallucinations-leaderboard/results/tree/main/EleutherAI",
+     "finding": "No Pythia models listed (gpt-j-6b, gpt-neo-125m/1.3B/2.7B, llemma_7b only)",
+     "how_checked": "WebFetch of the directory listing"
+    }
+   ],
+   "usable_resources": [
+    {
+     "name": "EleutherAI/pythia-1.4b (and pythia-1.4b-deduped)",
+     "what": "Model weights, tokenizer and 154 training checkpoints as HF revisions (stepN); main = step143000",
+     "license_or_terms": "Apache-2.0 (model card)",
+     "automated_access_allowed": "HF ToS is silent on automated access. The round already downloads its models from HF in Colab; the bridge would add about 9 revisions under the same practice (user's call). Only page reads were used in this research.",
+     "size": "main fp16 model.safetensors 2.93 GB. Each step branch: pytorch_model.bin 2.93 GB (fp16) plus fp32-sized safetensors shards 5.66 GB. Deduped step branches also carry optimizer.pt (18.4 GB at step8000)."
+    },
+    {
+     "name": "AlignmentResearch/tuned-lens Space: lens/EleutherAI/pythia-1.4b-deduped",
+     "what": "Pretrained tuned lens for the deduped 1.4B (also -v0). None for the standard variant.",
+     "license_or_terms": "Code MIT (GitHub); licence of the lens files (unverified)",
+     "automated_access_allowed": "HF ToS silent; page read only here",
+     "size": "(unverified)"
+    },
+    {
+     "name": "anthropics/jacobian-lens",
+     "what": "Reference implementation for fitting J-lenses; would be needed for Pythia-1.4B, which has no published J-lens",
+     "license_or_terms": "Apache-2.0; 'not maintained'",
+     "automated_access_allowed": "Code repository; page read only here",
+     "size": "small (code)"
+    },
+    {
+     "name": "neuronpedia/jacobian-lens",
+     "what": "Pre-fitted J-lenses; only pythia-70m-deduped among Pythia models",
+     "license_or_terms": "Base-model licence per folder; Apache-2.0 for the non-Llama, non-Gemma folders",
+     "automated_access_allowed": "HF ToS silent; page read only here",
+     "size": "pythia-70m lens 2.6 MB"
+    },
+    {
+     "name": "EleutherAI SAEs (sae-pythia-70m/160m/410m) and Vadim21221 pythia-1.4b layer-12 SAEs",
+     "what": "No EleutherAI SAE for 1.4B. One third-party residual SAE at layer 12 (65,536 latents, top-k), unvetted.",
+     "license_or_terms": "(unverified)",
+     "automated_access_allowed": "HF ToS silent; not downloaded",
+     "size": "(unverified)"
+    },
+    {
+     "name": "timaeus/pile-<subset> datasets (Hugging Face)",
+     "what": "Pile subsets matching the atlas's text distribution (100,000 rows each, from monology/pile-uncopyrighted). Input for the proposed PY3 atlas-keyed records.",
+     "license_or_terms": "Not stated on the dataset card (Pile component licences apply)",
+     "automated_access_allowed": "HF ToS silent; page reads only here. The bridge would read about 32 rows per subset.",
+     "size": "e.g. pile-wikipedia_en 175 MB, 100,000 rows"
+    },
+    {
+     "name": "Timaeus Cluster Explorer (clusters.timaeus.co)",
+     "what": "Interactive view of the 4.25M ground-truth and 46M Aux clusterings for Pythia-1.4B (57,236 Aux clusters) and the Pythia-14M runs",
+     "license_or_terms": "No terms, no licence shown; timaeus.co has only a privacy policy (silent on automated access)",
+     "automated_access_allowed": "Unclear, so normal page reads only (one render done). No scraping or bulk download planned. Data for a join must come from Timaeus on request.",
+     "size": "not downloadable"
+    },
+    {
+     "name": "timaeus-research/devinterp",
+     "what": "SGLD, LLC, susceptibility and BIF library (would be needed only for recomputation, which is excluded)",
+     "license_or_terms": "MIT",
+     "automated_access_allowed": "Code repository; page read only",
+     "size": "small"
+    },
+    {
+     "name": "Timaeus posts (Spectroscopy at Scale; How to Scale Susceptibilities; Interpreting the Ising Model) and arXiv 2601.12703",
+     "what": "Definitions, component set (410), SGLD settings, Aux-model description, cost figures",
+     "license_or_terms": "Posts: no stated licence; arXiv paper CC BY 4.0",
+     "automated_access_allowed": "Posts: normal page reads only (no terms); arXiv: page reads",
+     "size": "n/a"
+    },
+    {
+     "name": "TriviaQA rc.nocontext (already in plan K1)",
+     "what": "QA items for PY1 (H-set), PY2 (trace) and PY4 (carry), using K1's frozen splits",
+     "license_or_terms": "As checked by part K (K1)",
+     "automated_access_allowed": "As in the round's plan",
+     "size": "as K1"
+    },
+    {
+     "name": "Pythia data tools (preshuffled Pile, batch_viewer)",
+     "what": "Exact training data order; would allow linking H emergence to when relevant entities were seen (not proposed for the small bridge)",
+     "license_or_terms": "Pile component licences (unverified)",
+     "automated_access_allowed": "HF ToS silent; not used",
+     "size": "very large (full Pile token streams)"
+    }
+   ],
+   "proposals": [
+    "Add a separate tier-2 bridge arm 'PY' on Pythia-1.4B, funded as its own line (user decision Q1): minimal PY0+PY1+PY2+PY3 about 2.5 A100-h, standard (+PY4, PY5) about 2.9 h, full (+PY1d, PY7) about 3.3 h (fp32, TF32 off; est. at round-2 rates x 0.85). Two sessions, r1b_PY_S1 (about 1.6 h) and r1b_PY_S2 (about 1.25 h), starting after r1b_K_S1; key prefix 'r1bPY_'.",
+    "Pin the Pythia variant and revision to the atlas's. Default EleutherAI/pythia-1.4b standard (matching the explorer label 'pythia-1.4b'; unverified), revision main = step143000, sha256 recorded. PY0 compares main fp16 with the step143000 fp32 shards and fixes one file type for all checkpoints.",
+    "Express all PY outputs in the atlas's coordinates: the 410-component index (384 heads layer-major, 24 MLP layers, embedding, unembedding), text from the public timaeus/pile-* subsets, and per-token keys (subset, row, position). A later join with Timaeus data is then a table merge without recomputing the atlas.",
+    "Suggest that the user, not the agent, ask Timaeus for one of: (a) the Pythia variant, revision and context length used; (b) a token sample with ground-truth susceptibility vectors and/or cluster IDs for both the 4.25M ground-truth and 46M Aux clusterings; (c) the Aux model weights plus cluster centroids. Any of these enables the conditional PY3b/PY3c joins at negligible GPU cost.",
+    "PY1: run K2 (with K3a/b/c) on Pythia unchanged except for the base frame (5-shot 'Question: {q}\\nAnswer:', stop at newline), two-stage screening (greedy on up to 30,000 questions; 10 samples on greedy-correct and on 30 % of greedy-wrong; lossiness estimated on a fully sampled block), and CETT at dense_4h_to_h's input with the bias excluded. Use K's verdict strings with the suffix ' (Pythia-1.4B)'.",
+    "PY2 checkpoint trace (answers whether H-neurons emerge in pre-training): checkpoints {0, 1000, 4000, 8000, 16000, 33000, 66000, 103000} plus 143000. Measure fixed-text and own-label AUROC of the step-143000 H coordinates against RS39, covariate-adjusted, with drift ranks and re-identification Jaccard at 33000 and 66000. One primary trace string: 'H signal established by mid-training' / 'H signal emerges late' / 'not decidable (yield)'.",
+    "Do not port part D's core to Pythia. Its 2,048-token training window has no 'above natural length' region, positions beyond 2,048 are untrained, and a base model has no assistant identity (D4). Record this as 'no counterpart (Pythia window 2,048)' rather than running a within-window substitute.",
+    "Do not port the chain-lens arm (K4, K6, K10c, L2b, L5) or R's verdict machinery to Pythia. Reasons: no J-lens (a bf16 fit with 100 prompts would take about 8-13 min if ever needed); K's ACH-short items are likely beyond Pythia-1.4B (PY0 measures yield descriptively); digits are BPE-merged; R's verdicts need Qwen's round-1/2 axes and files.",
+    "Optional PY7: run R4-lite (FDT linear response J = Cov(x, S)/cbar, cross-fitted full-space top mode, direct-push check) at Pythia block 12 as the activation-space twin of the atlas's 'susceptibility = covariance' identity. Descriptive only.",
+    "State in the plan text that our pushes, G, K and R4's FDT Jacobian are activation-space linear responses estimated with the same fluctuation-dissipation identity Timaeus uses in weight space. They are analogous, not equal. Low alignment with susceptibility clusters is expected (Timaeus report CKA of about 0.15 between ground-truth susceptibilities and activations) and does not count against any round-1b verdict.",
+    "Flag for the user: Hugging Face's terms are silent on automated access. PY would download about 9 Pythia revisions (about 26 GB as fp16 .bin) through the same HF route the round already uses for Qwen. No automated access to timaeus.co or clusters.timaeus.co is planned (no terms there; only normal page reads were used)."
+   ]
+  }
+ },
+ {
+  "label": "research:timaeus",
+  "result": {
+   "report_md": "## Timaeus susceptibility atlas (Pythia-14M / Pythia-1.4B) as a bridge target for round 1b\n\n### 0 Bottom line\n\n1. **Nothing in round 1b's verdicts transfers to Pythia or the atlas on its own.** Round 1b measures Qwen3-1.7B in activation space at inference. The atlas measures Pythia in weight space, as posterior covariances. The two efforts share no model, tokenizer, token sequences, window convention or ensemble. Transfer is possible only by re-running a few round-1b instruments on Pythia over the atlas's own token windows and joining the results per token. The parts of round 1b that run on generations or long contexts cannot be joined at all: R's loops, D's 16K-32K contexts (Pythia's window is 2,048) and the chat-template frames.\n2. **The brief mixes two numbers.** 57,236 clusters is the clustering of the **46M upsampled (Aux) vectors** for Pythia-1.4B. The **4.25M ground-truth (GT)** vectors form a separate clustering with **13,531 clusters**. That count comes from the explorer's run file, not from the posts. The posts' neighborhoods (Roles, Game-Image-Play) come from the GT run. The she/her and \"Make\" examples come from the Aux runs.\n3. **A per-token join is technically possible.** Every explorer example carries a `global_idx` into the run's token stream. The run's offsets file maps it to (sequence, position). For 1,000 sequences per run, the explorer's Sequences view serves the token ids, a cluster id per token, and float16 PC susceptibility vectors.\n   - **Licensing blocks a bulk download.** There are no terms of use (timaeus.co, resolution.org, the explorer), no licence statement on the data, and no robots.txt on the explorer and data hosts. Under our rule this is \"unclear\", so only normal page reads are allowed. Bulk use of these arrays needs written permission or a data release from Timaeus/Resolution.\n4. **Cheap checks of their findings are possible.** Two of them need no GPU once the labels are available:\n   - the she/her reorganisation, read from cluster labels in the GT and the Aux runs;\n   - Roles-neighborhood coherence.\n   A third needs about 1 A100-h on Pythia-1.4B: conductance of their clusters in activation-space response graphs, plus Jaccard-kNN and CKA against their published baselines.\n5. **Ground-truth susceptibilities for new text are out of reach.** 4,800 H200-h for 4.25M tokens is about 4 H200-s per token amortised, and the SGLD draws are not released. This matches the user's wish not to recompute the atlas.\n6. **The only cheap route from activations into the atlas is their Aux model.** It maps Pythia-1.4B residual activations to the 410 susceptibility PCs. It is not public; I found no Pythia-1.4B Aux model on Hugging Face.\n\n### 1 What was computed (primary sources opened)\n\n**1.1 Definition.**\n- The per-token susceptibility is χ^C_xy = −Cov_β[φ_C(w), ℓ_xy(w) − L(w)] (fluctuation-dissipation theorem).\n- φ_C is the component-restricted loss observable: δ on the slice {u*}×C times [L(w) − L(w*)].\n- It is estimated with two pSGLD chains: one restricted to C, one full. The estimator targets the renormalised susceptibility (Z_full/Z_C)·χ, and column z-scoring removes the C-dependent factor (\"How to Scale Susceptibilities\").\n- The unit is a **token in context (x, y)**, with loss −log p(y|x). There is **no per-document or per-sequence vector**; the vector per (x, y) is χ_xy ∈ R^H.\n\n**1.2 Components.**\n- Pythia-1.4B: H = 410 = 384 heads (24 layers × 16) + 24 MLPs + embedding + unembedding.\n- Pythia-14M: H = 32 = 24 heads (6 × 4) + 6 MLPs + embedding + unembedding. This matches Gordon et al. Table 7 and the explorer's run_info (K = 32).\n- Both decompositions check against the HF configs, which I read.\n- Gordon et al.'s main text says \"for each component C (an attention head)\" and \"l × h columns\". This is an inconsistency inside the paper.\n\n**1.3 Runs.**\n\n| Run (explorer id) | Model | Token set | n_tokens | Components | Preprocessing | Clusters |\n|---|---|---|---|---|---|---|\n| Gordon et al. 2026 (paper) | Pythia-14M | 60,000 sequences from each of 13 subsets (780K) | 780,000 | 32 | column z-score, then row mean removed | 510 |\n| same paper, Table 7 | Pythia-31M / 70M / 160M / 410M / 1.4B | same 780K | – | 56 / 56 / 158 / 410 / 410 | same | 358 / 254 / 311 / 241 / 249 |\n| `clusters/pythia-1.4b/` (\"pythia-1.4b - 4.5M - GT\") | Pythia-1.4B | 2,080 windows × 2,048 tokens | 4,259,840 | 410 | column z-score, then PCA whitening | 13,531 |\n| `clusters/pythia-1.4b-46m-aux-pcs/` (\"46M Aux\") | Pythia-1.4B, Aux-predicted | 74,767 sequences of 11-1,024 tokens (median 577; 29,219 at the 1,024 cap) | 46,010,313 | 410 PCs | – | 57,236 |\n| `clusters/pythia-14m-46m-GT/` | Pythia-14M, SGLD | 22,672 windows × 2,047 tokens | 46,409,584 | 32 | whitening | 40,457 |\n| `clusters/46m_pca_whiten_with_probes/` (\"14m 46M Aux\") | Pythia-14M, Aux-predicted | the same 74,767 sequences as the 1.4B 46M run (identical offsets) | 46,010,313 | 32 PCs (pc_dim 32, whiten false) | – | 77,140 |\n\n- The clustering hyperparameters are identical in all runs: kNN k = 45, ACL α = 1e-3, ε = 1e-7, minimum cluster size 20 (run_info).\n- The 1.4B GT source file name is `pythia-1.4b_dan_susceptibilities.pt` (run_info).\n\n**1.4 What a token sequence xy is.**\n- **1.4B GT:** packed 2,048-token windows, Pythia's native context.\n  - All 50 windows I could inspect start with `<|endoftext|>`. That token has cluster −1.\n  - There are 62 end-of-text tokens in 50 windows, so windows can cross document boundaries. 18 of the 270 example snippets of one cluster contain `<|endoftext|>`.\n  - Every position of every window is an (x, y). x is the window prefix and y is the token at that position.\n  - 2,080 = 13 × 160 fits \"uniform over 13 subsets\", but that is my inference.\n- **46M set:** variable-length sequences of at most 1,024 tokens.\n- **14M GT:** 2,047 positions per window.\n\n**1.5 Data and model versions.**\n- Subsets per Gordon et al. App. D: github-code, pile-cc, pubmed_abstracts, uspto_backgrounds, pubmed_central, stackexchange, wikipedia_en, freelaw, arxiv, dm_mathematics, enron_emails, hackernews, nih_exporter.\n- Source per Baker et al. App. B: \"the first 100k rows\" of monology/pile-uncopyrighted subsets, published as HF `timaeus/pile-<subset>`. The code set \"github-all\" is codeparrot/github-code, not the Pile.\n- I infer that Gordon's \"github-code\" is the same set; unverified.\n- **Checkpoint and dedup are not stated anywhere I opened.** Gordon says \"the trained model checkpoint\". The names used (pythia-14m, pythia-1.4b, pythia-31m) are the non-deduped HF repo names. Treat both as unverified.\n- **pSGLD settings (Gordon Table 5):**\n\n  | Setting | Value |\n  |---|---|\n  | γ | 300 |\n  | ε | 1e-5 |\n  | batch | 16 |\n  | chains | 4 |\n  | draws | 100 |\n  | nβ | 3 for 14M-160M; 10 for 410M and 1.4B |\n  | steps between draws | 55 (14M) / 120 / 200 / 140 / 160 / 160 |\n\n  The posts do not restate these for the 4.25M run.\n- **Compute:** about 4,800 H200-h for the 4.25M GT set (main post).\n\n**1.6 Clustering, neighborhoods and regions.**\n- The kNN graph is symmetrised with a self-tuning RBF weight exp(−‖x−y‖²/(σ_x σ_y)), where σ is the distance to the k-th neighbour.\n- Iterative ACL personalised-PageRank clustering searches for low-conductance prefixes. A prefix is rejected if it covers more than 99 % of the ranked nodes. The loop stops when fewer than 0.1 % of nodes remain unvisited. For 1.4B, seeds run in parallel.\n- The 2024-2025 runs used column z-scoring plus row-mean removal. The 2026 runs replace the row step with PCA whitening, X = √(N−1)·U.\n- The definitions post reports a bug: row normalisation was applied after whitening, which removes one direction. Re-clustering was announced, so the released labels may change. Pin them by sha256 and date.\n- **Neighborhoods** are hand-picked sets of nearby clusters on a UMAP of the cluster centroids, taken from the GT run.\n  - The post's embedded props give 150 cluster ids for **Roles** (including the ligand clusters C3660 and C9575, and C80 \"agents\"). They give 169 ids for **Game-Image-Play**.\n  - C80 also holds chemical \"agent\" uses (\"radiological agent\", \"adhesive agent\"). The Roles theme is a reading of centroid proximity, and the authors themselves flag possible UMAP artefacts.\n- **Regions:** 19 annotated regions.\n- **She/her across scale:**\n  - 14M clusters come from the 14M **Aux** run: C68817 (he/she, 78 tokens), C60937 (\"(she\", 92), C31034 (Her after newlines, 130), C21508 (his/her, 139). All four are small clusters of single tokens **without a leading space**.\n  - 1.4B clusters come from the 1.4B **Aux** run: C1828 (6,862 tokens), C342 (7,542) and C822 (7,524; ' his', ' her', ' their', ' its').\n  - I verified the top tokens in the explorer. Where the with-space ' she'/' her' tokens fall at 14M is not shown.\n\n**1.7 Upsampling to 46M (Aux model).**\n- Architecture: one-layer encoder-decoder, 16× hidden width, light L1 penalty.\n- Input: concatenated residual-stream activations of Pythia-1.4B layers 5, 11, 17 and 23. Target: the 410 GT PCs.\n- Accuracy: mean per-PC Pearson r 0.714 on about 212K held-out tokens (top PCs > 0.95; bottom PCs 0.5-0.6).\n- Agreement with activations:\n\n  | Comparison | Linear CKA | Jaccard-kNN (k = 50) |\n  |---|---|---|\n  | Activations vs GT susceptibilities | ≤ about 0.15 | 0.05 |\n  | Activations vs Aux susceptibilities | ≤ about 0.275 | 0.19 |\n\n- For 14M, Aux clusters are more single-token than GT clusters: top-4 entropy 0.24 vs 0.36 nats, and 77,140 vs 40,457 clusters.\n- **Which token position feeds the Aux model (t or t−1) is not stated.**\n\n**1.8 Inconsistencies to keep in mind.**\n- The definitions post says the 14M GT run used \"the same set of 46 million tokens\" as the Aux runs. The explorer's offsets differ: 22,672 × 2,047 windows versus 74,767 variable sequences, and 46,409,584 versus 46,010,313 tokens.\n- The explorer labels the GT run \"4.5M\"; the true count is 4,259,840.\n- The definitions post attributes the 4.25M set to Gordon et al. (2026), whose paper reports only 780K-token runs.\n\n### 2 What is released, licences and automated access\n\n| Resource | Content | Licence / terms | Automated access |\n|---|---|---|---|\n| Three timaeus.co posts | text and figures | no terms page; footer has a privacy policy only; robots.txt \"Allow: /\" | single page reads done; no bulk |\n| Cluster Explorer (see the explorer details below) | interactive app with per-run data | no licence, no terms; no robots.txt (404) on clusters.* and clusters-data.*; \"Login for more runs\" | unclear, so normal interactive use only |\n| arXiv 2601.12703, 2504.18274, 2601.13548, 2508.00331 | papers; App. I.1 of Gordon et al. lists all 510 Pythia-14M clusters (780K run, not in the explorer) | CC BY 4.0 | yes (single reads) |\n| arXiv 2605.07980, 2605.07970 | primer and estimator papers | CC BY-NC-SA 4.0 | yes |\n| devinterp (GitHub) | v2 susceptibilities API; weight restrictions for 85+ HF model types including GQA groups | MIT | yes |\n| HF datasets `timaeus/pile-<subset>` and `pile_subsets_mini` | 100,000 documents per subset (e.g. pile-github 203 MB download); mini set 6,656 rows | no licence tag; source monology/pile-uncopyrighted is \"license: other\" | HF API allowed; reuse licence unclear |\n| HF dataset `timaeus/lang5_probes` | 15 binary probe CSVs, 56 MB; probably the explorer's \"probes\" (inference) | no licence tag | HF API allowed; licence unclear |\n| HF models `timaeus/aux_weighted_*pythia14m*` | 4 repos; purpose unverified (names suggest patterning) | none | – |\n| EleutherAI Pythia-14M and 1.4B | the models | Apache-2.0 | yes |\n\n**Explorer details.** For each run the explorer serves:\n- per-cluster example files: 30 random examples plus 120 top and 120 bottom by projection, each with before/target/after text and `global_idx`;\n- cluster metadata and relations (pos/neg-linked, sim/opp probes);\n- an 80,000-token UMAP sample;\n- the token offsets file;\n- a Sequences view of **1,000 sequences** in 20 batches of 50. Each token record holds `{t, id, c}`, and each batch has a float16 per-token PC matrix (84 MB per batch for 1.4B GT);\n- for the 1.4B GT run, 1,000 of 2,080 windows; batch 0 holds ids 0, 2, 4, …, 101, so roughly every second window.\n\n**Code.** The public code is the estimator library (devinterp). The clustering pipeline, the Aux models and the explorer code are not in the org's 13 public repositories.\n\n### 3 Joining another method's per-token measurements\n\n**Key.** The join key is (run id, `global_idx`).\n- Use the run's offsets to find s with offsets[s] ≤ g < offsets[s+1], and t = g − offsets[s]. For 1.4B GT, s = g // 2048.\n- I did not verify this token by token: none of the sampled examples fell into the one batch I inspected.\n- Then y = tokens[g] and x = the window prefix. Use the token ids as given; never re-tokenise or re-chunk.\n\n**Pitfalls.**\n- The loss for xy comes from the state at position t−1, while the y-token's own state is at t. Record both.\n- Window conventions differ by run (2,048 / 2,047 / ≤ 1,024). Context crosses end-of-text boundaries.\n- Cluster ids are run-specific: C3660 is \"ligands\" in GT but \"Mar/Mor\" in 46M Aux.\n- 27.1 % of tokens are unclustered (c = −1) in the 50 GT windows I inspected.\n- The exposed 1,000 sequences are not a random sample.\n- Labels may be re-issued after the bug fix.\n- The 14M and 1.4B **Aux** runs share sequences, so a cross-scale per-token join is possible there. The two GT runs do not share windows.\n\n**What a join shows.** It shows whether their weight-space clusters are coherent in Pythia's activation-space responses. It cannot say anything about Qwen3-1.7B.\n\n### 4 Their findings that activation-space measurements could check cheaply\n\n**(a) She/her across scale.**\n- **Labels only (CPU), conditional on permission.** For all she/her tokens, with and without the leading space, in the shared 46M sequences:\n  - annotate grammatical role with deterministic rules (subject / object / possessive determiner);\n  - annotate surface context (previous token '/', '(', '[', quote or newline);\n  - compare the normalised mutual information of cluster labels with role versus with surface, at 14M versus 1.4B;\n  - repeat inside each GT run.\n- If the reorganisation appears only in the Aux runs, it may be inherited from activations: the Aux models read activations, and Aux clusters are more single-token.\n- **Activation space.** On the same tokens, measure kNN purity (k = 45) for role versus surface in Pythia-14M and 1.4B residual streams. Cost: minutes.\n\n**(b) Roles.**\n- Take the 150 GT cluster ids against frequency-matched non-role nouns from the same domains.\n- Test whether a direction built on legal contexts transfers to military and software contexts, against shuffled labels and random directions.\n\n**(c) Activations vs susceptibilities.**\n- Compute conductance of their clusters on a kNN graph of our per-token vectors. This is their own cross-scale test; random sets give about 1.\n- Compute Jaccard-kNN and CKA against their PC vectors, next to their baselines (0.05 / ≤ 0.15 for activations).\n\n**(d) Observation from two manual explorer searches (1.4B GT run, descriptive only).**\n- ' improve' sits in improve-family clusters (C5949, C10935, C9074, …) next to ' enhance', ' facilitate' and ' promote'.\n- ' change' sits in change-family clusters (C12728, C2085, …) and in two mixed clusters (signal/line/process; connected/relationship).\n- None of the listed clusters is shared.\n- This is the same word pair as round 2's Part A finding that \"improve an AI system\" is barely more general than \"change\", but in a different model and a different space.\n\n### 5 Crosswalk: round-1b quantities against the susceptibility formalism\n\n| Round 1b | Timaeus counterpart | Same mathematics? | Transfer |\n|---|---|---|---|\n| Push s·α·min(\\|h\\|,cap)·unit(d) | a field: data mixture q_h; magnetic field h·F in the Ising post | both are linear perturbation parameters, but ours acts on activations and theirs on data | the operator ports to GPT-NeoX; directions must be rebuilt in Pythia |\n| R3.3 small-push slope; R4.1 J_b = Cov(x, S)/cbar (FDT); R4.3 direct-push check | χ = (1/nβ)∂⟨φ⟩/∂h = −Cov[φ, ΔL] | the same identity; our ensemble is sampling over texts, theirs the posterior over weights | the estimator transfers, the numbers do not |\n| Teacher-forced KL damage (SO-DMG) | none; closest noise analogue is the nβ = 0 Gaussian baseline (Gordon App. H) | no | per-token damage can be joined |\n| G and K carry (R6, D2-f, K6e/K8b, L3b) | none (no inference dynamics) | no | Pythia generations only; no join |\n| H-neurons, a_X(t) | component observables (heads and MLPs), not neurons | no | joinable per token, but needs a Pythia H-set (K2's yield gate) |\n| L3c Ising fits; L3d and σ | \"Interpreting the Ising Model\": χ_p = Cov[M_C, M_p] | analogy only | conceptual |\n| D at 16K-32K | Pythia window 2,048 | – | none |\n\nTheir whitening (Λ^-1/2, `pinv_scale`) is a forward preprocessing transform, not a reconstruction. The primer's pseudo-inverse for patterning would violate our inverse-free rule and is not needed.\n\n### 6 Access log and what remains unverified\n\n**What I did.**\n- One curl read per page: the three posts, robots.txt files, arXiv abstract and HTML pages, HF API and READMEs, the devinterp README and LICENSE.\n- WebFetch for GitHub pages.\n- Playwright single page loads and a few UI interactions in the explorer: run menu, about 15 cluster links, two token searches, the Sequences tab. These kept only files the page itself loaded.\n- No scripted bulk download. No model was run.\n\n**Files.** Kept in `/tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/timaeus_bridge/`:\n- `txt/` (texts);\n- `dl_explorer/runinfo/` (run_info and offsets);\n- `derived/neighborhoods_from_post.json` (Roles and Game-Image-Play ids);\n- `dl_explorer/seqmeta/sequences_batch_0.json` (50 GT windows with token and cluster ids, from normal use; do not redistribute).\n\n**Unverified.**\n- Pythia revision and dedup.\n- Aux input position.\n- 160 windows per subset.\n- Whether the 13 subsets of Gordon et al. equal the HF `timaeus/pile-*` sets.\n- The `global_idx` mapping, token by token.\n- Which subsets the 46M set draws on.\n- The ICML 2026 poster (seen only in search results).\n- The purpose of `lang5_probes` and the `aux_weighted` models.\n",
+   "refs": [
+    {
+     "title": "Spectroscopy at Scale: Finding Interpretable Structure in Pythia-1.4B (Murfet, Gordon, Adam, Wang, Hoogland, Baker, Snell, van Wingerden, Newgas, Snikkers, Hitchcock; Timaeus, 21 Apr 2026)",
+     "url": "https://timaeus.co/research/2026-04-21-spectroscopy-main",
+     "finding": "H=410 components (384 heads, 24 MLPs, embed, unembed); 4.25M GT token sequences from Pile subsets, about 4,800 H200-h; upsampled to 46M; 57,236 clusters (46M Aux run); 19 regions; Roles and Game-Image-Play neighborhoods from the 4.25M GT clustering; she/her reorganisation across scale; embedded component props show run prefixes (14M examples from 46m_pca_whiten_with_probes, 1.4B examples from pythia-1.4b-46m-aux-pcs, neighborhoods from pythia-1.4b) and the neighborhood cluster-id lists (Roles 150, Game-Image-Play 169)",
+     "how_checked": "curl single read of the HTML, converted to text and read in full; component props parsed from the same HTML"
+    },
+    {
+     "title": "How to Scale Susceptibilities (Gordon, Adam, Hoogland, Murfet; Timaeus, 21 Apr 2026)",
+     "url": "https://timaeus.co/research/2026-04-21-spectroscopy-definitions",
+     "finding": "Estimator and FDT form; column z-score then PCA whitening (bug note: row normalisation after whitening, re-clustering announced); ACL clustering k=45, alpha 1e-3, eps 1e-7; Aux model: 1-layer encoder-decoder, 16x hidden, inputs Pythia-1.4B residual layers 5/11/17/23 to 410 PCs, mean per-PC r 0.714; CKA activations vs GT about 0.15 (Aux about 0.275); Jaccard-kNN 0.05 vs 0.19; 14M Aux vs GT 77,140 vs 40,457 clusters",
+     "how_checked": "curl single read, text read in full"
+    },
+    {
+     "title": "Interpreting the Ising Model (Gordon, Hitchcock, Murfet; Timaeus, 21 Apr 2026)",
+     "url": "https://timaeus.co/research/2026-04-21-spectroscopy-ising",
+     "finding": "Susceptibility as Cov[observable, field generator] (FDT); walled-Ising example with chi_p = Cov[M_C, M_p] reveals hidden walls; physics-to-network dictionary (Hamiltonian to population loss, Boltzmann to tempered posterior, field to data perturbation)",
+     "how_checked": "curl single read, text read in full"
+    },
+    {
+     "title": "Towards Spectroscopy: Susceptibility Clusters in Language Models (Gordon, Baker, Wang, Snell, van Wingerden, Murfet), arXiv:2601.12703, 19 Jan 2026",
+     "url": "https://arxiv.org/abs/2601.12703",
+     "finding": "Pythia-14M, 13 subsets x 60,000 = 780K token sequences, 510 clusters, 50.8 % matched to Pythia-70M SAE features; pSGLD hyperparameters (Table 5); Table 7 components and cluster counts for 14M-1.4B (1.4B: 249); 14M clusters keep conductance below 1 in larger models; nbeta=0 Gaussian baseline 288 clusters; checkpoint and dedup not stated; CC BY 4.0",
+     "how_checked": "abs page and full HTML read (relevant sections and appendices A, D, E, H)"
+    },
+    {
+     "title": "Structural Inference: Interpreting Small Language Models with Susceptibilities (Baker, Wang, Hoogland, Murfet), arXiv:2504.18274 (v3, 6 Mar 2026)",
+     "url": "https://arxiv.org/abs/2504.18274",
+     "finding": "Original per-token susceptibility; 3M attention-only model with K=1024; datasets are the first 100k rows of monology/pile-uncopyrighted subsets (HF timaeus/pile-*); github-all = codeparrot/github-code; CC BY 4.0",
+     "how_checked": "abs page and HTML read (Appendix B, sections 4.2 and C)"
+    },
+    {
+     "title": "Patterning: The Dual of Interpretability (Wang, Murfet), arXiv:2601.13548",
+     "url": "https://arxiv.org/abs/2601.13548",
+     "finding": "Inverts the linear response to choose data that produce target structure; no role in a read-only bridge; CC BY 4.0",
+     "how_checked": "abs page read"
+    },
+    {
+     "title": "Susceptibilities and Patterning: A Primer on Linear Response in Bayesian Learning (Elliott, Murfet), arXiv:2605.07980",
+     "url": "https://arxiv.org/abs/2605.07980",
+     "finding": "Primer; susceptibility matrix as Jacobian; uses a pseudo-inverse for patterning (incompatible with our inverse-free rule if used for reconstruction); CC BY-NC-SA 4.0",
+     "how_checked": "abs page read"
+    },
+    {
+     "title": "Linear Response Estimators for Singular Statistical Models (Elliott, Murfet), arXiv:2605.07970",
+     "url": "https://arxiv.org/abs/2605.07970",
+     "finding": "Consistency and asymptotic unbiasedness of susceptibility estimators; CC BY-NC-SA 4.0",
+     "how_checked": "abs page read"
+    },
+    {
+     "title": "Embryology of a Language Model (Wang, Baker, Gordon, Murfet), arXiv:2508.00331",
+     "url": "https://arxiv.org/abs/2508.00331",
+     "finding": "UMAP of susceptibilities over training; background only",
+     "how_checked": "abs page read"
+    },
+    {
+     "title": "Elicitation without Backpropagation (Baker, Pathak, Murfet, Wei), arXiv:2607.18804",
+     "url": "https://arxiv.org/abs/2607.18804",
+     "finding": "Prompt elicitation in Bayes-filtered transformers; not a bridge target",
+     "how_checked": "abs page read"
+    },
+    {
+     "title": "Timaeus Cluster Explorer",
+     "url": "https://clusters.timaeus.co/explorer?run=clusters%2Fpythia-1.4b-46m-aux-pcs%2F",
+     "finding": "Four public runs plus a login wall; run_info and offsets files give the run table in section 1.3; examples carry global_idx; Sequences view serves 1,000 sequences per run (20 batches of 50, per-token {t,id,c}, float16 PC vectors); GT windows start with <|endoftext|>; 27.1 % of tokens unclustered in batch 0; no licence or terms",
+     "how_checked": "Playwright single page loads and a few normal UI interactions; kept only files the page itself loaded; no bulk download"
+    },
+    {
+     "title": "timaeus.co robots.txt, privacy policy, homepage footer; resolution.org footer",
+     "url": "https://timaeus.co/robots.txt",
+     "finding": "robots.txt: User-agent: * Allow: /; no terms-of-use page on timaeus.co or resolution.org; privacy policy says nothing on automated access; clusters.timaeus.co and clusters-data.timaeus.co robots.txt return 404",
+     "how_checked": "curl and WebFetch single reads"
+    },
+    {
+     "title": "HF dataset timaeus/pile-github (and pile-pile-cc, pile_subsets_mini, lang5_probes READMEs)",
+     "url": "https://huggingface.co/datasets/timaeus/pile-github",
+     "finding": "Each subset holds the first 100,000 qualifying rows streamed from monology/pile-uncopyrighted; no licence tag; lang5_probes holds 15 balanced probe CSVs",
+     "how_checked": "HF API and raw README reads"
+    },
+    {
+     "title": "monology/pile-uncopyrighted",
+     "url": "https://huggingface.co/datasets/monology/pile-uncopyrighted",
+     "finding": "license: other; Books3, BookCorpus2, OpenSubtitles, YTSubtitles and OWT2 removed",
+     "how_checked": "HF API and README read"
+    },
+    {
+     "title": "EleutherAI/pythia-1.4b and pythia-14m",
+     "url": "https://huggingface.co/EleutherAI/pythia-1.4b",
+     "finding": "Apache-2.0; configs: 1.4B has 24 layers x 16 heads, hidden 2048, context 2048, parallel residual, rotary 25 %; 14M has 6 x 4, hidden 128; main shas fedc38a16eea3bd36a96b906d78d11d2ce18ed79 and cf967c0a9a04383db6f7b1108d86b2962634b4ac",
+     "how_checked": "HF API and config.json reads"
+    },
+    {
+     "title": "timaeus-research/devinterp",
+     "url": "https://github.com/timaeus-research/devinterp",
+     "finding": "MIT; v2 susceptibilities() with weight restrictions (l0h1, GQA groups, attn, mlp, embed, unembed); quickstart on Qwen2.5-0.5B; no clustering, Aux or explorer code found",
+     "how_checked": "WebFetch of the repo and folder pages; raw README and LICENSE read"
+    },
+    {
+     "title": "timaeus-research GitHub organisation repositories",
+     "url": "https://github.com/orgs/timaeus-research/repositories",
+     "finding": "13 public repositories; none contains the spectroscopy pipeline, clustering, Aux models or explorer",
+     "how_checked": "WebFetch of the org page (GitHub API blocked by the session proxy)"
+    },
+    {
+     "title": "Towards Spectroscopy ICML 2026 poster listing",
+     "url": "https://icml.cc/virtual/2026/poster/60506",
+     "finding": "Listed as an ICML 2026 poster",
+     "how_checked": "unverified (seen only as a web-search result, not opened)"
+    }
+   ],
+   "usable_resources": [
+    {
+     "name": "Cluster Explorer data (clusters-data.timaeus.co): 1.4B GT run",
+     "what": "Per run: token offsets (2,080 x 2,048 windows), cluster metadata, per-cluster examples with global_idx, cluster relations, 80K-token UMAP sample; Sequences view for 1,000 windows with per-token token id and cluster id (batch JSON 3.7 MB decoded x 20) and float16 410-dim PC susceptibility vectors (84 MB per batch x 20, about 1.68 GB)",
+     "license_or_terms": "No licence, no terms of use, no robots.txt on the data host; the explorer invites interactive exploration",
+     "automated_access_allowed": "Unclear, so normal interactive page use only; bulk download needs written permission or a data release",
+     "size": "about 1.8 GB per run if all 20 sequence batches are taken; small per-cluster files 20-65 KB"
+    },
+    {
+     "name": "Cluster Explorer data: 1.4B 46M Aux and 14M 46M Aux runs (shared 74,767 sequences)",
+     "what": "Same file types; identical offsets in both runs (46,010,313 tokens, sequences of at most 1,024 tokens), so per-token cross-scale joins are possible; 57,236 and 77,140 clusters",
+     "license_or_terms": "No licence or terms stated",
+     "automated_access_allowed": "Unclear, so normal interactive use only",
+     "size": "1.4B Aux: 24 MB PC data and 0.18 MB transfer per sequence batch, meta-short 7.5 MB, probes.npy 94 MB"
+    },
+    {
+     "name": "Cluster Explorer data: 14M 46M GT run",
+     "what": "22,672 windows x 2,047 tokens, K=32, 40,457 clusters; Sequences view for 1,000 windows",
+     "license_or_terms": "No licence or terms stated",
+     "automated_access_allowed": "Unclear, so normal interactive use only",
+     "size": "6.6 MB PC data per sequence batch; probes.npy 5.2 MB"
+    },
+    {
+     "name": "Neighborhood cluster-id lists extracted from the main post",
+     "what": "Roles (150 GT cluster ids, including 80, 3660, 9575) and Game-Image-Play (169 ids), run clusters/pythia-1.4b/; saved at /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/timaeus_bridge/derived/neighborhoods_from_post.json",
+     "license_or_terms": "Post content; no licence stated; facts only",
+     "automated_access_allowed": "Taken from a single normal page read",
+     "size": "under 3 KB"
+    },
+    {
+     "name": "Gordon et al. 2026, arXiv:2601.12703",
+     "what": "Paper incl. full list of 510 Pythia-14M cluster descriptions (780K run; not in the explorer), hyperparameters, larger-model table",
+     "license_or_terms": "CC BY 4.0",
+     "automated_access_allowed": "Yes (arXiv single reads)",
+     "size": "HTML about 2.7 MB"
+    },
+    {
+     "name": "Baker et al. 2025, arXiv:2504.18274",
+     "what": "Original per-token susceptibility method; dataset provenance (Appendix B)",
+     "license_or_terms": "CC BY 4.0",
+     "automated_access_allowed": "Yes",
+     "size": "HTML about 2.5 MB"
+    },
+    {
+     "name": "HF datasets timaeus/pile-<subset> (13 used) and timaeus/pile_subsets_mini",
+     "what": "First 100,000 rows per Pile subset from monology/pile-uncopyrighted (fields text, meta.pile_set_name); mini set 6,656 rows (13 x 512)",
+     "license_or_terms": "No licence tag; source licence 'other'",
+     "automated_access_allowed": "HF API downloads technically allowed; reuse licence unclear, so the user decides",
+     "size": "e.g. pile-github 203 MB, pile-pile-cc 260 MB download"
+    },
+    {
+     "name": "HF dataset timaeus/lang5_probes",
+     "what": "15 balanced binary probe CSVs (prompt, prompt_len, target), likely the explorer's probes (inference)",
+     "license_or_terms": "No licence tag",
+     "automated_access_allowed": "HF API allowed; licence unclear",
+     "size": "56 MB, 47 files"
+    },
+    {
+     "name": "devinterp library",
+     "what": "Susceptibility, LLC and Bayesian influence-function estimators; weight restrictions for HF and TransformerLens models (heads, GQA groups, attn, mlp, embed, unembed)",
+     "license_or_terms": "MIT",
+     "automated_access_allowed": "Yes",
+     "size": "Python package"
+    },
+    {
+     "name": "EleutherAI Pythia-14M and Pythia-1.4B",
+     "what": "Models the atlas was computed on (revision and dedup not stated by Timaeus; main shas recorded above)",
+     "license_or_terms": "Apache-2.0",
+     "automated_access_allowed": "Yes",
+     "size": "about 2.9 GB (1.4B fp16 weights); 14M small"
+    },
+    {
+     "name": "Timaeus Pythia-1.4B Aux model",
+     "what": "Map from residual activations (layers 5/11/17/23) to the 410 susceptibility PCs; the only cheap route from activations into the atlas",
+     "license_or_terms": "Not released (not found on HF)",
+     "automated_access_allowed": "Not available; ask the authors",
+     "size": "unknown"
+    }
+   ],
+   "proposals": [
+    "Keep the round-1b core and every tier-1 rule unchanged. Add an optional tier-2 'part T (transfer to Pythia and the Timaeus atlas)': all strings exploratory or descriptive, never in a CF family, never feeding a tier-1 verdict. Key namespace 'r1bT_'; session r1b_T_S1 in account B (lowest tier-2 load). Drop order: directly after RK-2, movable if the user ranks transferability higher.",
+    "T0 (no GPU; documentation and code only). Freeze the crosswalk table of section 5 into the main plan. Give the instrument code a GPT-NeoX/Pythia adapter with plain-text frames: SO-DMG's damage functional and calibrate rule, the push operator, the small-push linear response by symmetric differences, R4.1's FDT estimator, and the per-component direct effect on log p(y|x) over the same 410 (32) components Timaeus use. Unit-test on Pythia-14M inside r1b_P0 (seconds).",
+    "Data-permission gate TG-perm. T1 and T2 run only with written permission or a public data release from Timaeus/Resolution (correspondence addresses in the posts); the user decides whether to ask. Request: token ids, offsets and per-token cluster labels for the four public runs; optionally the PC vectors, the Pythia-1.4B Aux model, the exact Pythia revision (deduped or not, which step), the Aux input position (t or t-1), and the corrected re-clustering. Without it, T1/T2 read 'not run (no data permission)'. No scripted bulk download of explorer arrays in any case.",
+    "T1 atlas join pass (if TG-perm; about 1.0-1.5 A100-h planned at the plan's rates, Pythia-1.4B taken as about 2.8 GFLOP per token, my estimate). Run Pythia-1.4B and 14M teacher-forced on up to 500 exposed GT windows and up to 500 shared 46M sequences, using their token ids unchanged. Per token, record at both t-1 and t: (a) the 410-dim (32-dim) direct-effect vector; (b) teacher-forced KL damage of pushes calibrated to delta1 = 0.05 nats (SO-DMG rule on a 16-passage Pythia reference set) along a random direction and a topic axis rebuilt in Pythia; (c) small-push linear response of the token loss. Analyses, units = windows, 90 % bootstrap with 2,000 replicates: conductance of each cluster with at least 20 sampled members on a k=45 self-tuning-RBF kNN graph of our vectors, against 99 equal-size random sets (rank p, BH-FDR q 0.10); Jaccard-kNN (k=50) and CKA against their PCs, beside their baselines (0.05 / about 0.15); eta-squared of cluster labels for (b) and (c) beyond token identity. Strings: 'atlas clusters coherent in activation-space response (share s)' / 'not coherent'.",
+    "T2 she/her from labels alone (if TG-perm; CPU in r1b_ana). Annotate every she/her token with rules: role (subject / object / possessive determiner) and surface (previous token '/', '(', '[', quote, newline). Compare normalised mutual information of cluster labels with role versus surface: 14M versus 1.4B in the shared 46M Aux runs, and separately inside each GT run. Include the with-space tokens the post does not show. Strings: 'reorganisation present in GT and Aux' / 'present in Aux only (possibly inherited from activations)' / 'absent'.",
+    "T3 concept-level checks without any join (no permission needed; about 0.1 A100-h). On a text slice disjoint from SO-WT103's allocations, or Pile text if the user accepts its 'other' licence: (a) kNN purity (k=45) for role versus surface of she/her in Pythia-14M versus 1.4B residual streams, layer by layer; (b) Roles: does a legal-context role direction (role nouns from the post versus frequency-matched non-role nouns) transfer to military and software contexts, against shuffled-label and random-direction nulls. Descriptive.",
+    "T4 Aux placement (only if the authors share the Pythia-1.4B Aux model; about 0.1 A100-h). Project Pythia activations of new texts, e.g. plain-text versions of the round-1 RSI and sea axis texts, into their 410-PC space and report the nearest cluster centroids. Labelled 'Aux-predicted (activation-derived), not ground truth'. Their whitening is a forward transform and is allowed under main §2.5.",
+    "Do not plan any ground-truth SGLD susceptibilities on Qwen or Pythia. 4,800 H200-h for 4.25M tokens is about 4 H200-s per token amortised, the draws are not released, and the user does not want the atlas recomputed. Do not use the primer's pseudo-inverse (patterning) anywhere.",
+    "Join rules to freeze if T1/T2 run. Key = (run id, global_idx), mapped to (sequence, position) via that run's offsets. Keep their windows verbatim: EOT-led 2,048-token windows for 1.4B GT, 2,047 for 14M GT, at most 1,024 for the 46M runs. Read loss-related quantities at t-1 and y-token states at t. Cluster ids are run-specific. Report the unclustered share (c = -1) and the non-random selection of the 1,000 exposed sequences. Pin every explorer file by sha256 and access date (labels may be re-issued after the preprocessing bug fix).",
+    "Correct the framing in the user-facing text. The 57,236 clusters are the 46M Aux clustering; the 4.25M GT set has 13,531 clusters (explorer run_info). The 14M she/her clusters shown are 78-139-token clusters of no-space 'she'/'her'. The 14M GT run's windows differ from the 46M Aux set although the post says 'same set'. Round-1b verdicts on Qwen3-1.7B never transfer to Pythia without re-running the instruments."
+   ]
+  }
+ }
+]
