@@ -255,8 +255,12 @@ with the final producer versions (including the Amendment 2 toy library). The ro
 `r2_pc_toy.make_fixture`; no git, no Drive, no model weights. All 37 producer stages ran (rc 0). `run_ana.sh` then runs the
 r2_ana steps in the runner's order and mirrors every output into `<r2in>/r2_ana/` as the runner does. All steps ran (rc 0), with
 lowered counts and once with the plan's full counts. On these inputs every comparison with a producer's in-session view or
-preview agrees (`od_g8` empty). The MOCK verdicts are the expected 'not testable' / 'undecided' ones (random MOCK axes, 2 toy
-worlds).
+preview agrees (39 flags; `od_g8` empty). The MOCK verdicts are the expected 'not testable' / 'undecided' ones (random MOCK axes,
+2 toy worlds). Last rebuild: 13 Nov, 05:18-05:38 UTC, with the producers' versions of that time. Every damage-matched control
+carries `full_at_dstar` (None at QUICK sizes: no control takes Amendment 2's step). The r2_rgi_toy rows carry `param_arm` (no
+mismatch). armA.json carries the Amendment 3 (a) fields (recentred interval verified; both readings agree). q5 carries the
+bootstrap medians. The theta-toy verdict carries `rng_seeds`. The causal entries' `D_sim_ci` is not reached on the chain (P is
+empty under MOCK), so it is covered by the self-test only.
 
 Timings, one CPU thread, synthetic data at real size:
 - AT7 with 1,500 simulations x 6 scenarios x 8 line-arm runs on 8 worlds: 86 s (plan: 127 s).
