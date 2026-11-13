@@ -21,6 +21,11 @@ uses pc_meta's QUICK constants through TC (MAXSTEPS 200, AFTER 50, LEVEL1 0, FT_
 
 ## 2 Outputs (the interfaces for r2_pc_toy.py, r2_rgi_verdict.py and r2_report.py)
 
+Every stage output (both scripts) carries `rng_seeds`: the random streams it used (OD-G6; review rgi_toy-3 / theta_toy-2). Every model row
+of rgi_toy carries `finite_weights` (false = non-finite weights: `dropped` note, level1 false, every line null, no pair; review
+rgi_toy-4) and `param_arm` (the parameterisation bp_mup / bp_sp; `arm` is the condition arm 'nat' | 'late' | 'early' | 'nat2';
+review rgi_toy-2).
+
 `<out_dir>/rgi_toy/`
 - `r0.json` (AT0): `levels` = what AT2 reads: `task_late` [{target_x, gamma, status 'accepted' | 'flagged', flags}], `sham_late`,
   `task_early`, `sham_early` (gammas that passed level 1 in both inits); `selection` (per target, incl. dropped ones), `task_late_grid`
@@ -37,14 +42,16 @@ uses pc_meta's QUICK constants through TC (MAXSTEPS 200, AFTER 50, LEVEL1 0, FT_
   Lambda, Lambda_per_shift, Lambda_null_wrong, Lambda_null_perm; S_gain, T1_gain, T1, LOO, LOO_shuf (means over the model's 2 pairs as
   receiver, 2.7 C20), n_senders; Phi, acc_proj; acc_free (4 tasks, after 300 steps), A_free (mean over FT_EVAL), acc_free_curve;
   acc_alpha, alpha, X; recipe_acc (depth 1-6), rho (5); RG (mean over its pairs as sender); heldout_pre, colnorm, sat_h1; natural rows
-  also B2_8, B2_4, A8_mean, F8_mean, F4_mean and r1_job_name (init 0: pc_meta's job name of the same cell, for G46).
+  also B2_8, B2_4, A8_mean, F8_mean, F4_mean and r1_job_name (init 0: pc_meta's job name of the same cell, for G46, built from
+  param_arm; '_quick' under QUICK as pc_meta).
   Pair keys: A, B, cond, ws, A_init, B_init, A_level1, B_level1, S_gain, accB, accB_perm, t1, t1_shuf, t1_gain, t1_tasks, loo, loo_shuf,
   r1 (ridge factor), loo_err1, RG, back, own, warm10, warm40.
 - `r1/at3.json` (AT3, written once every world exists): correlation of delta_h2 with each line across the natural inits at both
   checkpoints (pooled over worlds, raw and with world means removed) and the within-run changes with t intervals over worlds.
 - `cross/w<ws>.json` (AT5 among BP nets): `models` (12 per world: BP-muP W 64 / 128 / 256 / 1024 inits 0, 1 and BP-SP init 0; Lambda,
   Phi, X, delta, B2, r1_job_name, `as_receiver` / `as_sender` means of S_gain, T1_gain, LOO, T4, T3), `pairs` (all 132 ordered pairs:
-  S_gain, accB, accB_perm, t1 ..., loo ..., t4 [4], t4_mean, t3 [4], t3_mean, stitch {lam, R2}; t3 only where both widths <= 256).
+  A, B, ws, A_W, B_W, A_arm / B_arm (the parameterisation, as r2_pc_toy's cross_pc rows), A_init, B_init, A_level1, B_level1, S_gain,
+  accB, accB_perm, t1 ..., loo ..., t4 [4], t4_mean, t3 [4], t3_mean, stitch {lam, R2}; t3 only where both widths <= 256).
 - `models/at5_<TC.net_name(spec)>.pt`: one `TC.save_nets` file per AT5 net (state with pc_common.MLP keys, arch, tables, meta with
   'spec', 'name' and the training 'row', weight checksum); read by `TC.load_nets` (r2_pc_toy.py's `_bp_groups` does exactly that) and
   by stage fam. Other nets are bundles `models/r0.pt`, `r1_w<ws>.pt`, `fam_*.pt`, `forcing_*.pt` (one file per architecture group:
@@ -63,9 +70,11 @@ uses pc_meta's QUICK constants through TC (MAXSTEPS 200, AFTER 50, LEVEL1 0, FT_
   A8_mean, F8_mean, F4_mean, B2_all, retention_mean) plus stage ('t1' | 't2'), eval_point, updates, first95_cens, censored, checksum,
   r2_name, B2_meta (K 12 rows), A8, F8, A_all8, retention (per task). `pc_analyze.cell` / `main_rows` work on them (tested). Built
   from `rows_t1.json` and `rows_t2.json`.
-- `t2.json`: the in-session choice of B-T2's wd values (OD-G8) with the W 256 P2 result it came from.
+- `t2.json`: the in-session choice of B-T2's wd values (OD-G8) with the W 256 P2 result it came from (`seeds` = B-T2's net seeds).
 - `t5.json`: per (net, tau): S, M (M_0 .. M_6), M1, M6, kappa, A_true, A_wrong, eval_point, level1, delta_h2; `pilot` and `G27`.
-- `verdict.json`: P1 (phase per (wd, W) with counts), P2 (brackets, point estimates, flags), P3, P4, B_T2 (cells), B_T4 (per cell
+- `verdict.json`: P1 (phase per (wd, W) with counts), P2 (brackets, point estimates, flags), P3 (verdict, direction, switch_on and
+  switch_on_flags per width, larger_widths), P4, B_T2 (choice, cells, od_g8 = the in-session wd values against the same decision
+  recomputed from the rows, with agree), B_T4 (`peak` = the susceptibility peak per width, and per cell
   delta_h2, delta_ctrl_h2, ring_h2, delta_h1, B2_meta mean, susceptibility; peak per width; B2_meta against delta_h2 across all cells
   and widths; delta_h2 at the switch-on brackets), T5 (phases per (W, wd, tau), tau_c per (W, wd) and per net, tau_c regression).
 - `models/t1_W<W>_K12.pt`, `_K1.pt`, `t2_...` bundles (B-T5 reloads the K 12 bundles).
@@ -138,7 +147,12 @@ Rules (r2_theta_toy rules)
   grid', 'not bracketed') the fallback 0.3 and 3 (OD-B6), marked descriptive; P3 is then 'not decidable'.
 - P3 'inside' at W 512 / 1024 = 0 of 2 seeds in meta at the lower bracket wd and 2 of 2 at the upper (OD-B10); intervals intersect when
   they share a point; 'shifts' carries a direction text (W 256 vs W 64 interval order; W 512 meta already at the lower or missing at
-  the upper end). P4 uses the seed means of delta_h2 over all 4 seeds' K 12 nets at the two bracketing wd values.
+  the upper end). P3 has only the frozen two outcomes wherever B-T2 can test the W 256 bracket: a W 64 switch-on outside the grid gives
+  'shifts' (direction 'W 256 switch-on at higher wd than W 64' for 'below grid', 'direction not determined' for 'no meta cell' or 'not
+  bracketed'). 'Not decidable' remains only where B-T2 cannot test the bracket: W 256 has no switch-on bracket, B-T2 ran at the OD-B6
+  fallback, or B-T2 has no W 512 net at a bracket wd value (a t2.json from an earlier decision; reported with both brackets). P4 uses
+  the seed means of delta_h2 over all 4 seeds' K 12 nets at the two bracketing wd values; without a switch-on bracket at either width
+  it is 'not shown', the plan's 'otherwise'.
 - Susceptibility = SD (ddof 1) of B2_meta over the seeds that have one; peak = largest SD per width.
 - T5 phases: 'self-improving', 'bistable' and 'dissipative' can hold together (the first is about S, the others about M_6); a cell
   carries every label reaching >= 3 of 4 seeds, 'mixed' if none. tau_c = the first adjacent tau pair where the cell is bistable at the
@@ -150,14 +164,14 @@ Rules (r2_theta_toy rules)
 
 ## 4 Tests (CPU, 1 thread, QUICK=1; scratchpad r2_impl/w6/)
 
-- `r2_rgi_toy.py selftest`: 17 / 17. AT0 rule on synthetic grids (accepted / flagged / duplicate resolved by distance / cascade to
+- `r2_rgi_toy.py selftest`: 20 / 20 (17 before the review, plus one check per fix of section 6). AT0 rule on synthetic grids (accepted / flagged / duplicate resolved by distance / cascade to
   'dropped' / nothing passing / undefined ratios); batched lines against the library's per-pair references on tiny trained nets:
   free columns = TC.b2_A, alphas = TC.learn_alpha, S = TC.s_line, Phi and F (t1, t1_shuf, t1_gain, loo, loo_shuf, ridge factor) =
   TC.f_line, round trip and warm start = TC.round_trip / TC.warm_start, pooling = TC.pooling, T4 and T3 = TC.t3_t4, Lambda =
   TC.lambda_line (tolerance 2 / 281 per accuracy; observed: identical, apart from float rounding of Phi's ratio, 2e-8 relative); LOO
   held-out pairs of a shared-split net exclude its training pairs; the 8 + spare variant's task set; stitch_fit_t = TC.stitch_fit
   (same lambda, R2 to 1e-15, map to 2e-14 relative).
-- `r2_theta_toy.py selftest`: 15 / 15. P1 phases, P2 brackets (on / off with interpolation, below grid, above grid, no meta), B-T2
+- `r2_theta_toy.py selftest`: 20 / 20 (15 before the review, plus the checks of section 6). P1 phases, P2 brackets (on / off with interpolation, below grid, above grid, no meta), B-T2
   choice, P3 transfer, P4, T5 phases (co-occurring labels, 'mixed'), tau_c; finetune_all = pc_meta.finetune('all') (weights rel. diff
   0.0, accuracies and retention equal) and = TC.b2_all for K 12; rows carry every pc_summary key and work with pc_analyze.cell.
 - Every stage of both scripts under QUICK, in runner order (r0 6 s, r1 97 s, cross 15 s, fam 15 s, forcing 21 s; t1 6 s, t2 3 s, t5
@@ -179,3 +193,44 @@ Rules (r2_theta_toy rules)
   at the cost of a class loop per world. I kept the library default.
 - The verdict scripts (r2_rgi_verdict.py, r2_report.py) did not exist when this was written; section 2 is their input contract. AT7 /
   AT8, G38, G39, the AT5 'width/capacity, not delta' label and G46 are decided there, not here.
+
+## 6 Review findings (2026-11-13) and what changed
+
+Amendments 1-3 (plan_amendments.md) do not touch these scripts: neither calls `damage_match` (Amendment 2) nor computes a U statistic,
+G16 or a Qwen theta rule (Amendments 1 and 3).
+
+- theta_toy-1 (P3 'not decidable' when only W 64 lacks a switch-on bracket) - fixed. p3_transfer follows the frozen two-outcome rule:
+  a missing W 64 bracket cannot intersect, so the verdict is 'shifts', with the direction from W 64's flag ('below grid': W 256 at
+  higher wd; other flags: not determined); 'not decidable' only where B-T2 cannot test the W 256 bracket (section 3). The W 512 / 1024
+  counts are reported in P3 in every decidable case. Tests: selftest P3 cases ('below grid', 'not bracketed', no W 256 bracket) and an
+  end-to-end stage_rules run on synthetic files.
+- theta_toy-2 (seeds not in the output JSON, OD-G6) - fixed: the tau_c regression records boot_seed 0, draws 10,000 and the percentile
+  interval; t2.json, t5.json and verdict.json carry `rng_seeds` (net init, fresh F, coordinate probe, delta floor, W6 sampling stream,
+  cluster bootstrap, global seed). Test: the synthetic stage_rules run.
+- theta_toy-3 (P3 reads B-T2 cells at the recomputed bracket without checking that B-T2 ran there) - fixed: P3 is 'not decidable (B-T2
+  has no W 512 nets at the W 256 switch-on bracket ...)' when a bracket cell is empty, with the in-session bracket next to it; verdict.json
+  records OD-G8 (B_T2.od_g8: the in-session wd values against the same decision recomputed from the rows; agree). stage_t2 still reuses
+  an existing t2.json, as OD-G8 prescribes ('the in-session value governs what ran'). Test: the synthetic stage_rules run with a stale
+  t2.json.
+- Aside of the theta_toy-1 verifier (r2_report reads B_T4.peak, verdict.json had only B_T4.<W>.susceptibility_peak): verdict.json now
+  also has B_T4.peak = the peak per width; nothing else changed for it.
+- rgi_toy-1 (T1 ridge factor not chosen by the leave-one-anchor-out error) - no change here: the comparison bug is in
+  r2_toy_common.t1_choose_r (implementer 5 fixes it in the library). This script only passes the returned r on (field `r1`); nothing
+  assumes r = 1e-4 (the 1e-4 in stitch_fit_t is the T3 grid's first value, unrelated), and the selftest compares f_pairs with
+  TC.f_line, which calls the same function, so the check stays valid after the fix. The T1 / LOO numbers change with the library fix.
+- rgi_toy-2 (info_of overwrote the parameterisation arm with the condition arm) - confirmed and fixed: info_of keeps the spec's arm as
+  `param_arm` (output rows too); r1_job_name and AT5's A_arm / B_arm use it ('bp_mup' / 'bp_sp' instead of 'nat'); `arm` stays the
+  condition arm, which the outputs and r2_rgi_verdict already use; infos of bundles written before the fix are backfilled from the net's
+  stored spec. Test: selftest check rgi_toy-2; QUICK cross output has A_arm / B_arm in {bp_mup, bp_sp}.
+- rgi_toy-3 (permutation seeds not in the output JSONs, OD-G6) - confirmed and fixed: every stage output carries `rng_seeds` (the
+  SEEDS dict: net init, fresh F, coordinate probe, delta floor, Lambda label permutations, S correspondences, T1 and LOO shuffles, recipe
+  chains and pairs, other split, coding, global seed). Test: selftest check rgi_toy-3; every QUICK output has the key.
+- rgi_toy-4 (one net with non-finite weights aborts a stage, e.g. np.linalg.lstsq in Phi, and again on every rerun) - confirmed (lstsq
+  raises on NaN columns) and fixed: every stage finds the nets whose parameters are not all finite and drops them from every line with a
+  flag (row: finite_weights false, level1 false, a 'dropped' note; no pair; in AT4 a bad A leaves its world's B rows without pair values,
+  with a note); Phi, the T1 / LOO maps and the T3 stitch also skip non-finite inputs instead of raising; the per-model means skip missing
+  values. AT8 drops such a model anyway (it cannot pass level 1). Tests: selftest check rgi_toy-4 (the other models' lines are identical
+  to a run without the bad net); harness `review/harness_nonfinite.py` (scratchpad r2_impl/w6/) corrupts one saved net each for r1,
+  cross (AT4's A at the same time), fam and forcing and reruns them: every stage finishes, the net is flagged and has no pair.
+- After the fixes: selftests 20 / 20 (r2_rgi_toy.py) and 20 / 20 (r2_theta_toy.py); the full QUICK pipeline of both scripts runs (r0 8 s,
+  r1 127 s, cross 15 s, fam 15 s, forcing 21 s; t1 7 s, t2 3 s, t5 18 s, rules 1 s; scratchpad r2_impl/w6/review/H).

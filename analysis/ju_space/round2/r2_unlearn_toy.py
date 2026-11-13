@@ -544,16 +544,20 @@ def plan_text_full(dm, fwd):
     """Plan-text counterpart of an Amendment-2 control (coordinator's request of 2026-11-13): when damage_match found the control by
     bisecting one shared lam at d* > r0 (note 'partial removal at d* (Amendment 2)'), the frozen OD-C2 text would have used the same
     NDRAW draws at d* with full removal (lam = 1), which overshoots the target by more than 0.02 and so is unmatched (G45). fwd(dm with
-    lam 1) returns that control's forward measures as per-seed arrays (no search, no relearning); each is stored with its t interval
-    and paired seed bootstrap (summ, key '<measure>_t'), with d*, lam 1, the ladder's drop at d* and matched. None for every other
-    control (field present, None = not an Amendment-2 control)."""
+    lam 1) returns that control's forward measures as per-seed arrays, or dicts of them (probes), in the layout stored for the matched
+    control (no search, no relearning); each is stored with its t interval and paired seed bootstrap under '<measure>_t' (summ; for a
+    dict, per entry), with d*, lam 1, the ladder's drop at d* (lam 1, the same draws) and matched. None for every other control (the
+    field is always present; None = not an Amendment-2 control, the plan text gives the same control)."""
     if AMEND2 not in str(dm.get("note", "")):
         return None
     vals = fwd(dict(dm, lam=1.0)); drop1 = next((float(d) for r, d in dm.get("ladder", []) if int(r) == int(dm["r"])), None)
     out = dict(r=int(dm["r"]), lam=1.0, drop=drop1, matched=bool(drop1 is not None and abs(drop1 - dm["target"]) <= 0.02),
                note="frozen plan text (before Amendment 2): the same draws at d* with full removal; forward measures only")
     for k, v in vals.items():
-        out[k] = np.asarray(v, float); out[k + "_t"] = summ(v)
+        if isinstance(v, dict):
+            out[k] = {kk: np.asarray(vv, float) for kk, vv in v.items()}; out[k + "_t"] = {kk: summ(vv) for kk, vv in v.items()}
+        else:
+            out[k] = np.asarray(v, float); out[k + "_t"] = summ(v)
     return out
 
 
@@ -735,7 +739,7 @@ def t4b_forward(nets, tasks, layer, base, key, mlp=True):
         p_ = probes(probe_feats(nets, tasks, vv, layer, ops=o_), mlp=mlp)
         return dict(acc=red(e_["mean"]), integrity=red(e_["integrity"]), sp=red(sum_probe_gen(nets, tasks, vv, ops=o_)), probes={k: red(v) for k, v in p_.items()})
     f_ = fwd(dm)
-    dm["full_at_dstar"] = plan_text_full(dm, lambda d_: (lambda r_: dict(acc=r_["acc"], sp=r_["sp"], **r_["probes"]))(fwd(d_)))
+    dm["full_at_dstar"] = plan_text_full(dm, fwd)                    # plan-text control (Amendment 2 only): the same measures
     out["dm"] = dict(match=dm_public(dm), **f_)
     out["eraser"] = dict(Q=Q, mu=mu, dm_R=dm["R"], dm_lam=dm["lam"], dm_note=dm["note"])     # removed before writing (C-T7 relaxation)
     out["_jobs"] = dict(erase=per_chain(items, tasks.n), dm=dm_chain_items(dm, mu, allv, tasks.n, layer))

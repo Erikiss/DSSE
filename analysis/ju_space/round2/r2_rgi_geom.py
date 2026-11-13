@@ -45,7 +45,7 @@ for _p in (HERE, JU):
 import r2_stimuli as STIM                                                                  # frozen Appendix A lists and G29 asserts
 
 MOCK = os.environ.get("MOCK") == "1"
-VERSION = "r2_rgi_geom 1.0 (plan sha256 5e476340dfdb1d82)"
+VERSION = "r2_rgi_geom 1.1 (plan sha256 5e476340dfdb1d82; review fixes of 13 Nov)"
 PLAN_SHA256 = "5e476340dfdb1d827582c869f2dfc08e32ed8e9a9dbebf7642acceb5bb5edc2d"
 MODELS = ("qwen3-1.7b", "qwen3-0.6b")
 QWEN06_PIN = dict(repo="Qwen/Qwen3-0.6B", revision="c1899de289a04d12100db370d81485cdf75e47ca",       # OD-A6 (HF API, 12 Nov 2026;

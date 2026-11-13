@@ -326,7 +326,7 @@ def rule_loop(abl, twin=None, comparator=None, ref_name=None):
     |A| < 0.25 while the twin (or, for arm A, the R1 seed-0 comparator) has p <= 0.01 and A >= 0.25; 'survives' if p <= 0.01, c > 0 and
     A >= 0.25; 're-routed' if rel >= 0.5, Ue >= 0.25 with its 90 % interval above 0 and |A| < 0.25; 'undecided (<reference> does not
     re-find RSI)' if the reference fails p <= 0.01 and A >= 0.25; otherwise 'undecided'. Every condition at both d_2 and d_3."""
-    ref = twin if twin is not None else comparator; name = ref_name or ("twin" if twin is not None else "the R1 seed-0 comparator")
+    ref = twin if twin is not None else comparator; name = ref_name or ("the R1 seed-0 comparator" if (twin is None and comparator is not None) else "twin")
     ns = (2, 3); g = lambda r, k: r.get(k) if isinstance(r, dict) else None
     if abl is None or any(n not in abl for n in ns): return "undecided (rounds d_2, d_3 missing)"
     allv = lambda f, rows: all(f(rows[n]) for n in ns)
@@ -1555,8 +1555,10 @@ def selftest_rules(check):
         import r2_unlearn_verdict as UV
         rows = [mk(c, p, A, rel, Ue, lo) for c in (-0.1, 0.2) for p in (0.005, 0.05, 0.5) for A in (-0.5, 0.1, 0.5) for rel in (0.3, 0.7) for Ue in (0.1, 0.4) for lo in (-0.1, 0.1)]
         refs = [None] + [{2: mk(0.5, p, A), 3: mk(0.5, p, A)} for p in (0.005, 0.5) for A in (0.1, 0.5)]
-        dis = [(a, t) for a in rows for t in refs if rule_loop({2: a, 3: a}, twin=t) != UV.loop_rule({2: a, 3: a}, t, "twin")]
-        check(f"rule_loop = r2_unlearn_verdict.loop_rule (OD-G8) on {len(rows) * len(refs)} row combinations", not dis, dis[:2])
+        nm = "the R1 seed-0 comparator"
+        dis = [(a, t) for a in rows for t in refs if rule_loop({2: a, 3: a}, twin=t) != UV.loop_rule({2: a, 3: a}, t, "twin")
+               or rule_loop({2: a, 3: a}, comparator=t, ref_name=nm) != UV.loop_rule({2: a, 3: a}, t, nm)]
+        check(f"rule_loop = r2_unlearn_verdict.loop_rule (OD-G8) on {len(rows) * len(refs)} row combinations, twin and comparator", not dis, dis[:2])
     except ImportError as e: print(f"[INFO] r2_unlearn_verdict not importable, OD-G8 cross-check of rule_loop skipped: {e}", flush=True)
     check("_rung: 'not decidable (no baseline gap: g_0 <= 0)' unless g_0 > 0 (review unlearn_a-2); one direction / span / not removed",
           _rung(-0.25, 0.1, -0.04) == RUNG_NO_BASELINE and _rung(0.4, 0.9, float("nan")) == RUNG_NO_BASELINE and _rung(2.0, 2.0, 0.0) == RUNG_NO_BASELINE

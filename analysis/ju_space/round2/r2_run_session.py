@@ -1551,28 +1551,81 @@ def sh(cmd, env, log=None):
     return r.stdout
 
 
+MOCK_DEVICE = "cpu"   # the device of the mock round-1 tree and of the library tests (runner_steps-1: a regenerated text equals the
+                      # stored one only on the same device, 2.3; CPU and CUDA generators give different streams for one seed)
+
+
+def lib_nt():
+    """Threads of the mock rk build and of the library tests: the same value for both (default 1, as the scripts' authors ran them)."""
+    return os.environ.get("R2_LIB_NT") or "1"
+
+
+def mock_npar():
+    return int(os.environ.get("R2_MOCK_NPAR") or max(1, min(6, (os.cpu_count() or 2) - 2)))
+
+
+def run_parallel(jobs, npar, what):
+    """jobs: [(label, [(cmd, env, log_path), ...])]; the commands of one job run in order, up to npar jobs at a time (round-1 job-pool
+    pattern). Raises SystemExit naming the failed jobs (their logs stay in place)."""
+    todo, running, failed = list(jobs), [], []
+    while todo or running:
+        while todo and len(running) < npar:
+            label, cmds = todo.pop(0)
+            running.append([label, list(cmds), None, None])
+        for r in list(running):
+            label, cmds, proc, fh = r
+            if proc is not None and proc.poll() is None:
+                continue
+            if proc is not None:
+                fh.close()
+                if proc.returncode:
+                    failed.append(f"{label} (rc {proc.returncode}, log {fh.name})"); running.remove(r); continue
+            if not cmds:
+                running.remove(r); continue
+            cmd, env, log = cmds.pop(0)
+            say("[mock] " + " ".join(os.path.basename(c) if i == 1 else c for i, c in enumerate(cmd[:6])) + (" ..." if len(cmd) > 6 else ""))
+            fh = open(log, "a")
+            r[2], r[3] = subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT, env=env), fh
+        time.sleep(0.2)
+    if failed:
+        raise SystemExit(f"mock round-1 tree: {what} failed: {failed}")
+
+
 def mock_r1(root, dr, parts=("rk", "pc")):
-    """A mock dsse_runs tree in the round-1 layout (code tests only, plan section 9): rk_loop.py MOCK=1 at block 14 (pilot and all;
-    the same at blocks 8 and 20 (R2_MOCK_FAST=1: copies of block 14 with the block patched, for stub tests only), rk_verdict.py summaries,
-    a fake dn_delta.json and blocks_chosen.json (b_lo 8, b_hi 20) in gpu2 and gpu3; pc_meta.py QUICK=1 jobs (bp_mup W 128 and 256 in
-    gpu5, pc_mup W 256 in gpu2 and W 128 in gpu3, seeds 0-4, renamed without '_quick'), pc_expected / pc_summary files; shard_done.json
-    and code_commits.txt in every shard (no r1_finality.json: every mock shard is final by its shard_done.json)."""
+    """A mock dsse_runs tree in the round-1 layout (code tests only, plan section 9), built on the CPU (MOCK_DEVICE, also when the
+    session runs on CUDA: the library tests that compare regenerated texts with the stored ones run on the CPU, runner_steps-1 / rk-1;
+    the session's MOCK steps on CUDA assert no equality with the mock texts): rk_loop.py MOCK=1 'pilot' and 'all' at blocks 14, 8 and
+    20 (one process chain per block, R2_MOCK_NPAR at a time, R2_LIB_NT threads each; R2_MOCK_FAST=1: blocks 8 and 20 as copies of
+    block 14 with the block patched, for stub tests only), rk_verdict.py summaries, a fake dn_delta.json and blocks_chosen.json
+    (b_lo 8, b_hi 20) in gpu2 and gpu3; pc_meta.py QUICK=1 jobs at r2_pc_toy's QUICK widths and seeds under pc_meta's own '_quick'
+    names (pc_mup W 64 in gpu4 and W 128 in gpu3, bp_mup W 64 and 128 in gpu5, seeds 0 and 1; runner_steps-2), pc_expected (the
+    '_quick' names) and pc_summary files; shard_done.json (with "device": "cpu") and code_commits.txt in every shard, and
+    mock_fixture.json (no r1_finality.json: every mock shard is final by its shard_done.json)."""
     root, dr = os.path.abspath(root), os.path.abspath(dr)
     os.makedirs(dr, exist_ok=True)
     head = git_head()
-    env = dict(os.environ, MOCK="1", DEVICE=os.environ.get("RUN_DEVICE", "cuda"), NT=os.environ.get("NT", "4"), PYTHONUNBUFFERED="1",
+    nt = lib_nt()
+    env = dict(os.environ, MOCK="1", DEVICE=MOCK_DEVICE, NT=nt, OMP_NUM_THREADS=nt, PYTHONUNBUFFERED="1",
                POOLDIRS=os.path.join(root, "gpu_pkg", "rk_dirs.pt"), PERSONA=os.path.join(root, "rsi_dl", "persona"))
-    env.pop("QUICK", None)
+    for k in ("QUICK", "ASCALE"):
+        env.pop(k, None)
     log = os.path.join(dr, "mock_build.log")
-    if "rk" in parts and not os.path.exists(os.path.join(dr, ".mock_rk_ok")):
+    npar = mock_npar()
+    ok_rk = os.path.join(dr, f".mock_rk_{MOCK_DEVICE}_ok")          # a tree of an older runner (built on RUN_DEVICE) is rebuilt
+    if "rk" in parts and not os.path.exists(ok_rk):
         t = time.time()
         fast = os.environ.get("R2_MOCK_FAST") == "1"
-        for shard, b in (("gpu1", 14), ("gpu2", 8), ("gpu3", 20)):
+        blocks = (("gpu1", 14), ("gpu2", 8), ("gpu3", 20))
+        for shard, b in blocks:
+            shutil.rmtree(os.path.join(dr, shard, "rk", f"b{b}"), ignore_errors=True)
+            os.makedirs(os.path.join(dr, shard, "rk"), exist_ok=True)
+        rk = lambda shard, b: [([PY, os.path.join(AJS, "rk_loop.py"), root, os.path.join(dr, shard, "rk"), stage], dict(env, BLOCK=str(b)),
+                                os.path.join(dr, f"mock_rk_b{b}.log")) for stage in ("pilot", "all")]
+        say(f"[mock] rk_loop.py MOCK at blocks {[b for _, b in blocks]} on the {MOCK_DEVICE} ({npar} at a time, NT={nt})")
+        run_parallel([(f"rk_loop b{b}", rk(shard, b)) for shard, b in blocks if b == 14 or not fast], npar, "rk_loop.py MOCK")
+        for shard, b in blocks:
             out = os.path.join(dr, shard, "rk")
-            if b == 14 or not fast:
-                for stage in ("pilot", "all"):
-                    sh([PY, os.path.join(AJS, "rk_loop.py"), root, out, stage], dict(env, BLOCK=str(b)), log)
-            else:
+            if fast and b != 14:
                 import torch
                 src, dst = os.path.join(dr, "gpu1", "rk", "b14"), os.path.join(out, f"b{b}")
                 shutil.rmtree(dst, ignore_errors=True); shutil.copytree(src, dst)
@@ -1594,45 +1647,41 @@ def mock_r1(root, dr, parts=("rk", "pc")):
             dump_json(fd, os.path.join(dr, shard, "dn_delta.json"))
             dump_json(dict(b_lo=8, b_hi=20, delta={str(l): round(fd["blocks"][str(l)]["last"]["delta"], 4) for l in range(6, 25)}, mock=True),
                       os.path.join(dr, shard, "blocks_chosen.json"))
-        open(os.path.join(dr, ".mock_rk_ok"), "w").write(iso())
+        dump_json(dict(builder="r2_run_session.mock_r1", device=MOCK_DEVICE, nt=nt, torch=version("torch"), built=iso(),
+                       blocks={str(b): dict(device=MOCK_DEVICE, shard=shard, copy_of_14=bool(fast and b != 14)) for shard, b in blocks}),
+                  os.path.join(dr, "mock_fixture.json"))
+        open(ok_rk, "w").write(iso())
         say(f"[mock] rk part ready ({time.time() - t:.0f}s)")
-    if "pc" in parts and not os.path.exists(os.path.join(dr, ".mock_pc_ok")):
+    ok_pc = os.path.join(dr, ".mock_pc_quick_ok")                    # a tree of an older runner (other widths and names) is rebuilt
+    if "pc" in parts and not os.path.exists(ok_pc):
         t = time.time()
-        jobs = ([("gpu5", "bp_mup", W, s, {}) for W in (128, 256) for s in range(5)]          # C-T7's BP side, G-meta rows
-                + [("gpu2", "pc_mup", 256, s, dict(T="20", BETA="0.1")) for s in range(5)]
-                + [("gpu3", "pc_mup", 128, s, dict(T="20", BETA="0.1")) for s in range(5)])
-        npar = int(os.environ.get("R2_MOCK_NPAR") or max(1, min(6, (os.cpu_count() or 2) - 2)))
+        jobs = ([("gpu5", "bp_mup", W, s, {}) for W in (64, 128) for s in (0, 1)]                # C-T7's BP side, G-meta rows
+                + [("gpu4", "pc_mup", 64, s, dict(T="20", BETA="0.1")) for s in (0, 1)]
+                + [("gpu3", "pc_mup", 128, s, dict(T="20", BETA="0.1")) for s in (0, 1)])
+        names = {}
+        for shard in {j[0] for j in jobs}:
+            shutil.rmtree(os.path.join(dr, shard, "pc"), ignore_errors=True)
         say(f"[mock] {len(jobs)} pc_meta.py QUICK jobs on the CPU, {npar} at a time (round-1 job-pool pattern; a code fixture only)")
-        todo, running, failed, names = list(jobs), [], [], {}
-        while todo or running:
-            while todo and len(running) < npar:
-                shard, arm, W, s, ex = todo.pop(0); o = os.path.join(dr, shard, "pc"); os.makedirs(o, exist_ok=True)
-                lg = open(os.path.join(dr, f"mock_{arm}_W{W}_s{s}.log"), "w")
-                p = subprocess.Popen([PY, os.path.join(AJS, "pc_meta.py"), o, arm, str(W), str(s), "12"], stdout=lg, stderr=subprocess.STDOUT,
-                                     env=dict(env, QUICK="1", NT="1", DEVICE="cpu", **ex))
-                running.append((p, lg, (shard, arm, W, s)))
-                names.setdefault(shard, []).append(f"{arm}_W{W}_s{s}_K12_g0_wd1" + ("_T20_beta0.1" if arm == "pc_mup" else ""))
-            time.sleep(0.2)
-            for r in list(running):
-                if r[0].poll() is not None:
-                    running.remove(r); r[1].close()
-                    if r[0].returncode:
-                        failed.append(r[2])
-        if failed:
-            raise SystemExit(f"mock round-1 tree: pc_meta.py failed for {failed} (logs in {dr})")
-        for shard in names:
-            for sub in ("jobs", "models"):
-                for p in glob.glob(os.path.join(glob.escape(os.path.join(dr, shard, "pc", sub)), "*_quick.*")):
-                    os.replace(p, p.replace("_quick.", "."))
+        todo = []
+        for shard, arm, W, s, ex in jobs:
+            o = os.path.join(dr, shard, "pc"); os.makedirs(o, exist_ok=True)
+            todo.append((f"{arm} W{W} s{s}", [([PY, os.path.join(AJS, "pc_meta.py"), o, arm, str(W), str(s), "12"],
+                                               dict(env, QUICK="1", NT="1", OMP_NUM_THREADS="1", DEVICE="cpu", **ex),
+                                               os.path.join(dr, f"mock_{arm}_W{W}_s{s}.log"))]))
+            names.setdefault(shard, []).append(f"{arm}_W{W}_s{s}_K12_g0_wd1" + ("_T20_beta0.1" if arm == "pc_mup" else "") + "_quick")
+        run_parallel(todo, npar, "pc_meta.py QUICK")
         for shard, nm in names.items():
             dump_json(nm, os.path.join(dr, shard, f"pc_expected_{shard}.json"))
             sh([PY, os.path.join(AJS, "pc_summary.py"), os.path.join(dr, shard, "pc"), os.path.join(dr, shard, f"pc_summary_{shard}.json")], env, log)
-        open(os.path.join(dr, ".mock_pc_ok"), "w").write(iso())
+        open(ok_pc, "w").write(iso())
         say(f"[mock] pc part ready ({time.time() - t:.0f}s)")
     for s in SHARDS:
-        if not os.path.exists(os.path.join(dr, s, "shard_done.json")):
-            dump_json(dict(shard=s, gpu="MOCK", torch=version("torch"), transformers=version("transformers"), code_commit=head,
-                           code_commits_used=[head], mock=True), os.path.join(dr, s, "shard_done.json"))
+        p = os.path.join(dr, s, "shard_done.json")
+        rec = load_json(p) or dict(shard=s, gpu="MOCK", torch=version("torch"), transformers=version("transformers"), code_commit=head,
+                                   code_commits_used=[head], mock=True)
+        if rec.get("device") != MOCK_DEVICE:                       # r2_rk.fixture_device reads it (gpu1) for its device diagnostics
+            rec["device"] = MOCK_DEVICE; dump_json(rec, p)
+        if not os.path.exists(os.path.join(dr, s, "code_commits.txt")):
             with open(os.path.join(dr, s, "code_commits.txt"), "w") as f:
                 f.write(head + "\n")
     return dr

@@ -192,7 +192,7 @@ def late_fields(f95):
 
 def r1_job_name(info, K=NPRE):
     """pc_meta's job name of a round-1 cell with the same definition (for G46's reproduction check; only init 0 nets have one)."""
-    return f"{info['param_arm']}_W{info['W']}_s{info['ws']}_K{K}_g0_wd{info['wd']:g}"
+    return f"{info['param_arm']}_W{info['W']}_s{info['ws']}_K{K}_g0_wd{info['wd']:g}" + ("_quick" if QUICK else "")    # as pc_meta names it
 
 
 class Pool:
@@ -1730,7 +1730,7 @@ def selftest(out):
         pl_ = Pool()
         pl_.add(tr.nets, [{k: v for k, v in info_of(s_, r, cond="nat", arm="nat").items() if k != "param_arm"} for s_, r in zip(specs, tr.rows)])
         _check(res, "rgi_toy-2: param_arm kept beside the condition arm; r1_job_name = pc_meta's job name; A_arm / B_arm = parameterisation",
-               i_sp["arm"] == "nat" and i_sp["param_arm"] == "bp_sp" and r1_job_name(i_sp) == "bp_sp_W64_s2_K12_g0_wd1"
+               i_sp["arm"] == "nat" and i_sp["param_arm"] == "bp_sp" and r1_job_name(i_sp) == "bp_sp_W64_s2_K12_g0_wd1" + ("_quick" if QUICK else "")
                and pid["A_arm"] == "bp_sp" and pid["B_arm"] == "bp_mup" and all(m_["param_arm"] == "bp_mup" for m_ in pl_.models),
                dict(arm=i_sp["arm"], param_arm=i_sp["param_arm"], r1_job_name=r1_job_name(i_sp), A_arm=pid["A_arm"], B_arm=pid["B_arm"]))
         # review rgi_toy-3: every stage output carries the seeds (OD-G6)

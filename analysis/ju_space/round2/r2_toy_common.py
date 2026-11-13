@@ -2882,18 +2882,31 @@ def selftest(work=None):
        f"base {np.round(sp0, 3).tolist()}, x-span block {np.round(spx, 3).tolist()}")
     gq = torch.Generator().manual_seed(9); Htr_ = torch.randn(1, 120, 10, generator=gq); Hte_ = torch.randn(1, 400, 10, generator=gq)
     wq = torch.randn(10, 5, generator=gq); ytr_ = (Htr_[0] @ wq + 0.5 * torch.randn(120, 5, generator=gq)).argmax(-1)[None]; yte_ = (Hte_[0] @ wq).argmax(-1)[None]
-    acc_m = float(mlp_probe(Htr_, ytr_, Hte_, yte_, 5, steps=60, seed=4)[0])
+    cap_, adam_ = [], _adam_q
+
+    def _cap(q, *a_, **k_):                                     # records the probe's parameter tensors (updated in place) for the comparison
+        adam_(q, *a_, **k_); cap_.append(q)
+    globals()["_adam_q"] = _cap
+    try:
+        acc_m = float(mlp_probe(Htr_, ytr_, Hte_, yte_, 5, steps=60, seed=4)[0])
+    finally:
+        globals()["_adam_q"] = adam_
+    fin_m = [t_.cpu() for t_ in cap_[-4:]]                     # W1, c1, W2, c2 after the last step
     mu_, sd_ = Htr_.mean(1, keepdim=True), Htr_.std(1, keepdim=True) + 1e-6; Xtr_, Xte_ = (Htr_ - mu_) / sd_, (Hte_ - mu_) / sd_
-    g4 = torch.Generator().manual_seed(4); u1, u2 = 1 / math.sqrt(10), 1 / math.sqrt(64)
-    prm = [(torch.rand(1, 64, 10, generator=g4) * 2 - 1) * u1, (torch.rand(1, 64, generator=g4) * 2 - 1) * u1, (torch.rand(1, 5, 64, generator=g4) * 2 - 1) * u2, (torch.rand(1, 5, generator=g4) * 2 - 1) * u2]
-    prm = [t_.clone().requires_grad_(True) for t_ in prm]; opt_ = torch.optim.Adam(prm, lr=1e-2, weight_decay=1e-4)      # torch's default betas (0.9, 0.999)
-    fw = lambda X: torch.baddbmm(prm[3].unsqueeze(1), torch.tanh(torch.baddbmm(prm[1].unsqueeze(1), X, prm[0].transpose(1, 2))), prm[2].transpose(1, 2))
-    for _ in range(60):
-        opt_.zero_grad(); Fn.cross_entropy(fw(Xtr_).reshape(-1, 5), ytr_.reshape(-1), reduction="none").view(1, -1).mean(1).sum().backward(); opt_.step()
-    with torch.no_grad():
-        acc_r = float((fw(Xte_).argmax(-1) == yte_).float().mean())
-    ck("mlp_probe = torch.optim.Adam(lr 1e-2, weight decay 1e-4, default betas) on the same init and data (OD-C10, ref c1_structure; review toy_defs-4)", acc_m == acc_r,
-       f"accuracy {acc_m:.4f} vs {acc_r:.4f}", mine=acc_m, ref=acc_r)
+    accs_r, fins_r = [], []
+    for betas_ in ((0.9, 0.999), (0.9, 0.98)):                  # torch's default betas (the fix) and pc_meta's (the version before the review)
+        g4 = torch.Generator().manual_seed(4); u1, u2 = 1 / math.sqrt(10), 1 / math.sqrt(64)
+        prm = [(torch.rand(1, 64, 10, generator=g4) * 2 - 1) * u1, (torch.rand(1, 64, generator=g4) * 2 - 1) * u1, (torch.rand(1, 5, 64, generator=g4) * 2 - 1) * u2, (torch.rand(1, 5, generator=g4) * 2 - 1) * u2]
+        prm = [t_.clone().requires_grad_(True) for t_ in prm]; opt_ = torch.optim.Adam(prm, lr=1e-2, betas=betas_, weight_decay=1e-4)
+        fw = lambda X: torch.baddbmm(prm[3].unsqueeze(1), torch.tanh(torch.baddbmm(prm[1].unsqueeze(1), X, prm[0].transpose(1, 2))), prm[2].transpose(1, 2))
+        for _ in range(60):
+            opt_.zero_grad(); Fn.cross_entropy(fw(Xtr_).reshape(-1, 5), ytr_.reshape(-1), reduction="none").view(1, -1).mean(1).sum().backward(); opt_.step()
+        with torch.no_grad():
+            accs_r.append(float((fw(Xte_).argmax(-1) == yte_).float().mean())); fins_r.append([t_.detach().clone() for t_ in prm])
+    d_def = max(float((a_ - b_).abs().max()) for a_, b_ in zip(fin_m, fins_r[0])); d_old = max(float((a_ - b_).abs().max()) for a_, b_ in zip(fin_m, fins_r[1]))
+    ck("mlp_probe = torch.optim.Adam(lr 1e-2, weight decay 1e-4, default betas (0.9, 0.999)) on the same init and data: final weights and accuracy (OD-C10, ref c1_structure; review toy_defs-4)",
+       len(cap_) == 4 * 60 and d_def <= (1e-6 if str(DEV) == "cpu" else 1e-4) and d_old > 10 * max(d_def, 1e-6) and abs(acc_m - accs_r[0]) <= (0 if str(DEV) == "cpu" else 1 / 400 + 1e-9),
+       f"max |d weight| {d_def:.1e} (against betas (0.9, 0.98): {d_old:.1e}); accuracy {acc_m:.4f} vs {accs_r[0]:.4f}", mine=acc_m, ref=accs_r[0], max_abs_diff=d_def)
     pr = task_answer_probes(task_answer_features(nb, [0, 1]), mlp=True)
     ck("task-identity / pooled-answer probes run (linear, MLP)", all(np.all((v >= 0) & (v <= 1)) for v in pr.values()), {k: np.round(v, 2).tolist() for k, v in pr.items()})
     f_ = lambda r_, lam: min(1.0, 0.1 * r_ * lam)

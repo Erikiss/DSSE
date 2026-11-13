@@ -64,7 +64,7 @@ import r2_stimuli as STIM
 from r2_rgi_geom import FAMS, NLEX, VF_OFF, NVF, NOBJ, NCELL, CELL_NAMES, CELL_OF, PARA_OF, SELF_OBJ, OTHER_OBJ, sentence_layout
 
 MOCK = os.environ.get("MOCK") == "1"
-VERSION = "r2_rgi_stats 1.0 (plan sha256 5e476340dfdb1d82)"
+VERSION = "r2_rgi_stats 1.1 (plan sha256 5e476340dfdb1d82; review fixes of 13 Nov)"
 PLAN_SHA256 = GEOM.PLAN_SHA256
 CONTRASTS = (("IMP", "DES"), ("CHG", "DES"), ("IMP", "CHG"), ("WOR", "CHG"), ("WOR", "DES"), ("PRA", "DES"))
 CN = tuple(f"{a}-{b}" for a, b in CONTRASTS); NX = len(CN)

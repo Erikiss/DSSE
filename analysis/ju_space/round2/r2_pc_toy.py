@@ -22,6 +22,7 @@ import json
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -197,41 +198,72 @@ def t7_unsearch(nets, ws_of, eta, key):
 
 
 @torch.no_grad()
+def _relax_pass(nets, tasks, base_feats, items, var, eta, Ts):
+    """One batched relaxation pass over the variants var (net index per variant) with the per-variant op items: per T, the task-identity
+    and pooled-answer probe accuracies on the relaxed and on the erased feedforward h2 (test halves) and the inference residual.
+    Returns {T: (acc[relaxed | ff][task | ans] per variant, ratio per variant)}."""
+    W, n = nets.W, tasks.n; V = len(var); ops = UT.mk_ops(items, W)
+    vb, tp, x, y, lab, _ = UT._chains(tasks, var, 0, P * P); cols = UT._chain_cols(nets, tasks, vb, tp); oc = UT._expand(ops, V, n)
+    h_ff = UT._hidden(nets, vb, cols, x, y, oc, "h2")[:, 144:]
+    res = {}
+    for T in Ts:
+        per = max(1, TC.CHUNK // max(1, P * P * W * 12)); hs, rat = [], []
+        for a in range(0, len(vb), per):
+            b_ = min(len(vb), a + per)
+            _, h2r, r_ = TC.pc_relax(nets, vb[a:b_], cols[a:b_], (x[a:b_], y[a:b_], lab[a:b_]), np.asarray(eta, float)[vb[a:b_]], T=T,
+                                     ops=UT.ops_slice(oc, slice(a, b_)))
+            hs.append(h2r[:, 144:]); rat.append(torch.as_tensor(r_).reshape(-1).cpu())
+        h_rel = torch.cat(hs); ratio = torch.cat(rat).numpy().reshape(V, n).mean(1)
+        acc = {}
+        for nm, H in (("relaxed", h_rel), ("ff", h_ff)):
+            f = UT.probe_feats(nets, tasks, var, "h2", states=H)
+            acc[nm] = dict(task=TC.ridge_probe(base_feats["Htr"][var], base_feats["task_tr"][var], f["Hte"], f["task_te"], n).cpu().numpy(),
+                           ans=TC.ridge_probe(base_feats["Htr"][var], base_feats["ans_tr"][var], f["Hte"], f["ans_te"], P).cpu().numpy())
+        res[T] = (acc, ratio)
+    return res
+
+
+@torch.no_grad()
 def relax_test(nets, tasks, base_feats, tb, eta, Ts=RELAX_T):
     """C-T7 (c) 'relaxation restores task information' (PC nets): all old tasks x 289 pairs with the output clamped to the true label,
     the erasure (h1 or h2) inside the energy, value nodes relaxed for T steps (TC.pc_relax: closed form, eta_x of the net); the
     task-identity and pooled-answer linear probes trained on the unerased feedforward h2 (probe halves of W8) read the relaxed h2 (test
     halves); Delta_relax = accuracy on the relaxed h2 minus on the erased feedforward h2; Delta_rand = the same under the damage-matched
     random erasure (mean over its draws); the inference residual (end / start gradient norm) per relaxation. contrast = Delta_relax -
-    Delta_rand (task identity; the C-T7 family item)."""
-    B, W, n = nets.B, nets.W, tasks.n; allv = np.arange(B); out = {}
+    Delta_rand (task identity; the C-T7 family item). Where the matched erasure took Amendment 2's step (partial removal at d* > r0),
+    'full_at_dstar' holds the plan-text control's measures: the same draws at d* with full removal (lam 1), relaxed and probed the same
+    way in a separate pass (forward and relaxation only, no search), with the contrast against it (t interval and paired seed
+    bootstrap); None otherwise."""
+    B = nets.B; allv = np.arange(B); out = {}
+    red = lambda a: np.asarray(a, float).reshape(B, UT.NDRAW).mean(1)
     for layer in ("h1", "h2"):
         er = tb[layer]["eraser"]; kU, kc, kl = UT.LAYER_KEYS[layer]
         items = [{kU: er["Q"][b], kc: er["mu"][b]} for b in allv] + [{kU: er["dm_R"][d], kc: er["mu"][b], kl: er["dm_lam"]} for b in allv for d in range(UT.NDRAW)]
-        var = np.concatenate([allv, np.repeat(allv, UT.NDRAW)]); V = len(var); ops = UT.mk_ops(items, W)
-        vb, tp, x, y, lab, _ = UT._chains(tasks, var, 0, P * P); cols = UT._chain_cols(nets, tasks, vb, tp); oc = UT._expand(ops, V, n)
-        h_ff = UT._hidden(nets, vb, cols, x, y, oc, "h2")[:, 144:]
+        var = np.concatenate([allv, np.repeat(allv, UT.NDRAW)])
+        main = _relax_pass(nets, tasks, base_feats, items, var, eta, Ts)
+        amended = UT.AMEND2 in str(er.get("dm_note", ""))
+        if amended:                                            # plan-text control (coordinator's request of 2026-11-13; NOTES_w7)
+            plan = _relax_pass(nets, tasks, base_feats, [{kU: er["dm_R"][d], kc: er["mu"][b], kl: 1.0} for b in allv for d in range(UT.NDRAW)],
+                               np.repeat(allv, UT.NDRAW), eta, Ts)
         res_l = {}
         for T in Ts:
-            per = max(1, TC.CHUNK // max(1, P * P * W * 12)); hs, rat = [], []
-            for a in range(0, len(vb), per):
-                b_ = min(len(vb), a + per)
-                _, h2r, r_ = TC.pc_relax(nets, vb[a:b_], cols[a:b_], (x[a:b_], y[a:b_], lab[a:b_]), np.asarray(eta, float)[vb[a:b_]], T=T,
-                                         ops=UT.ops_slice(oc, slice(a, b_)))
-                hs.append(h2r[:, 144:]); rat.append(torch.as_tensor(r_).reshape(-1).cpu())
-            h_rel = torch.cat(hs); ratio = torch.cat(rat).numpy().reshape(V, n).mean(1)
-            acc = {}
-            for nm, H in (("relaxed", h_rel), ("ff", h_ff)):
-                f = UT.probe_feats(nets, tasks, var, "h2", states=H)
-                acc[nm] = dict(task=TC.ridge_probe(base_feats["Htr"][var], base_feats["task_tr"][var], f["Hte"], f["task_te"], n).cpu().numpy(),
-                               ans=TC.ridge_probe(base_feats["Htr"][var], base_feats["ans_tr"][var], f["Hte"], f["ans_te"], P).cpu().numpy())
-            d = {}
+            acc, ratio = main[T]; d = {}
             for pr in ("task", "ans"):
                 dl = acc["relaxed"][pr] - acc["ff"][pr]
                 d[pr] = dict(relaxed=acc["relaxed"][pr][:B], ff=acc["ff"][pr][:B], delta_relax=dl[:B], delta_rand=dl[B:].reshape(B, UT.NDRAW).mean(1),
                              relaxed_rand=acc["relaxed"][pr][B:].reshape(B, UT.NDRAW).mean(1), ff_rand=acc["ff"][pr][B:].reshape(B, UT.NDRAW).mean(1))
             d["contrast"] = d["task"]["delta_relax"] - d["task"]["delta_rand"]
             d["ratio"] = ratio[:B]; d["ratio_rand"] = ratio[B:].reshape(B, UT.NDRAW).mean(1)
+            d["full_at_dstar"] = None
+            if amended:
+                pa, pratio = plan[T]
+                fd = dict(r=int(er["dm_R"][0].shape[1]), lam=1.0,
+                          note="frozen plan text (before Amendment 2): the same draws at d* with full removal; relaxation and probes only")
+                for pr in ("task", "ans"):
+                    fd[pr] = dict(relaxed_rand=red(pa["relaxed"][pr]), ff_rand=red(pa["ff"][pr]), delta_rand=red(pa["relaxed"][pr] - pa["ff"][pr]))
+                    fd[pr + "_t"] = {k: UT.summ(v) for k, v in fd[pr].items()}
+                fd["contrast"] = d["task"]["delta_relax"] - fd["task"]["delta_rand"]; fd["contrast_t"] = UT.summ(fd["contrast"])
+                fd["ratio_rand"] = red(pratio); d["full_at_dstar"] = fd
             res_l[str(T)] = d
         out[layer] = res_l
     return out
@@ -601,6 +633,76 @@ def make_at5(root, worlds=(0, 1), widths=(32, 64)):
     return root
 
 
+def review_checks(work, out, r1, check):
+    """Self-test checks of the review fixes (pc_toy-1 .. -5) and of the plan-text field full_at_dstar (coordinator, 2026-11-13); run
+    after the stages (they reuse the stage outputs, the fixture's round-1 nets and the cross_pc files)."""
+    # pc_toy-1: both scripts compile under Python 3.11 (no PEP 701 f-string); compile() in a subprocess, no .pyc written
+    py311 = shutil.which("python3.11")
+    if py311:
+        code = "import sys\nfor p in sys.argv[1:]:\n    compile(open(p).read(), p, 'exec')\n"
+        cp = subprocess.run([py311, "-c", code, os.path.join(_HERE, "r2_pc_toy.py"), os.path.join(_HERE, "r2_unlearn_toy.py")], capture_output=True, text=True)
+        check("pc_toy-1: r2_pc_toy.py and r2_unlearn_toy.py compile under Python 3.11", cp.returncode == 0, cp.stderr.strip()[-300:])
+    else:
+        print("[SKIP] pc_toy-1: python3.11 not found", flush=True)
+    # pc_toy-2: the exact QUICK names the finder looks for (R1PC.find unchanged; the mock tree must carry these names)
+    names = [job_name(a, W, s_) for a in ("pc_mup", "bp_mup") for W in T7_WIDTHS for s_ in SEEDS]
+    check("pc_toy-2: QUICK job names (pc_mup_W<W>_s<s>_K12_g0_wd1_T20_beta0.1_quick, bp_mup_W<W>_s<s>_K12_g0_wd1_quick) found for every T7 width and seed",
+          job_name("pc_mup", 64, 0) == "pc_mup_W64_s0_K12_g0_wd1_T20_beta0.1_quick" and job_name("bp_mup", 128, 1) == "bp_mup_W128_s1_K12_g0_wd1_quick"
+          and all(r1.find(nm) for nm in names), f"{len(names)} names, widths {list(T7_WIDTHS)}, seeds {list(SEEDS)}")
+    # pc_toy-5: paired seed bootstrap and per-seed values next to every t interval of the C-T7 family
+    t7o = read_json(pdir(out, "t7.json")); rows = t7o["rule_preview"]["items"]
+    check("pc_toy-5: every testable C-T7 family item carries boot95 (paired seed bootstrap) and its per-seed values",
+          any(r["testable"] for r in rows) and all(r["boot95"] is not None and len(r["values"]) == r["n"] for r in rows if r["testable"])
+          and all("values" in r for r in rows), f"{len(rows)} items")
+    # pc_toy-4: t7 partials tied to the code and to the round-1 nets (sha256); a width that did not run is never stored
+    calls = []
+
+    def stub(r1_, W):
+        calls.append(W); return dict(W=W, status="stub (selftest)")
+    orig = globals()["t7_width"]; globals()["t7_width"] = stub; W0 = T7_WIDTHS[0]
+    pp = os.path.join(out, SUB, "partial", f"t7_W{W0}.json"); raw = open(pp).read()
+    try:
+        UT.PROV["partials"].clear(); ra = stage_t7(out)
+        reuse_ok = calls == [] and ra["from_partial"] == list(T7_WIDTHS) and all("pc" in w for w in ra["widths"].values())
+        d_ = json.loads(raw); d_["_provenance"]["extra"]["r1_nets"][0][2] = "0" * 64; write_json(d_, pp)
+        UT.PROV["partials"].clear(); rb = stage_t7(out)
+        changed_ok = (calls == [W0] and rb["from_partial"] == list(T7_WIDTHS[1:]) and rb["widths"][f"W{W0}"].get("status", "").startswith("stub")
+                      and read_json(pp)["_provenance"]["extra"]["r1_nets"][0][2] == "0" * 64)
+        UT.cached(out, "t7_Wselftest", lambda: dict(status="not run (selftest)"), sub=SUB, store=lambda r: "pc" in r)
+        not_stored = not os.path.exists(os.path.join(out, SUB, "partial", "t7_Wselftest.json")) and UT.PROV["partials"][f"{SUB}/t7_Wselftest"]["stored"] is False
+    finally:
+        globals()["t7_width"] = orig
+        with open(pp, "w") as f:
+            f.write(raw)
+    check("pc_toy-4: t7 partials reused only with the same code and round-1 net files; changed net hash -> recomputed (and the stub's "
+          "'not run' result not stored); from_partial lists the reused widths", reuse_ok and changed_ok and not_stored, f"calls {calls}")
+    # pc_toy-3: cross_pc is skipped only when every world file exists; with one missing, every world is recomputed and rewritten
+    fs = [pdir(out, "cross_pc", f"w{ws}.json") for ws in SEEDS]; before = [read_json(f) for f in fs]; mt = [os.stat(f).st_mtime_ns for f in fs]
+    os.remove(fs[-1]); run_stage(out, "cross_pc")
+    after = [read_json(f) if os.path.exists(f) else None for f in fs]
+    rewritten = all(os.stat(f).st_mtime_ns > m for f, m in zip(fs[:-1], mt[:-1])); mt2 = [os.stat(f).st_mtime_ns for f in fs]
+    run_stage(out, "cross_pc"); skipped = [os.stat(f).st_mtime_ns for f in fs] == mt2
+    check("pc_toy-3: one world file missing -> cross_pc recomputes and rewrites every world (identical pairs and models); all present -> skipped",
+          all(a is not None and a["pairs"] == b["pairs"] and a["models"] == b["models"] for a, b in zip(after, before)) and rewritten and skipped,
+          f"{len(fs)} files, rewritten {rewritten}, skipped {skipped}")
+    # full_at_dstar: the plan-text control of an Amendment-2 erasure control in the relaxation test (C-T7 (c)); forced here at lam 1
+    ws = list(SEEDS); pcn = TC.load_pc_state_dicts([r1.find(job_name("pc_mup", W0, s_)) for s_ in ws])
+    eta = np.array([TC.pc_eta(pcn, i, *TC.r1_training_batch(w), seed=PC_ETA_SEED + w) for i, w in enumerate(ws)])
+    tasks = UT.Tasks.w1(ws); base = UT.base_measures(pcn, tasks, ws, relearn=False, new=False, b2=False)
+    tb, _ = UT.t4b_layers(pcn, tasks, base, f"t7|W{W0}", pc_eta=eta, mlp=False, relearn=False)
+    tb2 = {L: dict(tb[L], eraser=dict(tb[L]["eraser"], dm_lam=1.0, dm_note="partial removal at d* (Amendment 2)")) for L in tb}
+    rx = relax_test(pcn, tasks, UT.probe_feats(pcn, tasks, np.arange(pcn.B), "h2"), tb2, eta, Ts=(20,)); ok, dev = True, []
+    for L in ("h1", "h2"):
+        d = rx[L]["20"]; fd = d["full_at_dstar"]
+        ok = ok and isinstance(fd, dict) and fd["lam"] == 1.0 and fd["r"] == int(tb[L]["eraser"]["dm_R"][0].shape[1]) and fd["contrast_t"]["boot95"] is not None
+        ok = ok and all(np.allclose(fd[pr]["delta_rand"], d[pr]["delta_rand"], atol=0.02) for pr in ("task", "ans"))
+        ok = ok and np.array_equal(fd["contrast"], d["task"]["delta_relax"] - fd["task"]["delta_rand"]); dev.append(float(np.abs(fd["task"]["delta_rand"] - d["task"]["delta_rand"]).max()))
+    st_ok = all("full_at_dstar" in w[sd]["t4b"][L]["dm"]["match"] and (w["pc"]["relax"][L][str(T)]["full_at_dstar"] is None) == (UT.AMEND2 not in str(w["pc"]["t4b"][L]["dm"]["match"]["note"]))
+                for w in t7o["widths"].values() if "pc" in w for sd in ("pc", "bp") for L in ("h1", "h2") for T in RELAX_T)
+    check("full_at_dstar (C-T7 relaxation): plan-text control = the same d* draws at lam 1 in a separate pass (equals the matched pass at lam 1), "
+          "contrast against it with t interval and bootstrap; t7.json carries the field, None unless Amendment 2", ok and st_ok, f"max |diff| {dev}")
+
+
 def selftest(work):
     if not QUICK:
         raise SystemExit("selftest needs QUICK=1")
@@ -650,6 +752,7 @@ def selftest(work):
                 check(f"stage {st} runs", r is not None and "G_PC" in r)
         except Exception as ex:                                                # noqa: BLE001
             import traceback; traceback.print_exc(); check(f"stage {st} runs", False, repr(ex))
+    review_checks(work, out, r1, check)
     t1 = os.path.join(work, "fake_t1.json")
     write_json(dict(cells={"bp_mup_W128": dict(base=dict(level1=[True] * 5, B2={"8": [0.3, 0.25, 0.35, 0.28, 0.31]}))}), t1)
     fb = g_meta_fallback(read_json(t1)); check("G35 fallback formulas (G1, G2 on round-2 BP-muP W 128 rows)", fb["pass_"] and fb["label"] == "gate from round 2")
