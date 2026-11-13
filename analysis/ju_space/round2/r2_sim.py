@@ -235,16 +235,30 @@ def scalar_experiment(G, a_cells, N, snr, deff, h, rho, q, rng, B=B_BOOT):
     return g, se, gb
 
 
-def cells_experiment(G, a_cells, n_pairs, sd, h, rho, rng, B=B_BOOT):
-    """Measured-noise generalisation of scalar_experiment (OD-B14): per-pair read-back x_cj = a_c G(a_c) (1 + eta_j) + sd_c (rho zc_j +
-    sqrt(1 - rho^2) z_cj) with per-cell SD sd_c of the per-pair projections (in units where the expected read-back is a G(a)), the
-    measured correlation rho across cells (shared keys) and per-cell pair counts n_c: the cells share the first min(n_c) pairs' eta and zc
-    (common keys); the joint bootstrap draws Nmax indices per replicate and a cell with n_c pairs uses the first n_c of them modulo n_c.
-    With equal n_c and sd_c = sqrt(1 / (snr^2 deff)) a_c^(q / 2) this is scalar_experiment (same generator use)."""
+def correlation_loading(rho):
+    """OD-B14 (review toy_num-1): sim_gain's noise model gives every cell the common factor zc with loading L, so two cells' per-pair
+    read-backs correlate with L^2 (at h = 0). The measured correlation r of the per-pair projections across cells is therefore passed
+    as L = sqrt(r); a negative r cannot be represented by one common factor and is set to 0 (r is clipped to [0, 1])."""
+    return float(np.sqrt(min(max(float(rho), 0.0), 1.0)))
+
+
+def _cells_x(G, a_cells, n_pairs, sd, h, rho, rng):
+    """The per-pair read-backs x [C, Nmax] of cells_experiment (its generator use: eta, zc, z)."""
     a_cells = np.asarray(a_cells, float); C = len(a_cells); n = np.broadcast_to(np.asarray(n_pairs, int), (C,)); Nm = int(n.max())
     sd = np.broadcast_to(np.asarray(sd, float), (C,))
     eta = rng.normal(0, h, Nm); zc = rng.normal(size=Nm); z = rng.normal(size=(C, Nm))
-    x = (G(a_cells) * a_cells)[:, None] * (1 + eta)[None] + sd[:, None] * (rho * zc[None] + np.sqrt(1 - rho ** 2) * z)
+    return (G(a_cells) * a_cells)[:, None] * (1 + eta)[None] + sd[:, None] * (rho * zc[None] + np.sqrt(1 - rho ** 2) * z), n, Nm
+
+
+def cells_experiment(G, a_cells, n_pairs, sd, h, rho, rng, B=B_BOOT):
+    """Measured-noise generalisation of scalar_experiment (OD-B14): per-pair read-back x_cj = a_c G(a_c) (1 + eta_j) + sd_c (rho zc_j +
+    sqrt(1 - rho^2) z_cj) with per-cell SD sd_c of the per-pair projections (in units where the expected read-back is a G(a)), the
+    LOADING rho of the common factor zc (as sim_gain; the cross-cell correlation is rho^2 at h = 0: gain_A2 and resolvable_band pass
+    correlation_loading(measured correlation)) and per-cell pair counts n_c: the cells share the first min(n_c) pairs' eta and zc
+    (common keys); the joint bootstrap draws Nmax indices per replicate and a cell with n_c pairs uses the first n_c of them modulo n_c.
+    With equal n_c and sd_c = sqrt(1 / (snr^2 deff)) a_c^(q / 2) this is scalar_experiment (same generator use)."""
+    a_cells = np.asarray(a_cells, float); C = len(a_cells)
+    x, n, Nm = _cells_x(G, a_cells, n_pairs, sd, h, rho, rng)
     idx = rng.integers(0, Nm, (B, Nm)); g, se, gb = np.zeros(C), np.zeros(C), np.zeros((B, C))
     for c in range(C):
         xc = x[c, :n[c]]; g[c] = xc.mean() / a_cells[c]; se[c] = xc.std(ddof=1) / np.sqrt(n[c]) / a_cells[c]
@@ -292,12 +306,13 @@ def run_A2_port(reps=400, B=B_BOOT):
 def gain_A2(a_cells, n_pairs, sd, rho, h=0.0, scen=None, reps=400, B=B_BOOT, seed=1):
     """OD-B14 power re-run: run_A2's summary per scenario (default SCEN: soft crossings at 0.7, 1.5, 3 alpha_0, sub-critical lambda 0.6
     and 0.85, threshold, flat g = 1) with the measured per-cell SDs sd [C] of the per-pair projections on u_read (push units, i.e. divided
-    by alpha_b cbar as the gains), the measured correlation rho of these projections across cells, the cells' pair counts n_pairs [C] and
-    cell alphas a_cells (multiples of alpha_0, ascending). h: extra prompt heterogeneity of the signal (0: already in the measured SD).
-    Returns {scenario: summary}."""
+    by alpha_b cbar as the gains), the measured correlation rho of these projections across cells (simulated as that correlation:
+    loading correlation_loading(rho), exact for h = 0), the cells' pair counts n_pairs [C] and cell alphas a_cells (multiples of
+    alpha_0, ascending). h: extra prompt heterogeneity of the signal (0: already in the measured SD). Returns {scenario: summary}."""
     scen = SCEN if scen is None else scen; a_cells = np.asarray(a_cells, float); rng = np.random.default_rng(seed); out = {}
+    load = correlation_loading(rho)
     for sn, (G, adn, aup, truth) in scen.items():
-        exp_ = lambda rg, G=G: cells_experiment(G, a_cells, n_pairs, sd, h, rho, rg, B)
+        exp_ = lambda rg, G=G: cells_experiment(G, a_cells, n_pairs, sd, h, load, rg, B)
         out[sn] = a2_scenario(G, adn, aup, truth, reps, rng, exp_, a_cells)
     return out
 
@@ -305,14 +320,15 @@ def gain_A2(a_cells, n_pairs, sd, rho, h=0.0, scen=None, reps=400, B=B_BOOT, see
 def resolvable_band(a_cells, n_pairs, sd, rho, h=0.0, reps=400, B=B_BOOT, seed=2, g_grid=None, level=0.8):
     """OD-B14 'resolvable band': for flat gains g (G(a) = g at every cell) on g_grid (default 41 values log-spaced in [0.5, 2]) the rate
     of 'sub' or 'super' over reps replicates; the band = the largest interval around 1 in which the rate stays < level, its ends found
-    by linear interpolation in log g between the last grid point inside and the first outside. Returns dict(lo, hi, grid, rate)
-    (lo = None / hi = None: no end within the grid)."""
+    by linear interpolation in log g between the last grid point inside and the first outside. rho = the measured cross-cell
+    correlation (loading correlation_loading(rho), as gain_A2). Returns dict(lo, hi, grid, rate) (lo = None / hi = None: no end within
+    the grid)."""
     g_grid = np.exp(np.linspace(np.log(0.5), np.log(2.0), 41)) if g_grid is None else np.asarray(g_grid, float)
-    a_cells = np.asarray(a_cells, float); rng = np.random.default_rng(seed); rate = []
+    a_cells = np.asarray(a_cells, float); rng = np.random.default_rng(seed); rate = []; load = correlation_loading(rho)
     for gv in g_grid:
         G = lambda a, gv=gv: np.full_like(np.asarray(a, float), gv); hits = 0
         for _ in range(reps):
-            _, _, gb = cells_experiment(G, a_cells, n_pairs, sd, h, rho, rng, B)
+            _, _, gb = cells_experiment(G, a_cells, n_pairs, sd, h, load, rng, B)
             c = classify(np.percentile(gb, 5, 0), np.percentile(gb, 95, 0)); hits += c in ("sub", "super")
         rate.append(hits / reps)
     rate = np.array(rate); lg = np.log(g_grid); i1 = int(np.argmin(np.abs(lg)))
@@ -401,6 +417,14 @@ def selftest(quiet=False, return_rows=False):
         r1, r2 = np.random.default_rng(9), np.random.default_rng(9); G = SCEN["super_mid (lam 2, a* 1.5)"][0]
         a = scalar_experiment(G, GRID, 64, 0.2, 8, 0.5, 0.6, 0.5, r1); b = cells_experiment(G, GRID, 64, np.sqrt(1 / (0.2 ** 2 * 8)) * GRID ** 0.25, 0.5, 0.6, r2)
         ok = all(np.allclose(u, v, rtol=1e-12, atol=1e-12) for u, v in zip(a, b))
+        xs, _, _ = _cells_x(lambda a: np.ones_like(np.asarray(a, float)), [1.0, 2.0, 4.0], 40000, [1.0, 2.0, 0.5], 0.0, correlation_loading(0.6), np.random.default_rng(5))
+        cm = np.corrcoef(xs); sim_r = float(cm[np.triu_indices(3, 1)].mean())
+        ok = ok and abs(sim_r - 0.6) < 0.01 and correlation_loading(0.36) == 0.6 and correlation_loading(-0.4) == 0.0 and correlation_loading(1.7) == 1.0
+        say("OD-B14: the simulated cross-cell correlation equals the measured one (loading sqrt(r); negative r -> 0)", ok, f"passed 0.6, simulated {sim_r:.4f}")
+        r_a, r_b = np.random.default_rng(1), np.random.default_rng(1); G1 = SCEN["super_mid (lam 2, a* 1.5)"]
+        via = gain_A2([0.5, 1, 2], [256, 128, 128], [0.9, 1.0, 1.2], 0.36, reps=3, B=100, scen={"s": G1})["s"]
+        direct = a2_scenario(G1[0], G1[1], G1[2], G1[3], 3, r_b, lambda rg: cells_experiment(G1[0], np.array([0.5, 1, 2]), [256, 128, 128], [0.9, 1.0, 1.2], 0.0, 0.6, rg, 100), np.array([0.5, 1, 2]))
+        ok = ok and via == direct
         gA = gain_A2([0.5, 1, 2], [256, 128, 128], [0.9, 1.0, 1.2], 0.5, reps=3, B=100)
         band = resolvable_band([0.5, 1, 2], [256, 128, 128], [0.9, 1.0, 1.2], 0.5, reps=20, B=100, g_grid=np.exp(np.linspace(np.log(0.5), np.log(2), 9)))
         ok = ok and set(gA) == set(SCEN) and (band["lo"] is None or band["lo"] < 1) and (band["hi"] is None or band["hi"] > 1)

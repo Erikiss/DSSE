@@ -1475,13 +1475,13 @@ def mock_fixture(root, r1_dir):
     if not os.path.exists(os.path.join(r1_dir, "gpu1", f"summary_b{BLOCK}.json")): R.mock_r1(root, r1_dir, spec=((BLOCK, "gpu1", ("all",)),))
 
 
-def _cli(root, r1, r2, stage, script=None, extra_env=None):
-    env = dict(os.environ); env.pop("ASCALE", None); env.pop("BLOCK", None)
+def _cli(root, r1, r2, stage, script=None, extra_env=None, want_out=False, quiet=False):
+    env = dict(os.environ); env.pop("ASCALE", None); env.pop("BLOCK", None); env.pop("R2_UNLEARN_FAIL", None)
     env.update(MOCK="1", DEVICE=os.environ.get("DEVICE", "cpu"), NT=os.environ.get("NT", "1"), OMP_NUM_THREADS="1", **(extra_env or {}))
     cmd = [sys.executable, script or os.path.abspath(__file__), root, r1, r2] + ([stage] if stage else [])
     p = subprocess.run(cmd, env=env, capture_output=True, text=True)
-    if p.returncode != 0: print(p.stdout[-3000:], p.stderr[-3000:], flush=True)
-    return p.returncode
+    if p.returncode != 0 and not quiet: print(p.stdout[-3000:], p.stderr[-3000:], flush=True)
+    return (p.returncode, p.stdout + p.stderr) if want_out else p.returncode
 
 
 def selftest(root, r1_dir, r2_dir):
@@ -1495,7 +1495,7 @@ def selftest(root, r1_dir, r2_dir):
     mock_fixture(root, r1_dir)
     if not os.path.exists(os.path.join(r2_dir, "axes", "r2_axes.json")):
         assert _cli(root, r1_dir, r2_dir, "all", script=os.path.join(HERE, "r2_axes.py")) == 0, "r2_axes.py failed"
-    selftest_rules(check)
+    selftest_rules(check); selftest_cache(check, r2_dir)
     rc = {st: _cli(root, r1_dir, r2_dir, st) for st in STAGES}
     check("CLI: every stage exits 0 and writes unlearn/<stage>.json (+ .pt)", all(v == 0 for v in rc.values()) and all(os.path.exists(out_paths(r2_dir, st)[0]) for st in STAGES), rc)
     mt = {st: os.path.getmtime(out_paths(r2_dir, st)[0]) for st in STAGES}
@@ -1509,8 +1509,8 @@ def selftest(root, r1_dir, r2_dir):
     selftest_q2(check, ctx, J["q2"], P["q2"])
     selftest_loops(check, ctx, J["q4b"], P["q4b"], J["armA"], P["armA"])
     selftest_q5(check, ctx, J["q5"], P["q5"])
-    selftest_q6(check, ctx, J["q6"], P["q6"])
-    ctx_q5_before[0] = J["q5"]; selftest_variants(check, root, r1_dir, r2_dir, ctx)
+    selftest_q6(check, ctx, J["q6"], P["q6"]); selftest_scope(check, ctx)
+    ctx_q5_before[0] = J["q5"]; selftest_variants(check, root, r1_dir, r2_dir, ctx, J)
     ok = all(r["ok"] for r in res); R.write_json(os.path.join(r2_dir, "unlearn", "selftest.json"), dict(ok=ok, n=len(res), passed=sum(r["ok"] for r in res), seconds=time.time() - t0, tests=res))
     print(f"r2_unlearn_qwen selftest: {sum(r['ok'] for r in res)}/{len(res)} passed ({time.time() - t0:.0f} s)", flush=True); return ok
 
@@ -1543,9 +1543,36 @@ def selftest_rules(check):
           and not q4b_gate(True, False, None)["open"] and "G15" in q4b_gate(True, False, None)["verdict"] and "G13" in q4b_gate(False, False, None)["verdict"])
     mk = lambda c, p, A, rel=0.6, Ue=0.3, lo=0.1: dict(c=c, p=p, A=A, rel=rel, Ue=Ue, Ue_ci90=[lo, 0.5])
     gone = {2: mk(0.01, 0.5, 0.1), 3: mk(0.02, 0.4, -0.1)}; good = {2: mk(0.5, 0.001, 0.6), 3: mk(0.5, 0.001, 0.5)}; rer = {2: mk(0.1, 0.05, 0.2), 3: mk(0.1, 0.05, 0.2)}
-    check("C-Q4b loop rule: un-searched, twin fails, survives, re-routed, undecided", rule_loop(gone, good) == "un-searched" and rule_loop(gone, gone) == "undecided (twin does not re-find RSI)"
+    gone_low = {2: mk(0.01, 0.5, 0.1, rel=0.3), 3: mk(0.02, 0.4, -0.1, rel=0.3)}
+    check("C-Q4b loop rule in the plan's order (review unlearn_b-3): un-searched; survives; re-routed before 'twin does not re-find RSI' (also when gone); undecided",
+          rule_loop(gone, good) == "un-searched" and rule_loop(gone, gone) == "re-routed" and rule_loop(gone_low, gone_low) == "undecided (twin does not re-find RSI)"
           and rule_loop(good, gone) == "survives" and rule_loop(rer, good) == "re-routed" and rule_loop({2: mk(0.1, 0.05, 0.3), 3: mk(0.1, 0.05, 0.3)}, good) == "undecided"
-          and rule_loop({2: mk(0.1, 0.05, 0.2, rel=0.3), 3: mk(0.1, 0.05, 0.2)}, good) == "undecided")
+          and rule_loop({2: mk(0.1, 0.05, 0.2, rel=0.3), 3: mk(0.1, 0.05, 0.2)}, good) == "undecided"
+          and rule_loop(gone_low, comparator=gone_low) == "undecided (the R1 seed-0 comparator does not re-find RSI)" and rule_loop(None) == "undecided (rounds d_2, d_3 missing)")
+    try:
+        import r2_unlearn_verdict as UV
+        rows = [mk(c, p, A, rel, Ue, lo) for c in (-0.1, 0.2) for p in (0.005, 0.05, 0.5) for A in (-0.5, 0.1, 0.5) for rel in (0.3, 0.7) for Ue in (0.1, 0.4) for lo in (-0.1, 0.1)]
+        refs = [None] + [{2: mk(0.5, p, A), 3: mk(0.5, p, A)} for p in (0.005, 0.5) for A in (0.1, 0.5)]
+        dis = [(a, t) for a in rows for t in refs if rule_loop({2: a, 3: a}, twin=t) != UV.loop_rule({2: a, 3: a}, t, "twin")]
+        check(f"rule_loop = r2_unlearn_verdict.loop_rule (OD-G8) on {len(rows) * len(refs)} row combinations", not dis, dis[:2])
+    except ImportError as e: print(f"[INFO] r2_unlearn_verdict not importable, OD-G8 cross-check of rule_loop skipped: {e}", flush=True)
+    check("_rung: 'not decidable (no baseline gap: g_0 <= 0)' unless g_0 > 0 (review unlearn_a-2); one direction / span / not removed",
+          _rung(-0.25, 0.1, -0.04) == RUNG_NO_BASELINE and _rung(0.4, 0.9, float("nan")) == RUNG_NO_BASELINE and _rung(2.0, 2.0, 0.0) == RUNG_NO_BASELINE
+          and _rung(0.4, 0.9, 1.0) == "one direction" and _rung(0.7, 0.4, 1.0) == "two-dimensional span" and _rung(0.7, 0.6, 1.0) == "not removed within the tested 2-dim span")
+    try:
+        import r2_linearity as LIN
+        mk3 = lambda r1, r2, g0: dict(status="ran", linear_rung=dict(inputs=dict(RSI_1dim=dict(ratio=r1, g0=g0), RSI_span=dict(ratio=r2, g0=g0)), RSI=_rung(r1, r2, g0)))
+        cases = [(r1, r2, g0) for r1 in (-0.25, 0.4, 0.7, 2.0) for r2 in (0.3, 0.6) for g0 in (-0.04, 0.0, 1.0)]
+        check("_rung agrees with r2_linearity.linear_rung (OD-G8), also for g_0 <= 0", all(LIN.linear_rung(mk3(*c), "RSI")["agrees_with_in_session"] for c in cases))
+    except ImportError as e: print(f"[INFO] r2_linearity not importable, OD-G8 cross-check of _rung skipped: {e}", flush=True)
+    dr = np.random.default_rng(3).normal(0.4, 0.05, 2000); ci = centred_interval(0.5, dr); q = np.percentile(dr, [5, 95])
+    check("Amendment 3 (a): G16 interval = percentile interval shifted by c - median; unshifted interval and median kept",
+          abs(ci["boot_median"] - np.median(dr)) < 1e-12 and np.allclose(ci["ci90_percentile"], q) and np.allclose(ci["ci90"], q + 0.5 - np.median(dr))
+          and ci["ci90"][0] < 0.5 < ci["ci90"][1] and not ci["ci90_percentile"][0] < 0.5 < ci["ci90_percentile"][1], ci)
+    STx = {"ref": 1, "k6_null0": 2, "k6_r2_u_com": 3, "r2_b05_null0": 4, "r2_b05_u_RSI": 5, Q2_STATE_KEY: "old", "r2_other": 6}
+    gone_keys = q2_state_purge(STx, "new"); same = q2_state_purge(dict(STx, **{Q2_STATE_KEY: "new", "k6_r2_x": 1}), "new")
+    check("q2 state validity (review unlearn_a-1): k6_r2_* and r2_b05_* purged when code or inputs differ; kept when they match",
+          gone_keys == ["k6_r2_u_com", "r2_b05_null0", "r2_b05_u_RSI"] and set(STx) == {"ref", "k6_null0", Q2_STATE_KEY, "r2_other"} and same == [], gone_keys)
     check("G16 arm A continuation", arma_continues(0.1, 0.2) and not arma_continues(0.3, 0.2) and not arma_continues(float("nan"), 0.2))
     a = np.array([0.1, -0.2, 0.3, 0.05]); u = 0.5 + 2 * a; nl = [dict(A_fin=x, Ue_fin=y) for x, y in zip(a, u)]; rg = ols_nulls(nl)
     check("O5 null regression and z_fin (exact line: se 0, beta (0.5, 2))", abs(rg["beta"][0] - 0.5) < 1e-12 and abs(rg["beta"][1] - 2) < 1e-12 and rg["se"] < 1e-12)
@@ -1626,6 +1653,8 @@ def selftest_q4a(check, ctx, J, P, J3, P3):
           abs(gc - J["g_cue"]) < 1e-9 * max(1, abs(gc)) and abs(ga - J["g_abl"]) < 1e-9 * max(1, abs(ga))
           and (abs(sh - J["restored_share"]) < 1e-9 * max(1, abs(sh)) or (math.isnan(sh) and math.isnan(J["restored_share"]) and not J["share_defined"]))
           and J["verdict_in_session"] == rule_cue(J["restored_share"], J["restored_share_ci90"][1], J["passed_C_Q3"]), (gc, J["g_cue"], sh, J["restored_share"]))
+    oc = R.axis_from_texts(P["unablated"]["X"], ref["Xa"], ctx.fold, basis=ref["Q"], n_null=0)["gap_perp_cross"]; jc = J["ceiling"]["own_axis_gap"]
+    check("q4a: own-axis gap of the unablated cued texts next to the ceiling gap (review unlearn_a-3)", (fin(oc) and abs(oc - jc) < 1e-9 * max(1, abs(oc))) or (not fin(oc) and not fin(jc)), (oc, jc))
     rows = [(rk.enc(rk.chat(P["messages"][p])), P["keys"][p], 1.0) for p in range(n)]
     with R.WriteOrth(P["U"].double()): G = rk.generate(rows)
     check("q4a: ablated cued texts regenerate (keys of the O2 RSI_PRO texts, the chosen ablation)", G == P["ablated"]["conts"] and P["keys"] == [int(k) for k in O["keys"]["RSI_PRO"]])
@@ -1635,6 +1664,8 @@ def selftest_q2(check, ctx, J, P):
     rk = ctx.rk; O = ctx.o2(); H = ctx.H30(); KL = ctx.refkl(); u = ctx.u_rsi
     check("q2: status ran; K6 entries 'k6_r2_<dir>' in the state; behaviour entries 'r2_b05_*'", J["status"] == "ran" and all(f"k6_r2_{nm}" in rk.ST for nm in ("u_RGI_perp", "u_com", "u_diff", "u_RGI_perp_RGI30", "u_com_RGI30"))
           and all(f"r2_b05_null{i}" in rk.ST for i in range(J["n_nulls"])) and all(f"r2_b05_{nm}" in rk.ST for nm in ("u_RSI", "u_diff", "u_RGI_perp")))
+    check("q2: state validity entry 'r2_q2_valid' written; nothing purged on a fresh run; code_sha256 in the JSON", isinstance(rk.ST.get(Q2_STATE_KEY), str)
+          and J["state_entries_purged"] == [] and J["code_sha256"] == code_sha256())
     f = rk.ST["alpha"]["alpha"]
     check("RefKL.push = rk.damage (cached unpushed log-probs)", abs(KL.push(u, f) - rk.damage(u, f)) < 1e-12 and abs(KL.push(-u, f) - rk.damage(-u, f)) < 1e-12)
     M, Y = rk.logodds_matching(H, u, f, -1.0); lo, y = ctx.scores(H, u, f, -1.0)
@@ -1677,6 +1708,11 @@ def selftest_loops(check, ctx, Jb, Pb, Ja, Pa):
     ref, cb = ref_seed0_c(ctx, rk.ST[f"ev_RSI_a{rk.SUF}_0"]); ev0 = rk.ST[f"ev_RSI_a{rk.SUF}_0"]
     d0 = ev0["delta"][0::2].double()[torch.as_tensor(ev0["ok"])[0::2]].mean(0)
     check("arm A: reference = c(d_1) of the seed-0 (even) pairs of R1 RSI_a evaluation 0, bootstrap interval", abs(ref["c"] - R.cosf(d0, u)) < 1e-12 and ref["ci90"] == Ja["reference_seed0_RSI_a"]["ci90"])
+    rf = Ja["reference_seed0_RSI_a"]; sh = rf["c"] - rf["boot_median"]
+    check("arm A (Amendment 3 (a)): ci90 = percentile interval + (c - bootstrap median); G16 from ci90[0]; the percentile interval's G16 value stored",
+          abs(rf["boot_median"] - float(np.median(cb))) < 1e-12 and np.allclose(np.array(rf["ci90"]) - np.array(rf["ci90_percentile"]), sh)
+          and np.allclose(rf["ci90_percentile"], np.percentile(cb, [5, 95])) and Ja["continues"] == arma_continues(Ja["c1"], rf["ci90"][0])
+          and rf["continues_with_percentile_interval"] == arma_continues(Ja["c1"], rf["ci90_percentile"][0]), {k: rf[k] for k in ("c", "boot_median", "ci90", "ci90_percentile")})
     b = Ja["beta"]["f"]; keyf = lambda p, s: rk.keyseed("r2CHK", "constpush", p)
     A1 = R.evaluate_variant(u, 0.0, keyf, prompts=range(4), hooks=[ConstPush(rk, u, b, -1.0)], cbar=False)
     A2 = R.evaluate_variant(u, b, keyf, prompts=range(4), signs=(-1.0, -1.0), cbar=False)
@@ -1694,6 +1730,10 @@ def selftest_q5(check, ctx, J, P):
     E, _ = torch.linalg.qr(torch.stack([R.unit(ctx.uT), R.unit(sea)], 1)); A = torch.stack([E.T @ P["F_RSI"].double(), E.T @ P["F_SEA"].double()], 1)
     check("q5: coefficients solve F(mix) = a F(RSI) + b F(SEA) within the plane", torch.allclose(A @ torch.tensor([s["coef_RSI"], s["coef_SEA"]], dtype=torch.float64), E.T @ P["F_mix"].double(), rtol=1e-4, atol=1e-6)
           and abs(s["coef_RSI"] - J["superposition"]["coef_RSI"]) < 1e-6)
+    sp = J["superposition"]; md = pct(P["boot"]["cos"].double().numpy(), 50)
+    check("q5: the descriptive cosine intervals also report the bootstrap median (Amendment 3 (a))", abs(sp["cos_boot_median"] - md) < 1e-6
+          and abs(J["dose"]["cos_boot_median"] - pct(P["boot"]["dose_cos"].double().numpy(), 50)) < 1e-6
+          and (not fin(sp["cos_disatt"]) or abs(sp["cos_disatt_boot_median"] - md / math.sqrt(sp["rel_mix"]["rel"] * sp["rel_sum"]["rel"])) < 1e-6), (sp["cos_boot_median"], md))
     Ev = R.evaluate_variant(ctx.u_rsi, 2 * ctx.alpha, lambda p, s: rk.keyseed("r2DOSE", p), nseed=1, cbar=False)
     check("q5: dose pairs regenerate (2 alpha_14 along u_T_perp, keys ('r2DOSE', p)); dose ratio finite or NaN by U-statistics", Ev["conts"] == P["dose"]["conts"] and "norm_ratio" in J["dose"])
 
@@ -1721,10 +1761,36 @@ def selftest_q6(check, ctx, J, P):
           and float(((bm[s0:] - m2) @ Vr).abs().max()) < 1e-4 * float(bm.abs().max()))
 
 
+def selftest_cache(check, r2_dir):
+    """Review unlearn_a-1: a cached unit is reused only with the same signature and code fingerprint."""
+    d = os.path.join(r2_dir, "selftest_cache"); shutil.rmtree(d, ignore_errors=True)
+    a = Cache(d, "t", code="A"); v1 = a.get("u", "s", lambda: 1); v2 = a.get("u", "s", lambda: 2); v3 = Cache(d, "t", code="B").get("u", "s", lambda: 3)
+    v4 = Cache(d, "t", code="B").get("u", "s", lambda: 4); v5 = Cache(d, "t", code="B").get("u", "s2", lambda: 5)
+    R.torch_save(os.path.join(d, "local", "unlearn_t", "old.pt"), dict(sig="s", val=6)); v6 = Cache(d, "t", code="B").get("old", "s", lambda: 7)
+    check("cache: reused with the same signature and code; recomputed after a code change, a new signature, or a unit without code",
+          (v1, v2, v3, v4, v5, v6) == (1, 1, 3, 3, 5, 7) and len(code_sha256()) == 64, (v1, v2, v3, v4, v5, v6))
+
+
+def selftest_scope(check, ctx):
+    """Item 6 (iv): a stage that fails inside stage_scope leaves no hook, temperature, steering switch or unsaved state entry behind."""
+    rk = ctx.rk; n0 = sum(len(getattr(m, k)) for m in rk.model.modules() for k in ("_forward_hooks", "_forward_pre_hooks")); keys0 = set(rk.ST)
+    disk = set(torch.load(R.BLK["state"], map_location="cpu", weights_only=False)); err = None
+    try:
+        with stage_scope(rk, "selftest"):
+            R.WriteOrth(ctx.u_rsi[None]).__enter__(); ConstPush(rk, ctx.u_rsi, 1.0).__enter__(); rk.TEMP = 0.3; rk.CAP["on"] = True
+            rk.STEER.update(v=ctx.u_rsi.float(), V=None, alpha=1.0, cap=ctx.cap, sign=torch.tensor([1.0]), rowstart=torch.tensor([rk.START])); rk.ST["r2_selftest_unsaved"] = 1
+            raise RuntimeError("test")
+    except RuntimeError as e: err = str(e)
+    n1 = sum(len(getattr(m, k)) for m in rk.model.modules() for k in ("_forward_hooks", "_forward_pre_hooks"))
+    check("stage_scope: after a failure no hook, temperature, steering or early-stop switch survives; rk.ST reloaded from the saved state",
+          err == "test" and n1 == n0 and rk.TEMP == 0.7 and rk.STEER["v"] is None and not rk.CAP["on"] and "r2_selftest_unsaved" not in rk.ST and set(rk.ST) == disk
+          and keys0 <= disk | {"r2_selftest_unsaved"}, (n0, n1, rk.TEMP))
+
+
 ctx_q5_before = [None]
 
 
-def selftest_variants(check, root, r1_dir, r2_dir, ctx):
+def selftest_variants(check, root, r1_dir, r2_dir, ctx, J0=None):
     """Gate branches and 'not run' paths on modified copies of the MOCK fixture (separate processes)."""
     base = os.path.join(r2_dir, "selftest_variants"); shutil.rmtree(base, ignore_errors=True); os.makedirs(base)
     # (1) attractor branch: verdict 'unlikely', label_attractor true, RND_1's last row attracted
@@ -1781,7 +1847,25 @@ def selftest_variants(check, root, r1_dir, r2_dir, ctx):
     ok = all(v == 0 for v in rcs.values()) and all(Js[st]["suffix"] == "@1.5" and abs(Js[st]["alpha_14"] - 1.5 * ST15["alpha"]["alpha"]) < 1e-9 for st in Js)
     ok = ok and Js["q4b"]["r1"]["d1_RSI_a_key"] == "dir_RSI_a@1.5_1" and Js["armA"]["reference_seed0_RSI_a"]["key"] == "ev_RSI_a@1.5_0" and "ev_SEA@1.5_0" in Js["q5"]["references"]["SEA"]
     check("block 14 at 1.5 alpha: suffixed round-1 keys and alpha_14 = 1.5 alpha", ok, {k: (v.get("status"), v.get("suffix"), v.get("alpha_14")) for k, v in Js.items()})
-    # (8) BLOCK must be 14
+    # (8) item 6: one 'all' process; a middle stage (q2) fails after leaving a hook, a temperature, a steering switch and an unsaved state
+    # entry behind; the independent later stages still run (and equal the one-process-per-stage outputs), exit code non-zero; a rerun
+    # repeats only q2 and exits 0
+    r2f = os.path.join(base, "r2_all"); shutil.copytree(os.path.join(r2_dir, "axes"), os.path.join(r2f, "axes"))
+    rc1, out1 = _cli(root, r1_dir, r2f, "all", extra_env=dict(R2_UNLEARN_FAIL="q2"), want_out=True, quiet=True)
+    have1 = {st: os.path.exists(out_paths(r2f, st)[0]) for st in STAGES}; mt1 = {st: os.path.getmtime(out_paths(r2f, st)[0]) for st in STAGES if have1[st]}
+    check("'all' with a failing middle stage: the independent later stages run, q2 has no output, the summary names it, exit code non-zero",
+          rc1 != 0 and not have1["q2"] and all(have1[st] for st in STAGES if st != "q2") and "q2: failed (RuntimeError: injected failure" in out1, (rc1, have1))
+    rc2, out2 = _cli(root, r1_dir, r2f, "all", want_out=True)
+    check("'all' rerun: only q2 runs (the other outputs untouched), exit code 0", rc2 == 0 and os.path.exists(out_paths(r2f, "q2")[0])
+          and mt1 == {st: os.path.getmtime(out_paths(r2f, st)[0]) for st in mt1} and "q3: done earlier: ran" in out2 and "q2: ran" in out2, rc2)
+    canon = lambda j: json.dumps({k: v for k, v in j.items() if k != "versions"}, sort_keys=True)
+    diff = [st for st in STAGES if J0 and os.path.exists(out_paths(r2f, st)[0]) and canon(json.load(open(out_paths(r2f, st)[0]))) != canon(J0[st])]
+    check("'all' in one process (with the contained failure) = one process per stage: identical JSONs incl. finder logs (versions excluded)", J0 is not None and not diff, diff)
+    rc3, out3 = _cli(root, r1_dir, os.path.join(base, "r2_all_noaxes"), "all", want_out=True, quiet=True)
+    have3 = {st: os.path.exists(out_paths(os.path.join(base, "r2_all_noaxes"), st)[0]) for st in STAGES}
+    check("'all' without the axes output: q3 and q2 fail (missing round-2 input), q4a skipped (prerequisite), q4b, armA, q5, q6 run, exit non-zero",
+          rc3 != 0 and not any(have3[st] for st in ("q3", "q4a", "q2")) and all(have3[st] for st in ("q4b", "armA", "q5", "q6")) and "q4a: skipped (prerequisite q3 failed)" in out3, have3)
+    # (9) BLOCK must be 14
     rcb = _cli(root, r1_dir, os.path.join(base, "r2_block"), "q5", extra_env=dict(BLOCK="8"))
     check("env BLOCK other than 14 is refused", rcb != 0)
 

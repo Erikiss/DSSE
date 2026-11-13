@@ -412,6 +412,56 @@ def r_did(dfg_a, delta_a, P_a, dfg_b, delta_b, P_b, draws_a=None, draws_b=None, 
     return out
 
 
+DID_MODELS = ("qwen3-1.7b", "qwen3-0.6b")
+
+
+def did_inputs(r2_dir, m):
+    """r_DiD's inputs from model m's written statistics (geom_stats_<m>.json: dFG point series, delta_MMLU 'last', P; geom_draws_<m>.npz:
+    'pooled__dFG') and their provenance, or None if the statistics are missing. The series hash excludes the r_DiD block itself, so
+    writing r_DiD into a file does not change its provenance."""
+    P = paths(r2_dir, m)
+    if not os.path.exists(P["stats"]): return None
+    s = json.load(open(P["stats"])); dfg = np.array(s["per_block"]["pooled"]["dFG"]["point"], dtype=np.float64)
+    delta = np.array(s["delta"]["mmlu"]["last"]["delta"], dtype=np.float64); Pset = [int(b) for b in s["gate"]["P"]]; draws, dsha = None, None
+    if os.path.exists(P["draws"]):
+        with np.load(P["draws"], allow_pickle=False) as z:
+            if "pooled__dFG" in z.files: draws = z["pooled__dFG"].astype(np.float64)
+        dsha = GEOM.sha256_file(P["draws"])
+    ser = hashlib.sha256(json.dumps(dict(dFG=dfg.tolist(), delta=delta.tolist(), P=Pset)).encode()).hexdigest()
+    return dict(dfg=dfg, delta=delta, P=Pset, draws=draws, prov=dict(stats_file=os.path.basename(P["stats"]), stats_version=s.get("version"),
+                stats_written=s.get("written"), inputs_sha256={k: (v or {}).get("sha256") for k, v in (s.get("inputs") or {}).items()},
+                series_sha256=ser, draws_file=os.path.basename(P["draws"]), draws_sha256=dsha))
+
+
+def update_did(r2_dir):
+    """rgi_stats-3: r_DiD from both models' written statistics and draws (float32 draws of both, so the value does not depend on which
+    model's run computed it), stored with both sides' provenance in BOTH models' JSONs, so that whichever file is read carries the
+    value of the current statistics. Returns the r_DiD dict, or None when a model's statistics are missing."""
+    a, b = (did_inputs(r2_dir, m) for m in DID_MODELS)
+    if a is None or b is None: return None
+    same = a["draws"] is not None and b["draws"] is not None and a["draws"].shape == b["draws"].shape
+    did = r_did(a["dfg"], a["delta"], a["P"], b["dfg"], b["delta"], b["P"], a["draws"] if same else None, b["draws"] if same else None)
+    did.update(definition="corr over P_1.7B & P_0.6B of dFG_1.7B - dFG_0.6B with delta_MMLU(last)_1.7B - delta_MMLU(last)_0.6B",
+               provenance={DID_MODELS[0]: a["prov"], DID_MODELS[1]: b["prov"]}, computed=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"))
+    if not same: did["ci_status"] = "no per-draw interval (a draws file is missing or the two draw counts differ)"
+    for m in DID_MODELS:
+        P = paths(r2_dir, m); s = json.load(open(P["stats"])); s["r_DiD"] = did; GEOM.write_json(P["stats"], s)
+    return did
+
+
+def did_current(r2_dir):
+    """False when both models' statistics exist and either JSON lacks an r_DiD whose provenance (series and draws hashes of both models)
+    matches the current files; True otherwise (nothing to recompute)."""
+    ins = {m: did_inputs(r2_dir, m) for m in DID_MODELS}
+    if any(v is None for v in ins.values()): return True
+    for m in DID_MODELS:
+        prov = (json.load(open(paths(r2_dir, m)["stats"])).get("r_DiD") or {}).get("provenance") or {}
+        for o in DID_MODELS:
+            q = prov.get(o) or {}
+            if q.get("series_sha256") != ins[o]["prov"]["series_sha256"] or q.get("draws_sha256") != ins[o]["prov"]["draws_sha256"]: return False
+    return True
+
+
 # ======================================================================================================================================
 # Delta (A4)
 # ======================================================================================================================================
@@ -617,7 +667,9 @@ def inputs_record(P, gm):
 def run(r2_dir, m="qwen3-1.7b", force=False):
     t0 = time.time(); P = paths(r2_dir, m); dev = device()
     if os.path.exists(P["stats"]) and not force:
-        log(f"{P['stats']} exists; skipped (use --force to recompute)"); return json.load(open(P["stats"]))
+        log(f"{P['stats']} exists; skipped (use --force to recompute)")
+        if not did_current(r2_dir): did = update_did(r2_dir); log(f"r_DiD was stale or missing: recomputed ({(did or {}).get('r_DiD')})")
+        return json.load(open(P["stats"]))
     for k in ("geom", "delta", "pool", "causal", "dirs", "meta"):
         if not os.path.exists(P[k]): raise FileNotFoundError(f"{P[k]} missing: run r2_rgi_geom.py first")
     gm = json.load(open(P["meta"])); inp = inputs_record(P, gm)
@@ -681,44 +733,47 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
     spill = {k: [BS[b]["extra"]["spill_g_self"][k] for b in range(NL)] for k in BS[0]["extra"]["spill_g_self"] if k != "s_per_object"}
     spill["s_per_object"] = [BS[b]["extra"]["spill_g_self"]["s_per_object"] for b in range(NL)]
     tau = {r: {k: [BS[b]["extra"][f"tau_{r}"][k] for b in range(NL)] for k in BS[0]["extra"][f"tau_{r}"]} for r in ("dot", "obj")}
-    # A5 over P, over the composed blocks of P, object reading
-    Pb = np.array(Pset, dtype=np.int64); Pc = np.array([b for b in Pset if composed[b]], dtype=np.int64); over = {}
-    packs = {}
-    if len(Pb) >= 6:
-        packs["P"] = surrogate_pack(d_mmlu["last"][Pb], Pb, aniso["dot"][Pb], SEEDS["surrogates"])
-        packs["P_mean"] = surrogate_pack(d_mmlu["mean"][Pb], Pb, aniso["obj"][Pb], SEEDS["surrogates"] + 1)
-    if len(Pc) >= 6: packs["Pc"] = surrogate_pack(d_mmlu["last"][Pc], Pc, aniso["dot"][Pc], SEEDS["surrogates"] + 2)
+    # A5 over P, over the composed blocks of P, object reading. rgi_stats-2: a series enters with the blocks of the set where its point
+    # value is finite (A3 is identically zero at the last block, so the causal series are undefined there); each such block set gets its
+    # own surrogate pack (seed of the set) and the matching delta, delta_OBJ, anisotropy and draw columns; the dropped blocks are recorded.
+    Pb = np.array(Pset, dtype=np.int64); Pc = np.array([b for b in Pset if composed[b]], dtype=np.int64); over = {}; packs = {}
+
+    def pack(bl, which, seed):
+        key = (which, tuple(int(b) for b in bl))
+        if key not in packs: packs[key] = surrogate_pack(d_mmlu[which][bl], bl, aniso["dot" if which == "last" else "obj"][bl], seed) if len(bl) >= 6 else None
+        return packs[key]
+
+    def battery(y_all, d_all, w_all, blocks, which, seed):
+        y = np.asarray(y_all, dtype=np.float64)[blocks]; keep = np.isfinite(y); bl = blocks[keep]; dropped = [int(b) for b in blocks[~keep]]
+        if len(bl) == 0: return dict(status="empty block set" if len(blocks) == 0 else "no block of the set has a finite value", blocks=[], n=0, dropped_blocks=dropped)
+        out = over_blocks(np.asarray(y_all, dtype=np.float64)[bl], None if d_all is None else d_all[:, bl], bl, d_mmlu[which][bl], d_obj[bl], pack(bl, which, seed),
+                          y_white=None if w_all is None else np.asarray(w_all, dtype=np.float64)[bl])
+        out["dropped_blocks"] = dropped; return out
     white = point_only.get("dot/white/pooled", {})
     spec = [("dFG", "pooled", "dFG"), ("FG|IMP-DES", "pooled", "FG|IMP-DES")] + [(f"{s}|IMP-DES@{v}", v, f"{s}|IMP-DES") for v in DRAW_VARIANTS for s in ("rho_S", "sigma_self")] \
         + [("FG_causal|IMP-DES", "causal", "FG|IMP-DES"), ("rho_causal|IMP-DES", "causal", "rho_S|IMP-DES"), ("dFG_causal", "causal", "dFG")]
-    for setname, blocks in (("P", Pb), ("P_composed", Pc)):
+    for setname, blocks, seed in (("P", Pb, SEEDS["surrogates"]), ("P_composed", Pc, SEEDS["surrogates"] + 2)):
         over[setname] = {}
         for nm, v, k in spec:
             if setname == "P_composed" and v != "causal": continue
-            if len(blocks) == 0: over[setname][nm] = dict(status="empty block set"); continue
-            yw = white[k][blocks] if (v == "pooled" and k in white) else None
-            over[setname][nm] = over_blocks(series[v][k][blocks], draws[v][k][:, blocks], blocks, d_mmlu["last"][blocks], d_obj[blocks],
-                                            packs.get("P" if setname == "P" else "Pc"), y_white=yw)
+            over[setname][nm] = battery(series[v][k], draws[v][k], white[k] if (v == "pooled" and k in white) else None, blocks, "last", seed)
+    # rgi_stats-1: the causal line's interval, simultaneous over D(FG_causal) and D(rho_causal) on the composed blocks of P (A7): sup-t over
+    # the per-draw D's with each entry's own thirds (the construction of r2_rgi_verdict.causal_sim, which rebuilds it from geom_draws)
+    ef, er = over["P_composed"].get("FG_causal|IMP-DES") or {}, over["P_composed"].get("rho_causal|IMP-DES") or {}
+    if all("D" in e and e.get("k") for e in (ef, er)):
+        Dd = np.stack([draws["causal"][k][:, e["top"]].mean(1) - draws["causal"][k][:, e["bottom"]].mean(1) for e, k in ((ef, "FG|IMP-DES"), (er, "rho_S|IMP-DES"))], 1)
+        Dd = Dd[np.isfinite(Dd).all(1)]; lo, hi, c = supt_band(np.array([ef["D"], er["D"]]), Dd, np.ones(2, bool))
+        for j, e in enumerate((ef, er)):
+            e.update(D_sim_ci=[float(lo[j]), float(hi[j])], D_sim_crit=c, D_sim_n_draws=int(len(Dd)), D_sim_series=["FG_causal|IMP-DES", "rho_causal|IMP-DES"])
     if len(Pb):
-        over["object_reading"] = {"dFG": over_blocks(point_only["obj/raw/pooled"]["dFG"][Pb], None, Pb, d_mmlu["mean"][Pb], d_obj[Pb], packs.get("P_mean"),
-                                                     y_white=point_only["obj/white/pooled"]["dFG"][Pb])}
-        if "P" in packs:
+        over["object_reading"] = {"dFG": battery(point_only["obj/raw/pooled"]["dFG"], None, point_only["obj/white/pooled"]["dFG"], Pb, "mean", SEEDS["surrogates"] + 1)}
+        if len(Pb) >= 6:
             r3o = corr_rows(cubic_resid(series["pooled"]["dFG"][Pb], Pb), cubic_resid(d_obj[Pb], Pb)); S = cubic_resid(surrogates(cubic_resid(d_obj[Pb], Pb), N_SURR, SEEDS["surrogates"] + 3), Pb)
             over["P"]["r3_delta_obj_dFG"] = dict(r3=float(r3o), p_pos=pvals(float(r3o), corr_rows(S, cubic_resid(series["pooled"]["dFG"][Pb], Pb)))[0])
     sep = dict(last=separability(d_mmlu["last"], boot_sd["last"], Pb), mean=separability(d_mmlu["mean"], boot_sd["mean"], Pb),
                last_all_blocks=separability(d_mmlu["last"], boot_sd["last"], np.arange(NL)))
-    # r_DiD
+    # r_DiD (rgi_stats-3): computed after this model's files are written, from both models' written statistics, by update_did()
     did = dict(status="the other model's statistics are not available")
-    other = "qwen3-0.6b" if m == "qwen3-1.7b" else "qwen3-1.7b"; Po = paths(r2_dir, other)
-    if os.path.exists(Po["stats"]):
-        so = json.load(open(Po["stats"])); dro = np.load(Po["draws"], allow_pickle=False) if os.path.exists(Po["draws"]) else None
-        mine = dict(dfg=series["pooled"]["dFG"], delta=d_mmlu["last"], P=Pset, draws=draws["pooled"]["dFG"])
-        theirs = dict(dfg=np.array(so["per_block"]["pooled"]["dFG"]["point"], dtype=np.float64), delta=np.array(so["delta"]["mmlu"]["last"]["delta"]),
-                      P=so["gate"]["P"], draws=dro["pooled__dFG"] if dro is not None and "pooled__dFG" in dro.files else None)
-        a, bb = (mine, theirs) if m == "qwen3-1.7b" else (theirs, mine)
-        did = r_did(a["dfg"], a["delta"], a["P"], bb["dfg"], bb["delta"], bb["P"], a["draws"], bb["draws"]) if (a["draws"] is not None and bb["draws"] is not None and
-              a["draws"].shape == bb["draws"].shape) else r_did(a["dfg"], a["delta"], a["P"], bb["dfg"], bb["delta"], bb["P"])
-        did["definition"] = "corr over P_1.7B & P_0.6B of dFG_1.7B - dFG_0.6B with delta_MMLU(last)_1.7B - delta_MMLU(last)_0.6B"
     flags = []
     if not pinfo["ok"]: flags.append("G30: fewer than 12 passing blocks in P ('undecided (fewer than 12 passing blocks)')")
     if not sep["last"].get("ok"): flags.append("G31: separability fails (V1 impossible, V2 at best)")
@@ -748,6 +803,8 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
                   design_para_split=des_d["para_split"].astype(np.int8), delta_boot_last=boot["last"].astype(np.float32), delta_boot_mean=boot["mean"].astype(np.float32))
     GEOM.npz_save(P["draws"], dict(version=VERSION, model=m, n_draws=N_DRAWS, seeds=SEEDS, note="per-draw values [n_draws, n_blocks] '<variant>__<stat>'"), **arrays)
     GEOM.write_json(P["stats"], res); log(f"statistics -> {P['stats']} ({time.time() - t0:.1f}s); P = {Pset} ({len(Pset)} blocks)")
+    did = update_did(r2_dir)
+    if did is not None: res["r_DiD"] = did; log(f"r_DiD {did.get('r_DiD')} over {did.get('n')} blocks, written into both models' statistics")
     return res
 
 

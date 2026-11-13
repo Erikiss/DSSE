@@ -68,11 +68,11 @@ class Step:
               missing (the script skips the missing ones: env R2_MISSING_BLOCKS); None: it reads no round-1 file (C-Q6)"""
 
     def __init__(self, name, block, script, args, out, after="", opt="", quick_out=None, local=False, needed_by="", needs="", env=None,
-                 gate_in_script=False, r1_reads="block"):
+                 gate_in_script=False, r1_reads="block", settled=""):
         self.name, self.block, self.script, self.args = name, block, script, args
         self.out, self.opt = out.split(), opt.split()
         self.quick_out = None if quick_out is None else quick_out.split()
-        self.after, self.needed_by = _names(after), _names(needed_by)
+        self.after, self.needed_by, self.settled = _names(after), _names(needed_by), _names(settled)
         self.local, self.needs, self.env, self.gate_in_script = local, needs, dict(env or {}), gate_in_script
         self.r1_reads = r1_reads      # G4: 'block' = reads round-1 files of its block; 'any' = of every block of B3; None = none
 
@@ -84,6 +84,7 @@ def _names(s):
 QW = "{root} {r1} {work}"            # Qwen scripts (9.2): <root> <r1_dir> <r2_dir> [<stage>]; env DEVICE, NT, MOCK, BLOCK
 ANA = "{r1} {r2in} {work}/"          # analysis scripts (9.4): <r1_dir> <r2_root> <out.json>; <r2_root>/<session>/ = dsse_runs/<session>/
 M17, M06 = "qwen3-1.7b", "qwen3-0.6b"
+UNLEARN_STAGES = ("q3", "q4a", "q2", "q4b", "armA", "q5", "q6")      # r2_unlearn_qwen.py's stages, in its order
 
 
 def _geom(m, extra, needs=""):
@@ -96,18 +97,14 @@ def _geom(m, extra, needs=""):
 
 
 STEPS = {
-    "r2_q1": [   # block 14: O2; C-Q3; C-Q4a; C-Q2; A6(b) GEN loop; C-Q4b (gated); arm A; C-Q5 pushes; C-Q6; then the GEN loops at
-                 # b_lo and b_hi (plan 7.2; r2_gen_loop.py writes rgi/dyn_b<b>.json also when GA(b) closes the loop)
+    "r2_q1": [   # O2; then C-Q3, C-Q4a, C-Q2, C-Q4b (gated), arm A, C-Q5 pushes, C-Q6 in ONE process (r2_unlearn_qwen.py 'all': every
+                 # stage whose inputs exist, dependants of a failed stage skipped, its own 'not run' JSONs, C-Q6 always; exit 1 if a
+                 # stage failed; finished stages skipped on a second call); then the A6(b) GEN loops at 14, b_lo, b_hi (r2_gen_loop.py
+                 # writes rgi/dyn_b<b>.json also when GA(b) closes the loop). 5 processes; plan 7.2 costs 3 (packing only, 7.4).
         Step("axes", "14", "r2_axes.py", QW, "axes/r2_axes.json axes/r2_axes.pt axes/tok14.pt", r1_reads="any"),
-        Step("q3", "14", "r2_unlearn_qwen.py", QW + " q3", "unlearn/q3.json", opt="unlearn/q3.pt", after="axes"),
-        Step("q4a", "14", "r2_unlearn_qwen.py", QW + " q4a", "unlearn/q4a.json", opt="unlearn/q4a.pt", after="q3"),
-        Step("q2", "14", "r2_unlearn_qwen.py", QW + " q2", "unlearn/q2.json", opt="unlearn/q2.pt", after="axes"),
-        Step("gen_b{b}", "14", "r2_gen_loop.py", QW, "rgi/dyn_b{b}.json", opt="rgi/dyn_b{b}.pt", after="axes"),
-        Step("q4b", "14", "r2_unlearn_qwen.py", QW + " q4b", "unlearn/q4b.json", opt="unlearn/q4b.pt"),
-        Step("armA", "14", "r2_unlearn_qwen.py", QW + " armA", "unlearn/armA.json", opt="unlearn/armA.pt"),
-        Step("q5", "14", "r2_unlearn_qwen.py", QW + " q5", "unlearn/q5.json", opt="unlearn/q5.pt"),
-        Step("q6", "14", "r2_unlearn_qwen.py", QW + " q6", "unlearn/q6.json", opt="unlearn/q6.pt", r1_reads=None),
-        *[Step("gen_b{b}", blk, "r2_gen_loop.py", QW, "rgi/dyn_b{b}.json", opt="rgi/dyn_b{b}.pt", after="axes") for blk in ("b_lo", "b_hi")],
+        Step("unlearn", "14", "r2_unlearn_qwen.py", QW + " all", " ".join(f"unlearn/{st}.json" for st in UNLEARN_STAGES),
+             opt=" ".join(f"unlearn/{st}.pt" for st in UNLEARN_STAGES), settled="axes", r1_reads=None),
+        *[Step("gen_b{b}", blk, "r2_gen_loop.py", QW, "rgi/dyn_b{b}.json", opt="rgi/dyn_b{b}.pt", after="axes") for blk in ("14", "b_lo", "b_hi")],
     ],
     "r2_q2": [   # Part B only; one process per block (r2_theta.py 'all' runs the block's stages in the plan's order, each resumable):
                  # block 14: B-Q0, code checks, cells (B-Q1, B-Q3, B-Q4), turn 2 (B-Q8), power step (B-Q6), FDT (B-Q7); each extra
