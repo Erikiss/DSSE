@@ -468,3 +468,35 @@ def _jex_w(ser, item, nrep, g, w_run):
 
 def RU_LB(s):
     return isinstance(s.get("lo"), float) and s["lo"] > 0
+
+
+def l4_opp(ctx):
+    l4_run(ctx, "C-opp")
+
+
+def l4_half(ctx):
+    l4_run(ctx, "C-half")
+
+
+def l4_doc(ctx):
+    l4_run(ctx, "C-doc")
+
+
+def l4_hup(ctx):
+    l4_run(ctx, "C-Hup")
+
+
+def l4_rup(ctx):
+    l4_run(ctx, "C-Rup")
+
+
+def x2_hdown(ctx):
+    l4_run(ctx, "C-Hdown")
+
+
+def x2_rdown(ctx):
+    l4_run(ctx, "C-Rdown")
+
+
+def x6_solo(ctx):
+    l4_run(ctx, "C-solo")

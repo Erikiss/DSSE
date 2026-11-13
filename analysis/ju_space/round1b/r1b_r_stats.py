@@ -133,34 +133,43 @@ class Row:
         return out
 
     def rel(self, H, W=None):
-        """rel = max(2r / (1 + r), 0.05), r = mean over the halvings of cos(half A, half B) (rk.stats; recomputed per replicate)."""
-        t = T(); hs = self.halves(H, W)
+        """rel = max(2r / (1 + r), 0.05), r = mean over the halvings of cos(half A, half B) (rk.stats; recomputed per replicate through the
+        per-prompt Gram matrix G = S S', so a replicate costs O(P^2), not O(P D))."""
+        t = T()
         if W is None:
-            r = float(np.mean([cos(a, b) for a, b in hs])); return rel_of(r), r
-        r = t.stack([(unit(a) * unit(b)).sum(-1) for a, b in hs]).mean(0)
+            hs = self.halves(H); r = float(np.mean([cos(a, b) for a, b in hs])); return rel_of(r), r
+        W = t.as_tensor(W, dtype=t.float64).to(self.dev); G = self.gram(); rs = []
+        for h in H:
+            h = h.to(self.dev).double(); wa, wb = W * h[None], W * (1 - h)[None]; ga, gb = wa @ G, wb @ G
+            rs.append((ga * wb).sum(1) / t.sqrt(((ga * wa).sum(1) * (gb * wb).sum(1)).clamp_min(1e-300)))
+        r = t.stack(rs).mean(0)
         rl = t.where(r <= -1, t.full_like(r, 0.05), (2 * r / (1 + r)).clamp_min(FLOOR_REL)); return rl, r
+
+    def gram(self):
+        if getattr(self, "_G", None) is None:
+            self._G = self.S @ self.S.T
+        return self._G
 
 
 def readout(row, ax, fold, H, W=None, rel=None):
     """c_n^cf (cross-fitted: fold-True prompts' pairs on aB, fold-False on aA), in-sample c, rel, kappa and A_n = c^cf / sqrt(rel x
-    max(kappa, 0.5)) for the full sample (W None) or replicates W [B, P]. Returns float or tensor values."""
+    max(kappa, 0.5)) for the full sample (W None) or replicates W [B, P] (axes per replicate: ax tensors [B, D]); Gram-matrix form."""
     t = T(); f = t.as_tensor(fold, dtype=t.float64).to(row.dev)
-    if W is None:
-        W1 = t.ones(1, row.P, dtype=t.float64, device=row.dev)
-    else:
-        W1 = t.as_tensor(W, dtype=t.float64).to(row.dev)
-    n = (W1 @ row.n).clamp_min(1e-12); d = (W1 @ row.S) / n[:, None]
-    ST, SF = (W1 * f[None]) @ row.S, (W1 * (1 - f)[None]) @ row.S
+    W1 = t.ones(1, row.P, dtype=t.float64, device=row.dev) if W is None else t.as_tensor(W, dtype=t.float64).to(row.dev)
     aA, aB, u, kap = [ax[k] if ax[k].dim() == (2 if k != "kappa" else 1) else ax[k][None] for k in ("aA", "aB", "u", "kappa")]
-    ccf = ((ST * aB).sum(-1) + (SF * aA).sum(-1)) / n / d.norm(dim=-1).clamp_min(1e-12)
-    c = (unit(d) * unit(u)).sum(-1)
+    n = (W1 @ row.n).clamp_min(1e-12); dn = t.sqrt(((W1 @ row.gram()) * W1).sum(1).clamp_min(1e-300)) / n
+    SA, SB, SU = (row.S @ aA.T).T, (row.S @ aB.T).T, (row.S @ u.T).T
+    if SA.shape[0] != W1.shape[0]:
+        SA, SB, SU = SA.expand(W1.shape[0], -1), SB.expand(W1.shape[0], -1), SU.expand(W1.shape[0], -1)
+    ccf = ((W1 * f[None] * SB).sum(1) + (W1 * (1 - f)[None] * SA).sum(1)) / n / dn
+    c = (W1 * SU).sum(1) / n / (dn * u.norm(dim=-1).clamp_min(1e-12))
     if rel is None:
         rel = row.rel(H, None if W is None else W1)[0]
     rel_t = t.as_tensor(rel, dtype=t.float64, device=row.dev)
     A = ccf / t.sqrt(rel_t * kap.clamp_min(FLOOR_KAPPA))
     if W is None:
         return dict(c_cf=float(ccf[0]), c=float(c[0]), A=float(A[0]), rel=float(rel_t.reshape(-1)[0]), kappa=float(kap[0]),
-                    kappa_floored=bool(kap[0] < FLOOR_KAPPA), d_norm=float(d.norm(dim=-1)[0]))
+                    kappa_floored=bool(kap[0] < FLOOR_KAPPA), d_norm=float(dn[0]))
     return dict(c_cf=ccf, c=c, A=A, rel=rel_t, kappa=kap)
 
 

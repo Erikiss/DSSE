@@ -63,11 +63,17 @@ def jl(ctx, model):
     return J
 
 
-def ref_k16(ctx):
+def ref_k16(ctx, tok=None):
     p = os.path.join(RC.REPO, RC.C.PLAN_DIR, "ref_k16.json")
     if not os.path.exists(p):
         p = os.path.join(os.path.dirname(bank(ctx)["_dir"]), "ref_k16.json")
-    return RC.RefSet.from_json(p, "REF-K16")
+    r = RC.RefSet.from_json(p, "REF-K16")
+    if tok is not None and int(tok.vocab_size) != 151643:          # another tokenizer: re-encoded, the same number of scored tails
+        it = []
+        for ids, pos in r.items:
+            new = retok(ctx, tok, [ids])[0]; k = min(len(pos), len(new) - 1); it.append((new, list(range(len(new) - 1 - k, len(new) - 1))))
+        r = RC.RefSet(it, "REF-K16(retokenised)")
+    return r
 
 
 def ref_r16(ctx):
@@ -326,6 +332,16 @@ class SetReader:
                 acc = acc + self.buf[l][0][..., k].sum(-1); n += len(ix)
         return acc / max(n, 1) if n else None
 
+    def cett_cols(self, name):
+        """Raw CETT of the set's neurons [B, T', n] (zCETT * sd + mu)."""
+        torch = T_()
+        out = []
+        for l, ix in by_layer(self.sets[name]).items():
+            if l in self.buf:
+                k = torch.tensor([self.pos[l][j] for j in ix], device=self.buf[l][0].device)
+                out.append(self.buf[l][0][..., k] * self.sd[l].to(k.device)[k] + self.mu[l].to(k.device)[k])
+        return torch.cat(out, -1) if out else None
+
     def zcols(self, name):
         torch = T_()
         out = []
@@ -511,8 +527,33 @@ def own(ctx, rel):
 
 
 def up(ctx, session, rel, required=True):
-    """A file of an upstream session (copied input) or, if the session is this one, the own file."""
-    return own(ctx, rel) if session == ctx.session else ctx.input(session, rel, required=required)
+    """The session's own file if it wrote one (also when a later session re-runs a producer's step, e.g. RK-2's K2 on Qwen3.5-2B),
+    else the copied input of the upstream session."""
+    p = own(ctx, rel)
+    if p or session == ctx.session:
+        return p
+    return ctx.input(session, rel, required=required)
+
+
+_QTOK = {}
+
+
+def retok(ctx, tok, seqs, L=None):
+    """Token ids of the bank (Qwen3 tokenizer) for another tokenizer (Qwen3.5-2B): decoded with the pinned Qwen3 tokenizer and
+    re-encoded; windows of exactly L tokens when L is given (the next sequence's text fills a short window)."""
+    if int(tok.vocab_size) == 151643:
+        return [list(x)[:L] if L else list(x) for x in seqs]
+    if "q" not in _QTOK:
+        from transformers import AutoTokenizer
+        _QTOK["q"] = AutoTokenizer.from_pretrained(os.path.join(ctx.root, "models", RC.C.M17))
+    txt = [_QTOK["q"].decode(list(x)) for x in seqs]; out = []
+    for k, t in enumerate(txt):
+        ids = RC.enc(tok, t)
+        j = k + 1
+        while L and len(ids) < L and j < len(txt) + k + 1:
+            ids += RC.enc(tok, " " + txt[j % len(txt)]); j += 1
+        out.append(ids[:L] if L else ids)
+    return out
 
 
 def parts(units, i, n):

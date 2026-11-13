@@ -11,6 +11,11 @@ from r1b_k_base import N, H, T_, write, save, load_pt, own, Interv, by_layer, se
 import r1b_k_hn as HN
 
 Q_SUFFIX = "\nAnswer with only the answer."
+MODEL = RC.C.M17                     # r1b_K_S7 (RK-2) sets qwen3.5-2b: K2's protocol on the second model
+
+
+def _m(ctx):
+    return ctx.model(MODEL)
 
 
 def sizes(ctx):
@@ -66,9 +71,11 @@ def k1_check(ctx):
 
 def k2_refs(ctx):
     """REF-W stats, mu_gen, 99.8th percentiles (1M WikiText train tokens, both poles), Sigma_l at {10, 14, 18, 22}."""
-    tok, model = ctx.model(); b = KB.bank(ctx)
-    r = HN.refw_stats(model, b["wt"]["refw"])
+    tok, model = _m(ctx); b = KB.bank(ctx)
+    r = HN.refw_stats(model, KB.retok(ctx, tok, b["wt"]["refw"], 128))
     ids = np.load(b["_files"]["wt_train_ref.npy"])[:N(ctx, 1_000_000, 4096)]
+    if int(tok.vocab_size) != 151643:
+        ids = np.concatenate(KB.retok(ctx, tok, ids.reshape(-1, 128)[:N(ctx, 2000, 32)].tolist(), 128))
     p = HN.percentiles(model, ids, batch=N(ctx, 64, 8))
     sig_half = {k: HN.sqrtm_psd(v).float() for k, v in p["sigma"].items()}
     save(ctx, "k/refs.pt", dict(z_mu=r["z_mu"], z_sd=r["z_sd"], c_mu=r["c_mu"], c_sd=r["c_sd"], mu_gen=r["mu_gen"], n_refw=r["n_tokens"],
@@ -93,7 +100,7 @@ def _screened(ctx, upto):
 
 def k2_screen(ctx, i):
     """TriviaQA screening block i (S1 pool order): 10 samples per question at T 1.0, top-k 50, top-p 0.9 (Gao's protocol; keyed)."""
-    tok, model = ctx.model(); b = KB.bank(ctx); z = sizes(ctx)
+    tok, model = _m(ctx); b = KB.bank(ctx); z = sizes(ctx)
     prev = _screened(ctx, i); cc = sum(r["cls"] == "CC" for r in prev); ci = sum(r["cls"] == "CI" for r in prev)
     pool = [r for r in b["tqa"] if r["split"] == "S1"]
     blk = pool[i * z["block"]:(i + 1) * z["block"]] if i < z["nblocks"] else []
@@ -169,7 +176,7 @@ def tqa_rows(ctx, tok, split):
 def fit_data(ctx):
     """K2 rows: y = 1 answer-span vector of a CI response; y = 0 answer vector of a CC response and the 'other' vector of every kept
     response (sample 0). Columns: all neurons (layer-major)."""
-    tok, model = ctx.model()
+    tok, model = _m(ctx)
 
     def mk():
         R = tqa_rows(ctx, tok, "S_fit"); rows = [(tqa_prompt(tok, r["question"]), v["answers"][0]["text_ids"], v["span0"]) for q, r, v in R]
@@ -189,7 +196,7 @@ def _dev(ctx, d):
 def k2_path(ctx):
     """C grid c0 2^(k/2), k = 0..15: FISTA fits on all rows and on an 80 % question split (balanced held-out accuracy on 20 %)."""
     torch = T_()
-    tok, model = ctx.model(); d = fit_data(ctx); X, y = _dev(ctx, d); z = sizes(ctx); npl = KB.wnorms(model).shape[1]
+    tok, model = _m(ctx); d = fit_data(ctx); X, y = _dev(ctx, d); z = sizes(ctx); npl = KB.wnorms(model).shape[1]
     nq = int(d["q"].max()) + 1; rng = np.random.default_rng(1301); te_q = set(rng.permutation(nq)[:max(1, nq // 5)].tolist())
     te = torch.tensor([q in te_q for q in d["q"]], device=X.device)
     C0 = HN.c0(X, y); grid = [C0 * 2 ** (k / 2) for k in range(z["ngrid"])]; path = []; w = b = w8 = b8 = None
@@ -212,7 +219,7 @@ def supp_acc(ctx, model, tok, neurons, rows, label):
 
 def k2_supp(ctx):
     """C* = argmax [balanced held-out accuracy] + [greedy S2 accuracy with H(C) suppressed]; ties -> smaller |H|."""
-    tok, model = ctx.model(); b = KB.bank(ctx); z = sizes(ctx); P = load_pt(own(ctx, "k/k2/path.pt"))
+    tok, model = _m(ctx); b = KB.bank(ctx); z = sizes(ctx); P = load_pt(own(ctx, "k/k2/path.pt"))
     S2 = [(tqa_prompt(tok, r["question"]), r) for r in b["tqa"] if r["split"] == "S2"][:z["s2"]]
     lab = lambda r, t: label_tqa(ctx, r, t) == "correct"
     sc = []
@@ -235,7 +242,7 @@ def _fit_at(ctx, X, y, C):
 def k2_diag(ctx):
     """Final fit at C* (H_tq, F), Dg1 (H+), Dg2 (20 question-bootstrap refits), Dg3 (L2 overlap), label-permutation null."""
     torch = T_()
-    tok, model = ctx.model(); d = fit_data(ctx); X, y = _dev(ctx, d); z = sizes(ctx); npl = KB.wnorms(model).shape[1]
+    tok, model = _m(ctx); d = fit_data(ctx); X, y = _dev(ctx, d); z = sizes(ctx); npl = KB.wnorms(model).shape[1]
     cs = load_pt(own(ctx, "k/k2/cstar.pt")); C = cs["C_star"]; labels = list(cs["labels"])
     w, b = _fit_at(ctx, X, y, C); Hs = HN.neurons_of(w.cpu(), npl); F = HN.neurons_of(w.cpu(), npl, -1)
     if not Hs:                                          # fallback C: the highest-scoring C with |H| >= 2
@@ -275,7 +282,7 @@ def k2_har(ctx):
     """H_ar: the same pipeline on A-scr (10 samples at T 1.0, <= 8 tokens, exact labels, span = digit tokens); C by suppression
     accuracy on A-csel (greedy)."""
     torch = T_()
-    tok, model = ctx.model(); b = KB.bank(ctx); z = sizes(ctx); npl = KB.wnorms(model).shape[1]
+    tok, model = _m(ctx); b = KB.bank(ctx); z = sizes(ctx); npl = KB.wnorms(model).shape[1]
     scr = [it for it in b["ach_short"] if it["split"] == "A-scr"][:N(ctx, 3000, 40)]
     csel = [it for it in b["ach_short"] if it["split"] == "A-csel"][:N(ctx, 500, 8)]
     S = z["samples"]
@@ -323,7 +330,7 @@ def k2_har(ctx):
 
 def k2_sets(ctx):
     """G-K1, G-K22 -> H_op; random sets matched to H_op (RS39, RS39mc, RS19, RS20, RS10); detectors; SO-HN files."""
-    tok, model = ctx.model(); z = sizes(ctx); R = refs(ctx); npl = R["wn"].shape[1]
+    tok, model = _m(ctx); z = sizes(ctx); R = refs(ctx); npl = R["wn"].shape[1]
     lab = alloc(ctx); htq = load_pt(own(ctx, "k/k2/h_tq.pt")); har = load_pt(own(ctx, "k/k2/h_ar.pt"))
     gk1 = "ok"; labels = list(htq["labels"])
     if lab["G_K1_yield"] != "ok" or not htq["H"]:
@@ -339,7 +346,7 @@ def k2_sets(ctx):
     sel_null = "selection not above label-permutation null" if len(htq["H"]) <= htq["perm_q95"] else None
     d = fit_data(ctx); cm = d["X"][:len(d["y_q"])].float().mean(0).numpy()            # mean answer-CETT per neuron (S_fit)
     cands = HN.rand_sets(Hop, cm, npl, n_valid=z["cands"], exclude=Hop)
-    dm = RC.Damage(model, KB.ref_k16(ctx))
+    dm = RC.Damage(model, KB.ref_k16(ctx, tok))
     m = HN.match_sets(model, dm, Hop, cands, R["z_mu"], n_need=z["rs"]) if Hop else dict(RS39=[], RS39mc=[], labels={}, H_damage={})
     rs = [x["neurons"] for x in m["RS39"]]; rsmc = [x["neurons"] for x in m["RS39mc"]]
     gk9 = {"RS39": len(rs), "RS39mc": len(rsmc), "labels": m.get("labels", {}),
@@ -390,7 +397,7 @@ def detectors(ctx):
 def k3a(ctx):
     """K3a features: S3 (1,000 x 1 sample, keys r1bK_s3, Gao protocol), A-det (600), NE (300) and A-scr rows (H_ar detectors),
     restricted to the union of the sets; pre-generation features and covariates (K3b, K3c); SG8 preview by K3a's rule."""
-    tok, model = ctx.model(); b = KB.bank(ctx); hs = hnset(ctx); rs = rssets(ctx); R = refs(ctx); npl = R["wn"].shape[1]
+    tok, model = _m(ctx); b = KB.bank(ctx); hs = hnset(ctx); rs = rssets(ctx); R = refs(ctx); npl = R["wn"].shape[1]
     S3 = [r for r in b["tqa"] if r["split"] == "S3"][:N(ctx, 1000, 30)]
     Adet = [it for it in b["ach_short"] if it["split"] == "A-det"][:N(ctx, 600, 20)]
     NE = b["ne"][:N(ctx, 300, 16)]
@@ -432,7 +439,7 @@ def k3a(ctx):
 def k3g2(ctx):
     """K3g(ii): S3 sample-0 answers teacher-forced after 'Question: {q}\\nAnswer: The answer is' (no chat template); the unchanged
     refit detectors score them (AUROC_H against the RS39 AUROCs in the same frame)."""
-    tok, model = ctx.model(); D = load_pt(own(ctx, "k/k3/k3a_data.pt")); b = KB.bank(ctx)
+    tok, model = _m(ctx); D = load_pt(own(ctx, "k/k3/k3a_data.pt")); b = KB.bank(ctx)
     S3 = {r["qid"]: r for r in b["tqa"]}; rows = []
     for q, c in zip(D["qids_s3"], D["s3"]["conts"]):
         p = KB.RC.enc(tok, f"Question: {S3[q]['question']}\nAnswer: The answer is"); rows.append((p, c, span_len(tok, c) or 1))
@@ -473,7 +480,7 @@ def _outcome(ctx, f, it, text):
 def k3d_part(ctx, i, n):
     """K3d battery under a share of the conditions (H at alpha 0, 0.5, 1, 2, 3; RS39 at alpha 3; RS19 at alpha 0), greedy, <= 24
     tokens; SY in two turns (turn 1 unmodified and correct; turn 2 under the condition)."""
-    tok, model = ctx.model(); fam = k3d_battery(ctx)
+    tok, model = _m(ctx); fam = k3d_battery(ctx)
 
     def sy_prep():
         conts = KB.decode(model, tok, [RC.chat_ids(tok, it["prompt"]) for it in fam["SY"]], max_new=24)
@@ -507,7 +514,7 @@ def k3e(ctx):
     import r1b_k_gvra as GV
     import r1b_k_lens as LN
     torch = T_()
-    tok, model = ctx.model(); b = KB.bank(ctx); hs = hnset(ctx); R = refs(ctx); J = KB.jl(ctx, model); conv = k4j_conv(ctx)
+    tok, model = _m(ctx); b = KB.bank(ctx); hs = hnset(ctx); R = refs(ctx); J = KB.jl(ctx, model); conv = k4j_conv(ctx)
     npl = R["wn"].shape[1]; Ls = RC.layers_of(model); lens = LN.Lens(model, tok, b["frames"]); gen = torch.Generator().manual_seed(1305)
     neur = [tuple(n) for n in hs["H_tq"] + hs["H_ar"]]; layers = sorted({l for l, _ in neur})
     for l in layers:
@@ -598,7 +605,7 @@ def k4j(ctx):
     """K4j: J_l v estimated by central differences (+- eps v at all source positions of 64 WikiText windows; mean over sources of
     sum_t' dh_27(t') / (2 eps)) against the file's J[l] v, for v at the block-l output and at the block-l input."""
     torch = T_()
-    tok, model = ctx.model(); b = KB.bank(ctx); J = KB.jl(ctx, model); Ls = RC.layers_of(model); nL = len(Ls)
+    tok, model = _m(ctx); b = KB.bank(ctx); J = KB.jl(ctx, model); Ls = RC.layers_of(model); nL = len(Ls)
     ids = torch.tensor(b["wt"]["k4j"][:N(ctx, 64, 4)], device=ctx.device); D = model.config.hidden_size
     g = torch.Generator().manual_seed(1305); V = torch.randn(N(ctx, 8, 2), D, generator=g); V = V / V.norm(dim=1, keepdim=True)
     src = slice(16, ids.shape[1]); eps = 1e-2
@@ -638,7 +645,7 @@ def k0_pilot(ctx):
     forced fronts, global offset, frozen-QK reproduction is in r1b_k_te). SO-PILOT material only; engineering numbers only."""
     import r1b_k_lens as LN
     torch = T_()
-    tok, model = ctx.model(); dev = ctx.device; t = {}
+    tok, model = _m(ctx); dev = ctx.device; t = {}
     p0 = RC.enc(tok, KL.P0); ph = RC.enc(tok, KL.PH)[0]; fr = dict(P0_ids=p0, ph_id=ph)
     lens = LN.Lens(model, tok, fr); D = model.config.hidden_size
     for rows in (N(ctx, 80, 4), N(ctx, 160, 8)):
