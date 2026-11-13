@@ -124,6 +124,7 @@ def rule_R1(a, reps, half=None, curve=None, window_reps=None, band=None):
     elif ge.any() and bool((hi[ge] < 1).all()): v = "SUB" if (half is not None and hi[half] < 1) else "SUB(>= alpha_0)"
     elif bool((lo > 1).all()): v = "SUPER"
     else: v = "UNDECIDED"
+    if any(not bounds_ok(r) for r in reps): v = "UNDECIDED"      # Amendment 3 (b): an undefined bound makes the rule's outcome undecided
     G = np.stack([_np(r) for r in reps], 1); dn, up = crossings(a, G)
     out = dict(verdict=v, a=a.tolist(), points=[S(r) for r in reps], alpha_star=censored(dn, a.min(), a.max()),
                alpha_up=censored(up, a.min(), a.max()), labels=[], resolvable_band=band, nonfinite_share=[nf_share(r) for r in reps],
