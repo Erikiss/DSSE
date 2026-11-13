@@ -6,8 +6,8 @@
  "numpy": "2.5.3",
  "plan_sha256": "5e476340dfdb1d827582c869f2dfc08e32ed8e9a9dbebf7642acceb5bb5edc2d",
  "module_sha256": {
-  "r2_toy_common.py": "1d27e483d9f29560df0324823956588ac93c20ee74934bdb9938a2716360af80",
-  "r2_sim.py": "e7284fadfa6ea715d623661a1c8f0b269f7693946ed2b7ca0b798abfae630b4d",
+  "r2_toy_common.py": "3c14161416d65916dae476998736aed1dec399e950ff2adfcec7f83c53c9d96a",
+  "r2_sim.py": "6969201447628f493a7ff8da9bfe66a732f1318e24343e45eb4342e37e89f323",
   "pc_meta.py": "b69e314a2ca442ba56e9e31916578d718f9fdee4ec4bee329d3aa358a27bc0ae",
   "pc_common.py": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f"
  },
@@ -77,8 +77,8 @@
    "sha256": "17de2a1639d50637347824a1ac96cb53c733caef24b9611e1edf92f624e2c472"
   }
  },
- "passed": 70,
- "total": 70,
+ "passed": 74,
+ "total": 74,
  "failed": [],
  "checks": [
   {
@@ -233,6 +233,24 @@
    "passed": true,
    "info": "400 updates",
    "max_rel_diff": 0.0
+  },
+  {
+   "check": "B2_all of a K = 1 control: retention on its own task = pc_meta job's all8 (review toy_defs-7)",
+   "passed": true,
+   "info": "max |d acc| 0.0000 |d retention| 0.0000",
+   "mine": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "ref": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_diff": 0.0
   },
   {
    "check": "delta_stats = pc_meta job's delta (1e-6)",
@@ -1278,7 +1296,7 @@
    "max_rel_diff": 2.8741190465857333e-07
   },
   {
-   "check": "t1_map / t1_choose_r / stitch_fit = rgi_pilot / rgi_lib (exact)",
+   "check": "t1_map / stitch_fit = rgi_pilot / rgi_lib (exact); t1_loo_errors = rgi_pilot.t1_choose_r's per-grid errors (its sum-vs-mean comparison reproduced on them gives its choice exactly)",
    "passed": true,
    "info": "",
    "mine": [
@@ -1288,6 +1306,31 @@
    "ref": [
     0.1,
     -0.033415527747034934
+   ]
+  },
+  {
+   "check": "t1_choose_r = the grid value with the smallest mean leave-one-anchor-out error (plan AT1; the ref returns the first value; review toy_defs-1)",
+   "passed": true,
+   "info": "minimum away from the first grid value in 8 of 8 cases",
+   "mine": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "ref": [
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001,
+    0.0001
    ]
   },
   {
@@ -1370,20 +1413,20 @@
   {
    "check": "F line (T1 gain, LOO-anchor) = rgi_lib.pair_transfer",
    "passed": true,
-   "info": "Phi 0.095, T1 gain +0.006",
+   "info": "Phi 0.095, T1 gain -0.000",
    "mine": {
-    "t1": 0.02313167229294777,
-    "t1_shuf": 0.01666666753590107,
-    "loo": 0.04482759162783623,
-    "loo_shuf": 0.03258620947599411
+    "t1": 0.0026690391823649406,
+    "t1_shuf": 0.0028469751123338938,
+    "loo": 0.0477011539041996,
+    "loo_shuf": 0.03735632076859474
    },
    "ref": {
-    "t1": 0.023131672118324786,
-    "shuf": 0.016666666596817474,
-    "loo": 0.04482758603990078,
-    "loo_shuf": 0.032586207023511324
+    "t1": 0.0026690391241572797,
+    "shuf": 0.002846975077409297,
+    "loo": 0.0477011501789093,
+    "loo_shuf": 0.03735632191722591
    },
-   "max_abs_diff": 5.587935447692871e-09
+   "max_abs_diff": 3.725290298461914e-09
   },
   {
    "check": "S line carriage (alpha into B, permuted correspondences) = rgi_lib.span_transfer",
@@ -1405,7 +1448,7 @@
    "info": "S-gain +0.002 RG -0.166 pooling -0.035 warm {10: 0.049822062253952026, 40: 0.04359430447220802}"
   },
   {
-   "check": "ring_test / loo_ring / spec_rows / ridge_probe = c1_structure (exact); overlap(pure Fourier code) = 1",
+   "check": "ring_test / loo_ring / spec_rows / ridge_probe = c1_structure (exact; restructured C-T0 code, review toy_num-3); structure_tests' nulls = c1_structure's on the same stream; overlap(pure Fourier code) = 1",
    "passed": true,
    "info": "task-col max share 0.214 (null p99 0.237)",
    "mine": [
@@ -1418,23 +1461,24 @@
    ]
   },
   {
-   "check": "trajectory_modes = c4_traj.modes",
+   "check": "trajectory_modes: variance shares and emergence = c4_traj.modes; |corr| with the plan's template cos(pi i t / T) (C-T6, OD-C13; the ref used t + 0.5; review toy_defs-5)",
    "passed": true,
-   "info": "",
+   "info": "largest change against the ref's template 0.0207",
    "mine": [
-    0.6367076197380871,
-    0.14219568492461154,
-    0.0778437228580822,
-    0.03403538593788422,
-    0.023327877901864216
+    0.9897613797814456,
+    0.9281023254024794,
+    0.9375163694405251,
+    0.8819052492154326,
+    0.7573458002256596
    ],
    "ref": [
-    0.637,
-    0.142,
-    0.078,
-    0.034,
-    0.023
-   ]
+    0.988,
+    0.927,
+    0.955,
+    0.872,
+    0.778
+   ],
+   "max_abs_diff": 0.020654199774340465
   },
   {
    "check": "W3 circle training = c3_angle (30 updates)",
@@ -1539,6 +1583,14 @@
    "info": "base [0.847, 0.79], x-span block [0.0, 0.0]"
   },
   {
+   "check": "mlp_probe = torch.optim.Adam(lr 1e-2, weight decay 1e-4, default betas (0.9, 0.999)) on the same init and data: final weights and accuracy (OD-C10, ref c1_structure; review toy_defs-4)",
+   "passed": true,
+   "info": "max |d weight| 0.0e+00 (against betas (0.9, 0.98): 4.3e-02); accuracy 0.8800 vs 0.8800",
+   "mine": 0.8799999952316284,
+   "ref": 0.8799999952316284,
+   "max_abs_diff": 0.0
+  },
+  {
    "check": "task-identity / pooled-answer probes run (linear, MLP)",
    "passed": true,
    "info": {
@@ -1552,18 +1604,18 @@
     ],
     "task_mlp": [
      0.9900000095367432,
-     0.9900000095367432
+     0.9800000190734863
     ],
     "ans_mlp": [
-     0.949999988079071,
+     0.9599999785423279,
      0.9800000190734863
     ]
    }
   },
   {
-   "check": "OD-C2 damage_match (ladder; overshoot at r > r0 unmatched; bisection at r0)",
+   "check": "OD-C2 damage_match (ladder; overshoot at d* > r0 matched by partial removal, Amendment 2; bisection at r0; unreachable target unmatched; within 0.02 at W / 2 matched; failed bisection keeps the closest lam, review toy_defs-3)",
    "passed": true,
-   "info": "[(1, 0.1), (2, 0.2), (4, 0.4)]; r0 bisection lam 0.250"
+   "info": "[(1, 0.1), (2, 0.2), (4, 0.4)]; d* bisection lam 0.875; r0 bisection lam 0.250"
   },
   {
    "check": "OD-C16 modal-shift map labels",
@@ -1704,10 +1756,15 @@
    }
   },
   {
+   "check": "r2_sim: OD-B14: the simulated cross-cell correlation equals the measured one (loading sqrt(r); negative r -> 0)",
+   "passed": true,
+   "info": "passed 0.6, simulated 0.5976"
+  },
+  {
    "check": "r2_sim: cells_experiment = scalar_experiment for equal pair counts; gain_A2 / resolvable_band run",
    "passed": true,
-   "info": "band (0.7159134766037983, 1.35034994616819)"
+   "info": "band (0.7153229662176293, 1.3348398541700344)"
   }
  ],
- "seconds": 135.777729511261
+ "seconds": 158.0845878124237
 }
