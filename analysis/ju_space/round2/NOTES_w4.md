@@ -5,13 +5,16 @@ Implements Part B Qwen (section 4.1 with the frame of 4.0) of the frozen plan `r
 No round-1 output was opened. Every model test ran on MOCK round-1 states made locally (`r2_rk.mock_r1`: `rk_loop.py MOCK=1` at block
 14 `all`, blocks 8 and 20 `pilot`, `loops`, `k5`, fake `dn_delta.json`, `blocks_chosen.json`, summaries, `shard_done.json`); the rules
 were checked on synthetic cells and loops with planted gains. Built against the final r2_rk / r2_stimuli (NOTES_w1) and r2_sim (NOTES_w5).
+Amendments that govern this package (results/ju_space/plans/abschnitt11_12_runde2_plan_amendments.md): Amendment 1 (U statistic under the
+bootstrap; direction of R2's crossing) and Amendment 3 (b), (c) (undefined rule bounds; R4 (i) 'degenerate'). The changes made after the
+code review (2026-11-13) are listed per finding at the end.
 
 ## Files, commands, code tests
 
 | File | Command | Code test |
 |---|---|---|
-| r2_theta.py | `BLOCK=<b> python r2_theta.py <root> <r1_dir> <r2_dir> [rsib \| q0 \| checks \| cells \| turn2 \| power \| fdt \| all]` (default `all`; env DEVICE, NT, MOCK) | `MOCK=1 BLOCK=<b> python r2_theta.py <root> <r1_dir> <r2_dir> selftest` (builds the MOCK fixture in r1_dir if missing): 22 checks at block 14, 22 at blocks 8 / 20 |
-| r2_theta_verdict.py | `python r2_theta_verdict.py <r1_dir> <r2_root> <out.json>` (env R2_THETA_POWER_REPS, default 400) | `python r2_theta_verdict.py selftest <workdir> [<r1_dir> <r2_dir>]`: 38 checks (synthetic; with the MOCK outputs of r2_theta.py also end to end) |
+| r2_theta.py | `BLOCK=<b> python r2_theta.py <root> <r1_dir> <r2_dir> [rsib \| q0 \| checks \| cells \| turn2 \| power \| fdt \| all]` (default `all`; env DEVICE, NT, MOCK) | `MOCK=1 BLOCK=<b> python r2_theta.py <root> <r1_dir> <r2_dir> selftest` (builds the MOCK fixture in r1_dir if missing): 22 checks at block 14, 23 at blocks 8 / 20 |
+| r2_theta_verdict.py | `python r2_theta_verdict.py <r1_dir> <r2_root> <out.json>` (env R2_THETA_POWER_REPS, default 400) | `python r2_theta_verdict.py selftest <workdir> [<r1_dir> <r2_dir>]`: 41 checks (synthetic; with the MOCK outputs of r2_theta.py also end to end) |
 
 All tests in one script: `r2_impl/w4/run_all_tests.sh fresh` in the scratchpad (one process at a time, NT=1).
 
@@ -19,8 +22,8 @@ One process = one block (r2_rk.open_block). Every stage is resumable (skipped wh
 so any call order works: `q0` runs `rsib` first at an extra block, `cells` / `checks` / `power` need `q0`, `turn2` and `power` need `cells`.
 Per-cell partial results are kept in `theta/parts/` while a stage runs (a crash or the time guard does not lose finished cells) and removed
 when the stage's output is complete. A block whose round-1 output is not final (open_block raises R1Missing, G4) gets every output with
-status `'not run (round-1 output missing)'` and nothing is copied or generated. The runner (r2_run_session.py) calls the stages one by
-one, with an explicit `rsib` step before `q0` at the extra blocks; `all` does the same in one process.
+status `'not run (round-1 output missing)'` and nothing is copied or generated. The runner (r2_run_session.py) runs `r2_theta.py ... all`
+once per block (one process per block); single stages can also be called one by one.
 
 ## Outputs (in <r2_dir>/theta/; texts as token ids; float32 per-pair arrays)
 
@@ -41,7 +44,9 @@ Stages and keys
 1. Stage `rsib` is part of r2_theta.py (9.2 lists it; the task text did not). Keys keyseed('r2RSIb' + SUF_b, n, p, s, b) via rk.evaluate.
    G49 'ran (4 rounds)': if run_loop raises, the first failure is re-raised (the runner retries the step) and the second is recorded as
    `'not run (r2RSIb failed in two attempts; G49: no independent loop)'`; B-Q0 then runs without the loop ('no independent loop': no
-   cross-fit, no switch, the block does not enter R3). This mirrors 7.2's 'not run after two attempts'.
+   cross-fit, no switch, the block does not enter R3). This mirrors 7.2's 'not run after two attempts'. B-Q0 takes the loop from its
+   exported entries (theta/b<b>_r2RSIb.pt), not from the in-memory round-2 state; a loop that 'ran' but whose entries are missing makes
+   the q0 stage fail (it is retried) instead of writing a B-Q0 without it (review finding theta-1).
 2. Cell keys keyseed('theta', b, p, s) (b int); turn 2 keyseed('theta2', b, a, T, p, s) with a and T as Python floats (e.g.
    'theta2|14|1.0|0.7|p|s'); power keyseed('r2PWR', b, p, s), s = 0, 1; FDT keyseed('r2fdt', b, p); checks keyseed('r2CHK', check, p)
    with check in 'zero' / 'mirror' / 'entropy', p = 0..3. Cell names `a{a:g}_T{T:g}` (a1_T1 = alpha_0 at T 1.0). Run order: main cells
@@ -72,7 +77,7 @@ B-Q0 and the cells
    type, row 0 = point) for every B-Q0 evaluation, reference cbar, cell, turn-2 cell, power step and FDT text of every block, so that
    differences across cells and blocks (R1 onset, R3, R6 transfer) are paired. Per replicate: cbar (prompt-weighted), U, projections, m*^2,
    m_A^2, Gamma pools, K, lambda_lin, and in B-Q2 u_crit itself (re-derived from the pooled pairs: 'pooled-pair bootstrap').
-11. Bootstrap of the U statistic (methodological, NOT a change of any point formula): U = mean of delta_i . delta_j over distinct pairs;
+11. Bootstrap of the U statistic (Amendment 1; NOT a change of any point formula): U = mean of delta_i . delta_j over distinct pairs;
    in a bootstrap replicate products between copies of the same pair are excluded too: U* = (|sum w delta|^2 - sum w^2 |delta|^2) /
    (n^2 - sum w^2), and m^2 = U / |d|^2 uses |d|^2 = U (1 - 1/n) + sum w |delta|^2 / n^2 (an identity at the point estimate). Reason: the
    plug-in U of a resample counts the products of duplicated pairs with themselves and is centred on |d|^2 (the noise floor included)
@@ -93,28 +98,40 @@ Rules (r2_theta_verdict.py)
    sim_gain.ci), ends beyond the grid reported as 0 / inf (censored); D* by OD-B9 (0 / inf outside the damage grid). 'damage-limited' =
    D*(point) > 0.15 nats for a FOUND-soft crossing; 'convention-sensitive' = two windows' alpha* intervals disjoint (at an extra block the
    low end of a window's series pools Gamma_b with that window's alpha_0 cell). FOUND precedes SUB / SUPER (a 0.5 alpha_0 cell above 1 with
-   cells >= alpha_0 below 1 is FOUND-soft).
+   cells >= alpha_0 below 1 is FOUND-soft). Amendment 3 (b): a series point with undefined bounds makes R1 UNDECIDED (and the onset
+   undecided).
 15. R2: GLS of log(decision gain) (clipped at 1e-6, sim_gain's convention) on T - 0.7 with the inverse bootstrap covariance as fixed
    weight; every replicate refitted with the same weights. Order (crit_tline3): 'above 1 throughout' / 'below 1 throughout' (5th / 95th
    percentile band over 15 points of the tested range) before 'T_c located'. A replicate fit 'crosses 1' when its slope has the sign of the
-   point fit's slope (the direction of the point crossing; crit_tline3 counts downward crossings only, theory does not fix the direction),
-   T_c = 0.7 - b0 / b1; located if >= 95 % cross and the 90 % interval lies in [0.2, 1.1] ([0.1, 1.4] when T 1.3 or T 0.15 entered).
+   point fit's slope (Amendment 1's clarification; crit_tline3 counts downward crossings only), T_c = 0.7 - b0 / b1; located if >= 95 %
+   cross and the 90 % interval lies in [0.2, 1.1] ([0.1, 1.4] when T 1.3 or T 0.15 entered). Amendment 3 (b): if the point fit is not
+   finite or more than 5 % of the replicate fits are not finite, the verdict is 'undecided (gain undefined in x % of the replicates)';
+   the fit, slope, T_c and the band of the finite fits stay reported.
    Reported besides: g_par and norm-G fits (descriptive), rotation with T, curvature (quadratic GLS, >= 4 temperatures), the B-Q4 collapse
    comparison (descriptive: F_T(a) = a dec(a, T) against F_0.7 at 0.7 a / T, log-log interpolated across the existing T 0.7 cells).
 16. R3: the middle block's point estimate is compared with the end's upper bound; the non-overlap form is reported; entering = G-blk and
    in-session mode resolved and an independent loop (G49); non-entering blocks are listed with their Gamma next to the verdict. D*_b where
-   FOUND-soft with finite D* at >= 2 blocks; T-slopes = per-block GLS slopes per replicate.
+   FOUND-soft with finite D* at >= 2 blocks; T-slopes = per-block GLS slopes per replicate. Amendment 3 (b): an undefined bound (low end,
+   high end or their paired difference) gives 'no monotone relation (undecided: a bound is undefined ...)'. A D* replicate that is censored
+   above the grid (+inf) counts as undefined in this form (its paired difference is not a number).
 17. R4: default u_crit = u*_b (standard; m_crit = m* per replicate) or u*_A (switch; m_A). (i) applies when M_b = {RSI_a} and another loop
    has rel(d_4) >= 0.5; Gamma_L = pool over n = 2, 3 of L's decision gains; 'first' moves u_crit to that loop (m_crit = sqrt(rel(d_4))),
-   'degenerate' leaves no single mode. (ii) the power-step mode unit(d_pwr) with m_crit = sqrt(rel_pwr); 'changes with T' / 'with alpha'
-   by the chosen cell's T / a. 'generic attractor': debiased |cos(d_4^RND, u*_b)| = |cos| / sqrt(rel(d_4^RND) m*^2) >= 0.5. Specificity:
-   u_crit oriented by the sign of its point RSI cosine, raw cosines. At a block failing G-blk R4 is computed but reported as
-   `verdict_descriptive`. Alignment against delta: the R3 form on the sign-aligned corrected cosine with u_T_perp (and with u_RGI_perp).
+   'degenerate' leaves no single mode: no '(RSI-specific)' suffix, and the block does not enter R3's alignment form; it is listed there
+   as 'not entering (degenerate)' (Amendment 3 (c)); the per-loop alignments stay in R4.i.alignment (descriptive). (ii) the power-step mode
+   unit(d_pwr) with m_crit = sqrt(rel_pwr); 'changes with T' / 'with alpha' by the chosen cell's T / a. 'generic attractor': debiased
+   |cos(d_4^RND, u*_b)| = |cos| / sqrt(rel(d_4^RND) m*^2) >= 0.5. Specificity: u_crit oriented by the sign of its point RSI cosine, raw
+   cosines, the lower bound through Amendment 3 (b). At a block failing G-blk R4 is computed but reported as `verdict_descriptive`.
+   Alignment against delta: the R3 form on the sign-aligned corrected cosine with u_T_perp (and with u_RGI_perp).
 18. Power step (B-Q6): gains by B-Q0's formulas with d_n = the chosen cell's all-token read-back d and rel_n = that cell's split-half rel.
 19. R6: K's T-slope 'as in R2' = the same GLS on log K over the alpha_0 carry cells whose K interval lies above 0 (>= 2 needed).
 20. Labels: G20 failed -> 'descriptive (code check failed)'; theta/checks.json missing -> 'descriptive (code check not run)'; G-desc ->
    'descriptive (round-1 gate failed)' at block 14; G19 p < 0.25 -> 'verdicts expected mostly undecided'. Labels are attached to every rule
    output of the block (verdict strings unchanged) and `descriptive` is set.
+20b. Undefined bounds (Amendment 3 (b)): every rule bound goes through `lohi`, which returns (NaN, NaN) when the point value is not finite
+   or more than 5 % of the 2,000 replicates are not finite (NaN, or +-inf); every comparison with it is then False: the rule is
+   undecided, a reserve condition (G21-G23) is not met, R5's self-sustainment is 'undecided', R6's K verdict is 'undecided'. Every rule
+   output carries `nonfinite_share` (and `bounds_undefined`); the reported intervals (S) stay the percentiles of the finite replicates with
+   their `n_finite`.
 21. OD-G8: r2_ana recomputes B-Q0 (and the power-step choice) with the same functions and the same bootstrap rows and reports any
    disagreement; the in-session mode and directions (q0.pt), and the in-session labels, govern the analysis. Its attenuation arrays
    (m*^2, m_A^2) come from the recomputation for the in-session mode.
@@ -123,21 +140,21 @@ Rules (r2_theta_verdict.py)
    rho = mean Pearson correlation over pairs with the same (p, s) keys between every two cells, h = 0, 400 replicates.
 
 ## Deviations from the final plan
-None in any measurement, threshold or rule. Item 11 is the bootstrap's treatment of the U statistic (the plan does not specify the
-replicate formula; the point formulas are the plan's). Additions: theta/b<b>_r2RSIb.pt, theta/b14_turn2.json, point estimates in
+None in any measurement, threshold or rule beyond Amendments 1 and 3 (items 11, 15, 20b and 17). Additions: theta/b<b>_r2RSIb.pt, theta/b14_turn2.json, point estimates in
 cells.json, `theta/parts/` during a stage, the descriptive collapse and fit diagnostics listed above.
 
 ## Tests run (this container, CPU, NT=1, MOCK; scratchpad r2_impl/w4/run_all_tests.sh fresh)
-- `r2_theta.py selftest` at block 14: 22/22; blocks 8 and 20: 22/22 each. Among them: B-Q0's U, g_par, G by the plan's formulas; kappa_b
+- `r2_theta.py selftest` at block 14: 22/22; blocks 8 and 20: 23/23 each. Among them: B-Q0's U, g_par, G by the plan's formulas; kappa_b
   = cbar read / med_b; u*_b and the configuration follow the guard / switch; code checks 4/4, 4/4, entropy T 0.3 < T 0.7; every cell with
   its pair count; cell texts, cbar and entropy reproduce r2_rk.evaluate_variant with the same keys; the full-pass windows equal
   r2_rk.read_windows (difference 0); NLL equals a direct forward; damage curve = rk.damage, KL = damage_T; a bootstrap row equals the
   weighted resample mean; power-step choice and a forced power step (keys, layout); turn-2 ids, keys and reading; FDT x_j = rk.read and
   S_j = finite differences of y; resume keeps every output, no parts left, round-1 keys unchanged; r2RSIb keys reproduce rk.evaluate and
-  exactly the r2RSIb keys enter the round-2 state; G49 failure path; a code-path variant (theta_std: guard threshold 0, power threshold
+  exactly the r2RSIb keys enter the round-2 state; G49 failure path; theta-1 (B-Q0 identical when the round-2 state lacks the r2RSIb
+  entries, and a 'ran' loop without exported entries raises with no q0 written); a code-path variant (theta_std: guard threshold 0, power threshold
   +inf, test only) runs the standard configuration and the power step.
 - Non-final block (summary_b20.json removed): every stage writes 'not run (round-1 output missing)', nothing copied.
-- `r2_theta_verdict.py selftest`: 38/38. Synthetic cells with planted gains: a soft crossing at alpha* = sqrt(2) is located (FOUND-soft,
+- `r2_theta_verdict.py selftest`: 41/41. Synthetic cells with planted gains: a soft crossing at alpha* = sqrt(2) is located (FOUND-soft,
   interval covers sqrt(2), onset soft, D* by interpolation), a series built below 1 is SUB (not located), above 1 SUPER, a threshold
   FOUND-hard, SUB(>= alpha_0), damage-limited and convention-sensitive labels; a planted T_c = 0.6 is located (interval covers it), gains
   below 1 'below 1 throughout', flat noisy gains 'undecided', a crossing at T 0.17 located only in the extended window; R3 falls / rises /
@@ -146,16 +163,36 @@ cells.json, `theta/parts/` during a stage, the descriptive collapse and fit diag
   planted-operator loops (Gamma within 10 % of lambda 0.7 and 1.3, guard, mode set, u*_b on the mode), the switch configuration, 'mode not
   resolved' at low SNR, 'no independent loop'; a cell along u*_b recovers the planted gain through m*^2. End to end on the MOCK outputs:
   every block analysed, OD-G8 agreement, R6 with four carry cells, the power re-run; the theta_std variant (R4 / B-Q2 / R4 (ii), OD-G8
-  reports the guard disagreement); b_hi not final plus missing O2 axes.
+  reports the guard disagreement); b_hi not final plus missing O2 axes. Amendment 3: the review's 'mode not resolved' case with m_A^2 = 0
+  at the point (R1 UNDECIDED, R2 'undecided (gain undefined ...)' with slope and T_c kept, reserves not met, R5 undecided, shares
+  written); the 5 % share (4 % keeps SUB / 'below 1 throughout' / 'falls', 8 % gives undecided in R1, R2, R3; a fit without any finite
+  replicate returns without error); R4 (i) 'degenerate' without the suffix and listed 'not entering (degenerate)', a 'first' RSI_a keeping
+  'RSI-aligned (RSI-specific)'.
 
 ## Open points
 - MOCK (8 prompts) fails the m*^2 guard at every block, so the session outputs run in 'mode not resolved'; the standard / switch paths are
   covered by the theta_std variant and by the synthetic banks. MOCK gains are tiny (random model), so the MOCK end-to-end verdicts are
   code-path tests only.
-- Item 11 (U statistic under the bootstrap) and item 15 (direction of the R2 crossing) are readings that an amendment could state.
 - The power re-run costs 400 x (7 scenarios + 41 band points) r2_sim experiments per block (estimate 20-40 s per block on one core).
 - Production sizes: b14_cells.pt about 50 MB, an extra block's cells.pt about 21 MB, b14_turn2.pt about 13 MB, r2RSIb.pt about 13 MB,
   fdt.pt 4 MB per block. r2_theta_verdict.py loads the round-1 state of one block at a time.
 - For r2_report (implementer 8): the verdicts per block are `blocks[b].R1.verdict`, `R2.verdict`, `R4.verdict` (or `verdict_descriptive`),
   `R5.verdict`, `R6.cells[c].R6.verdict` / `.transfer.verdict`, `R3.*.verdict`, the sentence in `blocks[b].sentence`, labels in
   `blocks[b].labels` and `labels_global`.
+
+## Changes after the code review (2026-11-13; review files scratchpad r2_review/fixes/theta.md and theta_verdict.md)
+- theta-1 (confirmed, low): `stage_q0` builds the r2RSIb loop of the O3 bank from its exported entries
+  (`theta/b<b>_r2RSIb.pt`: entries, start, suffix), as r2_theta_verdict.py does, instead of the in-memory round-2 state; when the rsib
+  stage reports 'ran' but the loop is missing from the bank, `stage_q0` raises a RuntimeError (no q0 is written, the step is retried)
+  instead of silently running B-Q0 as 'no independent loop'. Self-test (blocks 8 / 20): B-Q0 identical (mode set, m*^2, Gamma, mode,
+  cross-fit) with the r2RSIb entries removed from the in-memory state; a 'ran' loop whose exported entries are empty raises. The optional
+  extra of the verifier (independent_loop.present in the OD-G8 comparison) is not made (outside the finding).
+- theta_verdict-1 (confirmed, medium) = Amendment 3 (b): `lohi` returns (NaN, NaN) when the point value is not finite or more than 5 % of
+  the replicates are not finite (`bounds_ok`, `nf_share`); R1 is UNDECIDED when a series point's bounds are undefined; R2 keeps the fit,
+  slope and T_c and returns 'undecided (gain undefined ...)' (and returns before the percentiles when no replicate fit is finite); R3
+  marks an undefined bound; R5, R6, the reserve conditions, R4 (i)'s Gammas and the B-Q2 specificity bound follow the same rule; every
+  rule output records `nonfinite_share`. Self-tests: the review's case and the 5 % share (see Tests).
+- theta_verdict-2 (confirmed, medium) = Amendment 3 (c): no '(RSI-specific)' suffix on a 'degenerate' R4 verdict; a degenerate block leaves
+  no alignment entry (`core['align_reps']` empty) and `alignment_entries` lists it in `R3.alignment_RSI.not_entering` /
+  `R3.alignment_GI.not_entering` as 'not entering (degenerate)'. Self-test: the verifier's two-mode construction.
+- theta_verdict-3 (refuted): no change.

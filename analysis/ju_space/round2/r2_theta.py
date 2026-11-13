@@ -977,7 +977,7 @@ def selftest(root, r1_dir, r2_dir, b):
         check("theta-1: B-Q0 uses r2RSIb's exported entries (same B-Q0 when the round-2 state lacks them); a 'ran' loop without entries raises, no q0 written",
               len(held) == 13 and RSIB in q5["loops"] and "no independent loop" not in q5["labels"] and q5["independent_loop"]["present"]
               and q5["mode_set"]["members"] == qm["mode_set"]["members"] and q5["m_star2"]["pt"] == qm["m_star2"]["pt"] and q5["Gamma"]["pt"] == qm["Gamma"]["pt"]
-              and q5["config"]["mode"] == qm["config"]["mode"] and q5["cross_fit"] == qm["cross_fit"] and raised
+              and q5["config"]["mode"] == qm["config"]["mode"] and json.dumps(R.jsonable(q5["cross_fit"]), sort_keys=True) == json.dumps(qm["cross_fit"], sort_keys=True) and raised
               and not os.path.exists(os.path.join(d6, f"b{b}_q0.json")), (len(held), q5.get("labels"), raised))
     ok = all(r["ok"] for r in res); R.write_json(os.path.join(r2_dir, f"selftest_theta_b{b}.json"), dict(ok=ok, tests=res, block=b))
     print(f"r2_theta selftest (block {b}): {sum(r['ok'] for r in res)}/{len(res)} passed", flush=True); return ok

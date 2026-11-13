@@ -1212,6 +1212,24 @@ def selftest(work):
                                                     "## Amendment 2 (2026-01-02T00:00:00Z)\n\n**Change.** Rule B changes.\n\n**Outputs seen.** Declared post hoc with respect to a smoke test.\n")
     am = amendments(repo)
     check("amendments: titles, change text, post-hoc flag", am["present"] and [x["post_hoc"] for x in am["amendments"]] == [False, True] and am["amendments"][1]["change"] == "Rule B changes." and amendments(os.path.join(work, "nope"))["present"] is False)
+    open(os.path.join(repo, AMEND_REL), "a").write("\n## Amendment 3 (2026-01-03T00:00:00Z)\n\n**Reason.** y\n\n**Change (a).** G16 interval recentred.\n\n**Clarification (b), theta rules.** Undefined bounds.\n\n"
+                                                     "**Outputs seen before writing.** Seen. Because of that, (a) is declared post hoc with respect to round 1.\n")
+    am3 = amendments(repo)["amendments"][2]
+    check("amendments: several 'Change (a)' / 'Clarification (b)' sections, the post-hoc statement kept (partial post hoc)", am3["post_hoc"] and [c["heading"] for c in am3["changes"]] == ["Change (a)", "Clarification (b), theta rules"]
+          and am3["change"] == "G16 interval recentred." and "(a) is declared post hoc" in am3["post_hoc_statement"] and amendments(repo)["n_amendments"] == 3, am3)
+    tvx = dict(status="ran", blocks={"14": dict(status="ran", R1=dict(verdict="UNDECIDED", nonfinite_share=[0.0, 0.08, 0.01], bounds_undefined=[False, True, False]),
+                                                R2=dict(verdict="undecided (gain undefined in 7.0 % of the replicates)", nonfinite_share=0.07, bounds_undefined=True),
+                                                R4=dict(verdict="degenerate", note="no single critical mode"), R6=dict(cells={"a1_T0.7": dict(R6=dict(verdict="dissipative at T", nonfinite_share=dict(K=0.0, G=0.01), bounds_undefined=False))})),
+                                     "8": dict(status="ran", R1=dict(verdict="SUB", nonfinite_share=[0.0, 0.0, 0.0], bounds_undefined=[False, False, False]))},
+               R3=dict(alignment=dict(not_entering={"14": "not entering (degenerate)"}), pull=dict(verdict="no monotone relation (undecided: a bound is undefined, more than 5 % of the replicates not finite)",
+                                                                                                nonfinite_share=dict(low=0.0, high=0.12, paired_difference=0.12), bounds_undefined=True)))
+    ux = theta_undefined(tvx); Bx = part_B(tvx, None, None, dict(G_meta=True)); bx = Bx["qwen"]["blocks"]["14"]
+    check("Amendment 3 (b): every theta rule output with a share of undefined replicates is collected; the 'undecided' ones are listed with their share; R4 'degenerate' and R3's 'not entering (degenerate)' are carried",
+          len(ux) == 5 and [e["where"] for e in Bx["qwen"]["undefined_replicates"]["undecided_for_undefined_bounds"]] == ["blocks/14/R1", "blocks/14/R2", "R3/pull"]
+          and bx["R1"]["bounds_undefined"] == [False, True, False] and bx["R2"]["nonfinite_share"] == 0.07 and bx["R6"]["a1_T0.7"]["nonfinite_share"] == dict(K=0.0, G=0.01)
+          and Bx["verdicts"]["undecided_for_undefined_bounds"][1] == "blocks/14/R2: 'undecided (gain undefined in 7.0 % of the replicates)' (7.0 % of the replicates undefined)"
+          and "12.0 %" in Bx["verdicts"]["undecided_for_undefined_bounds"][2] and Bx["verdicts"]["qwen"]["14"]["R4"] == "degenerate" and Bx["qwen"]["R3_detail"]["alignment"]["not_entering"]["14"] == "not entering (degenerate)",
+          Bx["verdicts"]["undecided_for_undefined_bounds"])
     nd = notes_deviations(HERE)
     check("notes_deviations: the implementers' NOTES are parsed (sha256, deviation sections)", all("sha256" in v for v in nd.values()))
     # collectors
