@@ -1785,6 +1785,31 @@ def selftest(work):
     finally:
         del os.environ["R2_REUSE_NETS"]; write_json(info0, mpth)
     check("unlearn_toy-4: saved nets of another r2_toy_common.py stop the stage; R2_REUSE_NETS=1 reuses them and records it", stopped and "R2_REUSE_NETS" in note, note)
+    # full_at_dstar (coordinator, 2026-11-13): the plan-text control (full removal at d*) next to every Amendment-2 control
+    seen = []
+    none_ok = plan_text_full(dict(note="ladder", r=4, lam=1.0, ladder=[(4, 0.1)], target=0.1), lambda d_: seen.append(d_)) is None and not seen
+    syn = dict(r=8, r0=2, lam=0.4, drop=0.3, matched=True, target=0.3, ladder=[(2, 0.1), (4, 0.2), (8, 0.45)], note="partial removal at d* (Amendment 2)")
+    fs_ = plan_text_full(syn, lambda d_: (seen.append(d_["lam"]), dict(acc=[0.5, 0.7], probes=dict(task_lin=[0.1, 0.3])))[1])
+    syn_ok = (seen == [1.0] and fs_["drop"] == 0.45 and fs_["matched"] is False and fs_["r"] == 8 and fs_["lam"] == 1.0 and syn["lam"] == 0.4
+              and fs_["acc_t"]["boot95"] is not None and fs_["probes_t"]["task_lin"]["values"] == [0.1, 0.3] and np.allclose(fs_["acc"], [0.5, 0.7]))
+    base_sp = sum_probe_gen(nets, tasks, allv); vv = np.repeat(allv, NDRAW)
+    lad = damage_match(nets, tasks, base_sp, 1e9, "z1", ref, 1, "selftest|a2")["ladder"]; tgt2 = None; mx = -np.inf
+    for k_ in range(1, len(lad)):
+        mx = max(mx, lad[k_ - 1][1])
+        if lad[k_][1] - mx > 0.03:
+            tgt2 = mx + 0.005; break
+    if tgt2 is None:
+        check("full_at_dstar: forced Amendment-2 control on the QUICK nets", False, f"no ladder step > 0.03: {lad}")
+    else:
+        dm2 = damage_match(nets, tasks, base_sp, tgt2, "z1", ref, 1, "selftest|a2")
+        fwd2 = lambda d_: {k: v for k, v in _draw_mean(_fwd(nets, tasks, vv, items=dm_items(d_, ref, allv, "z1")), B).items() if k in ("acc", "integrity", "sp")}
+        ft2 = plan_text_full(dm2, fwd2); dl = dict((int(r_), d_) for r_, d_ in dm2["ladder"])
+        ok2 = (AMEND2 in dm2["note"] and dm2["r"] > 1 and dm2["lam"] < 1 and isinstance(ft2, dict) and ft2["r"] == dm2["r"] and ft2["matched"] is False
+               and abs(ft2["drop"] - dl[dm2["r"]]) < 1e-12 and abs(float(np.mean(base_sp - ft2["sp"])) - ft2["drop"]) < 1e-9
+               and abs(float(np.mean(base_sp - fwd2(dm2)["sp"])) - dm2["drop"]) < 1e-9 and ft2["acc_t"]["boot95"] is not None)
+        check("full_at_dstar: plan-text field None unless Amendment 2; else lam 1 on the same d* draws (its sum-probe drop = the ladder's at d*), "
+              "unmatched, per-seed values with t interval and bootstrap", none_ok and syn_ok and ok2,
+              f"d* {dm2['r']} lam {dm2['lam']:.3f} target {tgt2:.3f} drop(lam 1) {ft2['drop'] if ft2 else None}")
     for st in STAGES:
         try:
             r = run_stage(out, st); check(f"stage {st} runs and writes JSON with a rule preview", "rule_preview" in r and r["meta"]["plan_sha256"] == PLAN_SHA256)
@@ -1812,6 +1837,24 @@ def selftest(work):
         for st in STAGES:
             walk(read_json(tdir(out, f"{st}.json"))["rule_preview"], st)
         check("unlearn_toy-5: every stored t summary of the rule previews carries the paired seed bootstrap (Bonferroni interval excepted)", not miss, str(miss[:5]))
+        dms = []
+
+        def walk_dm(o, path):
+            if isinstance(o, dict):
+                if {"ladder", "note", "r0", "target"} <= set(o):
+                    dms.append((path, o))
+                for k_, v_ in o.items():
+                    walk_dm(v_, f"{path}.{k_}")
+            elif isinstance(o, list):
+                for i_, v_ in enumerate(o):
+                    walk_dm(v_, f"{path}[{i_}]")
+        for st in ("t3", "t4", "t5"):
+            walk_dm(read_json(tdir(out, f"{st}.json")), st)
+        bad_dm = [p_ for p_, d_ in dms if "full_at_dstar" not in d_ or ((d_["full_at_dstar"] is None) != (AMEND2 not in d_["note"]))
+                  or (d_["full_at_dstar"] is not None and (d_["full_at_dstar"]["lam"] != 1.0 or d_["full_at_dstar"]["r"] != d_["r"]))]
+        n_a2 = sum(1 for _, d_ in dms if d_.get("full_at_dstar"))
+        check("full_at_dstar: every damage-matched control in t3 / t4 / t5 carries the field (None unless Amendment 2)", dms and not bad_dm,
+              f"{len(dms)} controls, {n_a2} with Amendment 2; bad {bad_dm[:3]}")
     except Exception as ex:                                                       # noqa: BLE001
         import traceback; traceback.print_exc(); check("unlearn_toy-3 / -4 / -5 checks on the stage outputs", False, repr(ex))
     p0 = tdir(out, "t0.json")

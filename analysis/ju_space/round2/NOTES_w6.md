@@ -233,4 +233,6 @@ G16 or a Qwen theta rule (Amendments 1 and 3).
   to a run without the bad net); harness `review/harness_nonfinite.py` (scratchpad r2_impl/w6/) corrupts one saved net each for r1,
   cross (AT4's A at the same time), fam and forcing and reruns them: every stage finishes, the net is flagged and has no pair.
 - After the fixes: selftests 20 / 20 (r2_rgi_toy.py) and 20 / 20 (r2_theta_toy.py); the full QUICK pipeline of both scripts runs (r0 8 s,
-  r1 127 s, cross 15 s, fam 15 s, forcing 21 s; t1 7 s, t2 3 s, t5 18 s, rules 1 s; scratchpad r2_impl/w6/review/H).
+  r1 127 s, cross 15 s, fam 15 s, forcing 21 s; t1 7 s, t2 3 s, t5 18 s, rules 1 s; scratchpad r2_impl/w6/review/H). Re-run against
+  the library with implementer 5's t1_choose_r fix (r2_toy_common.py md5 deda706a...; review/H2): both selftests 20 / 20, every stage
+  runs, and the stored ridge factor r1 is no longer always 1e-4 (the barely trained QUICK nets select 1.0).

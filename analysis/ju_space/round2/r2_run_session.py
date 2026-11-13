@@ -1659,8 +1659,10 @@ def mock_r1(root, dr, parts=("rk", "pc")):
                 + [("gpu4", "pc_mup", 64, s, dict(T="20", BETA="0.1")) for s in (0, 1)]
                 + [("gpu3", "pc_mup", 128, s, dict(T="20", BETA="0.1")) for s in (0, 1)])
         names = {}
-        for shard in {j[0] for j in jobs}:
+        for shard in SHARDS:                                          # files of an older mock (other widths, names without '_quick')
             shutil.rmtree(os.path.join(dr, shard, "pc"), ignore_errors=True)
+            for f in glob.glob(os.path.join(glob.escape(os.path.join(dr, shard)), "pc_*_gpu*.json")):
+                os.remove(f)
         say(f"[mock] {len(jobs)} pc_meta.py QUICK jobs on the CPU, {npar} at a time (round-1 job-pool pattern; a code fixture only)")
         todo = []
         for shard, arm, W, s, ex in jobs:
@@ -1687,16 +1689,19 @@ def mock_r1(root, dr, parts=("rk", "pc")):
     return dr
 
 
-LIB_SELFTESTS = {   # the scripts' own code tests (plan 9; NOTES of the implementers), run by --selftest before the session's MOCK run
-    "r2_q1": ("stimuli", "rk", "axes", "gen14", "gen8"), "r2_q2": ("stimuli", "rk"), "r2_q3": ("stimuli",),
+LIB_SELFTESTS = {   # the scripts' own code tests (plan 9; NOTES of the implementers), run by --selftest before the session's MOCK run.
+    # r2_q3: r2_rgi_geom.py selftest (about 35 s under MOCK on one CPU core); r2_rgi_stats.py selftest is left out (about 3 min; the
+    # session's MOCK run executes r2_rgi_stats end to end on the geometry it just wrote)
+    "r2_q1": ("stimuli", "rk", "axes", "gen14", "gen8"), "r2_q2": ("stimuli", "rk"), "r2_q3": ("stimuli", "geom"),
     **{s: ("toy", "sim") for s in ("r2_t1", "r2_t2", "r2_t3", "r2_t4", "r2_pc", "r2_ana")},
 }
 
 
 def lib_selftests(base, root, st_root, dr):
     """r2_stimuli.py check with the real tokenizer; r2_rk.py, r2_axes.py and r2_gen_loop.py selftest (MOCK=1) on copies of the mock
-    round-1 tree (so that they cannot change it); r2_toy_common.py selftest (QUICK=1, incl. the W0 equivalence tests and the reference
-    comparison) and r2_sim.py selftest; all on the CPU, as their authors ran them. 0 if all pass."""
+    round-1 tree (so that they cannot change it); r2_rgi_geom.py selftest (MOCK=1, its own tiny model); r2_toy_common.py selftest
+    (QUICK=1, incl. the W0 equivalence tests and the reference comparison) and r2_sim.py selftest. All on the CPU (MOCK_DEVICE, the
+    device the mock tree was built on) with R2_LIB_NT threads (default 1), as their authors ran them. 0 if all pass."""
     def copy_mock(dst):
         if not os.path.isdir(dst):
             for s in SHARDS:
@@ -1705,7 +1710,7 @@ def lib_selftests(base, root, st_root, dr):
         return dst
     sc = lambda n: os.path.join(SCRIPTS, n)
     os.makedirs(st_root, exist_ok=True)
-    env = dict(os.environ, DEVICE="cpu", NT=os.environ.get("NT", "4"), PYTHONUNBUFFERED="1")
+    env = dict(os.environ, DEVICE=MOCK_DEVICE, NT=lib_nt(), OMP_NUM_THREADS=lib_nt(), PYTHONUNBUFFERED="1")
     for k in ("MOCK", "QUICK", "BLOCK", "R2_SELFTEST", "R1_SRC"):
         env.pop(k, None)
     r1s, r2s = os.path.join(st_root, "scripts_r1"), os.path.join(st_root, "scripts_r2")
@@ -1719,13 +1724,17 @@ def lib_selftests(base, root, st_root, dr):
             cmd, ex = [sc("r2_axes.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1")
         elif t.startswith("gen"):
             cmd, ex = [sc("r2_gen_loop.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1", BLOCK=t[3:])
+        elif t == "geom":                                   # reads no round-1 file: an empty r1 folder
+            os.makedirs(os.path.join(st_root, "geom_r1"), exist_ok=True)
+            cmd, ex = [sc("r2_rgi_geom.py"), root, os.path.join(st_root, "geom_r1"), os.path.join(st_root, "geom"), "selftest"], dict(MOCK="1")
         elif t == "sim":
             cmd, ex = [sc("r2_sim.py"), "selftest"], {}
         else:                                               # NOTES_w5: QUICK=1 NT=1 OMP_NUM_THREADS=1 python r2_toy_common.py selftest <dir>
             cmd, ex = [sc("r2_toy_common.py"), "selftest", os.path.join(st_root, "toy_common")], dict(QUICK="1", NT="1", OMP_NUM_THREADS="1")
         log, t0 = os.path.join(st_root, f"lib_{t}.log"), time.time()
         envs = " ".join("%s=%s" % kv for kv in ex.items())
-        say(f"[selftest] {envs} {os.path.basename(cmd[0])} {cmd[1] if t in ('stimuli', 'rk', 'toy', 'sim') else 'selftest'}")
+        say(f"[selftest] {envs} {os.path.basename(cmd[0])} {cmd[1] if t in ('stimuli', 'rk', 'toy', 'sim') else 'selftest'} "
+            f"(DEVICE={env['DEVICE']}, NT={dict(env, **ex)['NT']})")
         with open(log, "w") as f:
             rc = subprocess.run([PY, "-u"] + cmd, env=dict(env, **ex), stdout=f, stderr=subprocess.STDOUT).returncode
         tail = (read_text(log) or "").strip().splitlines()
@@ -1738,12 +1747,54 @@ def lib_selftests(base, root, st_root, dr):
     return 0
 
 
+R1_USED = ("rk_loop.py", "rk_verdict.py", "ufo_common.py", "rsi_statements.py", "pc_meta.py", "pc_common.py", "pc_analyze.py",
+           "pc_summary.py")   # the round-1 modules that the round-2 scripts import or the mock tree runs
+
+
+def compile_check():
+    """Every round-2 script (analysis/ju_space/round2/*.py) and the round-1 modules it uses must compile with this interpreter (Colab's
+    Python; the code tests check 3.11, 3.12 and 3.13): a syntax error found here costs a self-test, not a session. Returns the failures."""
+    files = sorted(glob.glob(os.path.join(glob.escape(SCRIPTS), "*.py"))) + [os.path.join(AJS, n) for n in R1_USED]
+    bad = []
+    for f in files:
+        try:
+            with open(f, encoding="utf-8") as fh:
+                compile(fh.read(), f, "exec", dont_inherit=True)
+        except FileNotFoundError:
+            bad.append(f"{os.path.relpath(f, REPO)}: missing")
+        except SyntaxError as e:
+            bad.append(f"{os.path.relpath(f, REPO)}:{e.lineno}: {e.msg}")
+    say(f"[selftest] compile check (Python {platform.python_version()}): {len(files)} files, " + (f"FAILED: {bad}" if bad else "ok"))
+    return bad
+
+
+def pc_selftest_check(work):
+    """runner_steps-2: r2_pc's self-test must have run PC code: pc_toy/t7.json has a width with a PC side ('pc'), and a
+    pc_toy/cross_pc/w*.json lists a PC model and a pair. Returns the problems (empty = ok)."""
+    t7 = load_json(os.path.join(work, "pc_toy", "t7.json")) or {}
+    ran = sorted(w for w, v in (t7.get("widths") or {}).items() if isinstance(v, dict) and "pc" in v)
+    cross = [load_json(p) or {} for p in sorted(glob.glob(os.path.join(glob.escape(work), "pc_toy", "cross_pc", "w*.json")))]
+    n_pc = sum(1 for c in cross for m in (c.get("models") or []) if isinstance(m, dict) and m.get("kind") == "pc")
+    n_pairs = sum(len(c.get("pairs") or []) for c in cross)
+    say(f"[selftest] r2_pc content: C-T7 widths that ran {ran or 'none'}; cross_pc: {n_pc} PC models, {n_pairs} pairs")
+    return ([] if ran else ["pc_toy/t7.json: no width ran (no round-1 PC / BP net found?)"]) + \
+           ([] if n_pc else ["pc_toy/cross_pc: no PC model"]) + ([] if n_pairs else ["pc_toy/cross_pc: no pair"])
+
+
 def selftest(session, root, st_root):
     """The scripts' own code tests (LIB_SELFTESTS), then a MOCK / QUICK run of the session through this runner (same code path as the
     real run) on a mock dsse_runs tree in <st_root>/dsse_runs; a wave-2 session first runs the sessions it reads (r2_pc: r2_t1;
     r2_ana: all others) the same way (without their library tests)."""
     base, _ = split_session(session)
     st_root = os.path.abspath(st_root); dr = os.path.join(st_root, "dsse_runs")
+    os.makedirs(st_root, exist_ok=True)
+    problems = []
+    if compile_check():
+        say("SELFTEST FAILED: compile check"); return 1
+    comp = references_record()["comparison"]
+    if str(comp.get("status", "")).startswith("stale"):
+        problems.append(f"reference comparison {REF_COMPARISON} is {comp['status']}: {comp.get('changed')} (regenerate and commit it, 9.5)")
+        say(f"WARNING: {problems[-1]}")
     chain = list(SESSIONS[base]["upstream"]) + [base]
     parts = set()
     for s in chain:
@@ -1767,6 +1818,11 @@ def selftest(session, root, st_root):
         if rc != 0:
             say(f"SELFTEST FAILED: {s} (exit code {rc}); logs in {os.path.join(st_root, 'work', s, 'logs')}")
             return 1
+        if s == "r2_pc":
+            problems += pc_selftest_check(os.path.join(st_root, "work", s))
+    if problems:
+        say(f"SELFTEST FAILED: {base}: " + "; ".join(problems))
+        return 1
     say(f"SELFTEST OK: {base}" + (f" (with {', '.join(chain[:-1])})" if len(chain) > 1 else "") + f" in {time.time() - t:.0f}s")
     return 0
 
@@ -1779,6 +1835,8 @@ def main(argv=None):
             raise SystemExit("usage: r2_run_session.py --mock-r1 <root> <dsse_runs_dir> [rk,pc]")
         mock_r1(argv[1], argv[2], _names(argv[3]) if len(argv) > 3 else ("rk", "pc"))
         return 0
+    if argv and argv[0] == "--compile-check":
+        return 1 if compile_check() else 0
     flags = {a for a in argv if a.startswith("--")}
     pos = [a for a in argv if not a.startswith("--")]
     unknown = flags - {"--dry-run", "--verbose", "--selftest", "--sync-only"}
