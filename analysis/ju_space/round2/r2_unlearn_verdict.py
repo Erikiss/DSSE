@@ -861,3 +861,312 @@ def main(argv=None):
     if len(a) >= 2 and a[0] == "selftest": return 0 if selftest(a[1]) else 1
     if len(a) != 3: print(__doc__); return 2
     run(*a); return 0
+
+
+# ======================================================================================================================================
+# Self-test: synthetic inputs in the producers' formats, one case per verdict branch, gate failure and missing part
+# ======================================================================================================================================
+def _txt(g=0.3, g0=1.0, hi=0.6, mf=0.05):
+    return dict(g=g, g0=g0, ratio=g / g0 if g0 else float("nan"), ratio_ci90=[g / g0 - 0.1 if g0 else float("nan"), hi], m_concept=abs(g - g0) / g0 if g0 > 0 else float("nan"),
+                m_foreign=dict(sports=mf, tone=mf, sea=mf, TOPIC=mf), own_axis_gap=g)
+
+
+def _q2(**kw):
+    t = lambda: _txt(**{k: kw[k] for k in ("g", "g0", "hi", "mf") if k in kw})
+    beh = dict(Ue_fin=kw.get("Ue", 0.4), A_fin=0.5, z_fin=kw.get("z", 3.0), M0=kw.get("M0", 0.5))
+    return dict(status="ran", GA14=kw.get("GA", True), texts={"u_RSI|RSI": t(), "u_diff|RSI": t(), "u_RGI_perp|RGI": t(), "cov_14_3|RSI": _txt(0.95, 1.0, 1.1), "cov_14_3|RGI": _txt(0.95, 1.0, 1.1)},
+                behaviour=dict(u_RSI=dict(beh), u_diff=dict(beh), u_RGI_perp=dict(beh)), alpha_u={k: dict(f=1.0, damage=kw.get("damage", 0.05), damage_plus=0.05) for k in ("u_RSI", "u_diff", "u_RGI_perp", "cov_14_3")},
+                rules={k: dict(verdict=kw.get("sess", "suppressed"), ctrl_p5=kw.get("ctrl", 0.9)) for k in ("u_RSI", "u_diff", "u_RGI_perp")}, K6={}, content={}, perplexity={})
+
+
+def _q3(g=0.3, D=0.1, zD=-3.0, damage=0.02, span_g=0.3, sess_abl="u_RSI", D_hi=0.2, GA=True):
+    ab = lambda g_, D_: dict(dim=1, damage=damage, H30=dict(D=D_, D0=0.8, dD=D_ - 0.8, z_D=zD, D_ci90_statements=[D_ - 0.3, D_hi]), RGI30=dict(D=0.5, D0=0.6), texts=dict(RSI=_txt(g_, 1.0, g_ + 0.2), RGI=_txt(g_, 1.0, g_ + 0.2)))
+    A = dict(u_RSI=ab(g, D), span=ab(span_g, D), u_RGI_perp=ab(0.8, 0.7), u_diff=ab(0.8, 0.7), ctrl2=ab(0.95, 0.8), null2=ab(0.95, 0.8), null8=ab(0.95, 0.8))
+    A["u_RSI"]["unprompted"] = dict(shift_g0=-0.1)
+    return dict(status="ran", GA14=GA, ablations=A, ctrl_p5=dict(u_RSI=0.9, span=0.9), rules=dict(u_RSI=dict(verdict="unlearned" if sess_abl == "u_RSI" else "not unlearned"), span=dict(verdict="unlearned" if sess_abl in ("u_RSI", "span") else "not unlearned")),
+                c_q4a=dict(ablation=sess_abl, used=sess_abl or "u_RSI"), D0=dict(H30=0.8), g0=dict(RSI=1.0, RGI=1.0), Delta_T=1.0,
+                linear_rung=dict(inputs=dict(RSI_1dim=dict(ratio=g, g0=1.0), RSI_span=dict(ratio=span_g, g0=1.0), RGI_1dim=dict(ratio=0.8, g0=1.0), RGI_span=dict(ratio=0.8, g0=1.0))))
+
+
+def _row(c=0.5, p=0.001, A=0.6, rel=0.7, Ue=0.4, lo_=0.2, d=None):
+    r = dict(c=c, p=p, A=A, rel=rel, Ue=Ue, Ue_ci90=[lo_, Ue + 0.2]); return r if d is None else dict(r, d=d, n=d - 1)
+
+
+def _seeds(v, n=5, sd=0.01):
+    """n per-seed values around v (deterministic spread)."""
+    return [float(v + sd * (i - (n - 1) / 2)) for i in range(n)]
+
+
+def _dm(acc, matched=True, amended=False, key="acc"):
+    m = dict(r=22 if amended else 11, lam=0.6 if amended else 1.0, drop=0.3, matched=matched, ladder=[[11, 0.2], [22, 0.5]] if amended else [[11, 0.3]],
+             note="partial removal at d* (Amendment 2)" if amended else "ladder", target=0.3, r0=11)
+    return {key: _seeds(acc), "match": m}
+
+
+def _op(acc=0.06, dm=0.95, sp=0.9, relearn=0.6, a_new=0.2, B2=0.2, label="scrambled", iso=0.95, span=None, matched=True, amended=False):
+    o = dict(op=dict(acc=_seeds(acc), sp=_seeds(sp), relearn={"300": _seeds(relearn), "3000": _seeds(relearn)}, A_new={"300": _seeds(a_new), "3000": _seeds(a_new)}, B2={"8": _seeds(B2)}, label=[label] * 5),
+             dm=_dm(dm, matched, amended), iso=dict(acc=_seeds(iso)))
+    if span is not None: o["span"] = dict(acc=_seeds(span))
+    return o
+
+
+def _t4(ops, t4b=None, W=128):
+    return dict(meta=dict(budgets=[300, 3000]), cells={f"bp_mup_W{W}": dict(W=W, base=dict(acc=_seeds(0.97), sp=_seeds(0.9)), ops=ops, t4b=t4b or {})}, w4={})
+
+
+def _ladder(**over):
+    ops = dict(edit=_op(), block11=_op(acc=0.5), blk1=_op(acc=0.7, span=0.9), blk2=_op(acc=0.5, span=0.9), blk4=_op(acc=0.3, span=0.9), blk6=_op(acc=0.2, span=0.9)); ops.update(over); return _t4(ops)
+
+
+def _t5(col_last=0.05, col_r=3, rand=0.5, z1_last=0.05, dmr=0.5, dm_matched=True, dm_amended=False, R=25, seeds=5, tasks=4, free=0.5):
+    arms = ("col", "rand", "z1", "dmr"); chains, A = [], []
+    for arm in arms:
+        for s in range(seeds):
+            for j in range(tasks):
+                chains.append([arm, s, j])
+                if arm == "col": A.append([0.5 if r < col_r else col_last for r in range(R)])
+                elif arm == "z1": A.append([0.5 if r < 5 else z1_last for r in range(R)])
+                else: A.append([free] + [rand if arm == "rand" else dmr] * (R - 1))
+    dm = dict(round=R - 1, **_dm(0.9, dm_matched, dm_amended)["match"])
+    return dict(meta=dict(budgets=[300, 3000]), widths=dict(W128=dict(W=128, chains=chains, A={"300": A, "3000": A}, arms=list(arms), seeds=list(range(seeds)), dm=[dm], pc_last=11)))
+
+
+def _t7(diff=0.3, relax=0.0, seeds=5, W=128):
+    side = lambda base: dict(t4b={L: dict(acc=_seeds(base), relearn={"300": _seeds(0.5), "3000": _seeds(0.6)}, dm=_dm(0.9)) for L in ("h1", "h2")},
+                             unsearch=dict(chains=[["col", s, j] for s in range(seeds) for j in range(4)], A={"300": [[0.4] * 25 for _ in range(seeds * 4)]},
+                                           long=dict(chain=list(range(seeds * 4)), round=[24] * (seeds * 4), A_long=[0.45] * (seeds * 4))))
+    pc = side(0.5 + diff); bp = side(0.5); pc["t4b"]["h2"]["acc"] = _seeds(0.5)
+    pc["relax"] = {L: {str(T): dict(contrast=_seeds(relax if (L == "h2" and T == 20) else 0.0, seeds, 0.02)) for T in (20, 100)} for L in ("h1", "h2")}
+    return dict(meta=dict(budgets=[300, 3000], quick=False), widths={f"W{W}": dict(W=W, seeds_present=list(range(seeds)), seeds_missing=[], pc=pc, bp=bp)})
+
+
+def selftest(work):
+    import shutil
+    import r2_rk as R
+    R.MOCK = True
+    shutil.rmtree(work, ignore_errors=True); os.makedirs(work); res = []; t_start = time.time()
+
+    def check(name, cond, info=""):
+        res.append(dict(test=name, ok=bool(cond), info=str(info)[:300])); print(f"[{'PASS' if cond else 'FAIL'}] {name} {str(info)[:220]}", flush=True)
+    mf = dict(sports=0.05, tone=0.05, sea=0.05, TOPIC=0.05)
+    # ---- C-Q2
+    S = lambda **k: rule_suppressed(**{**dict(g=0.3, g0=1.0, ratio_hi=0.6, ctrl_p5=0.9, Ue=0.4, z=3.0, M0=0.5, damage=0.05, m_foreign=mf, m_concept=0.7), **k})
+    check("C-Q2 suppressed when (i)-(iv) hold", S()["verdict"] == "suppressed" and not S()["failed"])
+    fails = dict(gap_half=dict(g=0.6), gap_hi=dict(ratio_hi=0.8), gap_below_random=dict(ctrl_p5=0.6), Ue=dict(Ue=0.2), z_fin=dict(z=2.0), damage_band=dict(damage=0.06), foreign=dict(m_foreign=dict(mf, tone=0.4)), g0_positive=dict(g0=-1.0))
+    check("C-Q2 every single failing condition gives 'not suppressed' with that condition named", all(S(**kw)["verdict"] == "not suppressed" and k in S(**kw)["failed"] for k, kw in fails.items()),
+          {k: S(**kw)["failed"] for k, kw in fails.items()})
+    check("C-Q2 M0 <= 0.1: 'no baseline discrimination'; damage below the band and NaN foreign axis fail", "no baseline discrimination" in S(M0=0.05)["notes"] and "Ue" in S(M0=0.05)["failed"]
+          and "damage_band" in S(damage=0.04)["failed"] and "foreign" in S(m_foreign=dict(mf, sea=float("nan")))["failed"] and S(ratio_hi=0.9, ctrl_p5=0.9)["failed"] == ["gap_hi", "gap_below_random"])
+    import torch
+    pt = dict(texts={"cov_14_3|RSI": dict(ratio_draws=torch.linspace(0.8, 1.2, 2001)), "cov_14_3|RGI": dict(ratio_draws=torch.linspace(0.5, 1.2, 2001))})
+    c2 = cq2(_q2(), pt, [RP.LBL_GDESC], False)
+    check("C-Q2 from the producer's files: ctrl p5 from q2.pt draws, labels G-desc and 'RGI axis not resolved' (u_RGI_perp, u_diff), agreement recorded",
+          c2["directions"]["u_RSI"]["verdict"] == "suppressed" and abs(c2["directions"]["u_RSI"]["ctrl_p5"] - 0.82) < 1e-6 and c2["directions"]["u_RGI_perp"]["verdict"] == "not suppressed"
+          and c2["directions"]["u_RGI_perp"]["failed"] == ["gap_below_random"] and RP.LBL_RGI in c2["directions"]["u_diff"]["labels"] and RP.LBL_RGI not in c2["directions"]["u_RSI"]["labels"]
+          and c2["directions"]["u_RSI"]["labels"] == [RP.LBL_GDESC] and c2["od_g8"] == ["C-Q2 u_RGI_perp: r2_ana 'not suppressed', in session 'suppressed'"], c2["od_g8"])
+    check("C-Q2 without the .pt the JSON's ctrl_p5 is used; missing / not-run inputs give their status", cq2(_q2(), None, [], True)["directions"]["u_RSI"]["ctrl_source"].startswith("q2.json")
+          and cq2(None, None, [], True)["status"].startswith("not run (round-2 output missing") and cq2(dict(status=NOT_RUN_R1), None, [], True)["status"] == NOT_RUN_R1)
+    # ---- C-Q3
+    U = lambda **k: rule_unlearned(**{**dict(g=0.3, g0=1.0, ratio_hi=0.6, ctrl_p5=0.9, D=0.1, D0=0.8, zD=-3.0, damage=0.02, m_foreign=mf, m_concept=0.7, D_hi=0.3), **k})
+    f3 = dict(D_baseline=dict(D0=0.15), D_half=dict(D=0.5), z_D=dict(zD=-2.0), damage=dict(damage=0.06), gap_half=dict(g=0.51), foreign=dict(m_concept=0.08))
+    check("C-Q3 unlearned when every condition holds; each failing condition named", U()["verdict"] == "unlearned" and all(U(**kw)["verdict"] == "not unlearned" and k in U(**kw)["failed"] for k, kw in f3.items())
+          and "no baseline discrimination" in U(D0=0.15)["notes"])
+    check("C-Q3 inverted only if D_abl < 0 with the statement interval excluding 0", U(D=-0.2, D_hi=-0.05)["inverted"] and not U(D=-0.2, D_hi=0.1)["inverted"] and not U(D=0.1, D_hi=0.3)["inverted"] and U(D=-0.2, D_hi=-0.05)["verdict"] == "unlearned")
+    c3 = cq3(_q3(), None, [], True); c3b = cq3(_q3(g=0.8, sess_abl="span"), None, [], False); c3c = cq3(_q3(g=0.8, span_g=0.8, sess_abl=None), None, [], True); c3d = cq3(_q3(g=0.8, sess_abl="u_RSI"), None, [], True)
+    check("C-Q3 / G43: u_RSI if it passes, else the span, else none; a differing in-session choice is reported", c3["G43"]["r2_ana"] == "u_RSI" and c3["G43"]["agrees"] and c3b["G43"]["r2_ana"] == "span" and c3b["G43"]["agrees"]
+          and RP.LBL_RGI in c3b["rules"]["span"]["labels"] and c3c["G43"]["r2_ana"] is None and c3d["G43"]["agrees"] is False and any("G43" in x for x in c3d["od_g8"]) and "u_RGI_perp|RGI" in c3["descriptive"])
+    q3pt = dict(texts={"rand_14_2|RSI": dict(ratio_draws=torch.full((2000,), 0.5)), "cov_14_0|RSI": dict(ratio_draws=torch.full((2000,), 0.55)), "ctrl2|RSI": dict(ratio_draws=torch.full((2000,), 0.95))})
+    c3e = cq3(_q3(), q3pt, [], True)
+    check("C-Q3 random reference: the two 1-dim controls pooled for u_RSI (5th percentile 0.5 -> upper end 0.5 not below it), the 2-dim control for the span",
+          c3e["rules"]["u_RSI"]["verdict"] == "not unlearned" and c3e["rules"]["u_RSI"]["failed"] == ["gap_below_random"] and c3e["rules"]["span"]["verdict"] == "unlearned" and c3e["G43"]["r2_ana"] == "span")
+    # ---- C-Q4a
+    q4 = lambda share, hi_, used="u_RSI", sess=None: dict(status="ran", ablation=used, passed_C_Q3=True, restored_share=share, restored_share_ci90=[share - 0.1, hi_], verdict_in_session=sess)
+    check("C-Q4a: shallow / deep / partial / not applicable", cq4a(q4(0.6, 0.8), c3, [])["verdict"] == "shallow" and cq4a(q4(0.1, 0.3), c3, [])["verdict"] == "deep" and cq4a(q4(0.1, 0.4), c3, [])["verdict"] == "partial"
+          and cq4a(q4(0.3, 0.45), c3, [])["verdict"] == "partial" and cq4a(q4(0.6, 0.8), c3c, [])["verdict"] == "not applicable (nothing removed)" and cq4a(q4(0.6, 0.8, used="span"), c3b, [])["verdict"] == "shallow"
+          and cq4a(q4(0.6, 0.8, sess="deep"), c3, [])["agrees_in_session"] is False and cq4a(None, c3, [])["status"].startswith("not run"))
+    # ---- C-Q4b loop rule
+    gone, surv, rer, weak = _row(c=0.02, p=0.5, A=0.05, rel=0.2, Ue=0.05, lo_=-0.1), _row(), _row(c=0.1, p=0.03, A=0.15, rel=0.7, Ue=0.4, lo_=0.2), _row(c=0.2, p=0.03, A=0.3, rel=0.3, Ue=0.1, lo_=-0.1)
+    gone_rer = _row(c=0.02, p=0.5, A=0.05, rel=0.7, Ue=0.4, lo_=0.2); two = lambda r: {2: r, 3: r}
+    check("C-Q4b: un-searched (ablated gone, twin re-finds RSI)", loop_rule(two(gone), two(surv)) == "un-searched")
+    check("C-Q4b: survives; re-routed (reproducible read-back, Ue >= 0.25 above 0, |A| < 0.25)", loop_rule(two(surv), two(surv)) == "survives" and loop_rule(two(rer), two(surv)) == "re-routed")
+    check("C-Q4b: twin fails -> 'undecided (twin does not re-find RSI)'; but 're-routed' comes first in the plan's order", loop_rule(two(gone), two(weak)) == "undecided (twin does not re-find RSI)"
+          and loop_rule(two(gone_rer), two(weak)) == "re-routed" and loop_rule(two(gone_rer), two(surv)) == "un-searched")
+    check("C-Q4b: otherwise undecided; a condition must hold at d_2 and d_3; missing rounds", loop_rule(two(weak), two(surv)) == "undecided" and loop_rule({2: gone, 3: weak}, two(surv)) == "undecided"
+          and loop_rule({2: surv, 3: weak}, two(surv)) == "undecided" and loop_rule({2: gone}, two(surv)).startswith("undecided (rounds") and loop_rule(two(gone), None, "the R1 seed-0 comparator") == "undecided (the R1 seed-0 comparator does not re-find RSI)")
+    info_l = dict(LIKELY_wh=True, from_would_have_read=True, G_attr=False, attracted_loop=None)
+    qb = dict(status="ran", gate=dict(open=True, branch="likely", G13=True, G15=True, G14=False), twin_start_check=dict(c=0.3, p=0.001),
+              ablated=[_row(d=1), dict(gone, d=2), dict(gone, d=3)], twin=[_row(d=1), _row(d=2), _row(d=3)], verdict_in_session="un-searched")
+    b1 = cq4b(qb, info_l, dict(status="ran"), []); qc = dict(status="not testable (gate: G13 (LIKELY_wh) false; G14 (attractor) false)", gate=dict(open=False), twin_start_check=None)
+    b2 = cq4b(qc, dict(LIKELY_wh=False, from_would_have_read=False, G_attr=False), None, [RP.LBL_GDESC]); b3 = cq4b(dict(qb, twin_start_check=dict(c=-0.1, p=0.5)), info_l, None, [])
+    b4 = cq4b(dict(qb, twin_start_check=None, gate=dict(open=True, branch="attractor")), dict(LIKELY_wh=False, from_would_have_read=False, G_attr=True, attracted_loop="RND_1"), None, [])
+    check("C-Q4b gate G44 = (G13 and G15) or G14: recomputed, compared with the session; G-desc label when opened by a would-have-read LIKELY; closed gate 'not testable (gate ...)'",
+          b1["verdict"] == "un-searched" and b1["gate"]["open"] and b1["gate"]["agrees"] and RP.LBL_GDESC in b1["labels"] and b1["agrees_in_session"] and b2["verdict"].startswith("not testable (gate") and b2["gate"]["open"] is False
+          and b2["gate"]["agrees"] and b3["gate"]["open"] is False and b3["gate"]["agrees"] is False and any("G44" in x for x in b3["od_g8"]) and b4["gate"]["branch"] == "attractor" and b4["gate"]["open"]
+          and cq4b(None, info_l, None, [])["verdict"].startswith("not run"))
+    # ---- arm A, matched-size reference and C-Q5 on a synthetic round-1 tree
+    r1 = os.path.join(work, "r1"); RP.synth_r1(r1, sigma=1.0)
+    r1p = os.path.join(work, "r1p"); axp = RP.synth_r1(r1p, seed=1)
+    RP.synth_r1(r1p, seed=1, plants={(14, "RSI_a", n): 3.0 * axp[14]["u_T_perp"] for n in (1, 2, 3, 4)}, sigma=2.0, summaries={14: dict(verdict=dict(verdict="likely", PC_PASS=False, label_attractor=False, gates=dict(failed=[])))})
+    i_p = RP.r1_info(r1p); ref = seed0_reference(r1p, i_p); ref0 = seed0_reference(r1, RP.r1_info(r1))
+    check("R1-6 matched-size reference: seed-0 half (one pair per prompt) of RSI_a on u_T_perp, d_1 .. d_4", ref["status"] == "ran" and sorted(ref["rows"]) == [1, 2, 3, 4] and ref["rows"][2]["n_pairs"] == 16
+          and ref["rows"][2]["c"] > 0.5 and ref["rows"][2]["p"] <= 0.01 and ref0["rows"][2]["p"] > 0.01 and seed0_reference(os.path.join(work, "none"), dict(final={"14": False}))["status"] == NOT_RUN_R1, {d: (round(r["c"], 2), r["p"]) for d, r in ref["rows"].items()})
+    aA = lambda c1, rows, cont=True: dict(status="ran", c1=c1, continues=cont, rounds=len(rows), rows=rows, reference_seed0_RSI_a=dict(c=0.6, ci90=[0.45, 0.7]), verdict_in_session="x")
+    a1 = arm_a(aA(0.5, [_row(d=1)], cont=False), ref, []); a2 = arm_a(aA(0.3, [_row(d=1), dict(gone, d=2), dict(gone, d=3)]), ref, []); a3 = arm_a(aA(0.3, [_row(d=1), dict(gone, d=2), dict(gone, d=3)]), ref0, [])
+    a4 = arm_a(aA(0.5, [_row(d=1), dict(surv, d=2), dict(surv, d=3)], cont=True), ref, [])
+    check("arm A: stops after round 1 -> 'translation (as predicted), not un-searched'; continued -> loop rule with the R1 seed-0 comparator; G16 recomputed",
+          a1["verdict"] == "translation (as predicted), not un-searched" and a1["G16"]["agrees"] and a2["verdict"] == "un-searched" and a2["G16"]["r2_ana"] is True and a3["verdict"] == "undecided (the R1 seed-0 comparator does not re-find RSI)"
+          and a4["verdict"] == "survives" and a4["G16"]["agrees"] is False and a4["od_g8"] and arm_a(None, ref, [])["status"].startswith("not run"), (a2["verdict"], a3["verdict"], a4["G16"]))
+    q5 = lambda cd, cr, cs: dict(status="ran", superposition=dict(cos_disatt=cd, cos=cd, coef_RSI=cr, coef_SEA=cs, holds_in_session=True), dose=dict(norm_ratio=1.8, cos_debiased=0.9))
+    s1 = cq5(q5(0.9, 0.7, 0.7), RP.r1_info(r1), r1, []); s2 = cq5(q5(0.7, 0.7, 0.7), i_p, r1p, [RP.LBL_GDESC]); s3 = cq5(q5(0.9, 0.3, 0.7), i_p, r1p, []); s4 = cq5(q5(0.9, 0.7, 1.1), i_p, r1p, []); s5 = cq5(None, RP.r1_info(os.path.join(work, "none")), os.path.join(work, "none"), [])
+    check("C-Q5: superposition holds only with disattenuated cos >= 0.8 and both coefficients in [0.5, 1.5] / sqrt 2", s1["superposition"]["holds"] and not s2["superposition"]["holds"] and not s3["superposition"]["holds"] and not s4["superposition"]["holds"]
+          and s2["superposition"]["agrees_in_session"] is False)
+    check("C-Q5: +- symmetry from R1 sigma (row 0) in [0.7, 1.4]; label 'block 14 not usable' if G-blk(14) fails; SVD of the 24 stacked d_n with named modes",
+          s1["symmetry"]["holds"] is True and s2["symmetry"]["holds"] is False and RP.LBL_BLK14 in s2["labels"] and RP.LBL_BLK14 not in s1["labels"] and s1["svd"]["status"] == "ran" and s1["svd"]["n_directions"] == 24
+          and len(s1["svd"]["singular_values"]) == 24 and "mean_RND_response" in s1["svd"]["named_mode_cos_with_top_modes"] and s2["svd"]["named_mode_cos_with_top_modes"]["u_T_perp"][0] > 0.9
+          and s5["status"].startswith("not run") and s5["symmetry"]["status"] == NOT_RUN_R1 and s5["svd"]["status"] == NOT_RUN_R1, s2["svd"]["named_mode_cos_with_top_modes"]["u_T_perp"][:2])
+    # ---- C-Q6
+    def q6(ang=0.9, lo6=0.7, lin=0.1, usable=True, fr=(0.6, 0.7, 0.8), rnd=(0.05, 0.05, 0.05), val=(True, True), rep=(0.9, 0.9), sess=1, diff=0.3, dlo=0.1):
+        cap = {}
+        for i, r in enumerate((1, 2, 3)):
+            cap[f"k4_r{r}_mode"] = dict(frac_all=dict(median=fr[i], ci90=[fr[i] - 0.1, fr[i] + 0.1]), readout_18=dict(ge_3_5_all=rep[0]), readout_22=dict(ge_3_5_all=rep[1])); cap[f"k4_r{r}_rand"] = dict(frac_all=dict(median=rnd[i]))
+        rel = dict(angular={str(b): dict(share=ang, ci90=[lo6, 1.0]) for b in (8, 14, 18, 22)}, linear={str(b): dict(share=lin) for b in (8, 14, 18, 22)}, helix={}, kl=dict(usable=usable),
+                   readout={"18": dict(validated=val[0]), "22": dict(validated=val[1])}, cap=cap, r_star_in_session=sess)
+        return dict(status="ran", relations=dict(improves=rel, describes=rel, repetition=rel), improves_minus_describes_angular={str(b): dict(diff=diff, ci90=[dlo, diff + 0.2]) for b in (8, 14, 18, 22)})
+    k1 = cq6(q6(), []); k2 = cq6(q6(ang=0.7), []); k3 = cq6(q6(lo6=0.45), []); k4 = cq6(q6(lin=0.4), [])
+    check("C-Q6 helix linearises depth: angular >= 75 % with the interval above 0.5 while linear <= 25 %", k1["statement"]["helix_linearises_depth_at_14"] and not k2["statement"]["helix_linearises_depth_at_14"]
+          and not k3["statement"]["helix_linearises_depth_at_14"] and not k4["statement"]["helix_linearises_depth_at_14"])
+    check("C-Q6 RSI-specific: improves beats describes by >= 0.2 with the interval excluding 0", k1["statement"]["rsi_specific_at_14"] and not cq6(q6(diff=0.1), [])["statement"]["rsi_specific_at_14"] and not cq6(q6(dlo=-0.05), [])["statement"]["rsi_specific_at_14"])
+    k5 = cq6(q6(fr=(0.3, 0.6, 0.8), sess=2), []); k6 = cq6(q6(fr=(0.3, 0.4, 0.45), sess=None), []); k7 = cq6(q6(rnd=(0.3, 0.05, 0.05), sess=1), []); k8 = cq6(q6(usable=False), [])
+    check("C-Q6 depth cap: r* = the fewest modes moving >= 50 % with random patches < 20 %; none; KL below the floor 'not testable'; disagreement with the session reported",
+          k1["relations"]["improves"]["r_star"] == 1 and k5["relations"]["improves"]["r_star"] == 2 and k6["relations"]["improves"]["r_star"] is None and k6["relations"]["improves"]["depth_cap"].startswith("no r")
+          and k7["relations"]["improves"]["r_star"] == 2 and any("C-Q6" in x for x in k7["od_g8"]) and k8["relations"]["improves"]["depth_cap"].startswith("not testable") and not k1["od_g8"])
+    check("C-Q6 self-repair: the validated readouts read the capped states as depth >= 3.5 in >= 75 % of objects", k1["relations"]["improves"]["self_repair"] == "self-repair" and cq6(q6(rep=(0.9, 0.5)), [])["relations"]["improves"]["self_repair"] == "no self-repair"
+          and cq6(q6(rep=(0.9, 0.5), val=(True, False)), [])["relations"]["improves"]["self_repair"] == "self-repair" and cq6(q6(val=(False, False)), [])["relations"]["improves"]["self_repair"].startswith("not testable")
+          and k6["relations"]["improves"]["self_repair"] is None and cq6(None, [])["status"].startswith("not run"))
+    # ---- C-T0 .. C-T2
+    seed0 = lambda ring, fa: dict(ws=0, tests=dict(a_taskcols=dict(max=0.5 if ring else 0.2, null_max_p99=0.3), c_loo_ring_R2={"1": dict(real=0.5 if ring else -0.1, null_p95=0.2), "2": dict(real=0.1, null_p95=0.2)},
+                                                   overlap=dict(k1=0.9 if fa else 0.3, k2=0.4)), flags=dict(ring=ring, fourier_aligned=fa and ring))
+    t0 = dict(cells=dict(a=dict(seeds=[seed0(True, True)] * 4 + [seed0(False, False)]), b=dict(seeds=[seed0(True, False)] * 4 + [seed0(True, True)]), c=dict(seeds=[seed0(True, True)] * 3 + [seed0(False, True)] * 2)),
+              rule_preview=dict(a=dict(has_ring_code=True, fourier_aligned=True), b=dict(has_ring_code=True, fourier_aligned=True)))
+    z0 = ct0(t0)
+    check("C-T0: ring code / Fourier-aligned per net from the raw tests, cell property with >= 4 of 5 seeds; preview disagreement visible", z0["cells"]["a"]["has_ring_code"] and z0["cells"]["a"]["fourier_aligned"] and z0["cells"]["b"]["has_ring_code"]
+          and not z0["cells"]["b"]["fourier_aligned"] and not z0["cells"]["c"]["has_ring_code"] and z0["cells"]["a"]["agrees_preview"] and z0["cells"]["b"]["agrees_preview"] is False and ct0(None)["status"].startswith("not run"))
+    def t1(pca, span):
+        grid = list(range(1, 9)); fam = {str(k): dict(pca=dict(acc=[pca[i]] * 5), span=dict(acc=[span[i]] * 5)) for i, k in enumerate(grid)}
+        return dict(cells=dict(c=dict(base=dict(acc=[1.0] * 5, B2={"8": [0.2] * 5}), families=dict(xy=fam), grids=dict(xy=grid))))
+    lin8 = [0.12 * (i + 1) for i in range(8)]
+    check("C-T1: critical length / graceful / intermediate", ct1(t1([0.1, 0.95, 0.96, 0.97, 0.98, 0.99, 1, 1], [0.1, 0.2, 0.3, 0.5, 0.7, 0.92, 1, 1]))["cells"]["c"]["families"]["xy"]["label"] == "critical length"
+          and ct1(t1(lin8, lin8))["cells"]["c"]["families"]["xy"]["label"] == "graceful" and ct1(t1([0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0], [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0]))["cells"]["c"]["families"]["xy"]["label"] == "intermediate"
+          and ct1(t1([0.1, 0.95, 0.96, 0.97, 0.98, 0.99, 1, 1], [0.1, 0.5, 0.95, 1, 1, 1, 1, 1]))["cells"]["c"]["families"]["xy"]["label"] == "intermediate")
+    def t2(zs_ring=0.6, al=0.1, cs=0.2, zs_modal=True, l1_ring=(False, True, True)):
+        nets = {}
+        for ki, k in enumerate((2, 3, 4)):
+            for code in ("ring", "pring", "rand"):
+                for ws in range(5):
+                    he = 0.8 + (al if code == "ring" else 0.0) + 0.01 * ws * (1 if code == "ring" else 0.5)
+                    nets[f"{code}_k{k}_w{ws}"] = dict(code=code, k=k, ws=ws, level1=(l1_ring[ki] if code == "ring" else True), zero_shot=(zs_ring if code == "ring" else 0.01), zs_modal=[dict(modal_is_trained=zs_modal)] * 4,
+                                                     code_search=0.5 + (cs + 0.01 * ws if code == "ring" else 0.0), heldout_eval=he, B2_8=0.1)
+        return dict(nets=nets)
+    u1 = ct2(t2(), True); u2 = ct2(t2(zs_ring=0.2, cs=0.0, al=-0.1), True); u3 = ct2(t2(), False); u4 = ct2(t2(zs_ring=0.2, cs=0.2), None)
+    check("C-T2: k_min, 'the ring linearises' by zero-shot or by code-space search, snap, 'pattern (one-hot world)' with the Bonferroni interval and G41",
+          u1["k_min"] == dict(pring=2, rand=2, ring=3) and u1["ring_linearises"] and u1["ring_linearises_by"]["zero_shot"] and u1["pattern_one_hot_world"] == "pattern (one-hot world)" and not u2["ring_linearises"]
+          and u2["pattern_one_hot_world"] == "no pattern (one-hot world)" and u3["pattern_one_hot_world"].startswith("pattern claim withheld") and u4["ring_linearises_by"] == dict(zero_shot=False, code_search=True)
+          and u1["cells"]["pring_k2"]["snap"] and not u1["cells"]["ring_k3"]["snap"] and not ct2(t2(zs_modal=False), True)["cells"]["pring_k2"]["snap"] and ct2(None, True)["status"].startswith("not run"))
+    # ---- C-T3
+    def t3(byj3=None, byj6=None, conj_acc=0.0, share=1.0, arc=0.3, spread=0.6):
+        gate = dict(K1=dict(ring=[dict(ws=i, zero_shot=0.99, hatch=dict(extract=125, first95=550)) for i in range(5)], pring=[dict(ws=i, zero_shot=0.05) for i in range(5)], **{"c-onehot": [dict(ws=i, zero_shot=0.06) for i in range(5)]}))
+        w = lambda byj: dict(arc=[dict(ws=i, zero_shot=arc + 0.01 * i, by_j=byj, row=dict(eval_point="checkpoint")) for i in range(5)], spread=[dict(ws=i, zero_shot=spread, by_j=byj) for i in range(5)])
+        ops = dict(base=dict(acc=_seeds(0.98), sp=_seeds(0.9)), conj=dict(acc=_seeds(conj_acc, sd=0.001), sp=_seeds(0.9), modal_is_minus_c=[[True] * 12] * 4 + [[share >= 1.0] * 12]),
+                   t4b=dict(h1=dict(acc=_seeds(0.07), dm=_dm(0.95), probes=dict(task_lin=_seeds(0.09), task_mlp=_seeds(0.1))), h2=dict(acc=_seeds(0.95), dm=_dm(0.95, amended=True), probes=dict(task_lin=_seeds(0.09), task_mlp=_seeds(0.5)))),
+                   cplane=dict(acc=_seeds(0.06), zero_shot=_seeds(0.06), rand=dict(acc=_seeds(0.65))))
+        return dict(gate=gate, word=dict(L3=w(byj3 or {"1": 0.9, "2": 0.2, "3": 0.1}), L6=w(byj6 or {"1": 0.9, "2": 0.8})), ops=ops)
+    inp41 = lambda js: RP.Inputs(None, (RP.write_json(os.path.join(work, "t3", "r2_t3", "unlearn_toy", "t3.json"), js), os.path.join(work, "t3"))[1], None)
+    j = t3(); v3 = ct3(j, RP.g41(inp41(j)))
+    check("C-T3: gate, j*(L) (contiguous; literal reported), L*, word-length effect, conjugation 'inverted ability', T4b per layer", v3["gate"] is True and v3["word"]["L3"]["jstar"] == [1] * 5 and v3["word"]["L3"]["jstar_literal"] == [1] * 5
+          and v3["L_star"] == 6 and v3["word"]["L3"]["word_length_effect"] and v3["conjugation"]["inverted_ability"] and v3["t4b"]["h1"]["causal"] and v3["t4b"]["h2"]["correlate"] and v3["t4b"]["h2"]["nonlinear_residue"]
+          and not v3["t4b"]["h1"]["nonlinear_residue"] and v3["t4b"]["h2"]["under_plan_text"]["dm_matched"] is False and v3["t4b"]["h1"]["under_plan_text"] is None, (v3["L_star"], v3["word"]["L3"]["jstar"]))
+    j2 = t3(byj6={"1": 0.9, "2": 0.3}, conj_acc=0.3, arc=0.6, spread=0.3); j2["gate"]["K1"]["pring"] = [dict(ws=i, zero_shot=0.5) for i in range(5)]; v3b = ct3(j2, RP.g41(inp41(j2)))
+    check("C-T3: gate fails (no pattern claim in Part C), no L*, no word-length effect, no inversion; a gap in the distances stops j*", v3b["gate"] is False and "note" in v3b and v3b["L_star"] is None and not v3b["word"]["L3"]["word_length_effect"]
+          and not v3b["conjugation"]["inverted_ability"] and jstar({"1": 0.9, "2": 0.2, "3": 0.9}) == (1, 3, 3) and ct3(None, dict(passes=None))["status"].startswith("not run"))
+    # ---- C-T4
+    o = ct4(_ladder(), True)["cells"]["bp_mup_W128"]
+    check("C-T4 per operation: unlearns (upper bound <= 0.11, damage-matched control >= 0.9 x base), specific, shallow, meta level", o["ops"]["edit"]["unlearns"] and o["ops"]["edit"]["specificity"] == "specific" and o["ops"]["edit"]["depth"] == "shallow"
+          and not o["ops"]["edit"]["meta_unlearned"] and not o["ops"]["block11"]["unlearns"] and o["ladder"]["rung"] == "> 11", o["ladder"])
+    g_ = lambda **k: ct4(_ladder(**k), True)["cells"]["bp_mup_W128"]
+    check("C-T4 per operation: control too damaged -> no 'unlearns'; generic damage; deep / partial; meta unlearned; inverted needs a consistent permutation; unmatched control -> specificity 'not testable' (G45)",
+          not g_(edit=_op(dm=0.5))["ops"]["edit"]["unlearns"] and g_(edit=_op(sp=0.3))["ops"]["edit"]["specificity"] == "generic damage" and g_(edit=_op(relearn=0.22))["ops"]["edit"]["depth"] == "deep"
+          and g_(edit=_op(relearn=0.35))["ops"]["edit"]["depth"] == "partial" and g_(edit=_op(B2=0.01))["ops"]["edit"]["meta_unlearned"] and g_(edit=_op(acc=0.01, label="consistent permutation"))["ops"]["edit"]["inverted"]
+          and not g_(edit=_op(acc=0.01))["ops"]["edit"]["inverted"] and g_(edit=_op(matched=False))["ops"]["edit"]["specificity"].startswith("not testable"))
+    check("C-T4 ladder: one direction / subspace r* = 2, 4, 6 / the whole task span (11) / not specific / undecided / > 11", g_(blk1=_op(acc=0.05, span=0.9))["ladder"]["rung"] == "one direction"
+          and g_(blk2=_op(acc=0.05, span=0.95))["ladder"] == dict(rung="subspace", r_star=2) and g_(blk2=_op(acc=0.05, span=0.5), blk4=_op(acc=0.05, span=0.95))["ladder"]["r_star"] == 4
+          and g_(blk6=_op(acc=0.05, span=0.95))["ladder"]["r_star"] == 6 and g_(block11=_op(acc=0.05, iso=0.95))["ladder"].get("label") == "subspace: the whole task span"
+          and g_(block11=_op(acc=0.05, iso=0.05))["ladder"]["rung"] == "not specific" and g_(block11=_op(acc=0.05, iso=0.5))["ladder"]["rung"].startswith("undecided") and g_()["ladder"]["r_star"] == "> 11")
+    am = ct4(_ladder(edit=_op(amended=True)), False); e = am["cells"]["bp_mup_W128"]["ops"]["edit"]
+    check("Amendment 2: an amended control (partial removal at d* > r0) is used as run; the plan-text reading is given next to it; G-meta label on the meta level",
+          e["dm"]["amended"] and e["dm"]["d_star"] == 22 and e["dm"]["lam"] == 0.6 and e["unlearns"] and e["specificity"] == "specific" and e["under_plan_text"]["specificity"] == NOT_TESTABLE_DM
+          and e["under_plan_text"]["dm_matched"] is False and am["cells"]["bp_mup_W128"]["ops"]["blk1"]["under_plan_text"] is None and am["cells"]["bp_mup_W128"]["meta_level_labels"] == [RP.LBL_GMETA]
+          and dm_info(dict(d_star=22, r0=11, **{"lambda": 0.5}, dm_matched=True))["amended"] and dm_info({})["matched"] is False and dm_info(dict(match=dict(r=11, r0=11, lam=0.5, matched=True, note="partial removal at r0")))["amended"] is False)
+    t4b = dict(h1=dict(acc=_seeds(0.07), dm=_dm(0.95), probes=dict(task_lin=_seeds(0.09), task_mlp=_seeds(0.09))), h2=dict(acc=_seeds(0.95), dm=_dm(0.95), probes=dict(task_lin=_seeds(0.1), task_mlp=_seeds(0.6))),
+               h3=dict(acc=_seeds(0.5), dm=_dm(0.95), probes=dict(task_lin=_seeds(0.5))))
+    tb = ct4(_t4(dict(blk1=_op(), block11=_op(), blk2=_op(), blk4=_op(), blk6=_op()), t4b), True)["cells"]["bp_mup_W128"]["t4b"]
+    check("C-T4b per layer: causal / correlate with a nonlinear residue / neither", tb["h1"]["causal"] and not tb["h1"]["correlate"] and tb["h1"]["nonlinear_residue"] is False and tb["h2"]["correlate"] and tb["h2"]["nonlinear_residue"]
+          and not tb["h2"]["causal"] and not tb["h3"]["causal"] and not tb["h3"]["correlate"] and tb["h3"]["nonlinear_residue"] is None)
+    w4 = _t4({}); w4["w4"] = dict(W128=dict(base=dict(add=_seeds(0.95), sub=_seeds(0.95)), ops=dict(block_add=dict(op=dict(add=_seeds(0.06), sub=_seeds(0.82), sp=_seeds(0.5), relearn_add={"300": _seeds(0.4), "3000": _seeds(0.5)}), dm=dict(_dm(0.95, key="add"), sub=_seeds(0.85))),
+                                                                                                          erase_h2=dict(op=dict(add=_seeds(0.9), sub=_seeds(0.3), sp=_seeds(0.5), relearn_add={"300": _seeds(0.4), "3000": _seeds(0.5)}), dm=dict(_dm(0.95, key="add"), sub=_seeds(0.85))))))
+    w4r = ct4(w4, True)["w4"]["W128"]["ops"]
+    check("C-T4 two-family world: forget (add) against retain (sub >= 0.9 x its value under the matched random operation)", w4r["block_add"]["forget_unlearns"] and w4r["block_add"]["specificity"] == "specific" and not w4r["erase_h2"]["forget_unlearns"]
+          and w4r["erase_h2"]["specificity"] == "generic damage" and ct4(None, True)["status"].startswith("not run"))
+    # ---- C-T5
+    f5 = lambda **k: ct5(_t5(**k))["widths"]["W128"]
+    v5 = f5()
+    check("C-T5: r* per seed (median over tasks), 'low-dimensional search', 'un-searched' for col (control rand) and z1 (control dmr)", v5["arms"]["col"]["rstar_seed"] == [3.0] * 5 and v5["low_dimensional_search"] and v5["verdict_col"] == "un-searched"
+          and v5["verdict_z1"] == "un-searched" and v5["re_routing"] is False and v5["arms"]["rand"]["rstar_seed"] == [25.0] * 5, (v5["arms"]["col"]["rstar_seed"], v5["verdict_col"]))
+    check("C-T5: re-routing (col lower bound > 0.11), partial (<= 0.5 x control), none, control too weak (no 'un-searched', no 'low-dimensional search'), slow search (r* > 4), unmatched dmr 'not testable' (G45)",
+          f5(col_last=0.3)["re_routing"] and f5(col_last=0.2)["verdict_col"] == "partial" and f5(col_last=0.4)["verdict_col"] == "none" and f5(rand=0.3)["verdict_col"] == "partial" and f5(rand=0.3, col_last=0.2)["verdict_col"] == "none" and not f5(rand=0.3)["low_dimensional_search"]
+          and not f5(col_r=7)["low_dimensional_search"] and f5(dm_matched=False)["verdict_z1"].startswith("not testable") and f5(dm_amended=True)["under_plan_text"]["verdict_z1"].startswith("not testable")
+          and f5(dm_amended=True)["verdict_z1"] == "un-searched" and f5(dm_amended=True)["dm_rounds_amended"] == [24] and "under_plan_text" not in f5() and ct5(None)["status"].startswith("not run"))
+    # ---- C-T6
+    def t6(n_real=4, ratio=(1.8, 1.7), l1=True):
+        modes = [dict(modes=[dict(var=0.5 if (i == 0 and s < n_real) else 0.1, lissajous_r=0.1 if i == 0 else 0.9) for i in range(5)]) for s in range(5)]
+        nulls = [dict(var_p99=[0.3] * 5, lis_p5=[0.5] * 5) for _ in range(5)]
+        return dict(free=dict(modes=modes, null=nulls, B2={"8": _seeds(0.2)}), caps={"1": dict(level1=[l1] * 5, ratio_Ex=_seeds(ratio[0]), ratio_W2=_seeds(ratio[1]), B2={"8": _seeds(0.1)})})
+    check("C-T6: a mode is real in >= 4 of 5 seeds (variance above the nulls' p99 and |corr| with the cosine template below their p5); re-routing under the cap", ct6(t6())["modes"][0]["real"] and not ct6(t6())["modes"][1]["real"]
+          and not ct6(t6(n_real=3))["modes"][0]["real"] and ct6(t6())["caps"]["1"]["re_routing"] and not ct6(t6(ratio=(1.8, 1.2)))["caps"]["1"]["re_routing"] and not ct6(t6(l1=False))["caps"]["1"]["re_routing"] and ct6(None)["status"].startswith("not run"))
+    # ---- C-T7
+    pc_ok = dict(widths_G_PC=[128], G_PC={"128": dict(status="usable")}, G_meta=True); v7 = ct7(_t7(), pc_ok)
+    claims = v7["family"]["claims"]; it = {r["item"]: r for r in v7["family"]["items"]}
+    check("C-T7: Holm over the 14-item family of a G-PC width; a paired PC - BP difference of 0.3 is a claim, differences of 0 are not", v7["family"]["family_size"] == 14 and claims == ["W128 fwd_acc_h1"] and it["fwd_acc_h1"]["p_holm"] <= 0.05
+          and abs(it["fwd_acc_h1"]["mean"] - 0.3) < 1e-9 and it["fwd_acc_h2"]["claim"] is False and v7["verdict"].startswith("claims:"), claims)
+    from scipy import stats as _st
+    rows_ = holm([dict(W=1, item=f"i{k}", values=v) for k, v in enumerate(([0.5, 0.52, 0.48, 0.51, 0.49], [0.1, -0.1, 0.2, -0.2, 0.05], [0.12, 0.13, 0.11, 0.12, 0.125]))])["items"]
+    p_ = [float(2 * _st.t.sf(abs(np.mean(v) / (np.std(v, ddof=1) / math.sqrt(5))), 4)) for v in ([0.5, 0.52, 0.48, 0.51, 0.49], [0.1, -0.1, 0.2, -0.2, 0.05], [0.12, 0.13, 0.11, 0.12, 0.125])]
+    order = np.argsort(p_); hp = np.zeros(3); run_ = 0.0
+    for rank, i in enumerate(order): run_ = max(run_, min(1.0, (3 - rank) * p_[i])); hp[i] = run_
+    check("Holm: step-down adjusted p values equal a direct computation; |mean| >= 0.10 needed for a claim", all(abs(rows_[i]["p_holm"] - hp[i]) < 1e-12 for i in range(3)) and rows_[0]["claim"] and not rows_[1]["claim"] and rows_[2]["claim"]
+          and not holm([dict(W=1, item="small", values=[0.05, 0.051, 0.049, 0.05, 0.0505])])["items"][0]["claim"])
+    v7b = ct7(_t7(diff=0.0, relax=0.25), pc_ok); v7c = ct7(_t7(), dict(widths_G_PC=[], G_PC={"128": dict(status="BP-equivalent (not used for PC claims)")})); v7d = ct7(_t7(seeds=3), pc_ok); v7e = ct7(_t7(diff=0.0), pc_ok)
+    check("C-T7: 'relaxation restores task information' from the PC-only contrast; no G-PC width 'not testable'; fewer than 4 paired seeds not testable; no claim", v7b["relaxation_restores_task_information"] == ["W128 relax_contrast_T20_h2"]
+          and v7c["verdict"] == "not testable (no G-PC width)" and v7c["per_width"]["128"]["G_PC"].startswith("BP-equivalent") and v7d["family"]["family_size"] == 0 and v7d["verdict"].startswith("not testable")
+          and v7e["verdict"].startswith("no claim") and ct7(None, pc_ok)["status"].startswith("not run"), (v7b["family"]["claims"], v7d["verdict"]))
+    # ---- end to end: nothing there; then a synthetic root with a subset of the parts
+    o0 = run(os.path.join(work, "none"), os.path.join(work, "empty"), os.path.join(work, "out0", "unlearn_verdict.json"))
+    check("end to end without any input: every part 'not run', strict JSON written", all(str(get(o0, k, "status")).startswith("not run") for k in ("C_Q1", "C_Q2", "C_Q3", "C_Q4a", "C_Q5", "C_Q6", "C_T0", "C_T4", "C_T7")) and o0["C_Q4b"]["verdict"].startswith("not run")
+          and RP.load_json(os.path.join(work, "out0", "unlearn_verdict.json")) is not None and o0["C_T7"]["status"].startswith("not run"))
+    r2 = os.path.join(work, "r2"); wj = lambda rel, js: RP.write_json(os.path.join(r2, RP.expected_session(rel), rel), js)
+    wj("unlearn/q2.json", _q2(GA=False)); wj("unlearn/q3.json", _q3(GA=False)); wj("unlearn/q4a.json", q4(0.6, 0.8)); wj("unlearn/q4b.json", qb); wj("unlearn/armA.json", aA(0.3, [_row(d=1), dict(gone, d=2), dict(gone, d=3)]))
+    wj("unlearn/q5.json", q5(0.9, 0.7, 0.7)); wj("unlearn/q6.json", q6()); wj("unlearn/q1.json", dict(status="ran", statements=dict(RSI="one direction; no nonlinear residue found"), G42=dict(pass_=True), concepts={}))
+    wj("unlearn_toy/t3.json", t3()); wj("unlearn_toy/t4.json", _ladder(edit=_op(amended=True))); wj("unlearn_toy/t5.json", _t5(dm_amended=True)); wj("pc_toy/t7.json", _t7())
+    rpc = os.path.join(work, "r1full"); RP.synth_r1(rpc, seed=1, plants={(14, "RSI_a", n): 3.0 * axp[14]["u_T_perp"] for n in (1, 2, 3, 4)},
+                                                   summaries={14: dict(verdict=dict(verdict="not decidable (pilot gate GO1 failed; would have read: likely)", PC_PASS=True, label_attractor=False, gates=dict(failed=["GO1"])))}); RP.synth_pcs(rpc)
+    o1 = run(rpc, r2, os.path.join(work, "out1", "unlearn_verdict.json")); sm = o1["summary"]
+    check("end to end on a synthetic root: verdicts, labels (G-desc on block 14, RGI axis), C-T7 family at the G-PC width, Amendment 2 list", sm["C-Q2"]["u_RSI"] == "suppressed" and sm["C-Q3"]["u_RSI"] == "unlearned" and sm["C-Q4a"] == "shallow"
+          and sm["C-Q4b"] == "un-searched" and sm["C-Q4 arm A"] == "un-searched" and sm["C-T3"]["gate"] is True and sm["C-T7"].startswith("claims: W128 fwd_acc_h1") and o1["labels_block14"] == [RP.LBL_GDESC]
+          and RP.LBL_RGI in o1["C_Q3"]["rules"]["span"]["labels"] and o1["amendment_2"]["n_affected"] >= 3 and any(a["where"].startswith("C-T5") for a in o1["amendment_2"]["affected"])
+          and o1["C_T0"]["status"].startswith("not run") and o1["gates"]["G_meta"]["value"] is True and o1["gates"]["G_likely"]["from_would_have_read"], (sm["C-Q4b"], sm["C-T7"], o1["amendment_2"]["n_affected"]))
+    ok = all(r["ok"] for r in res); RP.write_json(os.path.join(work, "r2_unlearn_verdict_selftest.json"), dict(ok=ok, tests=res, seconds=time.time() - t_start))
+    print(f"r2_unlearn_verdict selftest: {sum(r['ok'] for r in res)}/{len(res)} passed ({time.time() - t_start:.0f}s)", flush=True)
+    return ok
+
+
+if __name__ == "__main__":
+    sys.exit(main())
