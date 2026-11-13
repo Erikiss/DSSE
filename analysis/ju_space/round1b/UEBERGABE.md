@@ -55,3 +55,27 @@
   (mit MTP-Drafter als zweiter nativer Mehr-Token-Linse); 31b in 4 Bit (etwa 16 GB, passt auf A100-40GB) nur mit
   Vorwärts-Messungen aus K und L (gradientenbasierte Verfahren bräuchten entpackte Gewichte, etwa 62 GB); 12b als Brücke zur
   Neuron Lens für Gemma 4 12B.
+
+## Reihenfolge und Budget für die lokale Sitzung (API-Guthaben, etwa 160 $)
+1. Runde 1b fertigstellen (was „Stand“ noch offen lässt; Integrationstest, Notebooks), Pilot, Einfrieren, Läufe. Vorrang.
+2. Teil P (Pythia-1.4B-Brücke, Stufe 2): Recherche liegt in `results/ju_space/plans/runde1b/arbeitsstand/findings/P_research.json`;
+   kurzen Planteil schreiben (nur Vorwärts-Messungen aus K, L und eine kurze Fassung von D1 bei 2.048 Token; Ausgaben je Token auf
+   Pile-Sequenzen mit Kennung und Position, verknüpfbar mit den Timaeus-Clustern; keine Timaeus-Daten automatisiert laden, solange
+   deren Bedingungen das nicht klar erlauben), dann umsetzen. Etwa 3 A100-Stunden (+1,5 für Trainingsstände).
+3. Teil G (Gemma 4, siehe oben): kurzen Planteil schreiben und umsetzen.
+   - Vorab prüfen: Modellkarten, config.json und Lizenzen der vier Fassungen und der MTP-Drafter (Hugging Face); ob transformers die
+     compressed-tensors-Fassung mit Hooks lädt. Gegatete Modelle: Hugging-Face-Token setzt der Nutzer selbst in den Colab-Secrets.
+   - Umfang: e2b/e4b (Originale, float32) mit K-Kern (H-Menge nach Gao, Kettenlinse durch Selbst-Ausrollen, Eichung am MTP-Drafter)
+     und L-Kern; 31b-qat nur Vorwärts-Messungen aus K und L; optional D1-Kontrast (lokale gegen globale Aufmerksamkeit).
+   - Adapter im Kern-Lader (`r1b_core`): Hook-Punkte (Blockausgabe, MLP-Zwischenwerte), Chat-Vorlage, Fensteraufmerksamkeit.
+   - Etwa 4-8 A100-Stunden.
+- Kostenschätzung Claude Code (grob, nicht verbindlich): eine längere Arbeitssitzung kostet mit Opus 5.5 etwa 25-65 $, mit
+  Sonnet 5.5 etwa die Hälfte. 160 $ reichen für Rest von 1b, P und G nur bei schlanker Arbeitsweise: eine Sitzung, keine
+  Gremien oder Mehrfach-Agenten, `/model sonnet` für Routinearbeit, `/cost` im Blick, Ausgabenlimit im Console-Workspace.
+
+## Startprompt für Teil G (später kopieren)
+> Lies analysis/ju_space/round1b/UEBERGABE.md (Abschnitte zu Gemma 4) und IMPLEMENTATION.md. Prüfe zuerst Modellkarten, Lizenzen
+> und config.json der Gemma-4-Fassungen und der MTP-Drafter. Schreibe dann einen kurzen Planteil
+> results/ju_space/plans/runde1b/arbeitsstand/plan/runde1b_plan_teil_G.md im Format der anderen Teile (Messungen aus K und L,
+> gleiche Definitionen und Urteilssätze, Vorwärts-Messungen für 31b-qat), setze ihn mit einem Gemma-Adapter im Kern-Lader um,
+> teste im Mock-Modus und baue die Notebooks. Schlank arbeiten, nach jedem Schritt committen und pushen. Antworte auf Deutsch.

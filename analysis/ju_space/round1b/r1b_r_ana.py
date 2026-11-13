@@ -43,7 +43,7 @@ def load(ctx):
     probs, n = {}, 0
     for s in sorted(glob.glob(os.path.join(ctx.inp, "r1b_R_*"))):
         for f in glob.glob(os.path.join(s, "**", "*"), recursive=True):
-            if os.path.isfile(f) and not f.endswith(".prov.json") and not f.endswith(".orig") and "/cache/" not in f and "/r1b_replay" not in f:
+            if os.path.isfile(f) and not f.endswith((".prov.json", ".orig", "acc.pt")) and not any(x in f for x in ("/cache/", "/r1b_replay", "/cc4/")):
                 n += 1; e = K.check_output(f)
                 if e:
                     probs.setdefault(os.path.basename(s), []).append(e)
@@ -51,7 +51,7 @@ def load(ctx):
     for b in R.BLOCKS:
         c = K.load_json(R.find(ctx, f"r2/b{b}/checks.json") or "", {}) or {}; cc[str(b)] = dict(ok=bool(c.get("ok")), checks={k: c.get(k) for k in ("CC1", "CC2", "CC3")})
     c4 = K.load_json(R.find(ctx, "r2/b14/cc4.json") or "", {}) or {}; cc["14"]["CC4"] = c4.get("CC4"); cc["14"]["ok"] = cc["14"]["ok"] and bool((c4.get("CC4") or {}).get("ok"))
-    ctx.write_json("ana/index.json", dict(files_checked=n, RG17=dict(incomplete=sorted(probs), problems={k: v[:5] for k, v in probs.items()}), RG5=cc,
+    R.wj(ctx, "ana/index.json", dict(files_checked=n, RG17=dict(incomplete=sorted(probs), problems={k: v[:5] for k, v in probs.items()}), RG5=cc,
                                           bootstrap_t=boot_t(ctx)), config=dict())
 
 
@@ -211,7 +211,7 @@ def r2_block(ctx):
     tang = [float(e["abs_cos"]["mean"]) for (arm, L, n), e in evs.items() if arm == "NP" and isinstance(e.get("abs_cos"), dict) and isinstance(e["abs_cos"].get("mean"), float)]
     res["R32"] = dict(deb=npr, mean_abs_cos=K.val(np.mean(tang) if tang else float("nan"), "NaN:no_np_arm"), trimmed=b != 14 and ctx.trimmed("RL2"))
     ctx.save_pt(f"ana/r2_b{b}_draws.pt", {"|".join(map(str, k)): v for k, v in draws.items()}, config=dict(block=b, B=2000, seed=1001))
-    ctx.write_json(f"ana/r2_b{b}.json", res, config=dict(block=b, B=2000, seed=1001, flips=10000, bootstrap_t=bt))
+    R.wj(ctx, f"ana/r2_b{b}.json", res, config=dict(block=b, B=2000, seed=1001, flips=10000, bootstrap_t=bt))
 
 
 def NAMES_FOR(L):
@@ -267,7 +267,7 @@ def sens(ctx):
             hits += ok
         rate = hits / nout
         out[tag] = dict(pass_rate=rate, passes=rate >= 0.8, realised_planted_A={f"{L}:{n + 1}": v for (L, n), v in real.items()}, outer=nout, inner=nin)
-    ctx.write_json(f"ana/sens_b{b}.json", dict(block=b, **out), config=dict(plant_A=0.25, outer=nout, inner=nin, seed=2101, flips=2000, bootstrap_t=bt))
+    R.wj(ctx, f"ana/sens_b{b}.json", dict(block=b, **out), config=dict(plant_A=0.25, outer=nout, inner=nin, seed=2101, flips=2000, bootstrap_t=bt))
 
 
 # ------------------------------------------------------------------------------------------------------------------ R3 per block
@@ -327,7 +327,7 @@ def r3_block(ctx):
         res["directions"][un] = dict(cells=cells, k=kk, string=s, p=pr, shape=shape, slope_iv=slope_iv,
                                      even="even response along u*_b" if even else "no even response resolved", labels=lab)
     res["R34"] = _r34(ctx, b, P, us, ax)
-    ctx.write_json(f"ana/r3_b{b}.json", res, config=dict(block=b, B=2000))
+    R.wj(ctx, f"ana/r3_b{b}.json", res, config=dict(block=b, B=2000))
 
 
 def _rep4(c):
@@ -500,7 +500,7 @@ def r4_block(ctx):
             ("FDT confirmed by a direct push" if isinstance(iv_[0], float) and iv_[0] <= 0 <= iv_[1] else "FDT not confirmed by a direct push")
         r43[which] = dict(lambda_direct=ld(r.d().cpu()), lambda_FDT=e["lam_FDT"], diff_iv=iv_, string=cell, labels=["non-normal: Rayleigh read"] if ray else [])
     lab = [] if all(x["string"] != "FDT not confirmed by a direct push" for x in r43.values()) else ["FDT not confirmed by a direct push"]
-    ctx.write_json(f"ana/r4_b{b}.json", dict(block=b, lambda_cf=pt, lambda_iv={k: S.iv(v) for k, v in bs.items()}, perm_C=K.dist(perm), resolved=bool(resolved),
+    R.wj(ctx, f"ana/r4_b{b}.json", dict(block=b, lambda_cf=pt, lambda_iv={k: S.iv(v) for k, v in bs.items()}, perm_C=K.dist(perm), resolved=bool(resolved),
                                              diff_iv=div, proj_vmax_VRSI=proj, strings=st, lambda_RSI=dict(pt=lmR, iv=riv, string=lam_s),
                                              p=dict(ge1=pos(bs["W_RSI_build"], 1.0), lt1=pos(bs["W_RSI_build"], 1.0, "less")), lambda_lin=lin, R43=r43,
                                              ritz_full=J["ritz_full"]["lam"], full_space=full, labels=lab), config=dict(block=b, B=B, perms=nper, halvings=len(H)))
@@ -597,7 +597,7 @@ def r6(ctx):
         rec["string"] = ("K not defined" if not isinstance(k, dict) else "round-2 T 1.0 cell not replicated (dissipative on u_T_perp)" if k["iv"][1] < 1 else
                          "replicated, self-sustaining (K lower bound > 1)" if k["iv"][0] > 1 else "replicated (K >= 1 not excluded)")
         out["R63"] = rec
-    ctx.write_json("ana/r6.json", out, config=dict(B=2000))
+    R.wj(ctx, "ana/r6.json", out, config=dict(B=2000))
 
 
 # ------------------------------------------------------------------------------------------------------------------ verdicts
@@ -703,8 +703,8 @@ def verdicts(ctx):
         for v in (out[x] or {}).values():
             if isinstance(v, dict):
                 v.pop("provenance", None)
-    ctx.write_json("r1b_R_verdict.json", out, config=dict(families="F+ / F- (Holm 0.05)"))
-    ctx.write_json("rg15.json", dict(J1=J1, J2=J2, J1_and_J2=J1 and J2), config=dict())
+    R.wj(ctx, "r1b_R_verdict.json", out, config=dict(families="F+ / F- (Holm 0.05)"))
+    R.wj(ctx, "rg15.json", dict(J1=J1, J2=J2, J1_and_J2=J1 and J2), config=dict())
 
 
 def _r25(ctx, ok):
@@ -739,4 +739,4 @@ def pass2(ctx):
     for v in out.values():
         if isinstance(v, dict):
             v.pop("provenance", None)
-    ctx.write_json("r1b_R_verdict2.json", out, config=dict(), labels=["conditional run"])
+    R.wj(ctx, "r1b_R_verdict2.json", out, config=dict(), labels=["conditional run"])

@@ -30,12 +30,14 @@ def soft_gen(m, b, pids, d, a, cap, nsteps, T=0.7, batch=32, extra_read=None):
             hk.push(b, d, a, signs=sg, cap=cap, rowstart=pad + m.START)
         embs, surv, alive = [], [], t.ones(len(pb), dtype=t.float64, device=dev)
         with hk, t.no_grad():
-            o = m.model(input_ids=ids.to(dev), attention_mask=am.to(dev), use_cache=True); pkv = o.past_key_values; amk = am.to(dev)
+            amk = am.to(dev); pos = (amk.cumsum(-1) - 1).clamp_min(0)          # positions as in generate() (left padding)
+            o = m.model(input_ids=ids.to(dev), attention_mask=amk, position_ids=pos, use_cache=True); pkv = o.past_key_values; last = pos[:, -1:]
             for s in range(nsteps):
                 p = t.softmax(o.logits[:, -1].double() / T, -1); e = (p.to(E.dtype) @ E)[:, None]; surv.append(alive.clone())
                 alive = alive * (1 - p[:, stop].sum(-1)); embs.append(e); amk = t.cat([amk, t.ones(len(pb), 1, dtype=amk.dtype, device=dev)], 1)
                 if s < nsteps - 1:
-                    o = m.model(inputs_embeds=e, attention_mask=amk, past_key_values=pkv, use_cache=True); pkv = o.past_key_values
+                    last = last + 1; o = m.model(inputs_embeds=e, attention_mask=amk, position_ids=last, past_key_values=pkv, use_cache=True)
+                    pkv = o.past_key_values
         cb.append(R.cbar_of(rec, [[0] * nsteps] * len(pb))["pooled"])
         soft = t.cat(embs, 1); W = t.stack(surv, 1)
         with K.Hooks(m.model) as hr, t.no_grad():
@@ -59,7 +61,7 @@ def r61(ctx):
         ctx.save_pt(rel, dict(xp=X[0::2].float(), xm=X[1::2].float(), prompt_of=t.arange(len(pids)), a=a, cbar=cbar, push=d.float(), block=b,
                               direction=u), config=dict(block=b, direction=u, a_DN=a, T=0.7, steps=m.nnew))
         out["cells"][u] = dict(file=rel, a=a, cbar=cbar)
-    ctx.write_json(f"r6/r61_b{b}.json", out, config=dict(block=b))
+    R.wj(ctx, f"r6/r61_b{b}.json", out, config=dict(block=b))
 
 
 def r61_iter(ctx):
@@ -77,7 +79,7 @@ def r61_iter(ctx):
             d = ((ev["xp"].double() - ev["xm"].double()) / 2).nanmean(0)
         rel = f"r6/b{b}/iter_{L}.pt"; ctx.save_pt(rel, dict(rows=rows, prompt_of=t.arange(len(pids)), block=b, loop=L), config=dict(block=b, loop=L, rounds=4))
         out["loops"][L] = rel
-    ctx.write_json(f"r6/r61it_b{b}.json", out, config=dict(block=b))
+    R.wj(ctx, f"r6/r61it_b{b}.json", out, config=dict(block=b))
 
 
 def turns(ctx, m, P, t1, T, kmax, keyfn, b=14):

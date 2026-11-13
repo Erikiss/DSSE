@@ -59,7 +59,7 @@ def Jb(maps, conv, b):
 
 def lens(ctx):
     maps, conv, sha = lens_maps(ctx)
-    ctx.write_json("r5/lens.json", dict(convention=conv, sha256=sha, n_maps=int(maps.shape[0]), source="k4j.json (r1b_K_S1)"), config=dict())
+    R.wj(ctx, "r5/lens.json", dict(convention=conv, sha256=sha, n_maps=int(maps.shape[0]), source="k4j.json (r1b_K_S1)"), config=dict())
 
 
 def _texts64(ctx, P):
@@ -107,7 +107,7 @@ def axes_lens(ctx):
                                                     u_neg=un, cap=cap, med=med if st is None else float(st["ref"]["med"]), diff=diff, keep=keep, Xc512=Xc),
                     config=dict(block=b, cap_rule="R1 ref" if st is not None else "2 x median norm over 64 TXT0 texts"))
         summ[str(b)] = dict(cap=cap, kappa={k: float(v["kappa"][0]) for k, v in ax.items()})
-    ctx.write_json("ax1b/ax1b_lens.json", dict(blocks=summ, files=[f"ax1b/ax1b_lens_b{b}.pt" for b in LB]), config=dict(blocks=LB))
+    R.wj(ctx, "ax1b/ax1b_lens.json", dict(blocks=summ, files=[f"ax1b/ax1b_lens_b{b}.pt" for b in LB]), config=dict(blocks=LB))
 
 
 def dirs51(ctx, b, m):
@@ -129,12 +129,13 @@ def wsets(ctx, m, kind="eval"):
 
 
 def tf_logits(m, b, ids, start, setup=None):
-    """Teacher-forced full logits (float64) at the positions predicting the continuation, under setup(hk) hooks."""
+    """Teacher-forced full logits (float32) at the positions predicting the continuation, under setup(hk) hooks; unhooked: also the
+    last block's raw output (before the final norm) at those positions."""
     t = R.torch(); dev = K.model_device(m.model)
-    with (setup(K.Hooks(m.model)) if setup else K.Hooks(m.model)), t.no_grad():
-        out = m.model(t.tensor([ids], device=dev), output_hidden_states=setup is None)
-    lg = out.logits[0, start - 1:len(ids) - 1].double()
-    return lg, (out.hidden_states[-1][0, start - 1:len(ids) - 1].double() if setup is None else None)
+    with (setup(K.Hooks(m.model)) if setup else K.Hooks(m.model).capture([m.L - 1], cpu=False)) as hk, t.no_grad():
+        out = m.model(t.tensor([ids], device=dev))
+    lg = out.logits[0, start - 1:len(ids) - 1].float()
+    return lg, (hk.states[m.L - 1][0][0, start - 1:len(ids) - 1].double() if setup is None else None)
 
 
 def pred_dnorm(m, xfin, delta_fin):
@@ -149,17 +150,16 @@ def r51_block(ctx):
     t = R.torch(); b = int(ctx.step.rsplit("_b", 1)[1]); which = "J1b" if ctx.session.startswith("r1b_R_S5L") else "J"
     m = R.M(ctx); P = R.p256(ctx); maps, conv, sha = lens_maps(ctx, which); J = Jb(maps, conv, b); axl = R.load_pt(R.find(ctx, f"ax1b/ax1b_lens_b{b}.pt"))
     cap = axl["cap"]; dm = R.Dmg(ctx, m, b, cap); D = dirs51(ctx, b, m); SI = wsets(ctx, m); t64 = _texts64(ctx, P); pids = [m.ids(p) for p in P["prompts"]]
-    W_U = m.model.lm_head.weight.double(); res = dict(block=b, lens=which, convention=conv, lens_sha256=sha, directions={})
+    W_U = m.model.lm_head.weight.float(); res = dict(block=b, lens=which, convention=conv, lens_sha256=sha, directions={})
     if J is None:
         raise K.NotRun(f"no J-lens map for block {b} under convention {conv}")
     cal = {u: ctx.cached(f"aDN_{u}", (lambda u=u: dm.calibrate(v, R.alpha0(ctx, b) if b in R.BLOCKS else 0.1)), fmt="json") for u, v in D.items()}
     base = []
     for i, c in t64:
-        ids = pids[i] + list(c); lg0, xf = tf_logits(m, b, ids, len(pids[i])); lp0 = t.log_softmax(lg0, -1); p0 = lp0.exp()
-        cb = float(xf.new_tensor(0)); A = {}
-        for k, sid in SI.items():
-            q = t.softmax(lp0[:, sid], -1); A[k] = q @ W_U[sid]
-        base.append(dict(ids=ids, start=len(pids[i]), lp0=lp0, xf=xf, wbar=p0.float() @ W_U.float(), A=A, top=lp0.topk(min(1000, lp0.shape[-1]), -1).indices))
+        ids = pids[i] + list(c); lg0, xf = tf_logits(m, b, ids, len(pids[i])); lp0 = t.log_softmax(lg0, -1); wbar = lp0.exp() @ W_U
+        AS = t.stack([t.softmax(lp0[:, sid], -1) @ W_U[sid] - wbar for sid in SI.values()])          # [24, T, D]: E_q[W_U] - E_p[W_U]
+        base.append(dict(ids=ids, start=len(pids[i]), lS0=t.stack([t.logsumexp(lp0[:, sid], -1) for sid in SI.values()]), xf=xf, AS=AS,
+                         top=lp0.topk(min(1000, lp0.shape[-1]), -1).indices))
     with t.no_grad():                                                         # cbar_b on these texts (read mode)
         cbs = []
         for e in base:
@@ -175,18 +175,18 @@ def r51_block(ctx):
             for e in base:
                 lg = {s: t.log_softmax(tf_logits(m, b, e["ids"], e["start"], lambda hk, s=s: hk.push(b, v, a, signs=s, cap=cap, rowstart=t.tensor([m.START])))[0], -1)
                       for s in (1.0, -1.0)}
-                dn = pred_dnorm(m, e["xf"], dfin.to(e["xf"].device)); ebar = (e["wbar"].double() * dn).sum(-1)
-                for k, sid in SI.items():
-                    lpS = {s: t.logsumexp(lg[s][:, sid], -1) for s in lg}; lS0 = t.logsumexp(e["lp0"][:, sid], -1)
-                    meas[k].append(float(((lpS[1.0] - lpS[-1.0]) / 2).mean())); even[k].append(float(((lpS[1.0] + lpS[-1.0]) / 2 - lS0).mean()))
-                    pred[k].append(float(((e["A"][k] * dn).sum(-1) - ebar).mean()))
+                dn = pred_dnorm(m, e["xf"], dfin.to(e["xf"].device)).float(); pk = (e["AS"] * dn[None]).sum(-1).mean(1)
+                for j, (k, sid) in enumerate(SI.items()):
+                    lpS = {s: t.logsumexp(lg[s][:, sid], -1) for s in lg}
+                    meas[k].append(float(((lpS[1.0] - lpS[-1.0]) / 2).mean())); even[k].append(float(((lpS[1.0] + lpS[-1.0]) / 2 - e["lS0"][j]).mean()))
+                    pred[k].append(float(pk[j]))
                 tp = e["top"]; mo = (lg[1.0].gather(1, tp) - lg[-1.0].gather(1, tp)) / 2
                 pdl = t.stack([dn[r] @ W_U[tp[r]].T for r in range(tp.shape[0])]); mo, pdl = mo - mo.mean(1, keepdim=True), pdl - pdl.mean(1, keepdim=True)
                 corr.append(float(((mo * pdl).sum(1) / (mo.norm(dim=1) * pdl.norm(dim=1) + 1e-12)).mean()))
             rows[f"{f:g}"] = dict(a=a, measured=meas, even=even, predicted=pred, token_corr=float(np.mean(corr)))
         res["directions"][u] = dict(a_DN=cal[u], doses=rows)
     res["cbar"] = cbar; rel = f"{'r5l' if which == 'J1b' else 'r5'}/r51_b{b}.json"
-    ctx.write_json(rel, res, config=dict(block=b, sets=list(SI), doses=[0.25, 0.5, 1, 2], texts=len(base)),
+    R.wj(ctx, rel, res, config=dict(block=b, sets=list(SI), doses=[0.25, 0.5, 1, 2], texts=len(base)),
                    labels=["refit lens (second attempt)"] if which == "J1b" else [])
 
 
@@ -223,10 +223,10 @@ def rg10(ctx):
         prof[str(b)] = validity(K.load_json(p)) if os.path.exists(p) else dict(valid=False, string=K.coded("NA:not_run:input missing"))
     lab = ["refit lens (second attempt)"] if j1b else []
     if j1b:
-        ctx.write_json("r5l/jlens_validity_j1b.json", dict(blocks=prof, lens="LENS-J1b"), config=dict(), labels=lab); return
-    ctx.write_json("jlens_validity.json", dict(blocks=prof, lens="LENS-J", convention=K.load_json(ctx.path("r5/lens.json"))["convention"]), config=dict())
+        R.wj(ctx, "r5l/jlens_validity_j1b.json", dict(blocks=prof, lens="LENS-J1b"), config=dict(), labels=lab); return
+    R.wj(ctx, "jlens_validity.json", dict(blocks=prof, lens="LENS-J", convention=K.load_json(ctx.path("r5/lens.json"))["convention"]), config=dict())
     refit = (not prof["14"]["valid"]) or not any(prof[str(b)]["valid"] for b in (22, 24, 26))
-    ctx.write_json("rg11.json", dict(decision="refit" if refit else "no refit", valid={b: v["valid"] for b, v in prof.items()}),
+    R.wj(ctx, "rg11.json", dict(decision="refit" if refit else "no refit", valid={b: v["valid"] for b, v in prof.items()}),
                    config=dict(rule="not valid at 14 or at all of 22, 24, 26"))
 
 
@@ -259,12 +259,15 @@ def r52(ctx):
         ins = [ST2.a3_input(lambda s: K.enc(m.tok, s), lambda s: K.chat_text(m.tok, s), o["text"]["A3"]) for o in objs]
         base = []
         for a3 in ins:
-            ids = a3["ids"]
-            with t.no_grad():
-                o = m.model(t.tensor([ids], device=dev), output_hidden_states=True)
-            base.append((ids, a3["obj_pos"], o.hidden_states[-1][0, -1:].double(), o.logits[0, -1].double()))
-        tl = lambda v: float(np.mean([float((pred_dnorm(m, xf, (J @ v.double()))[0] @ (W_U[imp].mean(0) - W_U[des].mean(0)))) for ids, pos, xf, lg in base]))
-        rnd = covmatched(axl, 2000 if not ctx.mock else 50, 700 + b); tr = np.array([tl(v) for v in rnd]); tu = tl(u)
+            ids = a3["ids"]; lg, xf = tf_logits(m, b, ids + [m.PAD], len(ids)); base.append((ids, a3["obj_pos"], xf[-1:], lg[-1]))   # answer position
+        dW = W_U[imp].mean(0) - W_U[des].mean(0); g_ = m.model.model.norm.weight.double(); D_ = m.D
+
+        def tl(V):                                     # t_lens for directions V [n, D] (vectorised; first order, forward only)
+            JV = V.double() @ J.T; out_ = 0
+            for ids, pos, xf, lg in base:
+                x = xf[0]; rms = x.pow(2).mean().sqrt(); dn = g_ * (JV - (JV @ x)[:, None] * x[None] / (D_ * rms ** 2)) / rms; out_ = out_ + dn @ dW
+            return (out_ / len(base)).cpu().numpy()
+        rnd = covmatched(axl, 2000 if not ctx.mock else 50, 700 + b); tr = tl(R.torch().stack(rnd)); tu = float(tl(u[None])[0])
         z = (tu - tr.mean()) / tr.std(ddof=1); a = dm.calibrate(u, 0.1)["a"]
 
         def fd(v, pos_only):
@@ -290,7 +293,7 @@ def r52(ctx):
         if valid.get(str(b)) and np.sign(f_all) != np.sign(tu):
             lab.append("lens and direct push disagree in sign")
         out[str(b)] = dict(t_lens=tu, z_lens=z, fd_all=f_all, fd_objects=f_obj, fd_random=rr, a_DN=a, string=s, labels=lab + (["refit lens (second attempt)"] if which == "J1b" else []))
-    ctx.write_json(f"{'r5l' if which == 'J1b' else 'r5'}/r52.json", dict(blocks=out, lens=which), config=dict(n_random=nr, objects=len(objs)))
+    R.wj(ctx, f"{'r5l' if which == 'J1b' else 'r5'}/r52.json", dict(blocks=out, lens=which), config=dict(n_random=nr, objects=len(objs)))
 
 
 def _maskpush(hk, b, v, a, cap, mask):
@@ -312,11 +315,13 @@ def r53(ctx):
     200 centred pseudo-axes). Rule as frozen; per-set z-scores against the nulls reported (validity-5 / stats-5: open)."""
     t = R.torch(); valid, which = _valid(ctx); b = 14; ok = valid.get("14")
     if which == "J1b" and not ok:
-        ctx.write_json("r5l/r53.json", dict(string=K.coded("NA:not_run:LENS-J1b not newly valid at 14")), config=dict()); return
+        R.wj(ctx, "r5l/r53.json", dict(string=K.coded("NA:not_run:LENS-J1b not newly valid at 14")), config=dict()); return
     m = R.M(ctx); P = R.p256(ctx); maps, conv, sha = lens_maps(ctx, which); J = Jb(maps, conv, b); axl = R.load_pt(R.find(ctx, f"ax1b/ax1b_lens_b{b}.pt"))
-    A = axl["axes"]; ax = R.ax1b(ctx, 14); W_U = m.model.lm_head.weight.double(); g = m.model.model.norm.weight.double(); ld = [i for i in range(W_U.shape[0])
-                                                                                                                       if any(ch.isalnum() for ch in m.tok.decode([i]))]
-    Wc = W_U[ld] - W_U[ld].mean(0); G = Wc.T @ Wc; MJ = J.T @ (g[:, None] * G * g[None]) @ J
+    A = axl["axes"]; ax = R.ax1b(ctx, 14); W_U = m.model.lm_head.weight.float(); g = m.model.model.norm.weight.double()
+    ld = R.torch().tensor([i for i in range(W_U.shape[0]) if any(ch.isalnum() for ch in m.tok.decode([i]))]); mu_ = W_U[ld].mean(0); G = 0
+    for i0 in range(0, len(ld), 16384):                         # M_J = J' diag(g) Wc' Wc diag(g) J, Wc = W_U[letters / digits] centred (chunked)
+        Wc = W_U[ld[i0:i0 + 16384]] - mu_; G = G + (Wc.T @ Wc).double()
+    MJ = J.T @ (g[:, None] * G * g[None]) @ J
     ip = lambda x, y: float(x @ MJ @ y)
     basis = []
     for v in (A["sports_raw"], A["tone_raw"], A["sea_raw"], axl["u_neg"]):
@@ -369,7 +374,7 @@ def r53(ctx):
         if p:
             e = R.load_pt(p); w = e["words"]; words[u] = {nm: float(np.mean(w[0::2, j] - w[1::2, j])) for j, nm in enumerate(e["wordsets"])}
     out["generated_word_odd_differences"] = words
-    ctx.write_json(f"{'r5l' if which == 'J1b' else 'r5'}/r53.json", dict(**out, lens=which, labels=[] if ok else ["lens not valid at b"]),
+    R.wj(ctx, f"{'r5l' if which == 'J1b' else 'r5'}/r53.json", dict(**out, lens=which, labels=[] if ok else ["lens not valid at b"]),
                    config=dict(nulls=len(NL), sets=list(SI)))
 
 
@@ -406,10 +411,11 @@ def r55(ctx):
         for rev in range(4):
             cands = {order[0]: bank[order[0]]} if rev == 0 else {f"rev{rev}": (f"{bank[order[0]][0]} + {bank[order[rev]][0]}", bank[order[0]][1] + " " + bank[order[rev]][1],
                                                                                   bank[order[0]][2] + " " + bank[order[rev]][2])}
-            ck = list(cands)[0]; Xf = _axis_reads(ctx, m, {ck: cands[ck]} if rev else {ck: bank[ck]}, qs, (b,))[ck][b]
-            v = verify(Xf, [i % 2 == 0 for i in range(len(qs))], target); tried.append(dict(candidate=cands[ck][0], **v))
+            ck = list(cands)[0] if not rev else f"r{order[0]}_{order[rev]}"; cv = cands[list(cands)[0]]
+            Xf = _axis_reads(ctx, m, {ck: cv}, qs, (b,))[ck][b]
+            v = verify(Xf, [i % 2 == 0 for i in range(len(qs))], target); tried.append(dict(candidate=cv[0], **v))
             if v["accept"]:
-                return dict(string=f"verified label: {cands[ck][0]}", attempts=tried, ranking={BANK[c][0]: sc[c] for c in order[:5]})
+                return dict(string=f"verified label: {cv[0]}", attempts=tried, ranking={BANK[c][0]: sc[c] for c in order[:5]})
         return dict(string="abstained after 3 revisions", attempts=tried, ranking={BANK[c][0]: sc[c] for c in order[:5]})
     for b in R.BLOCKS:
         ax = R.ax1b(ctx, b); out["known"][str(b)] = {k: run(S.unit(ax["axes"][f"{k}_raw"].double()), b, qs_h, k) for k in ("sea", "tone")}
@@ -421,7 +427,7 @@ def r55(ctx):
     out["verifier_error"] = fails; unrel = all(fails[b] == 2 for b in fails)
     for v in out["targets"].values():
         v["labels"] = ["descriptive"] + (["unreliable verifier"] if unrel else [])
-    ctx.write_json("r5/r55.json", out, config=dict(bank=[b[0] for b in BANK], bank_sha256=K.sha256_text(K.canon(BANK)), accept=0.7, nulls=200, revisions=3),
+    R.wj(ctx, "r5/r55.json", out, config=dict(bank=[b[0] for b in BANK], bank_sha256=K.sha256_text(K.canon(BANK)), accept=0.7, nulls=200, revisions=3),
                    labels=["descriptive"])
 
 
@@ -467,7 +473,7 @@ def refit_fit(ctx):
                         h.remove()
             cnt += len(src)
         acc = dict(S=Ssum, n=cnt, done=acc["done"] + [k]); t.save(acc, accp + ".tmp"); os.replace(accp + ".tmp", accp); del mb
-    ctx.write_json(f"r5l/fit_{k}.json", dict(chunk=k, positions=acc["n"], chunks_done=acc["done"]), config=dict(dtype="bfloat16", dim_batch=64))
+    R.wj(ctx, f"r5l/fit_{k}.json", dict(chunk=k, positions=acc["n"], chunks_done=acc["done"]), config=dict(dtype="bfloat16", dim_batch=64))
 
 
 def refit_lens(ctx):

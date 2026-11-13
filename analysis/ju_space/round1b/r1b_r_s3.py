@@ -56,7 +56,7 @@ def dose(ctx):
                       cell=tag, u32=dm.u32(u, a), q=P["q"])
             R.save_ev(ctx, rel, ev, dict(block=b, direction=u_name, cell=tag, a=a, key="('r1b_dose', b, q, s)"))
         summ.append(dict(cell=tag, a=a, a_over_alpha0=a / a0, file=rel))
-    ctx.write_json(f"r3/b{b}/dose_{u_name}.json", dict(block=b, direction=u_name, alpha0=a0, a_DN=cal, cells=summ,
+    R.wj(ctx, f"r3/b{b}/dose_{u_name}.json", dict(block=b, direction=u_name, alpha0=a0, a_DN=cal, cells=summ,
                                                          trimmed_RL1=b != 14 and ctx.trimmed("RL1")), config=dict(block=b, direction=u_name, doses=doses))
 
 
@@ -127,7 +127,7 @@ def words(ctx):
             sets[nm].append(sorted(s_))
     out = dict(WORDSETS=R.WORDSETS, **sets, values=val, deciles=edges.tolist(), n_positions=n, texts=len(idx))
     out["sha256"] = K.sha256_text(K.canon(dict(WORDSETS=R.WORDSETS, **sets)))
-    ctx.write_json("txt0/wordsets.json", out, config=dict(seeds=dict(neutral_eval=4242, neutral_build=4243), pool_sha256=R.NEUTRAL_SHA))
+    R.wj(ctx, "txt0/wordsets.json", out, config=dict(seeds=dict(neutral_eval=4242, neutral_build=4243), pool_sha256=R.NEUTRAL_SHA))
 
 
 def scores(m, b, prompts, conts, cap, T=0.7, batch=8):
@@ -262,4 +262,4 @@ def r43(ctx):
                       w=J["halving0"][which]["w"], lam_FDT=J["halving0"][which]["lam_FDT"], u32=dm.u32(v, cal["a"]))
             R.save_ev(ctx, rel, ev, dict(block=b, which=which, key="('r1b_fdtchk', b, which, q, s)"), labels=cal["labels"])
         out["cells"][which] = dict(file=rel, a=cal["a"], dmg_sym=cal["dmg_sym"], in_band=cal["in_band"])
-    ctx.write_json(f"r4/r43_b{b}.json", out, config=dict(block=b))
+    R.wj(ctx, f"r4/r43_b{b}.json", out, config=dict(block=b))

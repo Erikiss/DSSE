@@ -72,7 +72,7 @@ def soax(ctx):
                                                  u_star_minus={k: v for k, v in loo.items() if not isinstance(v, dict)}, label=lab,
                                                  members=M, signs=sg), config=dict(block=b), labels=[lab] if lab else [])
     chk["ok"] = all(v["ok"] for v in chk["blocks"].values()); chk["label"] = None if chk["ok"] else "SO-AX reproduction failed"
-    ctx.write_json("so_ax/so_ax_check.json", chk, config=dict(tol_cos=1e-4, tol_image=1e-4), labels=[chk["label"]] if chk["label"] else [])
+    R.wj(ctx, "so_ax/so_ax_check.json", chk, config=dict(tol_cos=1e-4, tol_image=1e-4), labels=[chk["label"]] if chk["label"] else [])
     ctx.save_pt("xfer/so_ax_ustar.pt", dict(u_star=ust, src=src), config=dict(blocks=list(R.BLOCKS)))
 
 
@@ -87,7 +87,7 @@ def ref16(ctx):
     for b in (18, 6):
         c = R.r1_state(ctx, b)["ref"]["conts"]; diffs = [p for p in P if list(map(int, c[p])) != list(map(int, st["ref"]["conts"][p]))]
         eq[str(b)] = dict(equal=not diffs, diffs=diffs)
-    ctx.write_json("xfer/dmg_ref_R16.json", dict(items=items, source=dict(path=os.path.relpath(R.r1_file(ctx, 14, "rk/b{b}/state.pt"), ctx.inp),
+    R.wj(ctx, "xfer/dmg_ref_R16.json", dict(items=items, source=dict(path=os.path.relpath(R.r1_file(ctx, 14, "rk/b{b}/state.pt"), ctx.inp),
                                                                               sha256=K.sha256_file(R.r1_file(ctx, 14, "rk/b{b}/state.pt"))),
                                                  equal_at_18_6=eq), config=dict(prompts=P))
 
@@ -249,7 +249,7 @@ def r0_block(ctx):
     out["R0.6"] = r6
     out["strings"] = _r0_strings(b, g, blk, axc, cf)
     out["labels"] = ["post hoc (R0)"]
-    ctx.write_json(f"r0/r0_b{b}.json", out, config=dict(block=b, B=2000, seed=1001, flips=10000), labels=["post hoc (R0)"])
+    R.wj(ctx, f"r0/r0_b{b}.json", out, config=dict(block=b, B=2000, seed=1001, flips=10000), labels=["post hoc (R0)"])
 
 
 def _r1_pc(blk):
@@ -364,7 +364,7 @@ def r07(ctx):
     for b, c in corr.items():
         sdA = {"14": 0.045, "18": 0.033, "6": 0.034}[b]
         mdes[b] = [S.joint_mde(sdA, min(max(c["within"], 0.0), 0.95), min(max(c["between"], 0.0), 0.95), r) for r in ("substantial", "dominated", "unlikely")]
-    ctx.write_json("r0/r07.json", dict(size=dict(rows=size_rows, share_ok=K.val(share), RG6=rg6), power=power, power_model=dict(correlations=corr, joint_mde=mdes,
+    R.wj(ctx, "r0/r07.json", dict(size=dict(rows=size_rows, share_ok=K.val(share), RG6=rg6), power=power, power_model=dict(correlations=corr, joint_mde=mdes,
                                                                                                                             note="calibration only; changes no rule"),
                                         labels=["post hoc (R0)"]), config=dict(draws=nd, flips=nd, seed_flip=2001), labels=["post hoc (R0)"])
 
@@ -384,7 +384,7 @@ def r0_table(ctx):
     claim = "README null claim confirmed" if up else "README null claim not confirmed"
     for d in blocks.values():
         d.pop("provenance", None)
-    ctx.write_json("r0_table.json", dict(blocks=blocks, R0_7={k: v for k, v in r07.items() if k != "provenance"}, RG6=r07["size"]["RG6"],
+    R.wj(ctx, "r0_table.json", dict(blocks=blocks, R0_7={k: v for k, v in r07.items() if k != "provenance"}, RG6=r07["size"]["RG6"],
                                          bootstrap_t=r07["size"]["RG6"].startswith("K1-s size inflated"),
                                          readme_null_claim=dict(string=claim + " (post hoc (R0))", p_to_pc_below=up, pc_above=down),
                                          n_verdicts={b: len(d["strings"]) for b, d in blocks.items()}), config=dict(), labels=["post hoc (R0)"])
@@ -435,7 +435,7 @@ def r81(ctx):
         arm = "mixed (" + "; ".join(f"{x['block']}: {x['string']}" for x in per) + ")"
     cuts = {str(c): runs([bool(C0[l]) and not (fgc[l] > c and fgw[l] > c) for l in range(NL)]) for c in (0.85, 0.90)}
     j1 = not nan
-    ctx.write_json("r8_1.json", dict(per_block=per, arm=arm, J1=j1, run_C0_uncomposed=c0u, run_C0=c0, runs_passing_at_cut=cuts,
+    R.wj(ctx, "r8_1.json", dict(per_block=per, arm=arm, J1=j1, run_C0_uncomposed=c0u, run_C0=c0, runs_passing_at_cut=cuts,
                                      source=dict(path="r2_q3/rgi/geom_stats_qwen3-0.6b.json", sha256=K.sha256_file(p)), labels=["descriptive", "post hoc"]),
                    config=dict(run=12, cut=0.8), labels=["descriptive"])
 
@@ -451,4 +451,4 @@ def r95(ctx):
                                                                                                             file=f"r95/{f}.orig")
         else:
             out[f] = K.coded("NA:not_run:input missing")
-    ctx.write_json("r95/r95.json", dict(files=out, target="results/ju_space/runde2_ergebnisse/"), config=dict())
+    R.wj(ctx, "r95/r95.json", dict(files=out, target="results/ju_space/runde2_ergebnisse/"), config=dict())

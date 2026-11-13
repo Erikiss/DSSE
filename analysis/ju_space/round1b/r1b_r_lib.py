@@ -144,6 +144,8 @@ def r1_state(ctx, b):
     k = ("st", ctx.r1, b)
     if k not in _CACHE:
         _CACHE[k] = torch().load(r1_file(ctx, b, "rk/b{b}/state.pt"), map_location="cpu", weights_only=False)
+    if "axes" not in _CACHE[k]:
+        raise K.NotRun("input missing: round-1 state is a placeholder (MOCK without R1B_MOCK_WITH_R1=1)")
     return _CACHE[k]
 
 
@@ -172,8 +174,10 @@ def ustar(ctx, b):
     if os.path.exists(p):
         d = torch().load(p, map_location="cpu", weights_only=False)
         return d["u_star"].double(), dict(d["u_star_src"])
-    p = r2_file(ctx, f"r2_q2/theta/b{b}_q0.pt")
-    return torch().load(p, map_location="cpu", weights_only=False)["u_star"].double(), dict(path=f"r2_q2/theta/b{b}_q0.pt", sha256=K.sha256_file(p))
+    p = r2_file(ctx, f"r2_q2/theta/b{b}_q0.pt"); d = torch().load(p, map_location="cpu", weights_only=False)
+    if "u_star" not in d:
+        raise K.NotRun(f"input missing: r2_q2/theta/b{b}_q0.pt is a placeholder")
+    return d["u_star"].double(), dict(path=f"r2_q2/theta/b{b}_q0.pt", sha256=K.sha256_file(p))
 
 
 def tv(ctx, required=True):
@@ -197,6 +201,8 @@ def ax1b(ctx, b):
             k = ("ax", p)
             if k not in _CACHE:
                 _CACHE[k] = torch().load(p, map_location="cpu", weights_only=False)
+            if "axes" not in _CACHE[k]:
+                raise K.NotRun(f"input missing: {rel} is a placeholder")
             return _CACHE[k]
     raise K.NotRun(f"input missing: {rel}")
 
@@ -442,3 +448,22 @@ def find(ctx, rel):
         return p
     hits = sorted(glob.glob(os.path.join(ctx.inp, "r1b_R_*", rel)))
     return hits[0] if hits else None
+
+
+def safe(obj, code="NaN:not_finite"):
+    """R9.2 for whole outputs: every non-finite float (also numpy / torch scalars) becomes coded(code); other values unchanged."""
+    if isinstance(obj, dict):
+        return {k: safe(v, code) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [safe(v, code) for v in obj]
+    x = K.jsonable(obj)
+    if isinstance(x, (list, dict)):
+        return safe(x, code)
+    if isinstance(x, float) and not math.isfinite(x):
+        return K.coded(code)
+    return x
+
+
+def wj(ctx, rel, obj, **kw):
+    """ctx.write_json with safe() applied (non-finite numbers coded instead of refused)."""
+    return ctx.write_json(rel, safe(obj), **kw)

@@ -8,6 +8,7 @@ import r1b_core as K
 import r1b_contracts as C
 import r1b_d_stim as S
 from r1b_lce import LCE
+from r1b_d_ana import clean as A_clean
 
 
 def h30(ctx):
@@ -73,7 +74,7 @@ def res_r1(ctx):
                S_pro={f"L{L}|m{m}": S_(sm(x)) for (L, m), x in res.items()},
                count_subarm={f"L{L}": S_(sm(res[(L, ms[-1])]) - sm(res[(L, ms[0])])) for L in (0, Lstar)},
                template_check=dict(official_minus_concat_L0=S_(sm(tmpl) - sm(res[(0, ms[1])]))))
-    ctx.write_json("res/r1.json", out, config=dict(h30_source_sha256=hsha, rk_source_sha256=sha, m=ms, L=[0, Lstar], streams=st["sha256"]),
+    ctx.write_json("res/r1.json", A_clean(out), config=dict(h30_source_sha256=hsha, rk_source_sha256=sha, m=ms, L=[0, Lstar], streams=st["sha256"]),
                    seeds=dict(bootstrap=15), labels=["MOCK (tiny random model)"] if ctx.mock else [])
 
 

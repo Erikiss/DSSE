@@ -76,7 +76,7 @@ def l4_run(ctx, cond):
     tok, model, cf, H, items = setup(ctx)
     rw = refw(ctx, model)
     pop = load_pop(ctx)
-    its, dl = d1(ctx)
+    its, dl = d1(ctx, tok)
     R = runs(cf)
     cal = K.load_json(ctx.path("l/l4_cal.json"))
     nM = cf["l4_msgs"]
@@ -166,7 +166,7 @@ def l4_reads(ctx):
     belief probes (append-and-crop, 'In one word: ...') at events 0, 6, 12 for the unpushed dialogue conditions (descriptive)."""
     import os
     tok, model, cf, H, items = setup(ctx)
-    its, _ = d1(ctx)
+    its, _ = d1(ctx, tok)
     res = {}
     for cond in DIALOGUE + ("C-doc", "C-solo"):
         p = ctx.path(f"l/l4_{cond}.pt")
@@ -285,7 +285,7 @@ def l4_stats(ctx):
     their own files when those conditions ran."""
     import os
     tok, model, cf, H, items = setup(ctx)
-    its, _ = d1(ctx)
+    its, _ = d1(ctx, tok)
     rd = loadpt(ctx.path("l/l4_reads.pt"))["stance"]
     cal = K.load_json(ctx.path("l/l4_cal.json"))
     R = runs(cf)

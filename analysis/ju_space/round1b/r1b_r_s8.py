@@ -46,7 +46,7 @@ def setup(ctx):
     j3 = auc["T_1b"] >= 0.85 and auc["sea_1b"] >= 0.80
     ctx.save_pt("r8/setup.pt", dict(refs=refs, cap=2 * med, med=med, diff=diff, keep=keep, fold=t.as_tensor(P["fold"]), u_neg=un, block=B6,
                                     axes={k: v["u"][0] for k, v in ax.items()}), config=dict(model=C.M06, block=B6))
-    ctx.write_json("r8/j3.json", dict(auc=auc, J3=j3, labels=["not style-free"]), config=dict(thresholds=dict(T=0.85, sea=0.80)))
+    R.wj(ctx, "r8/j3.json", dict(auc=auc, J3=j3, labels=["not style-free"]), config=dict(thresholds=dict(T=0.85, sea=0.80)))
     if not j3:
         raise K.NotRun("not justified: J3")
 
@@ -88,4 +88,4 @@ def summary(ctx):
     rc = S.cf_cos(rows["RND_1"][3], [rows[x][3] for x in loo], H, [sg[x] for x in loo]) if loo else None
     out["generic_attractor"] = "generic attractor at 0.6B" if rc and isinstance(rc["cf"], float) and abs(rc["cf"]) >= 0.5 else "no generic attractor at 0.6B"
     out["note"] = "Two sizes are not a scaling law."
-    ctx.write_json("r8/r8_2.json", out, config=dict(model=C.M06, block=B6), labels=["descriptive", "conditional run"])
+    R.wj(ctx, "r8/r8_2.json", out, config=dict(model=C.M06, block=B6), labels=["descriptive", "conditional run"])

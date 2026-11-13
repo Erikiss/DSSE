@@ -83,6 +83,18 @@ def survival(theta, theta_k):
     return "inconclusive"
 
 
+def clean(x):
+    """Every non-finite float in a nested result replaced by a coded value (R9.2), numpy scalars made plain."""
+    x = K.jsonable(x)
+    if isinstance(x, float) and not math.isfinite(x):
+        return K.coded("NaN:undefined")
+    if isinstance(x, dict):
+        return {k: clean(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return [clean(v) for v in x]
+    return x
+
+
 def clipped(v):
     return float(np.clip(v, -CLIP, CLIP))
 
@@ -221,6 +233,27 @@ def strat(l0, lk, strata, mode):
         return np.nanmean(l0s, 1), {k: np.nanmean(x, 1) for k, x in lks.items()}, np.nanmean(l10, 1)
 
 
+def latent_bonus(D, items, L, fit, strata, mode):
+    """Per item: the mean latent minority bonus of the mixed main contexts (k = 1..4, both orders) at L on the fitted readout scale,
+    eps = c atanh(l / c) - (beta (2k - 10) + s b) (l clipped to 0.999 c), over all swaps ('all') or the item-attribute's prior-opposed
+    ('opp') / prior-aligned ('al') swap (D.23 amendment of the D1-a prior check)."""
+    n = len(items); beta = np.full((n, 6), np.nan); bb = np.full((n, 6), np.nan); idx = np.where(fit["rows"])[0]
+    beta.flat[idx] = fit["beta"]; bb.flat[idx] = fit["b"]; c = fit["c"]; out = np.full(n, np.nan)
+    for u, i in enumerate(items):
+        vals = []
+        for j in range(6):
+            sws = (0, 1) if mode == "all" else ((int(strata[u, j]),) if mode == "opp" else (1 - int(strata[u, j]),))
+            for sw in sws:
+                sg = 1 if sw == 0 else -1
+                for k in range(1, 5):
+                    for o in (1, 2):
+                        l = D.att(D.get("main", i, sw, k, o, L=L))[j]
+                        if np.isfinite(l) and np.isfinite(beta[u, j]):
+                            z = c * np.arctanh(np.clip(l / c, -0.999, 0.999)); vals.append(z - (beta[u, j] * (2 * k - 10) + sg * bb[u, j]))
+        out[u] = np.mean(vals) if vals else np.nan
+    return out
+
+
 def phi_s(W, l0, lk, l10, ks=(1, 2, 3, 4)):
     m0 = wm(W, l0); m10 = -m0 if l10 is None else wm(W, l10)
     with np.errstate(all="ignore"):
@@ -278,7 +311,7 @@ def _ana_d1(ctx):
     out["D1-v"] = d1v(K.load_json(p)) if p else dict(verdict=K.coded("NA:not_run:input missing"))
     out["D1-s"] = d1s(ctx, D, list(range(min(24 if not ctx.trimmed("T3") else 16, c.n_sym))), c, Ls)
     out["coexistence"] = coexistence(D, items, [0, Ls] if Ls else [0])
-    ctx.write_json("d_ana/d1.json", out, config=dict(seeds=dict(d1=11), clip=CLIP, cfg=dict(c)), seeds=dict(bootstrap=11),
+    ctx.write_json("d_ana/d1.json", clean(out), config=dict(seeds=dict(d1=11), clip=CLIP, cfg=dict(c)), seeds=dict(bootstrap=11),
                    labels=["MOCK (tiny random model)"] if ctx.mock else [])
 
 
@@ -365,11 +398,21 @@ def d1a(ctx, D, items, W, Ls, mode, pc_ok, gm_bad, c):
         res.update(verdict="not decidable (rule not specific at the measured noise)", support=False, negative=False); return res
     if cond4(P1, dP):
         th_lvl, thk_lvl = P1 - bound, Po1 - max(0.25, env_opp.get(Ls, 0.25) if np.isfinite(env_opp.get(Ls, np.nan)) else 0.25)
-        pr = [survival(th_lvl, thk_lvl), survival(dP, Po1 - Po0)]
-        prior = "explained" if "explained" in pr else ("survives" if pr == ["survives", "survives"] else "inconclusive")
+        pr = [survival(th_lvl, thk_lvl), survival(dP, Po1 - Po0)]     # the plan's Phi-scale check, reported (stats-1: misfires)
+        eps = {m_: wm(W, latent_bonus(D, items, Ls, fits[Ls], strata, m_)) - wm(W, latent_bonus(D, items, 0, fits[0], strata, m_))
+               for m_ in ("all", "opp", "al")}
+        if hi(eps["all"]) <= 0 or (hi(eps["opp"]) < 0.5 * pt(eps["al"]) and (lo(eps["al"] - eps["opp"]) > 0 or hi(eps["al"] - eps["opp"]) < 0)):
+            prior = "explained"
+        elif lo(eps["opp"]) > 0 and pt(eps["opp"]) >= 0.5 * pt(eps["al"]):
+            prior = "survives"
+        else:
+            prior = "inconclusive"
+        res["latent_bonus"] = {m_: S_(v_) for m_, v_ in eps.items()}
+        res["prior_check_phi_scale"] = pr
         hedge = survival(dP24_h, psi)
         form = survival(dP24_f, thk_f) if has_f else "inconclusive"
-        res["checks"] = dict(prior=dict(result=prior, components=pr), hedging=hedge, filler_form=form if has_f else "not run")
+        res["checks"] = dict(prior=dict(result=prior, rule="latent-scale minority bonus per stratum (D.23 amendment, stats-1)",
+                                        phi_scale_components=pr), hedging=hedge, filler_form=form if has_f else "not run")
         if prior == "explained":
             v = "not minority capture: explained by prior x saturation"
         elif hedge == "explained":
@@ -841,7 +884,7 @@ def _ana_d2(ctx):
             out[f"D2-g_{L}"] = dict(verdict="Pi not defined (turn-1 stance not resolved)")
     out["D2-f"] = d2f(ctx, recs, W, n_p)
     out["descriptive"] = d2_desc(recs, V, n_p)
-    ctx.write_json("d_ana/d2.json", out, config=dict(seed=12, cfg=dict(c)), seeds=dict(bootstrap=12),
+    ctx.write_json("d_ana/d2.json", clean(out), config=dict(seed=12, cfg=dict(c)), seeds=dict(bootstrap=12),
                    labels=["MOCK (tiny random model)"] if ctx.mock else [])
 
 
@@ -971,7 +1014,7 @@ def d2_desc(recs, V, n_p):
                 f += (d == 1) - (d == 3); n_ += 1
         return f / max(n_, 1)
     ss = [[v[t] for t in sorted(v)] for v in seqs.values() if len(v) == 3]
-    obs = fl(ss); floor = [fl([list(rng.permutation(s)) for s in ss]) for _ in range(200)]
+    obs = fl(ss); floor = [fl([[s[k] for k in rng.permutation(len(s))] for s in ss]) for _ in range(200)]
     return dict(D1_turn3_NEU_long=K.dist(t3), bimodality_coefficient=K.val(bc, "NaN:too_few_texts"),
                 production_share_S1={k: K.dist(v) for k, v in sorted(prod.items())},
                 flux=K.labelled(dict(net_cyclic_flux=obs, shuffle_floor_p95=float(np.percentile(np.abs(floor), 95)) if floor else None),
@@ -1058,7 +1101,7 @@ def _ana_d3(ctx):
     nI = len(items); need = math.ceil(14 / 16 * nI)
     for L in Ls:
         g0c_l, g0c_y, ret = [], [], []
-        per, x8, y1, ydist = {}, {}, [], {}
+        per, y1, ydist = {}, {}, {}
         for i in items:
             r = R.get((L, i)); r0 = R.get((Ls[0], i))
             if r is None:
@@ -1133,7 +1176,7 @@ def _ana_d3(ctx):
     out["D3"] = dict(verdict=v, mcnemar=dict(b=b, c=c_, p_grows=p_up, p_shrinks=p_dn), p_b1=p_up, G_D0d=sj["G_D0d"], G_LCE_4=g4,
                      verifier_error_rate=sj["verifier_error_rate"], lengths=Ls)
     out["D4"] = ana_d4(ctx)
-    ctx.write_json("d_ana/d3d4.json", out, config=dict(seed=13, cfg=dict(c)), seeds=dict(bootstrap=13),
+    ctx.write_json("d_ana/d3d4.json", clean(out), config=dict(seed=13, cfg=dict(c)), seeds=dict(bootstrap=13),
                    labels=["MOCK (tiny random model)"] if ctx.mock else [])
 
 
@@ -1301,7 +1344,7 @@ def _ana_d5(ctx):
         out["D5-x"] = dict(verdict=K.labelled(vx, "tier 2", "descriptive"), pairs=pairs, rows=X)
     else:
         out["D5-x"] = dict(verdict=K.coded(K.NA_TIER2 if not ctx.funded("D5-x") else "NA:not_run:input missing"))
-    ctx.write_json("d_ana/d5.json", out, config=dict(seed=14, cfg=dict(c), window=D5.WIN, step=D5.STEP, threshold=D5.THR), seeds=dict(bootstrap=14),
+    ctx.write_json("d_ana/d5.json", clean(out), config=dict(seed=14, cfg=dict(c), window=D5.WIN, step=D5.STEP, threshold=D5.THR), seeds=dict(bootstrap=14),
                    labels=["MOCK (tiny random model)"] if ctx.mock else [])
 
 
@@ -1352,7 +1395,8 @@ def ana_comb(ctx):
     elif len(neg) == 3:
         s = "H-DUAL not supported in Qwen3-1.7B"
     else:
-        s = "H-DUAL not decidable in Qwen3-1.7B (" + "; ".join(f"{k}: {reason(k)}" for k in oth + [x for x in neg if x not in oth][:0]) + ")"
+        s = "H-DUAL not decidable in Qwen3-1.7B (" + "; ".join(f"{k}: {reason(k)}" if k in oth else f"{k}: against ({reason(k)})"
+                                                               for k in parts if k in oth or k in neg) + ")"
     qual = dict(D1_b=val_s((d1.get("D1-b") or {}).get("verdict")), D1_c={k: val_s(v.get("verdict")) for k, v in (d1.get("D1-c") or {}).items()},
                 D1_d=val_s((d1.get("D1-d") or {}).get("verdict")), D1_e=val_s((d1.get("D1-e") or {}).get("verdict")),
                 D1_f=val_s((d1.get("D1-f") or {}).get("verdict")), D1_r=val_s((d1.get("D1-r") or {}).get("verdict")),
@@ -1371,7 +1415,7 @@ def ana_comb(ctx):
            "enables_the_duality": K.labelled(bool(enables), "descriptive joint reading (D1-d with D2-c coexistence or a D3 split at L*)"),
            "triggers": dict(R2=sup_b1 or vb1 == "split grows with length"),
            "notes": "part L's L4 strings are attached in r1b_ana, not here (main §3.3)"}
-    ctx.write_json(C.FILES["d_verdict"]["rel"], out, config=dict(alpha=0.05, rule="D.17"), labels=["MOCK (tiny random model)"] if ctx.mock else [])
+    ctx.write_json(C.FILES["d_verdict"]["rel"], clean(out), config=dict(alpha=0.05, rule="D.17"), labels=["MOCK (tiny random model)"] if ctx.mock else [])
 
 
 def _safe(fn, rel, keys):

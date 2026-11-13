@@ -33,7 +33,7 @@ def closed(ctx, b, stg):
     if r.returncode:
         raise RuntimeError(f"rk_loop {stage} at block {b} exited {r.returncode}")
     bd = os.path.join(out, f"b{b}"); files = {f: K.sha256_file(os.path.join(bd, f)) for f in sorted(os.listdir(bd)) if f.endswith(".json")}
-    ctx.write_json(f"r1/closed_b{b}_{stg}.json", dict(block=b, stage=stage, ascale=float(asc), seconds=time.time() - t0, files=files,
+    R.wj(ctx, f"r1/closed_b{b}_{stg}.json", dict(block=b, stage=stage, ascale=float(asc), seconds=time.time() - t0, files=files,
                                                       rk_loop_sha256=K.sha256_file(R.RK_SRC)), config=dict(block=b, stage=stage, ascale=asc),
                    seeds=dict(keys="round-1 keys keyseed(L + SUF, n, p, s, b), 'mirror' (stated reuse)"))
 
@@ -58,7 +58,7 @@ def open_loop(ctx, b):
             if L.startswith("SEA"):
                 s["sea"] = rk.stats(ev, "sea")[0]
             rows[L].append(dict(n=n, **{k: v for k, v in s.items() if isinstance(v, (int, float, dict))}))
-    ctx.write_json(f"r1/open_b{b}.json", dict(block=b, alpha=alpha, suffix=rk.SUF, rows=rows, state=os.path.relpath(os.path.join(out, f"b{b}", "state.pt"), ctx.work)),
+    R.wj(ctx, f"r1/open_b{b}.json", dict(block=b, alpha=alpha, suffix=rk.SUF, rows=rows, state=os.path.relpath(os.path.join(out, f"b{b}", "state.pt"), ctx.work)),
                    config=dict(block=b, alpha=alpha), seeds=dict(keys="round-1 keys (stated reuse)"))
 
 
@@ -127,7 +127,7 @@ def compare(ctx):
                                      replay_closed_string=v_rep, closed_loop_identity_descriptive=closed_id,
                                      labels=["descriptive"] + ([taus[b]["label"]] if taus[b]["label"] else []))
     res["errors"] = fails
-    ctx.write_json("r1/r1_replay.json", res, config=dict(rule="R1 (i)-(iii)", tolerance="|diff| (stats-16)"), labels=["descriptive"])
+    R.wj(ctx, "r1/r1_replay.json", res, config=dict(rule="R1 (i)-(iii)", tolerance="|diff| (stats-16)"), labels=["descriptive"])
 
 
 def main(ctx):

@@ -24,18 +24,18 @@ class FakeCtx:
         return False
 
 
-def synth_d1(bonus, seed=0, n=48):
+def synth_d1(bonus, seed=0, n=48, prior_sd=1.5, cc=8.0, betas=(1.2, 0.9)):
     """Synthetic D1 records: l = c tanh((beta_L E_w + s b)/c) + noise (uniform kernel), beta 1.2 at L0 and 0.9 at L* (degradation), item
     priors b ~ N(0, 1.5), plus `bonus` nats towards B in the mixed contexts (k = 1..4) at L*."""
     import r1b_d_d1 as D1M
     rng = np.random.default_rng(seed); c = S.cfg(mock=False); ctx = FakeCtx(); recs = []; Ls = 32000
-    b = rng.normal(0, 1.5, (n, 6)); w = np.ones(10)
+    b = rng.normal(0, prior_sd, (n, 6)); w = np.ones(10)
     def l_of(sp, L, extra=0.0):
-        beta = 1.2 if L == 0 else 0.9; s = 1 if sp["swap"] == 0 else -1
+        beta = betas[0] if L == 0 else betas[1]; s = 1 if sp["swap"] == 0 else -1
         E = A.evidence(sp["kinds"], sp["swap"], w) if sp["arr"] != "xn" else 0.0
         out = []
         for j, bf in sp["qs"]:
-            v = 8 * np.tanh((beta * E + s * b[sp["item"], j]) / 8) + extra + rng.normal(0, 0.3)
+            v = cc * np.tanh((beta * E + s * b[sp["item"], j]) / cc) + extra + rng.normal(0, 0.3)
             out.append(float(v))
         return out
     specs = []
@@ -83,6 +83,10 @@ def rules():
             ok(r["Phi_Ls"]["lo"] > r["bound"] and r["dPhi"]["lo"] > 0, "D1-a: planted 1.5-nat capture meets verdict 4's condition")
         else:
             ok(not str(v).startswith("length-driven"), "D1-a: null world is not called capture")
+    recs, c, Ls = synth_d1(0.0, prior_sd=4.0, cc=5.0, betas=(1.2, 0.5)); D = A.D1(recs); items = list(range(48))
+    W = A.weights(A.item_groups(items, 16), 11); r = A.d1a(FakeCtx(), D, items, W, Ls, "crop", True, lambda L: False, c)
+    print(f"     D1-a (prior x saturation null, |b| SD 4, c 5, beta 1.2 -> 0.5): {r['verdict']}")
+    ok(not str(r["verdict"]).startswith("length-driven"), "D1-a: prior x saturation null is not called capture")
     # split rule
     rng = np.random.default_rng(5); lab = np.r_[np.zeros(8), np.ones(8)]
     x = rng.normal(0, 1, 16) + 8 * lab; y_ = rng.normal(0, 1, 16) + 8 * lab

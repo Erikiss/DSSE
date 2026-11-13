@@ -76,7 +76,7 @@ def axes(ctx):
     out["go0"] = go0
     ctx.save_pt(f"ax1b/ax1b_b{b}.pt", out, config=dict(block=b, variants=VARS, verdict_axis="perp*" if b in (14, 18) else "^1b"),
                 seeds=dict(nulls=R.NULL_SEED))
-    ctx.write_json(f"ax1b/ax1b_b{b}.json", dict(block=b, auc=out["auc"], kappa=out["kappa"], rel=out["rel"], recheck=chk, go0=go0,
+    R.wj(ctx, f"ax1b/ax1b_b{b}.json", dict(block=b, auc=out["auc"], kappa=out["kappa"], rel=out["rel"], recheck=chk, go0=go0,
                                                  cos_T_v_ustar=S.cos(out["u_T_v"], us), cos_sea_v_ustar=S.cos(out["u_sea_v"], us),
                                                  cos_ustar_sea_perp1b=S.cos(us, out["u_sea_1b"])),
                    config=dict(block=b), labels=[c["flag"] for c in chk.values() if c["flag"]])
@@ -179,7 +179,7 @@ def summary(ctx):
         out["by_family"][fam] = K.dist(v)
     out["rg9"] = {f"{r['arm']}:{r['loop']}": sum(not x["in_band"] for x in rows if (x["arm"], x["loop"]) == (r["arm"], r["loop"]) and x["n"] < 4)
                   for r in rows if r["arm"] != "FX"}
-    ctx.write_json(f"r2/b{b}/r31_calibration.json", out, config=dict(block=b, band=[R.DMG_LO, R.DMG_HI]))
+    R.wj(ctx, f"r2/b{b}/r31_calibration.json", out, config=dict(block=b, band=[R.DMG_LO, R.DMG_HI]))
 
 
 # ------------------------------------------------------------------------------------------------------------------ code checks
@@ -205,7 +205,7 @@ def checks(ctx):
     out = dict(block=b, CC1=dict(identical=cc1, of=4, ok=cc1 == 4), CC2=dict(swapped=cc2, of=4, ok=cc2 >= 3),
                CC3=dict(max_rel=cc3, ok=cc3 < 1e-4), push_a=a)
     out["ok"] = all(out[k]["ok"] for k in ("CC1", "CC2", "CC3"))
-    ctx.write_json(f"r2/b{b}/checks.json", out, config=dict(block=b), labels=[] if out["ok"] else ["code check failed (RG5)"])
+    R.wj(ctx, f"r2/b{b}/checks.json", out, config=dict(block=b), labels=[] if out["ok"] else ["code check failed (RG5)"])
 
 
 def cc4_main(ctx):
@@ -230,7 +230,7 @@ def cc4_main(ctx):
     with K.Hooks(rk.model).push(b, d, alpha, signs=sg, cap=cap, rowstart=pad + rk.START), t.no_grad():
         lb = rk.model(input_ids=ids.to(rk.DEV), attention_mask=am.to(rk.DEV)).logits
     rel = float((la - lb).abs().max() / (la.abs().max() + 1e-12))
-    ctx.write_json("r2/b14/cc4.json", dict(CC4=dict(max_rel=rel, ok=rel <= 1e-6), rk_loop_sha256=K.sha256_file(R.RK_SRC)), config=dict(block=b, alpha=alpha))
+    R.wj(ctx, "r2/b14/cc4.json", dict(CC4=dict(max_rel=rel, ok=rel <= 1e-6), rk_loop_sha256=K.sha256_file(R.RK_SRC)), config=dict(block=b, alpha=alpha))
 
 
 if __name__ == "__main__":

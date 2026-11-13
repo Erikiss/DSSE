@@ -35,7 +35,8 @@ def detection(D, set_name, test, fitX, fity, ref_sets, B):
             return np.nan
         return auroc(y[ix], sc[set_name][ix]) - np.nanmean([auroc(y[ix], sc[r][ix]) for r in ref_sets])
     d = boot_stat(len(y), st, B=B); c = ci(d); pr = p_rank(aH, aR) if len(aR) else coded("NaN:no_random_sets")
-    return dict(auroc_H=val(aH), auroc_RS=[val(a) for a in aR], diff=val(aH - np.nanmean(aR)) if len(aR) else coded("NaN:no_random_sets"),
+    ca = ci(boot_stat(len(y), lambda ix: auroc(y[ix], sc[set_name][ix]) if len(set(y[ix].tolist())) > 1 else np.nan, B=B))
+    return dict(auroc_H=val(aH), auroc_ci=ca, auroc_lb=ca["lo"], auroc_RS=[val(a) for a in aR], diff=val(aH - np.nanmean(aR)) if len(aR) else coded("NaN:no_random_sets"),
                 ci=c, p_rank=pr, exceeds_all=bool(len(aR) and np.all(aH > aR)), n=int(len(y)))
 
 

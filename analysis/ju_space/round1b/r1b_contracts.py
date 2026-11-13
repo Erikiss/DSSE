@@ -197,11 +197,11 @@ SESSIONS = {
                   "R3.3, TXT0 (R3.4), R4.1-R4.3", r1=R1_ALL, r2=R2_Q0(14, 18, 6)),
     "r1b_R_S5": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_K_S1", ("k4j.json",))) + tuple(done(s, ("ax1b/**",)) for s in R_S2), 29.1,
                   (M17,), "R5.1, R5.2, R5.3, R5.5; AX-1b at the lens blocks; RG10, RG11", r1=R1_ALL, r2=R2_Q0(14, 18, 6), jlens=True),
-    "r1b_R_S6": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_R_S2_14", ("ax1b/**",))), 63.2, (M17,), "R6.1, R6.2, R6.3", r1=R1_ALL,
+    "r1b_R_S6": S("R", 1, "A", 4, (done("r1b_R_S3"),) + tuple(done(s, ("ax1b/**",)) for s in R_S2), 63.2, (M17,), "R6.1, R6.2, R6.3", r1=R1_ALL,
                   r2=R2_Q0(14, 18, 6)),
     "r1b_R_S7": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_R_S2_14", R_AXDIRS), done("r1b_R_S0", ("r0_table.json",))), 21.8, (M17,),
                   "R7.1-R7.3 (RG13, RG14 in session)", r1=R1_ALL, r2=R2_Q0(14)),
-    "r1b_R_ana": S("R", 1, "A", 5, tuple(done(s) for s in _R_TIER1), 55.3, (M17,),
+    "r1b_R_ana": S("R", 1, "A", 5, tuple(done(s, ("r1/**",) if s == "r1b_R_S1" else ("**",)) for s in _R_TIER1), 55.3, (M17,),
                    "R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check", r1=R1_ALL + ("gpu2/dn_delta.json",),
                    r2=R2_Q0(14, 18, 6) + ("r2_ana/theta_verdict.json",)),
     "r1b_D_A": S("D", 1, "B", 1, (), 202.3, (M17, M06), "G-LCE-1 / G-LCE-2 first (SG9), stream prefills, D1 (main, neutral, "
@@ -239,13 +239,15 @@ SESSIONS = {
     "r1b_R_S8": S("R", 2, "A", 6, (trig("rg15", "J1_and_J2", "true"),), 19.5, (M06,), "R8.2 (J3 in session)"),
     "r1b_R_ana2": S("R", 2, "A", 7, (any_done("r1b_R_S5L", "r1b_R_S8"), done("r1b_R_ana", ("r1b_R_verdict.json", "ana/**"))), 10.2, (M17,),
                     "R pass 2"),
-    "r1b_D_R": S("D", 2, "A", 6, (done("r1b_D_ana"),), 119.0, (M17,), "D's reserves R1, R2 (conditional on d_verdict triggers.R2), R3"),
+    "r1b_D_R": S("D", 2, "A", 6, (done("r1b_D_ana"), done("r1b_D_C", ("d5/pool.json", "d3/starts.pt", "d3/starts.json")),
+                                  done("r1b_D_A", ("d1/lstar.json", "d1/raw_L0.pt"))), 119.0, (M17,),
+                 "D's reserves R1, R2 (conditional on d_verdict triggers.R2), R3"),
     "r1b_K_S6": S("K", 2, "A", 6, (done("r1b_K_S1"), done("r1b_K_S2a")), 72.0, (M17,),
                   "RK-1 (two post-hoc MTP heads on frozen Qwen3-1.7B, bf16: standard CE and Soft-MTP / Teoh 2026; unconditional in tier 2)"),
     "r1b_K_S7": S("K", 2, "B", 4, (done("r1b_K_S3"), done("r1b_K_S1")), 53.0, (M35, M17),
                   "RK-2 (H-link on the native lens, Qwen3.5-2B; the Qwen3 tokenizer re-encodes the bank)"),
 }
-TIER2_ITEMS = {"r1b_K_S2b": ("K3h",), "r1b_D_C": ("D5-x",), "r1b_L_A": ("X2", "X6"), "r1b_L_B": ("X1", "X3", "X4", "X5")}   # tier-2 items in tier-1 sessions
+TIER2_ITEMS = {"r1b_K_S2b": ("K3h",), "r1b_D_C": ("D5-x", "D3-name"),"r1b_L_A": ("X2", "X6"), "r1b_L_B": ("X1", "X3", "X4", "X5")}   # tier-2 items in tier-1 sessions
 
 # Slots (main §4.4): one notebook each; sessions in order, each waiting for its start conditions (packing, not a rule).
 SLOTS = {

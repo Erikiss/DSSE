@@ -342,28 +342,26 @@ def lensout(ctx, gate_items):
     return recs, []
 
 
-def d1(ctx):
-    """SO-D1STIM F-sym items 0-31: list of dict(entity, attribute, v1, v2) (slot j = i mod 6)."""
-    path = os.path.join(K.REPO, C.PLAN_DIR, "d1_stimuli.json")
-    d = K.load_json(path) if os.path.exists(path) else None
-    if d is None:
-        if not ctx.mock:
+def d1(ctx, tok=None):
+    """SO-D1STIM F-sym items 0-31 (D's package file d1_stimuli.json through part D's loader; 'l4_items' and the F-sym referents):
+    list of dict(entity, attribute, v1, v2) with slot j = i mod 6."""
+    try:
+        import r1b_d_stim as DS
+        d, _ = DS.load_pkg(ctx, "d1_stimuli.json", tok)
+        labels = ["MOCK package (D's generator)"] if ctx.mock else []
+    except K.NotRun:
+        raise K.NotRun("input missing (d1_stimuli.json)")
+    except ImportError:
+        path = os.path.join(K.REPO, C.PLAN_DIR, "d1_stimuli.json")
+        if not os.path.exists(path):
             raise K.NotRun("input missing (d1_stimuli.json)")
-        pools = [["Anna", "Bert", "Carl", "Dora"], ["fox", "owl", "bear", "wolf"], ["salt", "wool", "tea", "tin"],
-                 ["red", "blue", "green", "white"], ["May", "June", "July", "March"], ["iron", "brass", "bronze", "copper"]]
-        return [dict(entity=f"Velmora{i}", attribute=ATTR_NAMES[i % 6], v1=pools[i % 6][i % 4], v2=pools[i % 6][(i + 1) % 4])
-                for i in range(32)], ["MOCK stand-in for SO-D1STIM"]
-    fs = d.get("F_sym") or d.get("F-sym") or [x for x in d.get("items", []) if x.get("family") in ("F-sym", "F_sym")]
-    slots = d.get("slots") or list(ATTR_NAMES)
+        d, labels = K.load_json(path), []
+    fs = d.get("fsym") or []
     out = []
-    for i, it in enumerate(fs[:32]):
-        j = i % 6
-        vals = it.get("versions") or [it.get("v1"), it.get("v2")]
-        v1, v2 = vals[0], vals[1]
-        pick = lambda v: v[j] if isinstance(v, list) else (v.get(slots[j]) if isinstance(v, dict) else v)
-        slot = slots[j] if isinstance(slots[j], str) else slots[j].get("name")
-        out.append(dict(entity=it.get("referent") or it.get("entity") or it.get("name"), attribute=slot, v1=pick(v1), v2=pick(v2)))
-    return out, []
+    for x in d.get("l4_items") or [dict(item=i, slot=i % 6, v1=fs[i]["slots"][i % 6]["v1"], v2=fs[i]["slots"][i % 6]["v2"]) for i in range(32)]:
+        i = int(x["item"])
+        out.append(dict(entity=fs[i]["referent"], attribute=ATTR_NAMES[int(x["slot"])], v1=x["v1"], v2=x["v2"]))
+    return out[:32], labels
 
 
 def ref_sets(ctx, tok, items, cf):

@@ -78,7 +78,7 @@ def select(ctx):
         var = [v for v in E if v[0] == sel][0]; ax = R.ax1b(ctx, 14); r = dm.dm(lambda: eraser(m.model, S.unit(ax["axes"]["T_v"].double()), var, mu)(K.Hooks(m.model)))
         out["u_T_v_variant"] = dict(damage=r["damage"], labels=["descriptive"])
     out["string"] = None if sel else "no low-damage erasure found"
-    ctx.write_json("r7/r71_select.json", out, config=dict(order=[v[0] for v in E], target=R.DMG_T, excluded="round 2's C-Q3 (zero, all, beta 1)"))
+    R.wj(ctx, "r7/r71_select.json", out, config=dict(order=[v[0] for v in E], target=R.DMG_T, excluded="round 2's C-Q3 (zero, all, beta 1)"))
 
 
 def _gen_read(ctx, m, rows, extra, b=14, read_ids=None):
@@ -143,7 +143,7 @@ def texts(ctx):
     import r2_rk
     t = R.torch(); sel = K.load_json(ctx.path("r7/r71_select.json"))
     if not sel["selected"]:
-        ctx.write_json("r7/r71.json", dict(string="no low-damage erasure found", RG13=False), config=dict()); return
+        R.wj(ctx, "r7/r71.json", dict(string="no low-damage erasure found", RG13=False), config=dict()); return
     m = R.M(ctx); var = [v for v in E if v[0] == sel["selected"]][0]; mu = ctx.cached("mu", lambda: module_means(ctx, m)); q = u_rsi(ctx)
     ax = R.ax1b(ctx, 14); P = R.p256(ctx); fold = t.as_tensor(P["fold"]); st = R.r1_state(ctx, 14)["axes"]
     basis = [st["sports"], st["tone"], st["sea"], st["u_neg"]]; W = K.prompt_bootstrap(len(P["q"]), B=2000, seed=1001)
@@ -182,7 +182,7 @@ def texts(ctx):
         string = "inverted"
     else:
         string = f"not unlearned ({', '.join(k for k, v in parts.items() if not v)})"
-    ctx.write_json("r7/r71.json", dict(selected=sel["selected"], gaps={k: {kk: vv for kk, vv in v.items() if kk not in ("draws", "axes")} for k, v in gap.items()},
+    R.wj(ctx, "r7/r71.json", dict(selected=sel["selected"], gaps={k: {kk: vv for kk, vv in v.items() if kk not in ("draws", "axes")} for k, v in gap.items()},
                                        controls_p5=c5, D=D, parts=parts, string=string, RG13=string == "unlearned",
                                        unprompted=dict(n=len(unp[0]), mean_len=float(np.mean([len(c) for c in unp[0]]))),
                                        labels=["inverted: upper end of g_abl / g_0 < 0 (definition in code)"]), config=dict(variant=var[:2], beta=var[3]))
@@ -196,7 +196,7 @@ def cue(ctx):
     import r2_rk
     t = R.torch(); r71 = K.load_json(ctx.path("r7/r71.json"))
     if not r71.get("selected"):
-        ctx.write_json("r7/r72.json", dict(string="not applicable (nothing removed)", share=K.coded("NA:gate_closed:RG13")), config=dict()); return
+        R.wj(ctx, "r7/r72.json", dict(string="not applicable (nothing removed)", share=K.coded("NA:gate_closed:RG13")), config=dict()); return
     m = R.M(ctx); var = [v for v in E if v[0] == r71["selected"]][0]; mu = ctx.cached("mu", lambda: module_means(ctx, m)); P = R.p256(ctx)
     tx = R.load_pt(R.find(ctx, "ax1b/axis_texts.pt"))["topics"]["rsi"]["pro"]; INSTR = R.rk_literal("INSTR"); n = len(P["q"]); typ = P["typ"]
     idx = {ty: [i for i in range(n) if typ[i] == ty] for ty in ("rsi", "scene")}; msgs = []
@@ -214,7 +214,7 @@ def cue(ctx):
         s = "not applicable (nothing removed)"
     else:
         s = "shallow" if sh >= 0.5 else ("deep" if sh < 0.2 else "partial")
-    ctx.write_json("r7/r72.json", dict(string=s, share=K.val(sh, "NaN:zero_removed_gap"), g_cue_abl=out["abl"], g_cue_unabl=out["unabl"],
+    R.wj(ctx, "r7/r72.json", dict(string=s, share=K.val(sh, "NaN:zero_removed_gap"), g_cue_abl=out["abl"], g_cue_unabl=out["unabl"],
                                        labels=[] if r71["RG13"] else ["descriptive"]), config=dict(format="OD-C3, within prompt type"))
 
 
@@ -226,7 +226,7 @@ def q4b(ctx):
     t = R.torch(); r71 = K.load_json(ctx.path("r7/r71.json")); r0 = K.load_json(ctx.input("r1b_R_S0", "r0_table.json"), {}) or {}
     bt = bool(r0.get("bootstrap_t"))
     if not r71.get("RG13"):
-        ctx.write_json("r7/r73.json", dict(string="not testable (gate: RG13 (erasure not passed))", RG14=False), config=dict()); return
+        R.wj(ctx, "r7/r73.json", dict(string="not testable (gate: RG13 (erasure not passed))", RG14=False), config=dict()); return
     m = R.M(ctx); var = [v for v in E if v[0] == r71["selected"]][0]; mu = ctx.cached("mu", lambda: module_means(ctx, m)); P = R.p256(ctx)
     cap = float(R.r1_state(ctx, 14)["ref"]["cap"]); q = u_rsi(ctx); ab = eraser(m.model, q, var, mu); dm = R.Dmg(ctx, m, 14, cap)
     d1 = R.load_pt(R.find(ctx, "r2/b14/dirs_DN_RSI_a.pt"))["d"][1].double(); s0 = S.unit(d1 - (d1 @ q) * q); Fn, F = r1b_r_s2.readout_set(R.ax1b(ctx, 14))
@@ -245,7 +245,7 @@ def q4b(ctx):
                 st = S.stat_row(S.Row(R.delta_of(ev), ev["ok"], ev["prompt_of"], len(P["q"])), a1["T_v"], aW["T_v"], P["fold"], H, W, boot_t=bt)
                 rg14 = st["p_s"] <= 0.01 and (S.num(st.get("A_lo")) or 0) >= 0.10
                 if not rg14:
-                    ctx.write_json("r7/r73.json", dict(string="not testable (gate: twin does not re-find RSI at round 1)", RG14=False,
+                    R.wj(ctx, "r7/r73.json", dict(string="not testable (gate: twin does not re-find RSI at round 1)", RG14=False,
                                                        twin_round1={k: v for k, v in st.items() if k not in ("A_draws", "rel_draws")}), config=dict()); return
     rd = {nm: [S.stat_row(S.Row(R.delta_of(e), e["ok"], e["prompt_of"], len(P["q"])), a1["T_v"], aW["T_v"], P["fold"], H, W, boot_t=bt) for e in evs[nm]]
           for nm in evs}
@@ -262,7 +262,7 @@ def q4b(ctx):
             s = "survives"; break
         if A["rel"] >= 0.5 and ue[n] >= 0.25 and (S.num(A["absA_hi"]) or 1) < 0.25:
             s = "re-routed"; break
-    ctx.write_json("r7/r73.json", dict(string=s, RG14=True, rows={nm: [{k: v for k, v in r.items() if k not in ("A_draws", "rel_draws")} for r in rd[nm]] for nm in rd},
+    R.wj(ctx, "r7/r73.json", dict(string=s, RG14=True, rows={nm: [{k: v for k, v in r.items() if k not in ("A_draws", "rel_draws")} for r in rd[nm]] for nm in rd},
                                        Ue_abl=ue, bootstrap_t=bt, labels=["Ue = unit(u_T^v) . d_n / Delta_T^v (stats-10, part file)"]),
                    config=dict(rounds=3, key="('r1b_Q4B', n, q, 0, 14)"))
 
@@ -280,4 +280,4 @@ def others(ctx):
         c, Xp, Xa = ctx.cached(f"abl_{var[0]}", lambda: instructed(ctx, m, "rsi", eraser(m.model, q, var, mu)))
         g = r2_rk.gap_on_fixed_axes(Xp, Xa, fold, aA, aB)["g"]; out[var[0]] = dict(ratio=K.val(g / g0 if g0 else float("nan"), "NaN:zero_gap"),
                                                                                   damage=[r for r in sel["variants"] if r["variant"] == var[0]][0]["damage"])
-    ctx.write_json("r7/r71_others.json", dict(variants=out, labels=["descriptive"]), config=dict(), labels=["descriptive"])
+    R.wj(ctx, "r7/r71_others.json", dict(variants=out, labels=["descriptive"]), config=dict(), labels=["descriptive"])
