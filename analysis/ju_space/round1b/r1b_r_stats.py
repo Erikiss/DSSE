@@ -22,7 +22,7 @@ def unit(v):
 
 
 def cos(a, b):
-    a, b = T().as_tensor(a).double(), T().as_tensor(b).double()
+    a, b = T().as_tensor(a).double().cpu(), T().as_tensor(b).double().cpu()
     return float(a @ b / (a.norm() * b.norm() + 1e-12))
 
 
@@ -234,7 +234,7 @@ def deb_fixed(row, u, rel, m2=1.0):
 def plant(row, u, rel, c_star_A=0.25):
     """R2.3b: delta_j <- delta_j - (u . d_n) u + eta_n u with eta_n = c* |d_n - (u . d_n) u| / sqrt(1 - c*^2), c* = 0.25 sqrt(rel_n),
     so that cos(d_n', u) = c*. Returns a new Row (same prompts)."""
-    t = T(); u = unit(t.as_tensor(u).double()); d = row.d().cpu(); c = c_star_A * math.sqrt(max(rel, 1e-12))
+    t = T(); u = unit(t.as_tensor(u).double().cpu()); d = row.d().cpu(); c = c_star_A * math.sqrt(max(rel, 1e-12))
     perp = d - (u @ d) * u; eta = c * float(perp.norm()) / math.sqrt(1 - c * c)
     dl = row.delta + (eta - float(u @ d)) * u[None]
     return Row(dl, row.ok, row.po, row.P, row.dev)
@@ -338,3 +338,21 @@ def stat_row(row, a1, aW, fold, H, W, two_sided=False, boot_t=False, keep_draws=
         if keep_draws:
             out["A_draws"] = A; out["rel_draws"] = rb["rel"].cpu().numpy()
     return out
+
+
+def rightmost_b(M):
+    """Batched rightmost eigenvalue of M [B, k, k] with right / left eigenvectors (left: eig of M', closest eigenvalue)."""
+    t = T(); ev, V = t.linalg.eig(M); i = ev.real.argmax(1); lam = ev.gather(1, i[:, None])[:, 0]
+    y = V.gather(2, i[:, None, None].expand(-1, V.shape[1], 1))[..., 0]; el, U = t.linalg.eig(M.transpose(1, 2))
+    j = (el - lam[:, None]).abs().argmin(1); z = U.gather(2, j[:, None, None].expand(-1, U.shape[1], 1))[..., 0]
+    return lam, y, z
+
+
+def heldout_b(MB, y, z):
+    """Batched held-out value z' M_B y / (z' y) (real parts; Rayleigh read y' M_B y / y'y where |cos(y, z)| < 0.2); returns (values, rayleigh)."""
+    t = T(); yr, zr = y.real.double(), z.real.double()
+    yr = t.where(yr.norm(dim=1, keepdim=True) > 1e-9, yr, y.imag.double()); zr = t.where(zr.norm(dim=1, keepdim=True) > 1e-9, zr, z.imag.double())
+    my = (MB @ yr[..., None])[..., 0]; c = (yr * zr).sum(1).abs() / (yr.norm(dim=1) * zr.norm(dim=1)).clamp_min(1e-300)
+    ray = c < 0.2; v = t.where(ray, (yr * my).sum(1) / (yr * yr).sum(1).clamp_min(1e-300), (zr * my).sum(1) / (zr * yr).sum(1).clamp_min(1e-300) * 1.0)
+    v = t.where(ray | ((zr * yr).sum(1).abs() > 1e-300), v, t.full_like(v, float("nan")))
+    return v, ray

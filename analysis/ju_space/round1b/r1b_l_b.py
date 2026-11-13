@@ -382,9 +382,9 @@ def l2a_stats(ctx):
     sl = S.summ(slope(Rpt), [slope(Rb[b]) for b in range(len(Rb))])
     Rlo, Rblo = ratio(mx < 0.05)
     low = S.summ(Rlo[-1], Rblo[:, -1]) if np.isfinite(Rlo[-1]) else None
-    st = dict(grid=grid.tolist(), I=S.summ(0.0, [0.0]) and [S.summ(I.mean(0)[j], Ib[:, j]) for j in range(len(grid))],
-              growth=dict(class_point=c0, class=top, share=share[top], shares=share, b=S.summ(fits["logarithmic"]["b"], bb),
-                          beta=S.summ(fits["power"]["beta"], betas), fits=fits), L_sat=Lsat, gmi_ok=gmi_ok, copy_ok=copy_ok, shuffle=shuf,
+    st = dict(grid=grid.tolist(), I=[S.summ(I.mean(0)[j], Ib[:, j]) for j in range(len(grid))],
+              growth={"class_point": c0, "class": top, "share": share[top], "shares": share, "b": S.summ(fits["logarithmic"]["b"], bb),
+                      "beta": S.summ(fits["power"]["beta"], betas), "fits": fits}, L_sat=Lsat, gmi_ok=gmi_ok, copy_ok=copy_ok, shuffle=shuf,
               lce=lce["ok"], R=[S.summ(Rpt[j], Rb[:, j]) for j in range(len(Ls))], R_top=R_top, lnR_slope=sl, R_top_low_eos=low,
               deficit_low_eos=bool(low is not None and isinstance(low["hi"], float) and low["hi"] < 0.87), n_truncated=int((tend < Ls[-1]).sum()))
     wj(ctx, "l/l2a.json", st, config=dict(nboot=cf["nboot"], grid=grid.tolist()), labels=([] if lce["ok"] else ["G-L2a-LCE failed"]) +

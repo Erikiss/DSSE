@@ -243,7 +243,7 @@ def q4b(ctx):
             ev = ctx.cached(f"{nm}_{n}", one); evs[nm].append(ev); a = ev["a"]; d = R.delta_of(ev)[ev["ok"]].mean(0)
             if nm == "twin" and n == 0:
                 st = S.stat_row(S.Row(R.delta_of(ev), ev["ok"], ev["prompt_of"], len(P["q"])), a1["T_v"], aW["T_v"], P["fold"], H, W, boot_t=bt)
-                rg14 = st["p_s"] <= 0.01 and isinstance(st.get("A_lo"), float) and st["A_lo"] >= 0.10
+                rg14 = st["p_s"] <= 0.01 and (S.num(st.get("A_lo")) or 0) >= 0.10
                 if not rg14:
                     ctx.write_json("r7/r73.json", dict(string="not testable (gate: twin does not re-find RSI at round 1)", RG14=False,
                                                        twin_round1={k: v for k, v in st.items() if k not in ("A_draws", "rel_draws")}), config=dict()); return
@@ -254,13 +254,13 @@ def q4b(ctx):
     s = "undecided"
     for n in (1, 2):
         A, T_ = rd["abl"][n], rd["twin"][n]
-        if not (T_["p_s"] <= 0.01 and T_["A_lo"] >= 0.25):
+        if not (T_["p_s"] <= 0.01 and (S.num(T_["A_lo"]) or 0) >= 0.25):
             s = "undecided (twin does not re-find RSI)"; continue
-        if A["p_s"] > 0.10 and A["absA_hi"] < 0.25:
+        if A["p_s"] > 0.10 and (S.num(A["absA_hi"]) or 1) < 0.25:
             s = "un-searched"; break
-        if A["p_s"] <= 0.01 and A["A_lo"] >= 0.25:
+        if A["p_s"] <= 0.01 and (S.num(A["A_lo"]) or 0) >= 0.25:
             s = "survives"; break
-        if A["rel"] >= 0.5 and ue[n] >= 0.25 and A["absA_hi"] < 0.25:
+        if A["rel"] >= 0.5 and ue[n] >= 0.25 and (S.num(A["absA_hi"]) or 1) < 0.25:
             s = "re-routed"; break
     ctx.write_json("r7/r73.json", dict(string=s, RG14=True, rows={nm: [{k: v for k, v in r.items() if k not in ("A_draws", "rel_draws")} for r in rd[nm]] for nm in rd},
                                        Ue_abl=ue, bootstrap_t=bt, labels=["Ue = unit(u_T^v) . d_n / Delta_T^v (stats-10, part file)"]),

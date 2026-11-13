@@ -34,7 +34,8 @@ def strip(d):
 
 
 def pos(x, thr, alt="greater"):
-    return S.p_one_sided(x, thr, alt) if False else K.p_one_sided(x, thr, alt)
+    """One-sided bootstrap p of a bound condition (SO-PVAL): (1 + #replicates on the null side) / (B + 1)."""
+    return K.p_one_sided(x, thr, alt)
 
 
 def load(ctx):
@@ -159,7 +160,7 @@ def r2_block(ctx):
         rr = [g("DN", pcL, n, nm) for n in (1, 2, 3)]; s4 = S.s4cf(rows[("DN", pcL, 2)], rows[("DN", pcL, 3)], H)["cf"]
         P1 = all(r["p_s"] <= 0.01 and isinstance(r["A_lo"], float) and r["A_lo"] >= 0.10 for r in rr); P2 = all(r["rel"] >= 0.5 for r in rr)
         P3 = isinstance(s4, float) and s4 >= 0.5
-        lex = _lex(evs, pcL, words, NP); P4p = S.k1s(lex, flips=10000)["p_s"] if False else _flip_p(lex)
+        lex = _lex(evs, pcL, words, NP); P4p = _flip_p(lex)
         rnd4 = [np.abs(dr("DN", L, 3, nm)) for L in ("RND_1", "RND_2") if dr("DN", L, 3, nm) is not None]
         P5d = dr("DN", pcL, 3, nm) - np.max(np.stack(rnd4), 0) if rnd4 else None; P5iv = S.iv(P5d) if P5d is not None else [None, None]
         P5 = isinstance(P5iv[0], float) and P5iv[0] > 0
@@ -169,7 +170,7 @@ def r2_block(ctx):
             dd = [np.mean(lex[idx] - np.maximum(*[x[idx] for x in lexr]) if len(lexr) > 1 else lex[idx] - lexr[0][idx]) for idx in K.boot_idx(len(lex), 2000, 2003)]
             P4x = S.iv(dd)
         res["PC"][pcL] = dict(P1=P1, P2=P2, P3=P3, P4=P4p <= 0.01, P4_p=P4p, P5=P5, P5_iv=P5iv, S4cf=s4, pass_=P1 and P2 and P3 and P4p <= 0.01 and P5,
-                              GO1_1b=g("DN", pcL, 0, nm)["rel"] >= 0.5 and g("DN", pcL, 0, nm)["p_s"] <= 0.01 and (g("DN", pcL, 0, nm)["A_lo"] or 0) >= 0.10,
+                              GO1_1b=g("DN", pcL, 0, nm)["rel"] >= 0.5 and g("DN", pcL, 0, nm)["p_s"] <= 0.01 and (S.num(g("DN", pcL, 0, nm)["A_lo"]) or 0) >= 0.10,
                               absA_hi_34=[g("DN", pcL, n, nm)["absA_hi"] for n in (2, 3)], P4_rnd_contrast_iv=P4x,
                               p_comp=dict(p_s=[r["p_s"] for r in rr], A_lo10=[pos(dr("DN", pcL, n, nm), 0.10) for n in (1, 2, 3)], P4=P4p,
                                           P5=pos(P5d, 0.0) if P5d is not None else 1.0))
@@ -199,7 +200,7 @@ def r2_block(ctx):
         for L in ("RSI_a", "RSI_b"):
             c[L] = [S.stat_row(rows[("DN", L, n)], a1o["T_vo"], aWo["T_vo"], fold, H, W, boot_t=bt, keep_draws=True) for n in range(4)]
         Abo = np.mean([c[L][n]["A_draws"] for L in c for n in (2, 3)], 0); Aao = np.mean([np.abs(c[L][n]["A_draws"]) for L in c for n in (2, 3)], 0)
-        res["robust"] = dict(A_bar_iv=S.iv(Abo), A_bar_abs_iv=S.iv(Aao), MANIP_1b=all(c[L][0]["p_s"] <= 0.01 and c[L][0]["A_lo"] >= 0.10 for L in c),
+        res["robust"] = dict(A_bar_iv=S.iv(Abo), A_bar_abs_iv=S.iv(Aao), MANIP_1b=all(c[L][0]["p_s"] <= 0.01 and (S.num(c[L][0]["A_lo"]) or 0) >= 0.10 for L in c),
                              p_pro_234={L: [c[L][n]["p_s"] for n in (1, 2, 3)] for L in c}, A1_hi={L: c[L][0]["A_hi"] for L in c})
     npr = {}
     for arm in ("DN", "NP"):
@@ -293,7 +294,7 @@ def r3_block(ctx):
             else:
                 gW = (r.d(W) @ u) / (a * cb) / (math.sqrt(m2) if un == "ustar" else 1.0); gp = float(r.d() @ u) / (a * cb) / (math.sqrt(m2) if un == "ustar" else 1.0)
             Dp = r.S / r.n.clamp_min(1)[:, None]; U = _ustat_gain(Dp, W); GW = t.sqrt(U.clamp_min(0)) / (a * cb); Gp = float(t.sqrt(_ustat_gain(Dp, t.ones(1, NP, dtype=t.float64, device=dev())).clamp_min(0))[0]) / (a * cb)
-            xp, xm = e["xp"].double(), e["xm"].double(); ok = e["ok"]; x0 = X0[[int(i) for i in range(len(xp))]] if len(X0) == len(xp) else X0
+            xp, xm = e["xp"].double(), e["xm"].double(); x0 = X0 if len(X0) == len(xp) else X0[: len(xp)]; ok = e["ok"] & ~T().isnan(x0).any(1)
             ev_ = ((xp + xm) / 2 - x0)[ok].mean(0); rot = gp / Gp if Gp else float("nan")
             gd[c["cell"]] = (gW if (un in ("T_v", "sea_v") or rot >= 0.9) else GW).cpu().numpy()
             rep4 = float(np.mean([_rep4(cc) for cc in e["conts"]]))
@@ -377,6 +378,47 @@ def _r34(ctx, b, P, us, ax):
 
 
 # ------------------------------------------------------------------------------------------------------------------ R4 per block
+def cfb_one(Pc, k, H, po, fac, cbar):
+    """lambda^cf of one subspace for the full sample (permutation nulls)."""
+    t = T(); hv = []
+    for h in H:
+        hm = h.bool()[po].double()
+        for A_ in (hm, 1 - hm):
+            wa, wb = (fac * A_)[None], (fac * (1 - A_))[None]
+            MA = (wa @ Pc).reshape(-1, k, k) / (wa.sum(1) * cbar)[:, None, None]; MB = (wb @ Pc).reshape(-1, k, k) / (wb.sum(1) * cbar)[:, None, None]
+            lam, y, z = S.rightmost_b(MA); hv.append(S.heldout_b(MB, y, z)[0])
+    return float(t.stack(hv, 1).nanmedian(1).values[0])
+
+
+def _full_space(Xc, Sc, fac, po, H, cbar, ustar, n_perm=20):
+    """Full-space top mode (R4.2, descriptive): cross-fitted Arnoldi (k = 20, start u*_b) held-out value, and the same on within-prompt
+    permutations of the S rows (n_perm; the in-sample rightmost real part = the noise-disc edge printed beside it)."""
+    t = T()
+
+    def one(Sx):
+        hv, ins = [], []
+        for h in H[:5]:
+            hm = h.bool()[po].double()
+            for A_ in (hm, 1 - hm):
+                wa, wb = fac * A_ / (fac * A_).sum(), fac * (1 - A_) / (fac * (1 - A_)).sum()
+                lam, y, z = S.full_ritz(Xc, Sx, wa, cbar, S.unit(ustar.double()))
+                fB = lambda v: Xc.T @ (wb * (Sx @ v)) / cbar; yr, zr = y.real.double(), z.real.double()
+                c = abs(float(yr @ zr)) / (float(yr.norm() * zr.norm()) + 1e-300)
+                hv.append(float(yr @ fB(yr) / (yr @ yr)) if c < 0.2 else float(zr @ fB(yr) / (zr @ yr))); ins.append(lam.real)
+        return float(np.median(hv)), float(np.median(ins))
+    real = one(Sc); nul = []
+    for i in range(n_perm):
+        g = t.Generator().manual_seed(2201 + i); idx = t.arange(len(po))
+        for p in range(int(po.max()) + 1):
+            m = (po == p).nonzero().flatten()
+            if len(m) > 1:
+                idx[m] = m[t.randperm(len(m), generator=g)]
+        nul.append(one(Sc[idx]))
+    p95 = float(np.percentile([x[0] for x in nul], 95))
+    return dict(heldout=real[0], in_sample=real[1], null_p95=p95, noise_edge=float(np.median([x[1] for x in nul])), n_perm=n_perm, halvings=5,
+                string="full-space top mode resolved" if real[0] > p95 else "full-space top mode not resolved", labels=["descriptive (5 halvings, cost)"])
+
+
 def r4_block(ctx):
     """R4.1 lambda_lin(u) with intervals; R4.2 cross-fitted rightmost eigenvalues of C_b (32) and the 24 word-set subspaces (4) over the 20
     halvings x 2 assignments (median of held-out values), joint bootstrap (2,000; halvings fixed, subspaces fixed), 200 within-prompt
@@ -388,42 +430,39 @@ def r4_block(ctx):
     XQ, SQ = Xc @ Qall, Sc @ Qall; off = {}; o = 0
     for k, v in subs.items():
         off[k] = (o, o + v.shape[1]); o += v.shape[1]
-    B = 200 if ctx.mock else 2000; Wp = K.prompt_bootstrap(NP, B=B, seed=1001)
+    B = 200 if ctx.mock else 2000; Wp = t.as_tensor(K.prompt_bootstrap(NP, B=B, seed=1001), dtype=t.float64)[:, po]      # [B, n] text weights
+    kk = {k: v.shape[1] for k, v in subs.items()}
+    Pk = {k: (XQ[:, off[k][0]:off[k][1], None] * SQ[:, None, off[k][0]:off[k][1]]).reshape(len(po), -1) for k in subs}   # x_n (x) s_n per subspace
 
-    def M_of(mask, wt, k):
-        i, j = off[k]; w = wt * fac * mask; return ((XQ[:, i:j] * w[:, None]).T @ SQ[:, i:j]) / (w.sum().clamp_min(1e-12) * cbar)
-
-    def cf(wt, Sperm=None):
+    def cfb(Wt, Pk_=Pk):
+        """cross-fitted lambda^cf (median over 20 halvings x 2 assignments of the held-out values) for replicate weights Wt [B, n]"""
         out = {}
         for k in subs:
             hv = []
             for h in H:
                 hm = h.bool()[po].double()
                 for A_ in (hm, 1 - hm):
-                    MA, MB = M_of(A_, wt, k), M_of(1 - A_, wt, k); lam, y, z, _ = S.rightmost(MA); v, ray = S.heldout(MB, y, z); hv.append(v)
-            out[k] = float(np.median(hv))
+                    wa, wb = Wt * (fac * A_)[None], Wt * (fac * (1 - A_))[None]
+                    MA = (wa @ Pk_[k]).reshape(-1, kk[k], kk[k]) / (wa.sum(1) * cbar).clamp_min(1e-300)[:, None, None]
+                    MB = (wb @ Pk_[k]).reshape(-1, kk[k], kk[k]) / (wb.sum(1) * cbar).clamp_min(1e-300)[:, None, None]
+                    lam, y, z = S.rightmost_b(MA); hv.append(S.heldout_b(MB, y, z)[0])
+            out[k] = t.stack(hv, 1).nanmedian(1).values.cpu().numpy()
         return out
-    pt = cf(t.ones(len(po), dtype=t.float64)); bs = {k: [] for k in subs}
-    for i in range(B):
-        r = cf(t.as_tensor(Wp[i], dtype=t.float64)[po])
+    pt = {k: float(v[0]) for k, v in cfb(t.ones(1, len(po), dtype=t.float64)).items()}; bs = {k: [] for k in subs}
+    for i0 in range(0, B, 250):
+        r = cfb(Wp[i0:i0 + 250])
         for k in subs:
-            bs[k].append(r[k])
-    perm = []
-    nper = 20 if ctx.mock else 200
+            bs[k] += r[k].tolist()
+    perm, nper = [], (20 if ctx.mock else 200)
     for i in range(nper):
         g = t.Generator().manual_seed(2201 + i); idx = t.arange(len(po))
         for p in range(NP):
             m = (po == p).nonzero().flatten()
             if len(m) > 1:
                 idx[m] = m[t.randperm(len(m), generator=g)]
-        SQp = SQ[idx]; hv = []
-        for h in H:
-            hm = h.bool()[po].double()
-            for A_ in (hm, 1 - hm):
-                i0, j0 = off["C"]; wa, wb = fac * A_, fac * (1 - A_)
-                MA = ((XQ[:, i0:j0] * wa[:, None]).T @ SQp[:, i0:j0]) / (wa.sum() * cbar); MB = ((XQ[:, i0:j0] * wb[:, None]).T @ SQp[:, i0:j0]) / (wb.sum() * cbar)
-                lam, y, z, _ = S.rightmost(MA); hv.append(S.heldout(MB, y, z)[0])
-        perm.append(float(np.median(hv)))
+        i0, j0 = off["C"]; Pp = {"C": (XQ[:, i0:j0, None] * SQ[idx][:, None, i0:j0]).reshape(len(po), -1)}
+        perm.append(float(cfb_one(Pp["C"], kk["C"], H, po, fac, cbar)))
+    full = _full_space(Xc, Sc, fac, po, H, cbar, R.ustar(ctx, b)[0], n_perm=3 if ctx.mock else 20)
     lmC, lmR = pt["C"], pt["W_RSI_build"]; dif = np.array(bs["C"]) - np.array(bs["W_RSI_build"]); div = S.iv(dif); riv = S.iv(bs["W_RSI_build"])
     resolved = lmC > np.percentile(perm, 95); vC = J["modes"]["C"]["v"].double(); VR = J["V_S"]["W_RSI_build"].double()
     proj = float(((VR.T @ S.unit(vC)) ** 2).sum()); neu = [pt[k] for k in subs if k.startswith("neutral")]
@@ -447,8 +486,8 @@ def r4_block(ctx):
         st.append("RSI above neutral words")
     lin = {}
     for nm, u in (("ustar", R.ustar(ctx, b)[0]), ("T_v", R.ax1b(ctx, b)["axes"]["T_v"]), ("sea_v", R.ax1b(ctx, b)["axes"]["sea_v"]), ("cov4", R.pool_dir(ctx, "cov", b, 4, X.shape[1]))):
-        uu = S.unit(u.double()); xu, su_ = Xc @ uu, Sc @ uu; v = lambda w: float((xu * su_ * w * fac).sum() / ((w * fac).sum() * cbar))
-        lin[nm] = dict(pt=v(t.ones(len(po), dtype=t.float64)), iv=S.iv([v(t.as_tensor(Wp[i], dtype=t.float64)[po]) for i in range(B)]))
+        uu = S.unit(u.double()); pr_ = Xc @ uu * (Sc @ uu) * fac
+        lin[nm] = dict(pt=float(pr_.sum() / (fac.sum() * cbar)), iv=S.iv(((Wp @ pr_) / ((Wp @ fac) * cbar)).numpy()))
     r43 = {}
     for which in ("vmax", "vRSI"):
         p = R.find(ctx, f"r4/b{b}/r43_{which}.pt")
@@ -464,7 +503,7 @@ def r4_block(ctx):
     ctx.write_json(f"ana/r4_b{b}.json", dict(block=b, lambda_cf=pt, lambda_iv={k: S.iv(v) for k, v in bs.items()}, perm_C=K.dist(perm), resolved=bool(resolved),
                                              diff_iv=div, proj_vmax_VRSI=proj, strings=st, lambda_RSI=dict(pt=lmR, iv=riv, string=lam_s),
                                              p=dict(ge1=pos(bs["W_RSI_build"], 1.0), lt1=pos(bs["W_RSI_build"], 1.0, "less")), lambda_lin=lin, R43=r43,
-                                             ritz_full=J["ritz_full"]["lam"], labels=lab), config=dict(block=b, B=B, perms=nper, halvings=len(H)))
+                                             ritz_full=J["ritz_full"]["lam"], full_space=full, labels=lab), config=dict(block=b, B=B, perms=nper, halvings=len(H)))
 
 
 # ------------------------------------------------------------------------------------------------------------------ R6

@@ -266,7 +266,7 @@ def decode(model, tok, prompts, keys, T=0.7, max_new=64, probe=None, mask_eos=Fa
         if A is not None:
             d["a"], d["a2"] = A[r, :k].numpy(), A2[r, :k].numpy()
         if rec["z"]:
-            d["z"] = [z[r] for z in rec["z"][:k]]
+            d["z"] = [tuple(x[r] for x in z) if isinstance(z, tuple) else z[r] for z in rec["z"][:k]]
         res.append(d)
     return res
 

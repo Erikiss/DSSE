@@ -5,7 +5,7 @@ d1_Lf (D1-f, shuffled streams at L*), d1_v (D1-v), d1_cov (SG8 optional covariat
 
 Raw records (d1/raw_<step>.pt with sidecar): one per context with id, arm, fam ('sym' | 'asym'), item, stream, swap, k, order, arr, enc,
 L (nominal; 0 = L0), model, filler ('coh' | 'shuf'), q [(attribute, B shown as (a))], l (log p(B letter) - log p(A letter), nats,
-unclipped; X_N: version-2 orientation; closed-book: true-value orientation), M (p(a) + p(b)), optional h14 / h18 (float16, last question
+unclipped; X_N: version-2 orientation; closed-book: true-value orientation), qs [(attribute, B shown as (a))], M (p(a) + p(b)), optional h14 / h18 (float16, last question
 token), optional D1-d extras (nll [2], kl, fact [4]). The analysis (r1b_d_ana.py) clips at +-15 and computes every statistic."""
 import os
 import numpy as np

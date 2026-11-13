@@ -107,7 +107,7 @@ class D1:
         if rec is None or not rec.get("l"):
             return out
         acc = {}
-        for (j, bf), v in zip(rec["q"], rec["l"]):
+        for (j, bf), v in zip(rec["qs"], rec["l"]):
             acc.setdefault(int(j), []).append(clipped(v))
         for j, v in acc.items():
             out[j] = np.mean(v)
@@ -233,7 +233,7 @@ def gm_ok(D, L, arms=None):
     return (float(np.median(m)) if m else float("nan")), bool(m and np.median(m) >= 0.9)
 
 
-def ana_d1(ctx):
+def _ana_d1(ctx):
     torch = K._torch(); c = S.cfg(ctx); recs = []
     for name in ("ends", "L0", "Ls", "Lf", "s"):
         p = ctx.input("r1b_D_A", f"d1/raw_{name}.pt", required=False)
@@ -352,10 +352,11 @@ def d1a(ctx, D, items, W, Ls, mode, pc_ok, gm_bad, c):
     psi = dP24_h - (PC1 - PC0)
     res.update(PhiC24_L0=S_(PC0), PhiC24_Ls=S_(PC1), Psi_Delta=S_(psi))
     iff = list(range(min(24, len(items)))); Wf = weights(item_groups(iff, c.n_streams), 11)
-    l0f, lkf = curve(D, iff, Ls, (2, 4), arm="f", filler="shuf", pure_arm="f")
-    has_f = np.isfinite(l0f).any()
-    if has_f:
+    _, lkf = curve(D, iff, Ls, (2, 4), arm="f", filler="shuf")
+    with np.errstate(all="ignore"):
         l0f = np.nanmean(np.stack([D.A(iff, arm="f", swap=s, arr="pure", L=Ls, filler="shuf") for s in (0, 1)]), (0, 2))
+    has_f = bool(np.isfinite(l0f).any())
+    if has_f:
         Pf = phi(Wf, l0f, lkf, (2, 4))[0]; Pf0 = p24(0, sub_items=iff, Wx=Wf)
         dP24_f = p24(Ls, sub_items=iff, Wx=Wf) - Pf0; thk_f = Pf - Pf0; res.update(Phi24_shuf_Ls=S_(Pf))
     # rule
@@ -531,8 +532,7 @@ def d1e(D, items, c, Ls):
                                   [np.where(keep, -D.A(items, arm="e", swap=1, k=5, order=o, L=L, fam="asym"), np.nan) for o in (1, 2)]), (0, 2))
         g[L] = wm(W, par); out[f"gamma_prior_L{L}"] = S_(g[L])
         for sw, nm in ((0, "true_minority"), (1, "cp_minority")):
-            l0 = np.nanmean(np.where(keep, D.A(items, arm="pure", swap=sw, L=L, fam="asym", arr="pure") if False else
-                                     D.A(items, arm="e", swap=sw, arr="pure", L=L, fam="asym"), np.nan), 1)
+            l0 = np.nanmean(np.where(keep, D.A(items, arm="e", swap=sw, arr="pure", L=L, fam="asym"), np.nan), 1)
             lk = {k: np.nanmean(np.stack([np.where(keep, D.A(items, arm="e", swap=sw, k=k, order=o, L=L, fam="asym"), np.nan) for o in (1, 2)]), (0, 2))
                   for k in (2, 4)}
             out[f"Phi24_{nm}_L{L}"] = S_(phi(W, l0, lk, (2, 4))[0])
@@ -581,7 +581,6 @@ def d1r(D, items, aitems, c):
             with np.errstate(all="ignore"):
                 per[S.SLOTS[j]] = K.val(np.nanmean(a) / np.nanmean(b))
         out[e]["rho_per_attribute"] = per
-    Dc, rc = Pc * 0 + (np.asarray(out["char"]["Phi"]["pt"] if False else 0)), None
     l0 = np.nanmean(np.stack([D.A(items, arm="r", swap=s, arr="pure", L=0, enc="char") for s in (0, 1)]), (0, 2))
     lk = {k: np.nanmean(np.stack([D.A(items, arm="r", swap=s, k=k, order=1, L=0, enc="char") for s in (0, 1)]), (0, 2)) for k in range(1, 5)}
     Pch = phi(W, l0, lk, range(1, 5))[0]; Dd = Pch - Pc
@@ -662,14 +661,14 @@ def coexistence(D, items, Ls):
                 xn = D.get("xn", i, L=L); pa = {s: D.get("pure", i, s, L=L) for s in (0, 1)}
                 if xn is None or any(v is None or f"h{blk}" not in v for v in pa.values()) or f"h{blk}" not in xn:
                     continue
-                hq = lambda r: {tuple(q): r[f"h{blk}"][n].double().numpy() for n, q in enumerate(r["q"])}
+                hq = lambda r: {tuple(q): r[f"h{blk}"][n].double().numpy() for n, q in enumerate(r["qs"])}
                 HX, HP = hq(xn), {s: hq(pa[s]) for s in (0, 1)}
                 for s in (0, 1):
                     for o in (1, 2):
                         r = D.get("main", i, s, 5, o, L=L)
                         if r is None or f"h{blk}" not in r:
                             continue
-                        for n, (j, bf) in enumerate(r["q"]):
+                        for n, (j, bf) in enumerate(r["qs"]):
                             hab = r[f"h{blk}"][n].double().numpy(); hn = HX[(j, bf if s == 0 else (not bf))]
                             uA, uB = HP[s][(j, bf)] - hn, HP[1 - s][(j, not bf)] - hn; y = hab - hn
                             X = np.stack([uA, uB], 1); co, *_ = np.linalg.lstsq(X, y, rcond=None)
@@ -726,7 +725,7 @@ def persist(E, key):
         return (e2 + e3) / (2 * e1), defined
 
 
-def ana_d2(ctx):
+def _ana_d2(ctx):
     torch = K._torch(); c = S.cfg(ctx)
     p = ctx.input("r1b_D_B", "d2/read.pt", required=False)
     if not p:
@@ -1041,7 +1040,7 @@ def mcnemar_p(b, c_):
     return float(binom.sf(b - 1, n, 0.5)) if n else 1.0
 
 
-def ana_d3(ctx):
+def _ana_d3(ctx):
     torch = K._torch(); c = S.cfg(ctx); out = {}
     p = ctx.input("r1b_D_C", "d3/traj.pt", required=False)
     if not p:
@@ -1227,7 +1226,7 @@ def cls_of(r, i):
 # ------------------------------------------------------------------------------------------------------------------------------------
 # D5
 # ------------------------------------------------------------------------------------------------------------------------------------
-def ana_d5(ctx):
+def _ana_d5(ctx):
     import r1b_d_d5 as D5
     torch = K._torch(); c = S.cfg(ctx)
     p = ctx.input("r1b_D_C", "d5/gen.pt", required=False)
@@ -1321,7 +1320,7 @@ def ana_comb(ctx):
     a = d1.get("D1-a", {}); va = val_s(a.get("verdict")) or "not run"
     sup_a = bool(a.get("support")) and va.startswith("length-driven"); neg_a = bool(a.get("negative"))
     p_a = a.get("p_a", 1.0)
-    D3 = d3.get("D3", {}); vb1 = D3.get("verdict", "not run"); sup_b1 = vb1 == "split grows with length"
+    D3 = d3.get("D3", {}); vb1 = val_s(D3.get("verdict")) or "not run"; sup_b1 = vb1 == "split grows with length"
     neg_b1 = vb1 in ("no split at any length", "split shrinks with length (urn-like)", "split at both lengths, no length trend")
     p_b1 = D3.get("p_b1", 1.0)
     d2a, d2b, d2c = val_s(d2.get("D2-a", {}).get("verdict")) or "", d2.get("D2-b", {}).get("verdict", ""), d2.get("D2-c", {}).get("verdict", "")
@@ -1373,3 +1372,20 @@ def ana_comb(ctx):
            "triggers": dict(R2=sup_b1 or vb1 == "split grows with length"),
            "notes": "part L's L4 strings are attached in r1b_ana, not here (main §3.3)"}
     ctx.write_json(C.FILES["d_verdict"]["rel"], out, config=dict(alpha=0.05, rule="D.17"), labels=["MOCK (tiny random model)"] if ctx.mock else [])
+
+
+def _safe(fn, rel, keys):
+    """An analysis step never ends 'not run': a missing input gives coded verdicts (so that D.17 and d_verdict.json are always written)."""
+    def step(ctx):
+        try:
+            return fn(ctx)
+        except K.NotRun as e:
+            ctx.write_json(rel, dict({k: dict(verdict=K.coded(f"NA:not_run:{e.reason}")) for k in keys}, not_run=e.reason), config=dict())
+    step.__doc__ = fn.__doc__
+    return step
+
+
+ana_d1 = _safe(_ana_d1, "d_ana/d1.json", ("D1-a", "D1-b", "D1-c", "D1-d", "D1-e", "D1-f", "D1-r", "D1-v", "D1-s"))
+ana_d2 = _safe(_ana_d2, "d_ana/d2.json", ("D2-a", "D2-b", "D2-c", "D2-g_long"))
+ana_d3 = _safe(_ana_d3, "d_ana/d3d4.json", ("D3", "D4"))
+ana_d5 = _safe(_ana_d5, "d_ana/d5.json", ("D5-a", "D5-r", "D5-g", "D5-x"))

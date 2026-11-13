@@ -105,6 +105,8 @@ FILES = {
                     "items {id: stratum ('correct' = known, 'wrong' = prone), greedy, samples[4] (T 0.7, keys)}", "L", "SO-LAB"),
     "k_verdict": _f("K", "r1b_K_ana", "k_verdict.json", "json", "K.7 composite; gates {G-K2, G-K4, G-K4b, G-K5, G-K14}; Holm families",
                     "r1b_ana r1b_K_S6"),
+    "k_rk1": _f("K", "r1b_K_S6", "k/rk1.json", "json", "RK-1 strings (CE and Soft-MTP heads), C_k, self-consistency KL", "r1b_ana"),
+    "k_rk2": _f("K", "r1b_K_S7", "k/rk2/rk2.json", "json", "RK-2 string and labels", "r1b_ana"),
     "ref_k16": _f("K", None, PKG + "ref_k16.json", "json", "REF-K16 token ids as RefSet items [{ids, pos}]", "R L", "SO-DMG"),
     "k1_label_bank": _f("K", None, PKG + "k1_label_bank/", "dir", "K1 label bank (items, hashes, splits, frames, scorer tests)", "K L",
                         "SO-LAB"),
@@ -200,7 +202,7 @@ SESSIONS = {
     "r1b_R_S7": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_R_S2_14", R_AXDIRS), done("r1b_R_S0", ("r0_table.json",))), 21.8, (M17,),
                   "R7.1-R7.3 (RG13, RG14 in session)", r1=R1_ALL, r2=R2_Q0(14)),
     "r1b_R_ana": S("R", 1, "A", 5, tuple(done(s) for s in _R_TIER1), 55.3, (M17,),
-                   "R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check", r1=R1_ALL,
+                   "R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check", r1=R1_ALL + ("gpu2/dn_delta.json",),
                    r2=R2_Q0(14, 18, 6) + ("r2_ana/theta_verdict.json",)),
     "r1b_D_A": S("D", 1, "B", 1, (), 202.3, (M17, M06), "G-LCE-1 / G-LCE-2 first (SG9), stream prefills, D1 (main, neutral, "
                  "degradation, non-competing, D1-h), D1-c, D1-d, D1-e, D1-f, D1-r, D1-v, D1-s", optional=(file("sg8_preview"),)),
@@ -214,9 +216,10 @@ SESSIONS = {
     "r1b_K_S2a": S("K", 1, "B", 2, (done("r1b_K_S1"), file("k5a_calib"), xfer("xfer_dmg_ref_R16")), 92.2, (M17,),
                    "K4 gating (incl. export to SO-LAB), K4 (150 wrong items), K4p, K6c, K6f, K6g, K6h, K10c; REF-U32 reporting of "
                    "r1b_K_S1's calibrations", jlens=True),
-    "r1b_K_S2b": S("K", 1, "B", 3, (done("r1b_K_S2a"),), 51.1, (M17,), "K6e"),
+    "r1b_K_S2b": S("K", 1, "B", 3, (done("r1b_K_S2a"), done("r1b_K_S1"), xfer("xfer_dmg_ref_R16")), 51.1, (M17,),
+                   "K6e (+ K3h atlas-compatible H-neuron metrics if tier 2 is funded)"),
     "r1b_K_S4": S("K", 1, "B", 3, (done("r1b_K_S1"), done("r1b_K_S3")), 119.9, (M17,), "K8a, K8b, K8c, K7a"),
-    "r1b_K_S5": S("K", 1, "A", 4, (done("r1b_K_S1"), done("r1b_K_S2a"), done("r1b_K_S4"), done("r1b_R_S0", ("so_ax/*",)),
+    "r1b_K_S5": S("K", 1, "A", 4, (done("r1b_K_S1"), done("r1b_K_S2a"), done("r1b_K_S4"), done("r1b_R_S0", ("so_ax/*", "xfer/*")),
                                    done("r1b_R_S2_14", ("ax1b/*",)), done("r1b_R_S2_18", ("ax1b/*",))), 70.1, (M17,),
                   "K9, K10a, K10b, K3f, K7b (SO-AX read)"),
     "r1b_K_ana": S("K", 1, "A", 5, tuple(done(s) for s in ("r1b_K_S1", "r1b_K_S2a", "r1b_K_S2b", "r1b_K_S3", "r1b_K_S4", "r1b_K_S5")),
@@ -237,10 +240,12 @@ SESSIONS = {
     "r1b_R_ana2": S("R", 2, "A", 7, (any_done("r1b_R_S5L", "r1b_R_S8"), done("r1b_R_ana", ("r1b_R_verdict.json", "ana/**"))), 10.2, (M17,),
                     "R pass 2"),
     "r1b_D_R": S("D", 2, "A", 6, (done("r1b_D_ana"),), 119.0, (M17,), "D's reserves R1, R2 (conditional on d_verdict triggers.R2), R3"),
-    "r1b_K_S6": S("K", 2, "A", 6, (trig("k_verdict", "gates.G-K5", "ne", "calibrated"),), 58.0, (M17,), "RK-1 (MTP head, bf16)"),
-    "r1b_K_S7": S("K", 2, "B", 4, (done("r1b_K_S3"),), 53.0, (M35,), "RK-2 (H-link on the native lens, Qwen3.5-2B)"),
+    "r1b_K_S6": S("K", 2, "A", 6, (done("r1b_K_S1"), done("r1b_K_S2a")), 72.0, (M17,),
+                  "RK-1 (two post-hoc MTP heads on frozen Qwen3-1.7B, bf16: standard CE and Soft-MTP / Teoh 2026; unconditional in tier 2)"),
+    "r1b_K_S7": S("K", 2, "B", 4, (done("r1b_K_S3"), done("r1b_K_S1")), 53.0, (M35, M17),
+                  "RK-2 (H-link on the native lens, Qwen3.5-2B; the Qwen3 tokenizer re-encodes the bank)"),
 }
-TIER2_ITEMS = {"r1b_D_C": ("D5-x",), "r1b_L_A": ("X2", "X6"), "r1b_L_B": ("X1", "X3", "X4", "X5")}   # tier-2 items in tier-1 sessions
+TIER2_ITEMS = {"r1b_K_S2b": ("K3h",), "r1b_D_C": ("D5-x",), "r1b_L_A": ("X2", "X6"), "r1b_L_B": ("X1", "X3", "X4", "X5")}   # tier-2 items in tier-1 sessions
 
 # Slots (main §4.4): one notebook each; sessions in order, each waiting for its start conditions (packing, not a rule).
 SLOTS = {

@@ -115,7 +115,8 @@ Statistic definitions:
     'NaN:denominator_interval_includes_0' and every rule that needs E cannot be reached.
   - All three are recomputed in every bootstrap replicate.
 - **Bound conditions and point conditions.**
-  - Bound conditions use the 90 % interval (one-sided 5 %): the lower and upper bounds of A, A_bar, A_bar_abs, E, SPO_t's |A_4|, the
+  - Bound conditions use the 90 % interval (one-sided 5 %; the F+ member 'likely' tests A_bar against 0.25 whichever strength is
+    reached, R.9 e): the lower and upper bounds of A, A_bar, A_bar_abs, E, SPO_t's |A_4|, the
     PC contrast P5, gains and K.
   - Point conditions are validity conditions, as in round 1: mean rel_2..4 >= 0.5, rel_n >= 0.5, R_4^cf >= 0.5, S_4^cf >= 0.5,
     D4 > 0, and the debiased-cosine labels.
@@ -439,8 +440,8 @@ loop map at one block, not of token fronts.
     - 0.95 when all four are equal;
     - 0.85 when only the GPU model differs (G47: L4 against A100 with equal software gave 0.969 / 0.938 on 64 axis texts);
     - 0.80 otherwise, labelled 'software versions differ'.
-  - (ii) Paired tolerance on the open-loop rows. For c and rel, the difference replay minus round 1 on the same row is
-    <= max(2.5 SD_diff, 1e-4) in at least 95 % of the rows and <= 4 SD_diff in every row. SD_diff is the prompt-bootstrap SD of the
+  - (ii) Paired tolerance on the open-loop rows. For c and rel, the absolute difference |replay - round 1| on the same row is
+    <= max(2.5 SD_diff, 1e-4) in at least 95 % of the rows and <= 4 SD_diff in every row (R.9 a). SD_diff is the prompt-bootstrap SD of the
     paired difference (the same prompt weights for both).
   - (iii) rk_verdict's gate list (GO0-GO3, which uses pilots and round 0 only) equals round 1's, and PC_PASS computed with round-1
     formulas on the open-loop rows equals round 1's.
@@ -509,7 +510,9 @@ loop map at one block, not of token fronts.
     - W_sports: sport, sports, football, soccer, basketball, tennis, game, team, match, player, athlete, coach, score, goal, race.
     - W_tone: amazing, wonderful, fantastic, exciting, incredible, love, awesome, thrilled, delighted, brilliant, great, joy,
       beautiful, magical, superb.
-    - Neutral sets: 20 sets of 15 words drawn (np.random.default_rng(4242)) from the frozen neutral pool (Appendix R.A).
+    - Neutral sets: 20 sets of 15 words drawn (np.random.default_rng(4242)) from the frozen neutral pool (Appendix R.A), matched to
+      W_RSI-eval (used by R5); R4.2 uses a second family of 20 sets matched to W_RSI-build the same way (np.random.default_rng(4243);
+      R.9 h).
       - The pool excludes every concept list, the A3 lexemes and every word (any inflection) of the eight round-1 axis instructions.
       - Each set is matched to W_RSI-eval on the decile histogram of the unsteered model's mean log-probability of each word's first
         token at continuation positions of 64 TXT0 texts. That histogram is computed in r1b_R_S3 and is outcome-independent.
@@ -587,7 +590,8 @@ loop map at one block, not of token fronts.
   - (P3) S_4^cf >= 0.5 (point);
   - (P4) lexical, one pooled test: the per-prompt mean of count(+) - count(-) of W_sea words, over evaluations 1-3 and the prompt's
     pairs, has a one-sided sign-flip p <= 0.01 (10,000 flips, np.random.default_rng(2003));
-  - (P5) specificity: A_4(SEA_t) - max(A_4(RND_1), A_4(RND_2)) has a 90 % lower bound > 0.
+  - (P5) specificity: A_4(SEA_t) - max(|A_4(RND_1)|, |A_4(RND_2)|) (absolute values in each replicate; the RND loops' sign is
+    arbitrary) has a 90 % lower bound > 0 (R.9 b).
   - Verdict strings: 'PC_PASS_1b' or 'PC fails (<P1..P5 components>)'. 'GO1_1b' (row 1: rel >= 0.5, p_s <= 0.01, A lower bound
     >= 0.10) is reported, not gating.
   - Label 'no topic persists beyond the generic mode at b' if PC_PASS_1b fails, SEA_t and SPO_t both have |A_n| upper bounds < 0.25
@@ -666,9 +670,9 @@ loop map at one block, not of token fronts.
     - R_4^cf >= 0.5 (point);
     - D4 > 0 for both loops (point);
     - SPO_t's |A_4| upper bound < 0.25;
-    - no RND loop with p_s <= 0.01 and A lower bound >= 0.25 at n = 3 or 4;
-    - every RSI push in band (RG9);
-    - the K5 gate: if z_beh(u_T^v) >= 3, then mean z_beh(d_4) >= 1.64 and |z_sports|, |z_literature| < 2.58.
+    - no RND loop with two-sided p_s <= 0.01 and |A|'s lower bound >= 0.25 at n = 3 or 4 (R.9 b);
+    - the K5 gate: if z_beh(u_T^v) >= 3, then mean z_beh(d_4) >= 1.64 (strings 4 and 5) or mean z_beh(d_4) x sign(A_4) >= 1.64
+      (string 6, round 1's ok_oscillation; R.9 c), and |z_sports|, |z_literature| < 2.58.
   - V_RSI_1b(b) is the first string in this list whose conditions hold:
     1. 'descriptive (code check failed; would have read: <string>)' when RG5 failed for the DN arm at b.
     2. 'not decidable (RSI axis not resolved)' when GO0_1b(b) fails.
@@ -679,7 +683,7 @@ loop map at one block, not of token fronts.
     6. 'oscillation (RSI begets anti-RSI)': PC_PASS_1b(b); C_pos; two-sided p_s <= 0.01 at n = 2, 3, 4 for both loops; the signs of
        A_1..A_4 alternating; A_bar_abs's lower bound >= 0.25.
     7. 'unlikely (RSI does not persist)': SENS_1b(b); MANIP_1b; A_bar_abs's upper bound < 0.25; no RND loop attracted to RSI (as in
-       C_pos); every RSI push in band.
+       C_pos). A single push out of band only labels the row (RG9; R.9 d).
     8. 'unlikely (no first link)': SENS_1b(b), and A_1's upper bound < 0.10 for both loops.
     9. 'undecided (positive control not testable)' when the conditions of 4, 5 or 6 hold except the PC, under RG7's last case.
     10. 'undecided (positive control failed)' when the conditions of 4, 5 or 6 hold except PC_PASS_1b.
@@ -892,7 +896,8 @@ loop map at one block, not of token fronts.
     - 'round-2 cells reproduced' where the u*_14 cells at 0.5 / 1 / 2 alpha_0 fall within round 2's intervals (G 0.2948 [0.2452,
       0.3432], 0.2996 [0.2682, 0.3312], 0.2783 [0.2645, 0.2922]);
     - 'consistent with the linear response' if g(0.25 alpha_0)'s interval overlaps R4.1's lambda_lin(u).
-  - The u_T^v rows at 14, 18 and 6 are members of F+ ('reaches 1') and F- ('below 1').
+  - The u_T^v rows at 14, 18 and 6 are members of F+ ('reaches 1') and F- ('below 1'). Where GO0_1b(b) fails they read 'not decidable
+    (RSI axis not resolved)' with p = 1 (R.9 f).
 - Null / controls: the unpushed texts (per-sign responses); the random direction; R3.4's noise floor.
 - Shows - cannot show: the small-push gain of the self-steering map along fixed directions, which closes round 2's open window. G = 1 is
   a threshold of this map under its read conventions (P2 4.0), so 'reaches 1' is not by itself self-sustainment of the natural loop;
@@ -1064,8 +1069,9 @@ loop map at one block, not of token fronts.
 
 **R4.3 Direct forward check of the Jacobian**
 - What: do pushes along v_max^C and v_RSI through the real loop return the gains R4.2 predicts?
-- How: per block, cells along v_max^C and v_RSI (in-session full-sample directions from R4.2; sign fixed so that the cosine with u*_b,
-  respectively u_T^v, is >= 0) at the PUSH-DN dose, 512 pairs each, keys ('r1b_fdtchk', b, which, q, s). lambda_direct(v) = w . d /
+- How: per block, cells along v_max^C and v_RSI (in-session directions of K2 halving 0's fit half A: v = y_A, w = z_A; sign fixed so
+  that the cosine with u*_b, respectively u_T^v, is >= 0; lambda_FDT = z_A' J_B y_A / (z_A' y_A), the held-out value; R.9 j) at the
+  PUSH-DN dose, 512 pairs each, keys ('r1b_fdtchk', b, which, q, s). lambda_direct(v) = w . d /
   (a cbar w . v), with w the matching left vector; if |cos(v, w)| < 0.2, the Rayleigh read v . d / (a cbar) is used ('non-normal:
   Rayleigh read').
 - Rule: 'FDT confirmed by a direct push' if the 90 % interval of lambda_direct - lambda_FDT contains 0. Otherwise R4.2's verdicts at b
@@ -1114,7 +1120,7 @@ loop map at one block, not of token fronts.
     text-bootstrap interval (texts as units, 2,000 replicates). Also R2_b, and the sign agreement over (set, direction) cells whose
     measured odd shift exceeds 2 SE.
   - 'Lens valid at b' iff beta_b's interval lies within [0.5, 2.0], R2_b >= 0.5 and sign agreement >= 0.8; otherwise 'lens not valid
-    at b'.
+    at b'. R2_b is the centred R^2 of the through-origin fit, 1 - SSres / sum (y - ybar)^2 (R.9 g).
   - The layer profile over the 8 blocks is reported in full: beta_b, R2_b, sign agreement, token correlation and the deviation
     1 - R2_b.
 - Null / controls: random directions; neutral sets; the even part (nonlinearity) beside the odd part.
@@ -1306,8 +1312,9 @@ loop map at one block, not of token fronts.
   - Secondary K_geo = exp(slope) of a weighted least-squares fit of log D_k on k (diagonal weights, the whole fit bootstrapped) over
     the turns whose D_k interval lies above 0. It needs >= 3 turns, else 'K_geo not estimable'; same thresholds.
   - The denominators D_1 are always printed with their intervals.
-  - Random control: 'RSI carry above generic carry' if the paired interval of K_2(u_T^v) - K_2(random) at T 0.7 lies above 0; 'below'
-    mirrored; else 'not distinguishable from generic carry'.
+  - Random control: 'not decidable (random-direction K not defined)' if the random D_1's 90 % interval contains 0 (code
+    NaN:denominator_interval_includes_0; R.9 i); otherwise 'RSI carry above generic carry' if the paired interval of K_2(u_T^v) -
+    K_2(random) at T 0.7 lies above 0; 'RSI carry below generic carry' mirrored; else 'not distinguishable from generic carry'.
 - Null / controls: the paired construction (the - side); the random-direction carry; the u*_14 carry. Round 2's K 0.45-0.48 was along
   u*_14 after a u*_14 push; here the push is along RSI, so the two are not the same quantity.
 - Shows - cannot show: the carry of an RSI stance through the model's own context over five follow-ups at short length. Nothing about
@@ -1422,8 +1429,9 @@ loop map at one block, not of token fronts.
   - If the gate is open, the ablated loop is read at d_2 and d_3:
     - 'un-searched' if p_s > 0.10 and |A|'s upper bound < 0.25, while the twin has p_s <= 0.01 and A's lower bound >= 0.25;
     - 'survives' if p_s <= 0.01 and A's lower bound >= 0.25;
-    - 're-routed' if rel >= 0.5, Ue >= 0.25 with its interval above 0, and |A|'s upper bound < 0.25;
-    - 'undecided (twin does not re-find RSI)';
+    - 're-routed' if rel >= 0.5, Ue >= 0.25 with its interval above 0, and |A|'s upper bound < 0.25, where Ue_n = unit(u_T^v(14)) .
+      d_n / Delta_T^v (AX-1b's text-unit gap); the rule reads u_T^v, u_RSI is descriptive (R.9 k);
+    - 'undecided (twin does not re-find RSI)' if the twin at d_2 or d_3 fails p_s <= 0.01 and A's lower bound >= 0.25;
     - otherwise 'undecided'.
   - If the gate is closed: 'not testable (gate: <reason>)'.
 - Null / controls: the unablated twin, with shared keys and the same pushes.
@@ -1749,6 +1757,58 @@ The report prints the reached and Holm-confirmed counts of F+ and F- next to the
 - OD-R15 Confirmatory families F+ and F- (ten members each) with Holm at family-wise 0.05.
 - OD-R16 Replay reproduction is judged on the open loop; the closed loop is descriptive.
 - OD-R17 Reduction level chosen by RG18 from r1b_P0's rates before the freeze (main SG7).
+
+## R.9 Implementation notes (code: analysis/ju_space/round1b/r1b_sessions_R.py, r1b_r_*.py)
+
+**Rule changes adopted from the review hints (confirmed against this text).**
+- (a) R1 (ii): the paired tolerance bounds |replay - round 1| (stats-16; the signed form let any negative deviation pass).
+- (b) RND checks are two-sided (R.1 already reads RND loops two-sided): C_pos and string 7 use two-sided p_s and |A|'s lower bound;
+  P5 uses max(|A_4(RND_1)|, |A_4(RND_2)|) (validity-2, stats-6). R0's 'not topic-specific' contrast uses |A_4(RND_1)| likewise.
+- (c) K5 clause: string 6 uses mean z_beh(d_4) x sign(A_4) (round 1's ok_oscillation, rk_verdict.py:82-84); strings 4-5 unchanged
+  (stats-4).
+- (d) 'every RSI push in band' is dropped from C_pos and string 7; RG9's row label and string 3 (> 1 push out of band) stay (stats-9).
+- (e) The F+ member 'likely (either strength)' tests A_bar's bound against 0.25 whichever string is reached (stats-11).
+- (f) R3.3's u_T^v members read 'not decidable (RSI axis not resolved)' with p = 1 where GO0_1b fails (stats-12).
+- (g) R5.1's R2_b is centred (stats-14). (h) R4.2 uses neutral sets matched to W_RSI-build (rng 4243; stats-15).
+- (i) R6.2's random control gets 'not decidable (random-direction K not defined)' (stats-7).
+- (j) R4.3: directions and lambda_FDT from halving 0's fit / held-out halves (stats-8, definitional part; the non-equivalence form of
+  'FDT confirmed' is unchanged and stays open).
+- (k) R7.3: Ue and the twin condition defined (stats-10).
+- Descriptive additions only (rules unchanged): P4' = SEA_t's lexical difference minus max |RND lexical difference| (validity-7);
+  per-set z-scores of R5.3's shifts against the null directions (validity-5 / stats-5).
+
+**Code deviations from the text (no rule changes).**
+- R2.2-R7 run with r1b_core (function style, in the session process: Hooks.push = rk's push, CC4) instead of r2_rk.open_block plus
+  an r1b_rk.py; r1b_rk.py's functions live in r1b_r_lib.py (NP push, dmg_sym and calibration, generation-time cbar, windows) and
+  r1b_r_s*.py. R1 uses rk_loop itself (closed loop as subprocesses, open loop as a library); CC4 is a script step in r1b_R_S2_14 that
+  registers r1b_core's push on rk_loop's own model.
+- Storage: per evaluation x+ and x- (float32, 'all' window; delta = (x+ - x-) / 2 is derived), 'div' / 'first20' as projections on F(b),
+  token ids, cbar, calibration record, word counts of the fixed WORDSETS. Neutral-set counts are computed from the stored token ids
+  (the neutral sets exist only after r1b_R_S3).
+- R6.2's in-context read is a teacher-forced read of the full context (= generation-time capture up to kernel numerics; turns >= 2
+  are unpushed).
+- R4.2 read directions: g = d/dV of sum_t log p(S | prefix_t), V a plain leaf added at the output of block b from the first user token
+  (one backward per (text, set); includes the cross-position terms).
+- R5.4: own averaged-Jacobian fit (batched VJPs, dim_batch 64, bf16; sources = block outputs, so LENS-J1b's convention is 'output')
+  instead of the jlens reference code.
+- R0.7: the M rule's inner bootstrap keeps the axes and rel of its outer replicate (cost); the power model uses round-1 RSI rows only
+  (R1's open-loop rows exist only after r1b_R_S0).
+- R3.3: g_par along u*_b divides by sqrt(m*^2) (round 2's attenuation); R6.1 compares g_soft and g_text with one estimator (plain
+  projection on unit(u)). R7.1: 'inverted' = the upper end of g_abl / g_0 below 0; foreign fixed axes projected off u_neg; unprompted
+  texts reuse TXT0 seed-0 keys (common random numbers); D = mean y(pro) - mean y(anti), y = log p(Yes) - log p(No). R7.2: restored share =
+  (g_cue,abl - g_abl) / (g_0 - g_abl). R5.5: the 24-pair bank wording is a draft (r1b_r_s5.BANK, package label_bank_1b.json).
+- R8.1 reads gate.C0 / C0_parts / uncomposed per block (r2_rgi_stats layout); the 0.85 / 0.90 runs count 'uncomposed' as FG(CHG-DES) and
+  FG(WOR-DES) above the cut.
+- R9.5's copies are written as r95/<file>.orig (byte-identical, sha256 in r95.json); the coordinator commits them to
+  results/ju_space/runde2_ergebnisse/.
+- MOCK tests use 16 of the 256 prompts and rk_loop's MOCK round-1 states (8 prompts).
+
+**Still open (main-level or design decisions, not changed here):** the F+ / F- composition (validity-1, stats-1), SENS_1b's
+calibration criterion (validity-3, stats-2), the PC gate on positive strings (validity-4), the perp* premise (validity-6), rel for
+'unlikely' (validity-8), R3.3's selection on significance (validity-9), R5.5's known targets (validity-10), string 8 (validity-11), the
+'oscillation' wording (validity-12), MDE anchors (stats-3, stats-13), R5.3's multiplicity (validity-5, stats-5), 'FDT confirmed' as a
+non-rejection (stats-8), the 12-h envelope against RG18's 12.5-h cap, and the 192 new prompts of prompts_1b.json (not yet written;
+r1b_r_package.py builds and checks the file).
 
 ## Appendix R.A Neutral word pool (frozen)
 

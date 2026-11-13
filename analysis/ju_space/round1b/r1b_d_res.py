@@ -31,34 +31,26 @@ def res_r1(ctx):
     torch = K._torch(); c = S.cfg(ctx); tok, model = ctx.model(); tk = S.Tk(tok); eng = LCE(model); st = S.streams(ctx, tk)
     pool = K.load_json(ctx.input("r1b_D_C", "d5/pool.json"))["pool"]; src, sha = S.rk_source(("RSI_PROMPTS", "SCENE_PROMPTS"))
     H, hsha = h30(ctx); H = H if not c.mock else H[:4]
-    m_max = 24 if not c.mock else 4; ms = (2, 8, 24) if not c.mock else (2, 4)
-    n_pool = len({k.split("|")[1] for k in pool})
-    neu, _ = zip(*[(None, None)] * 0) if False else ([], [])
+    ms = (2, 8, 24) if not c.mock else (2, 4); m_max = max(ms); n_pool = len({k.split("|")[1] for k in pool})
     outs = K.generate(model, tok, [(tk.user(src["SCENE_PROMPTS"][p]), ctx.key("r1bD_pool", "neutral", p, 0)) for p in range(m_max)], T=0.7,
                       max_new=c.d5_pool_len)
-    neu = [" ".join(tk.dec(o).split()) or "." for o in outs]
-    pro = [pool[f"pro|{p % n_pool}"][0]["text"] for p in range(m_max)]
-    Lstar = c.d3_long
-    def block(kind, m, official=False):
-        ps = src["RSI_PROMPTS"] if kind == "persona" else src["SCENE_PROMPTS"]; ans = pro if kind == "persona" else neu
-        ids = []
-        for t in range(m):
-            ids += tk.turn(ps[t]) + (tk.enc("<think>\n\n</think>\n\n")[:0] if not official else []) + tk.enc(ans[t])
-        if official:
-            msgs = [dict(role="user", content="x"), dict(role="assistant", content="Understood.")]
+    ans = dict(persona=[pool[f"pro|{p % n_pool}"][0]["text"] for p in range(m_max)], neutral=[" ".join(tk.dec(o).split()) or "." for o in outs])
+    qs = dict(persona=src["RSI_PROMPTS"], neutral=src["SCENE_PROMPTS"]); Lstar = c.d3_long; first0 = "The weather was mild and the streets were quiet."
+
+    def base_ids(L, kind, m, official=False):
+        if official:                      # template check (L0): the official template, history think blocks dropped
+            msgs = [dict(role="user", content=first0), dict(role="assistant", content="Understood.")]
             for t in range(m):
-                msgs += [dict(role="user", content=ps[t]), dict(role="assistant", content=ans[t])]
-            return msgs
+                msgs += [dict(role="user", content=qs[kind][t]), dict(role="assistant", content=ans[kind][t])]
+            ids = tk.enc(tok.apply_chat_template(msgs, tokenize=False, enable_thinking=False)); tail = tk.enc("<|im_end|>\n")
+            return ids[:-len(tail)] if ids[-len(tail):] == tail else ids
+        ids = tk.pre + (list(st["coh"][0][-L:]) if L else tk.enc(first0)) + tk.post + tk.enc("Understood.")
+        for t in range(m):
+            ids += tk.turn(qs[kind][t]) + tk.enc(ans[kind][t])
         return ids
+
     def cell(L, kind, m, official=False):
-        if official:
-            msgs = block(kind, m, True); msgs[0]["content"] = S.L0_SENTENCE if hasattr(S, "L0_SENTENCE") else "The weather was mild."
-            base = tk.enc(tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=False, enable_thinking=False).rstrip("\n"))
-            base = base[:-1] if base and base[-1] == tok.convert_tokens_to_ids("<|im_end|>") else base
-        else:
-            body = st["coh"][0][-L:] if L else tk.enc("The weather was mild and the streets were quiet.")
-            base = tk.pre + list(body) + tk.post + tk.enc("Understood.") + block(kind, m)
-        assert len(base) + 80 <= c.max_pos
+        base = base_ids(L, kind, m, official); assert len(base) + 80 <= c.max_pos
         cache, _ = eng.fwd(base); n0 = len(base); M = []
         for x in H:
             cache, lg = eng.fwd(tk.turn(x["question"]), cache)
@@ -109,11 +101,15 @@ def res_r2(ctx):
                 it = env.d3["items"][i]; sysb, torn, _ = D3.d3_text(it); r = st["res"][i]["M"]
                 a1 = r.get("a1") or r["attempts"][-1]["a1"]; a2 = r.get("a2") or r["attempts"][-1]["a2"]
                 tail = tk.turn(P[it["prompts"][0]]) + list(a1) + tk.turn(P[it["prompts"][1]]) + list(a2)
-                if arm in ("L", "official"):
+                if arm == "L":
                     ft = env.filler_turn(slot % c.n_streams, L - len(tail))
-                    if arm == "official":
-                        ft = tk.enc(K.chat_text(tok_ := env.tok, tk.dec(env.st["coh"][slot % c.n_streams][-(L - len(tail)):])))[:-len(tk.post)] + \
-                            tk.post + tk.enc("Understood.")
+                elif arm == "official":         # the whole history rendered by the official template (history think blocks dropped)
+                    msgs = [dict(role="user", content=tk.dec(env.st["coh"][slot % c.n_streams][-(L - len(tail)):])),
+                            dict(role="assistant", content="Understood."), dict(role="user", content=P[it["prompts"][0]]),
+                            dict(role="assistant", content=tk.dec(a1)), dict(role="user", content=P[it["prompts"][1]]),
+                            dict(role="assistant", content=tk.dec(a2))]
+                    ids = tk.enc(env.tok.apply_chat_template(msgs, tokenize=False, enable_thinking=False)); end = tk.enc("<|im_end|>\n")
+                    ft, tail = (ids[:-len(end)] if ids[-len(end):] == end else ids), []
                 elif arm == "T":
                     ft = tk.pre + tk.enc(S.NEUTRAL_PROMPTS[0]) + tk.post + tk.enc("Understood."); s_ = env.st["coh"][slot % c.n_streams]; k = 0
                     while len(ft) + len(tail) < L - 300:
