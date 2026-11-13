@@ -1495,6 +1495,8 @@ def dry_run(session, root, work, drive, verbose=False):
     g1 = gate_G1()
     print(f"G1 plan freeze: {'ok' if g1['ok'] else 'NOT ok'}: sha256 {g1['sha256']} (expected {FROZEN_PLAN_SHA256[:12]}...), freeze commit "
           f"{g1['freeze_commit']}, ancestor of HEAD {g1['head'][:12]}: {g1['freeze_is_ancestor']}")
+    print(f"amendments: {AMEND_REL} sha256 {g1['amendments']['sha256']}" if g1["amendments"]["sha256"] else
+          f"WARNING: the amendments file {AMEND_REL} is missing in this checkout")
     print("G2 GPU: checked at run time (an A100)" + (" - skipped, RUN_DEVICE=cpu" if ctx.test else ""))
     print(f"round-1 folders read: {', '.join(meta['shards']) or 'none'}" + (f"; version metadata only: {', '.join(meta['meta_shards'])}"
                                                                            if meta["meta_shards"] else ""))
@@ -1805,16 +1807,18 @@ def compile_check():
 
 
 def pc_selftest_check(work):
-    """runner_steps-2: r2_pc's self-test must have run PC code: pc_toy/t7.json has a width with a PC side ('pc'), and a
-    pc_toy/cross_pc/w*.json lists a PC model and a pair. Returns the problems (empty = ok)."""
+    """runner_steps-2: r2_pc's self-test must have run PC code: pc_toy/t7.json has a width with a PC side ('pc') and a
+    pc_toy/cross_pc/w*.json lists a PC model (the coordinator's criterion); no pair at all is a WARNING only. Returns the problems."""
     t7 = load_json(os.path.join(work, "pc_toy", "t7.json")) or {}
     ran = sorted(w for w, v in (t7.get("widths") or {}).items() if isinstance(v, dict) and "pc" in v)
     cross = [load_json(p) or {} for p in sorted(glob.glob(os.path.join(glob.escape(work), "pc_toy", "cross_pc", "w*.json")))]
     n_pc = sum(1 for c in cross for m in (c.get("models") or []) if isinstance(m, dict) and m.get("kind") == "pc")
     n_pairs = sum(len(c.get("pairs") or []) for c in cross)
     say(f"[selftest] r2_pc content: C-T7 widths that ran {ran or 'none'}; cross_pc: {n_pc} PC models, {n_pairs} pairs")
+    if n_pc and not n_pairs:
+        say("WARNING: r2_pc self-test: cross_pc lists PC models but no pair (the pair code did not run)")
     return ([] if ran else ["pc_toy/t7.json: no width ran (no round-1 PC / BP net found?)"]) + \
-           ([] if n_pc else ["pc_toy/cross_pc: no PC model"]) + ([] if n_pairs else ["pc_toy/cross_pc: no pair"])
+           ([] if n_pc else ["pc_toy/cross_pc: no PC model"])
 
 
 def selftest(session, root, st_root):

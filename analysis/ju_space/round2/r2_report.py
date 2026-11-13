@@ -467,7 +467,7 @@ def g46_round2_rows(inp):
                 name = str(m.get("name", "")); mt = NET_RE.match(name)
                 if not mt or int(mt.group(4)) != 0 or m.get("cond", "nat") != "nat" or any(t in name for t in ("gamma", "when", "reg")): continue
                 rows.append((src, (mt.group(1), int(mt.group(2)), 12, 0.0, 1.0), int(mt.group(3)),
-                             dict(first95=m.get("first95"), B2_8=m.get("B2_8"), delta_h2=m.get("delta_h2"), level1=m.get("level1"), name=name)))
+                             dict(first95=m.get("first95"), B2_8=m.get("B2_8"), delta_h2=m.get("delta_h2"), level1=m.get("level1"), name=name, param_arm=m.get("param_arm"))))
     for r in inp.json("theta_toy/nets.json") or []:
         if not isinstance(r, dict) or r.get("arm") not in ("bp_mup", "bp_sp"): continue
         rows.append(("B-T1 / B-T2 nets (r2_t2)", (r["arm"], int(r["W"]), int(r["K"]), float(r.get("gamma") or 0.0), float(r.get("wd_scale", 1.0))), int(r["seed"]),
@@ -521,6 +521,8 @@ def g46(r1_dir, inp):
         out["compared"] += 1
         if not ok: out["differing"].append(key)
     out["rule"] = "per cell: |seed-mean B2(8) difference| <= 0.05 and |first95 difference| <= 500 in >= 4 of 5 seeds (every seed of B-T1's 4-seed cells)"
+    out["param_arm_mismatch"] = sorted({v["name"] for _, cell, _, v in g46_round2_rows(inp) if v.get("param_arm") and v["param_arm"] != cell[0]})
+    out["job_name_source"] = "the net name '<arm>_W<W>_w<ws>_i<init>' (r2_rgi_toy's param_arm, where present, must agree: param_arm_mismatch)"
     return out
 
 

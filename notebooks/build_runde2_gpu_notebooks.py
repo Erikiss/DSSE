@@ -141,7 +141,8 @@ def markdown(s):
     if m["start"]:
         final = ("\n\n**Runde-1-Endstand (R1.final).** Fehlt in einem Runde-1-Ordner auch nach zwei Läufen seines Notebooks "
                  "`shard_done.json` (PC-Jobs fehlen) oder eine Blockzusammenfassung, trägt der Betreiber das von Hand in "
-                 "`dsse_runs/r1_finality.json` ein (kein Skript schreibt diese Datei; Plan 2.1), zum Beispiel\n"
+                 "`dsse_runs/r1_finality.json` ein, und zwar in Konto A, wo alle Sitzungen laufen, die es lesen (die Zelle *Zweiter "
+                 "Ordner* kopiert nur Ordner; kein Skript schreibt diese Datei; Plan 2.1), zum Beispiel\n"
                  "```json\n{\"gpu4\": {\"runs\": [{\"start\": \"2026-11-12T15:02Z\", \"end\": \"2026-11-12T15:24Z\"},\n"
                  "                  {\"start\": \"2026-11-12T16:10Z\", \"end\": \"2026-11-12T16:31Z\"}], \"final\": true}}\n```\n"
                  "Ab zwei eingetragenen Läufen und `\"final\": true` gilt der Teil als endgültig; Teile an einem Block ohne "

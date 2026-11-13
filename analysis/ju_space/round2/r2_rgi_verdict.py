@@ -443,12 +443,21 @@ def a7_over(gs, per, gs06, sim=None):
     def with_depth(cv, sgn):
         cd = depth_conditions(oc, sep, sgn) if sgn else None
         return (cv.replace("with delta or depth", "with delta beyond depth") if (cd and all(cd.values())) else cv), cd
-    (cv, cdep), (cv_pw, _) = with_depth(*causal_rule(sim["FG_causal|IMP-DES"] if sim_ok else Dcc)), with_depth(*causal_rule(Dcc))
+    two = lambda v: list(v) if (isinstance(v, (list, tuple)) and len(v) == 2 and all(fin(num(x)) for x in v)) else None
+    st_f, st_r = two(oc.get("D_sim_ci")), two(orc.get("D_sim_ci"))                 # stored by r2_rgi_stats.py (the same sup-t construction)
+    sim_f = st_f or (sim["FG_causal|IMP-DES"] if sim_ok else None); sim_r = st_f and st_r or (sim.get("rho_causal|IMP-DES") if sim_ok else None)
+    src = ("r2_rgi_stats.py (D_sim_ci, D_sim_crit)" if st_f else "r2_ana from rgi/geom_draws (D_sim_ci not stored)" if sim_ok else None)
+    xc = None
+    if st_f and sim_ok:
+        dmax = max(abs(num(a_) - num(b_)) for a_, b_ in zip(st_f + (st_r or []), sim["FG_causal|IMP-DES"] + (sim.get("rho_causal|IMP-DES") if st_r else [])))
+        xc = dict(max_abs_diff=dmax, agrees=bool(dmax <= 1e-6), crit_stored=oc.get("D_sim_crit"), crit_r2_ana=sim.get("crit"))
+    (cv, cdep), (cv_pw, _) = with_depth(*causal_rule(sim_f if sim_f else Dcc)), with_depth(*causal_rule(Dcc))
     out["causal_line"] = dict(verdict=cv, D_FG_causal=Dc, D_FG_causal_ci=Dcc, D_rho_causal=orc.get("D"), D_rho_causal_ci=orc.get("D_ci"), depth_conditions=cdep,
-                              composed_blocks=gate.get("P_composed"), simultaneous=sim, verdict_with_pointwise_intervals=cv_pw,
-                              intervals=("simultaneous over D(FG_causal) and D(rho_causal) (sup-t, 95 %)" if sim_ok else
+                              composed_blocks=gate.get("P_composed"), simultaneous=sim, verdict_with_pointwise_intervals=cv_pw, simultaneous_source=src,
+                              simultaneous_crosscheck=xc,
+                              intervals=("simultaneous over D(FG_causal) and D(rho_causal) (sup-t, 95 %)" if sim_f else
                                          "pointwise 95 % (" + str((sim or {}).get("status", "simultaneous intervals not computed")) + ")"),
-                              D_FG_causal_sim=sim.get("FG_causal|IMP-DES") if sim_ok else None, D_rho_causal_sim=sim.get("rho_causal|IMP-DES") if sim_ok else None)
+                              D_FG_causal_sim=sim_f, D_rho_causal_sim=sim_r)
     return out
 
 
@@ -1092,6 +1101,15 @@ def selftest(work):
               and csl["verdict"].startswith("causal generality grows") and csl["intervals"].startswith("simultaneous") and csb["verdict"] == "no relation" and csb["verdict_with_pointwise_intervals"].startswith("causal generality grows")
               and csb["D_FG_causal_sim"][0] < 0 < csb["D_FG_causal_ci"][0] and o1["causal_line"]["intervals"].startswith("pointwise 95 % (") and causal_sim(RP.Inputs(None, os.path.join(work, "empty"), None), gsd)["status"].startswith("not available"),
               (round(cs["crit"], 3), cs["FG_causal|IMP-DES"], csb["D_FG_causal_sim"], csb["verdict"]))
+        gss = _gs(over={"FG_causal|IMP-DES": dict(gsd["over_blocks"]["P_composed"]["FG_causal|IMP-DES"], D_sim_ci=list(cs["FG_causal|IMP-DES"]), D_sim_crit=cs["crit"]),
+                        "rho_causal|IMP-DES": dict(gsd["over_blocks"]["P_composed"]["rho_causal|IMP-DES"], D_sim_ci=list(cs["rho_causal|IMP-DES"]), D_sim_crit=cs["crit"])})
+        css = a7_over(gss, a7_blocks(gss), None, cs)["causal_line"]; gsx = _gs(over={"FG_causal|IMP-DES": dict(gsb["over_blocks"]["P_composed"]["FG_causal|IMP-DES"], D_sim_ci=[0.01, 0.19], D_sim_crit=2.0)})
+        csx = a7_over(gsx, a7_blocks(gsx), None, causal_sim(idr, gsx))["causal_line"]; cs0 = a7_over(gsx, a7_blocks(gsx), None, None)["causal_line"]
+        check("causal line: r2_rgi_stats.py's stored D_sim_ci is used (r2_ana's recomputation from the draws is a cross-check); without the draws file the stored interval alone",
+              css["simultaneous_source"].startswith("r2_rgi_stats") and css["simultaneous_crosscheck"]["agrees"] and css["verdict"] == csl["verdict"]
+              and csx["simultaneous_source"].startswith("r2_rgi_stats") and csx["verdict"].startswith("causal generality grows") and csx["simultaneous_crosscheck"]["agrees"] is False
+              and cs0["simultaneous_source"].startswith("r2_rgi_stats") and cs0["D_FG_causal_sim"] == [0.01, 0.19] and cs0["simultaneous_crosscheck"] is None,
+              (css["simultaneous_crosscheck"], csx["simultaneous_crosscheck"]))
         # ------------------------------------------------------------------------------------------------ combined statement
         cb = lambda dyn=None, order=(14, 8, 20), gs06=None, **k: (lambda gs: (lambda per: combined(per, a7_over(gs, per, gs06), dyn or {}, list(order)))(a7_blocks(gs)))(_gs(**k))
         dd = lambda hi, lo: {"14": dict(enters=True, self_loop=dict(verdict=lo)), "8": dict(enters=False), "20": dict(enters=True, self_loop=dict(verdict=hi))}

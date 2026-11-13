@@ -76,8 +76,10 @@ would block r2_pc / r2_ana for good, because an existing folder is never refresh
 finished is reported with "delete it and rerun the cell". The cell prints in German what it copied (size, seconds), what was already
 present, what is missing in both and what is not finished yet; without the shortcut it prints a one-line hint and continues; a
 session that reads nothing says so. No runner change: the copied folders are ordinary folders of `dsse_runs`. The copy counts
-against the 20-min clock (T0 is the first cell); r2_q1 / r2_q2 copy gpu4-gpu6 (version metadata only, all of r2_pc's PC nets) on
-their first run, so the notebooks recommend that first run with `NUR_SELBSTTEST = True`.
+against the 20-min clock (T0 is the first cell): r2_q1 / r2_q2 read only the version metadata of gpu4-gpu6 but copy the whole
+folders (with the PC nets that r2_pc and r2_ana need later) on their first run, so the notebooks recommend that first run with
+`NUR_SELBSTTEST = True`. `r1_finality.json` (R1.final) belongs in A's `dsse_runs` (every session that reads it runs in A; the cell
+copies folders only); the notebooks say so.
 
 ## Readings of ambiguities (my decisions; each easy to change)
 
@@ -184,7 +186,7 @@ the CPU (`MOCK_DEVICE`), also when the session runs on CUDA (runner_steps-1 / rk
 names; runner_steps-2 / runner_gates-3), `"device": "cpu"` in every mock shard_done.json and a `mock_fixture.json` (r2_rk /
 r2_axes print the fixture's device next to the test's on a text mismatch). Markers `.mock_rk_cpu_ok` / `.mock_pc_quick_ok` make a
 tree of an older runner rebuild. After an r2_pc session the self-test checks that `pc_toy/t7.json` has a width with a PC side and that
-`pc_toy/cross_pc/w*.json` list a PC model and a pair; a stale reference comparison also fails it (after all other tests ran).
+`pc_toy/cross_pc/w*.json` list a PC model (no pair: a WARNING); a stale reference comparison also fails it (after all other tests ran).
 r2_rgi_stats' self-test reuses the 1.7B geometry of the first geom test (alone it takes 74 s); timings by implementer 3 on one
 contended core: 39 s, 40 s, 54 s.
 The notebook stores a marker per code commit in `dsse_runs/<session>`, so a rerun skips the self-test; the notebooks recommend a first
@@ -200,7 +202,7 @@ run with `NUR_SELBSTTEST = True`. r2_ana's full self-test (all sessions) is off 
   addition: r2_rk / r2_axes print the fixture's device next to the test's on a mismatch). Regression test `mockdev` (below).
 - **runner_steps-2 / runner_gates-3.** Runner side only: the mock keeps pc_meta's `_quick` names, its jobs are at r2_pc_toy's QUICK
   widths 64 and 128 (pc_mup gpu4 / gpu3, bp_mup gpu5) and seeds 0, 1; the self-test (only) adds R1_QUICK copy patterns; the self-test
-  fails when `pc_toy/t7.json` has no width that ran or `cross_pc` lists no PC model (or no pair).
+  fails when `pc_toy/t7.json` has no width that ran or `cross_pc` lists no PC model (no pair at all: a WARNING).
 - **runner_steps-3 / runner_gates-2.** The seven r2_unlearn_qwen rows are one step `unlearn` = `r2_unlearn_qwen.py … all` after
   `axes`: required outputs the seven unlearn/<stage>.json, the .pt files optional; r1_reads left to the script; it starts when axes is
   done or 'not run' (`settled`, so C-Q6 is not dropped when axes is 'not run'); one retry like every step. Order: axes, unlearn,
