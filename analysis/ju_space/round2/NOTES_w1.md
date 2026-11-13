@@ -18,14 +18,25 @@ and 20 `pilot`, `loops`, `k5`) plus the fake `dn_delta.json`, `blocks_chosen.jso
 | Appendices A-D, O2, OD-C3, B-Q8, C-Q6 | Unchanged in the final text; r2_stimuli.py needed no content change (docstring only). Appendix D's new namespace ('r2RSIb' + SUF_b, n, p, s, b) is r2_theta's |
 | Everything else in section 13 | Not in this package (toys, C-T7, R6, sessions, references) |
 
+## Review fixes (package review of 13 November 2026; review files r2_review/fixes/rk.md and axes.md in the scratchpad)
+
+| Finding | Change | Self-test check |
+|---|---|---|
+| rk-1 (high; the runner side fixes the cause: its CPU library tests get a CPU-built fixture) | Not loosened. Every check that compares texts or reads made in the test process with a fixture's stored ones (r2_rk: read_windows re-read of a round-1 evaluation, evaluate_variant against RSI_a n = 0, the RND_1 start; r2_axes: match rate, R1 re-reads, u_S / u_neg reproduction, session RSI states) now ends its failure message with `same_device_note`: 'fixture and test must be made on the same device (CPU and CUDA random streams differ; plan 2.3): fixture device <recorded or 'not recorded'>, test device <device>'. New `fixture_device(r1_dir)` reads a recorded device from `<r1_dir>/mock_fixture.json` (or one level up) or a `device` field of `gpu1/shard_done.json`; `mock_r1` now writes `mock_fixture.json` (device 'cpu', per block it built itself; blocks it found are not claimed) | r2_rk: 'rk-1 diagnosis' (note names a recorded 'cuda' fixture and the 'cpu' test, and 'not recorded' without a record); passing checks print the share of identical texts |
+| rk-2 (low) | `evaluate_variant`'s finally now also calls `rk.steer_off()`. `k6_direction` clears the push on every exit, because rk.damage / rk.logodds_matching clear it only after a successful forward. Other context managers and try blocks checked: `temperature`, `CbarHook`, `WriteOrth`, `damage_T`, `read_windows`, `cbar_read` and `leaf_grads` already restore their state in finally / __exit__ | r2_rk: 'rk-2' (a failure injected into a pushed decode step of evaluate_variant and into the pushed forward of k6_direction: push cleared, no K6 entry written, the next zero-push pairs 4/4 identical and equal to the clean run; a probe with the old behaviour gave 0/4) |
+| axes-1 (low) | r2_axes `main()`: done only if r2_axes.pt, r2_axes.json and tok14.pt all exist; a missing tok14.pt opens the host block, stage_read rewrites tok14.pt (and local/axes_reads.pt) from the stored texts, stage_stats keeps r2_axes.pt / .json | r2_axes: 'axes-1' (tok14.pt removed: rebuilt identical tensors and texts, pt / json / texts untouched, next run skips) |
+| axes-2 (low) | r2_gen_loop `run()`: skips only if the JSON's status is not 'ran' or rgi/dyn_b<b>.pt exists; otherwise the loop resumes from the cached ev_r2GEN* / dir_r2GEN* entries (or regenerates with the same keys) and writes the .pt before the JSON | r2_gen_loop: 'axes-2' (dyn_b<b>.pt removed: rebuilt identical d_n and per-pair arrays, rows and E_GI unchanged, next run skips; a 'not run' JSON is kept without a .pt) |
+| axes-3 (low) | Plan 2.4 O2 asks for 'cross-fitted centred AUC and gap of every axis': r2_axes.json now has `axes.RGI_perp` (the RGI texts on u_RGI_perp's fold axes = O1's RGI a_A, a_B; its gap is Delta_RGI) and `axes.RGI_perpT` (the same fold axes with unit(u_T_perp) removed), by the new `r2_rk.cross_fit_on_axes` (rk_loop.axes()'s centred cross-fitted AUC / paired win / gap on given fold axes). u_diff and u_com combine two text pairs and have no pro / anti texts of their own, so they get no AUC or gap (reading 26) | r2_rk: 'cross_fit_on_axes' (raw fold axes give axis_from_texts's and rk's AUC / gap exactly; on O1's axes the gap is g_0); r2_axes: 'axes-3' on the planted block (AUC 1 on both) and on every MOCK block (gap of RGI_perp = Delta_RGI, recomputable from r2_axes.pt) |
+| rk-3, rk-4 | Refuted by the review: no action | - |
+
 ## Files, commands, code tests
 
 | File | Command | Code test (MOCK) |
 |---|---|---|
-| r2_rk.py | import only | `MOCK=1 python r2_rk.py selftest <root> <workdir>`: 35 checks (builds a MOCK block-14 fixture in `<workdir>/r1` if missing) |
+| r2_rk.py | import only | `MOCK=1 python r2_rk.py selftest <root> <workdir>`: 38 checks (builds a MOCK block-14 fixture in `<workdir>/r1` if missing; fixture and test must be on the same device, see rk-1) |
 | r2_stimuli.py | `python r2_stimuli.py check <tokenizer.json or its directory>` | the same command (all asserts of G29 and the template checks; exit 1 on failure) |
-| r2_axes.py | `python r2_axes.py <root> <r1_dir> <r2_dir> [texts \| read \| stats \| all]` | `MOCK=1 python r2_axes.py <root> <r1_dir> <r2_dir> selftest`: 13 checks |
-| r2_gen_loop.py | `BLOCK=<b> python r2_gen_loop.py <root> <r1_dir> <r2_dir> [run]` | `MOCK=1 BLOCK=<b> python r2_gen_loop.py <root> <r1_dir> <r2_dir> selftest`: 10 checks (after r2_axes) |
+| r2_axes.py | `python r2_axes.py <root> <r1_dir> <r2_dir> [texts \| read \| stats \| all]` | `MOCK=1 python r2_axes.py <root> <r1_dir> <r2_dir> selftest`: 16 checks |
+| r2_gen_loop.py | `BLOCK=<b> python r2_gen_loop.py <root> <r1_dir> <r2_dir> [run]` | `MOCK=1 BLOCK=<b> python r2_gen_loop.py <root> <r1_dir> <r2_dir> selftest`: 11 checks (after r2_axes) |
 
 Order in session r2_q1: r2_axes.py (opens block 14, or the first final block of B3), then r2_gen_loop.py with BLOCK = 14, b_lo, b_hi
 (one process per block). The block-14 GEN loop can share the r2_axes process (one model load): `r2_axes.main(root, r1, r2)` then
@@ -59,8 +70,10 @@ Round-1 files (no model needed)
   -> (a_A, a_B)`, `gap_on_fixed_axes(Xp, Xa, fold, a_A, a_B) -> dict(g, kept, per_prompt)`, `axis_rel(diff_all, keep=None, Q=None,
   extra=None) -> dict(rel, r, rel_floored, n_halvings)`, `stats_on_axis(ev, axis, null, n_prompts=None) -> (dict(c, p, Q, rel, r,
   rel_floored, A, norm), d)`, `prompt_bootstrap(n_prompts, B=2000, seed=0, n_rsi=None) -> W [B, NP]`, `pair_weights(W, prompt_of, ok)`,
-  `boot_mean(values, prompt_of, W, ok=None) -> [B, ...]`, `interval(draws, level=0.90) -> (lo, hi)`.
-- Files: `write_json`, `torch_save` (atomic), `jsonable`. Fixture: `mock_r1(root, r1_dir, spec, summaries)`, `fake_delta()`.
+  `boot_mean(values, prompt_of, W, ok=None) -> [B, ...]`, `interval(draws, level=0.90) -> (lo, hi)`, `cross_fit_on_axes(Xp, Xa, fold,
+  a_A, a_B) -> dict(auc, paired_win, gap_cross, kept)` (rk_loop.axes()'s cross-fitted centred statistics on given fold axes).
+- Files: `write_json`, `torch_save` (atomic), `jsonable`. Fixture: `mock_r1(root, r1_dir, spec, summaries)` (records the device of the
+  blocks it builds in `<r1_dir>/mock_fixture.json`), `fake_delta()`, `fixture_device(r1_dir)`, `same_device_note(r1_dir, test_device=None)`.
 
 Model side (after `rk = open_block(root, r1_dir, r2_dir, b)`: requires block_final; one process = one block; asking for the open
 block with other directories raises; `BLK` = dict(b, alpha (= alpha_b), alpha_scale, suffix, cap, med, r1_state, state, r1_dir, r2_dir,
@@ -77,7 +90,8 @@ mock, pooldirs, persona, device))
 - `WriteOrth(U)` (context manager, 57 hooks), `leaf_grads(seqs, positions, blocks, scalars_fn, batch=16) -> G [S, N, nblocks, D]`.
 - `evaluate_variant(d, alpha, keyfn, nseed=1, prompts=None, T=None, signs=(1, -1), gen_ids=None, read_ids=None, hooks=(), cbar=True,
   entropy=False, batch=32, n_first=20, cache_key=None)`: delta / ok / xp / xm (all-token window), prompt_of, seed_of, first_div, conts,
-  alpha, T, keys, signs, capped_share, dropped, n_pairs, windows {all, div, first20}, cbar, entropy (if asked).
+  alpha, T, keys, signs, capped_share, dropped, n_pairs, windows {all, div, first20}, cbar, entropy (if asked). Temperature, hooks, the
+  sampler and rk's push are restored on every exit, an exception included (rk-2).
 
 ## Ambiguities and the readings chosen
 
@@ -151,15 +165,37 @@ r2_gen_loop.py
     R_4(RSI_a, GEN) uses rel(d_4^RSI_a) = R1.loops[b]['RSI_a'][3]['rel'] and d_4^RSI_a = R1.state[b]['dir_RSI_a<SUF>_4']; S_4 is
     rk_verdict.S4's formula on the GEN loop. The A7 dynamics rules themselves are left to r2_ana (r2_rgi_verdict.py).
 
+After the review
+26. (axes-3) 'AUC and gap of every axis' (2.4 O2) is read as: every axis that has pro and anti texts of its own: session RSI, RGI
+    (raw), TOPIC, GI^TOP, dir (raw fold axes) and u_RGI_perp, u_RGI_perpT (the RGI texts on the projected fold axes: perp(dA), perp(dB),
+    for perpT also unit(u_T_perp) removed, then unit). u_diff and u_com are sums / differences of two axes from different text sets and
+    have no texts of their own, so no AUC or gap; their per-prompt analogues are the difference and common parts, whose norms and
+    split-half rel are reported.
+27. (axes-1, axes-2) A step counts as done only when all of its outputs exist: r2_axes needs r2_axes.pt, r2_axes.json and tok14.pt
+    (local/axes_reads.pt is local and may be missing); r2_gen_loop needs dyn_b<b>.json and, for a loop that ran, dyn_b<b>.pt.
+28. (rk-1) The selftests' same-device checks stay exact; a CPU test on a CUDA-built fixture fails with a one-line diagnosis that names
+    both devices. The cure is a fixture built on the test's device (runner side).
+
 ## Deviations from the final plan
 
 None in any measurement, threshold or rule. MOCK-only differences: the O2 key rule of item 15, and 4 K6 nulls (rk_loop's MOCK).
 Additions beyond the plan's lists: the `entropy` option of evaluate_variant, `cbar_read`, `delta_order`, `r1_blocks`, `block_final`,
-`k6_direction`, `fixed_fold_axes` / `gap_on_fixed_axes`, `loop_entry` / `extra`, the intermediate files `axes/o2_texts.pt` and
+`k6_direction`, `fixed_fold_axes` / `gap_on_fixed_axes`, `cross_fit_on_axes`, `fixture_device` / `same_device_note`, `loop_entry` /
+`extra`, the intermediate files `axes/o2_texts.pt` and
 `local/axes_reads.pt`, diagnostics in r2_axes.json (`r1_read_check`, `cos_RSI_session_R1`, `cos_u_dir_u_T_perp`, `perp_share_RGI`,
 `u_T_perp_recompute_rel_diff`, `host_block`, `final`), and a planted-signal check of the O2 statistics in the r2_axes selftest.
 
-## Tests run (this container, CPU, NT=1, MOCK; the full suite from scratch, script `r2_impl/w1/run_all_tests.sh` in the scratchpad)
+## Tests after the review fixes (13 November 2026; CPU, NT=1, OMP_NUM_THREADS=1, one process at a time)
+
+- `r2_rk.py selftest`: 38/38 on the existing fixture (22 s) and 38/38 from an empty workdir (builds its fixture, writes
+  mock_fixture.json with device 'cpu'; 70 s).
+- `r2_axes.py ... selftest`: 16/16 (incl. axes-1 and the two axes-3 checks).
+- `r2_gen_loop.py ... selftest`: 11/11 at blocks 14, 8 and 20 (incl. axes-2), and 11/11 at block 20 of the 1.5-alpha fixture.
+- `r2_stimuli.py check`: passes. CLI runs, the missing-b_hi fixture and the in-process combination as before.
+- Sensitivity probe of the rk-2 check (scratchpad r2_impl/w1/mutation_rk2.py): with the push not cleared on the error path (the old
+  behaviour), the next unsteered pairs were 0/4 identical; the check requires 4/4.
+
+## Tests run before the review (this container, CPU, NT=1, MOCK; the full suite from scratch, script `r2_impl/w1/run_all_tests.sh` in the scratchpad)
 
 - `r2_stimuli.py check models/qwen3-1.7b/tokenizer.json` (real Qwen3 tokenizer): all checks pass (60 objects, 2,040 A1 sentences, 60 A3
   inputs, RGI30, copies, nesting, turn-2 suffix 16 tokens, cue template).

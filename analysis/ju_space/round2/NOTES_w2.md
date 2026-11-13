@@ -8,11 +8,24 @@ implementer 1's files was changed. No round-1 output was opened: every test ran 
 blocks_chosen.json, summary_b14.json and shard_done.json; modified copies of these mock files (summary, loops.json) test the gate branches.
 No file named summary_b*.json, loops.json, pilot.json, k5.json, k6.json, dn_tf.json or pc_summary_*.json was opened with a tool; the
 script reads them (R1.summary, R1.loops, R1.k6 are inputs of C-Q2 / C-Q4b), in the tests only the mock copies in the test directory.
+Nothing under analysis/ju_space/microlens/ or results/ju_space/microlens/ and no file named mlpp_probe* was opened.
+
+## Changes after the independent review (13 Nov; coordinator's items 1-6, Amendment 3 of the amendments file)
+
+| Item | Finding | Change |
+|---|---|---|
+| 1 | unlearn_b-2 (medium, G16) | Amendment 3 (a) implemented in `ref_seed0_c` / `stage_armA`: `reference_seed0_RSI_a.ci90` = the 90 % percentile interval of the 2,000 replicates shifted by c - (bootstrap median), i.e. [q05 + c - m, q95 + c - m]; arm A continues iff c_1 < ci90[0] (r2_unlearn_verdict.arm_a reads the same field). Stored next to it: `ci90_percentile` (unshifted), `boot_median` (m) and `continues_with_percentile_interval` (the G16 value the unshifted interval would have given). C-Q5's descriptive cosine intervals keep their definition and also report the bootstrap median: `superposition.cos_boot_median`, `superposition.cos_disatt_boot_median`, `dose.cos_boot_median` (pure helper `centred_interval`) |
+| 2 | unlearn_b-3 (low) | `rule_loop` uses the plan's order of outcomes, the same as r2_unlearn_verdict.loop_rule (OD-G8): `un-searched` (gone and the reference re-finds RSI), `survives`, `re-routed`, `undecided (<reference> does not re-find RSI)`, `undecided`; the reference is named 'twin' or 'the R1 seed-0 comparator'. Reading 19 corrected |
+| 3 | unlearn_a-1 (low) | Code fingerprint `code_sha256()` = sha256 over this script, r2_rk.py, r2_stimuli.py and rk_loop.py (written into every JSON as `code_sha256`). Every intra-stage cache unit stores it and is reused only if signature and fingerprint both match. q2's round-2 state entries (k6_r2_*, r2_b05_*; they survive a new VM in the synced state) are valid only for `ST['r2_q2_valid']` = sig_of(fingerprint, the q2 directions, the null directions, the H30 / RGI30 questions, alpha_14); if it is missing or differs, q2 deletes every k6_r2_* / r2_b05_* entry before rk.k6_direction can return a cached one (`q2_state_purge`; the deleted keys are listed in q2.json `state_entries_purged`) |
+| 4 | unlearn_a-2 (low) | `_rung(r1, r2, g0)` returns 'not decidable (no baseline gap: g_0 <= 0)' (r2_linearity.linear_rung's string) unless g_0 > 0, with the g_0 of the concept's 1-dim entry |
+| 5 | unlearn_a-3 (low) | q4a.json `ceiling.own_axis_gap` = the own-axis gap (gap_perp_cross of the texts' own fold means) of the unablated cued texts against the O2 RSI_ANTI texts, next to the ceiling gap |
+| 6 | unlearn_a-4 / unlearn_b-1 (session packing) | 'all' made robust for one runner call for r2_q1 (see 'Command, stages, code test'): per-stage isolation (`stage_scope`), prerequisites (`PREREQ`), failure containment, per-stage summary, exit code, packing-independent finder logs, the O2 'not run' case recognised without r2_axes.pt |
 
 ## Command, stages, code test
 
     python r2_unlearn_qwen.py <root> <r1_dir> <r2_dir> [q3 | q4a | q2 | q4b | armA | q5 | q6 | all | selftest]    env DEVICE, NT, MOCK
-    (BLOCK, if set, must be 14: every stage works at block 14; one process may run several stages ('all'), the runner calls one per step)
+    (BLOCK, if set, must be 14: every stage works at block 14; 'all' runs the seven stages in one process - the runner calls it once
+    for r2_q1 - and a single stage name runs that stage alone)
     MOCK=1 python r2_unlearn_qwen.py <root> <r1_dir> <r2_dir> selftest      builds the MOCK fixture in <r1_dir> if missing, runs r2_axes.py
                                                                             (O2) if missing, every stage through the CLI, resume, checks
 
@@ -26,24 +39,40 @@ script reads them (R1.summary, R1.loops, R1.k6 are inputs of C-Q2 / C-Q4b), in t
 | q5 | C-Q5 pushes (superposition, dose) | - | state[14] (axes, ev_RSI_a<SUF>_0, ev_SEA<SUF>_0) | unlearn/q5.json, q5.pt |
 | q6 | C-Q6 | - | none | unlearn/q6.json, q6.pt |
 
-Session packing: all seven stages belong to r2_q1 (9.2; the runner r2_run_session.py of 20:37 has them there, q6 with r1_reads=None).
-The script does not depend on the packing: q4b, armA, q5 and q6 read no round-2 output (no O2), every stage opens block 14 in its own
-process, and q3, q4a, q2 need O2 (r2_axes.py) in the same <r2_dir> (q4a also needs q3).
+Session packing: all seven stages belong to r2_q1 (9.2). The runner calls `... all` once (one model load). Stages that need the axes
+output (axes/r2_axes.json and axes/r2_axes.pt of r2_axes.py in the same <r2_dir>): q3, q4a and q2; q4a also needs q3's outputs. q4b,
+armA, q5 and q6 read no round-2 output. 'all' (`main`):
+- runs the stages in the order q3, q4a, q2, q4b, armA, q5, q6, every stage whose prerequisites exist; a stage that fails (exception, or a
+  missing round-2 input such as the axes output) does not stop the independent later stages; a stage whose prerequisite failed in this
+  call (q4a after q3) is skipped;
+- a stage whose unlearn/<stage>.json exists is skipped ('done earlier'), so a second call (the runner's retry) repeats only what failed
+  or was skipped;
+- a stage whose round-1 inputs are missing or not final writes its 'not run (round-1 output missing)' JSON (that check comes before the
+  prerequisite check), and q6 always runs, so all seven JSONs exist after a complete call;
+- prints a per-stage summary and exits 0 only if every stage is done ('ran', 'not run (...)', 'not testable (...)', done earlier), else 1;
+- `stage_scope` isolates every stage, also after an exception: hooks registered on the model during the stage are removed (every hook dict
+  of every module, compared with a snapshot taken at the stage start), rk.TEMP and rk.Gumbel are restored, steering and the early-stop
+  switch are off, after a failure rk.ST is reloaded from its saved file (no unsaved entry survives), and GPU memory is released (gc,
+  torch.cuda.empty_cache, also after each stage in main);
+- the finder log of a stage = open_block's round-1 file choices (also when an earlier stage of the process opened the block) + the stage's
+  own, so a stage's JSON is identical whether it ran alone or inside 'all' (tested).
 
 Resume: a stage is skipped when unlearn/<stage>.json exists (written last, atomically, after the .pt). Inside a stage every expensive unit
 (statement scores, text sets, loop rounds, calibrations, cap runs) is cached in `<r2_dir>/local/unlearn_<stage>/` with a signature of its
-inputs, so a stage that crashed resumes; local/ is never synced (9.5). 'not run' paths write only the JSON.
+inputs and the code fingerprint, so a stage that crashed resumes and a resume after a code change recomputes; local/ is never synced
+(9.5). 'not run' paths write only the JSON.
 
 Status values: 'ran'; 'not run (round-1 output missing)' (block 14 not final - r2_rk.open_block raises R1Missing -, a needed R1 file or
 state key missing, or O2 'not run' at block 14; G4, G6); C-Q4b 'not testable (gate: ...)'. A missing round-2 input of an earlier step
-(r2_axes outputs, q3 for q4a) stops the stage with exit code 1 (session order; the runner's 'after' handles it). C-Q6 reads no round-1
+(r2_axes outputs, q3 for q4a) makes the stage fail (exit code 1, no JSON; a later call runs it). C-Q6 reads no round-1
 file and runs even when block 14 is not final (the model is then loaded through rk_loop with an empty state of its own,
 <r2_dir>/local/q6_rk; tested: identical numbers).
 
 ## Output formats
 
-Every JSON also holds script, plan, plan_sha256, stage, block, mock, seeds, n_boot, level, rule_thresholds, alpha_14, alpha_scale,
-suffix, cap, versions (torch, transformers, GPU) and finder (r2_rk.FINDER_LOG). Arrays in the .pt files are float32 unless stated.
+Every JSON also holds script, plan, plan_sha256, amendments, stage, block, mock, seeds, n_boot, level, rule_thresholds, code_sha256,
+alpha_14, alpha_scale, suffix, cap, versions (torch, transformers, GPU) and finder (the stage's round-1 file choices). Arrays in the .pt
+files are float32 unless stated.
 
 
 q3.json: `D0 {H30, RGI30}`, `Delta_T`, `g0 {RSI, RGI}` (O1 g_0), `Delta_RGI`, `GA14`, `labels {u_RGI_perp, span, u_diff}` ('RGI axis not
@@ -59,26 +88,29 @@ q3.pt: `ablations {name: U, H30 (lo, y per statement), RGI30, damage}`, `texts {
 keys_anti, Xp, Xa [64, D] float32 (block-14 reads by the unablated model), capped_share, per_prompt, g_draws, ratio_draws [2000]}`,
 `refs_unprompted {conts, keys, X}`.
 q4a.json: ablation, passed_C_Q3, g_cue, g_abl, g0, restored_share, restored_share_ci90, share_defined, own_axis_gap_cue, ceiling {g, share,
-ratio_g0, ci90_g}, kept, verdict_in_session (rule_cue), cue_prompt_tokens, empty. q4a.pt: messages, keys, ablated / unablated {conts, X,
+ratio_g0, ci90_g, own_axis_gap}, kept, verdict_in_session (rule_cue), cue_prompt_tokens, empty. q4a.pt: messages, keys, ablated / unablated {conts, X,
 per_prompt, draws}, U, share_draws.
 q2.json: `K6 {'<dir>|H30', '<dir>|RGI30'` (rk.k6_direction entries + z_fin), `u_RSI|H30 (R1.k6 ...)`, regression_H30, M0_H30, M0_RGI30,
 regression_RGI30, nulls_RGI30}`, `alpha_u {dir: f, damage (of the counter-push), damage_plus, tried, in_band, start}`, `texts
 {'<dir>|<concept>': gap entry as in q3 + capped_share}`, `behaviour {u_RSI, u_diff, u_RGI_perp: statements, f, Ue_fin, A_fin, Mp, Mm, z_fin,
 M0; regression {H30, RGI30}; nulls}`, `content {dir: RSI / RGI {content, content_ci90, counter_side, sigma, unit}, sigma_u_T, foreign,
 n_pairs, dropped, capped_share}`, `perplexity {dir: plus / minus {ppl, mean_nll}, unpushed}`, `rules {u_RSI, u_diff, u_RGI_perp}`
-(rule_suppressed + concept, statements, ctrl_p5), flags, labels. q2.pt: texts (as in q3), content evaluations (per pair: delta, ok, xp,
+(rule_suppressed + concept, statements, ctrl_p5), flags, state_entries_purged, labels. q2.pt: texts (as in q3), content evaluations (per pair: delta, ok, xp,
 xm, prompt_of, first_div, conts, keys), perplexity per text. State entries (guarded): k6_r2_u_RGI_perp, k6_r2_u_com, k6_r2_u_diff,
-k6_r2_u_RGI_perp_RGI30, k6_r2_u_com_RGI30, r2_b05_null<i> (calibration + H30 / RGI30 behaviour), r2_b05_<dir>.
+k6_r2_u_RGI_perp_RGI30, k6_r2_u_com_RGI30, r2_b05_null<i> (calibration + H30 / RGI30 behaviour), r2_b05_<dir>, r2_q2_valid (their
+validity signature).
 q4b.json: status, gate {open, branch, G13, G15, G14, verdict}, r1 {V_RSI, LIKELY_wh, from_would_have_read, label_attractor,
 attracted_loop, gates_failed, rnd_last_rows, cos_d1_u_RSI}, twin_start_check (read-outs of the G15 round), labels (G-desc if the gate
 opened through a would-have-read LIKELY), start, `ablated` / `twin` rows for d_1..d_3 {c, p, Q, rel, r, A, norm, Ue, Ue_ci90, cos_u_RSI,
 cos_push_u_RSI, damage_of_push, dropped, capped_share, identical_pairs, first_div_median, n, d, norm_d}, verdict_in_session (rule_loop).
 q4b.pt: start, twin / ablated {evs (per pair: delta, ok, xp, xm, prompt_of, first_div, conts, keys, ...), d {1..3}, push {0..2}},
 twin_start_check {ev, start}.
-armA.json: beta (calibration), reference_seed0_RSI_a {c, ci90, n_pairs, key}, c1, continues (G16), rounds, rows (as q4b), verdict_in_session.
+armA.json: beta (calibration), reference_seed0_RSI_a {c, n_pairs, ci90 (Amendment 3 (a): shifted), ci90_percentile, boot_median,
+continues_with_percentile_interval, amendment, key}, c1, continues (G16 from ci90[0]), rounds, rows (as q4b), verdict_in_session.
 armA.pt: evs, d, push, ref_c_draws.
 q5.json: mix (cosines), superposition {coef_RSI, coef_SEA, cos, cos_disatt, rel_mix, rel_sum, cos_ci90, coef_*_ci90, cos_disatt_ci90,
-holds_in_session, coef_band}, dose {norm_ratio, cos_debiased, norm2_alpha, norm2_2alpha, ratio_ci90, cos_ci90}, references, read_outs (stats
+cos_boot_median, cos_disatt_boot_median, holds_in_session, coef_band}, dose {norm_ratio, cos_debiased, norm2_alpha, norm2_2alpha, ratio_ci90,
+cos_ci90, cos_boot_median}, references, read_outs (stats
 of the mix and dose read-backs on u_T_perp). q5.pt: mix / dose evaluations, mix_dir, F_mix, F_RSI, F_SEA, F_sum, F_2alpha, boot draws.
 q6.json: model ('open_block' or 'model only'), split, relations {improves, describes, repetition: helix {block: |d12|, |d23|, |d34|, cos(d12,
 d23), cos(d23, d34), cos(d12, d34), rotation_prediction}, angular / linear {block: share, ci90, n (+ omega, plane_share)}, readout {18,
@@ -92,7 +124,7 @@ V [D, 3], m2, ranks, readout_values, kl arrays, patch {key: frac, kl, readout, l
 
 `rule_unlearned`, `rule_suppressed`, `restored_share`, `rule_cue`, `likely_wh`, `attracted_loop`, `q4b_gate`, `rule_loop`,
 `arma_continues`, `superposition_stats`, `u_norm2`, `ols_nulls`, `reg_from_r1_k6`, `z_fin`, `z_against`, `boot_g`, `stmt_D`,
-`stmt_boot_index`, `calibrate`, and the C-Q6 helpers (`helix_stats`, `depth_modes`, `angular_readout`, `linear_readout`, `depth_readout`,
+`stmt_boot_index`, `calibrate`, `centred_interval` (Amendment 3 (a)), `q2_state_purge`, and the C-Q6 helpers (`helix_stats`, `depth_modes`, `angular_readout`, `linear_readout`, `depth_readout`,
 `ridge_dual`). In session they decide C-Q4a's ablation (G43), the C-Q4b gate (G44) and arm A's continuation (G16); the JSONs carry
 in-session views of the other rules ('rules', 'verdict_in_session', 'holds_in_session', 'r_star_in_session') for r2_ana to recompute.
 
@@ -128,6 +160,7 @@ C-Q3
     'room_above_anti_g0' = (mean projection of the references - mean projection of the RSI_ANTI texts) / g_0 as the floor caveat. The
     session references are regenerated with keyseed('ref', p) (rk.references' rows); their match rate with R1 'ref' is reported (22k).
 11. The 'unlearned' rule is evaluated in session (it selects C-Q4a's ablation, G43) without labels; G-desc and other labels are r2_ana's.
+    The in-session view of C-Q1's linear rung applies the same g_0 > 0 condition ('not decidable (no baseline gap: g_0 <= 0)').
 
 C-Q4a
 12. Cue message by r2_stimuli.cue_message with this session's RSI_PRO texts decoded by tok.decode (continuations hold no stop token);
@@ -159,16 +192,19 @@ C-Q4b, arm A
 18. G15 is evaluated only when G13 holds (the twin's first round from s0 is run only then). Gate order: branch 'likely' (G13 and G15) first,
     else 'attractor' (G14; the twin's first round rerun from the attractor start with the same keys ('r2Q4B', 0, p, 0, 14)). The G-desc
     label is attached when the gate opened through a would-have-read LIKELY.
-19. rule_loop precedence (every condition at d_2 and d_3): ablated loop 'gone' (p > 0.10, |A| < 0.25) -> 'un-searched' if the twin re-finds
-    RSI (p <= 0.01, A >= 0.25), else 'undecided (twin does not re-find RSI)'; then 'survives'; then 're-routed'; then 'undecided (twin does
-    not re-find RSI)' if the twin fails; else 'undecided'. The matched-size reference (seed-0 half of R1 RSI_a; R1-6) is left to r2_ana as
-    section 8 assigns it; q4b reports an in-session view of the rule only.
+19. rule_loop: the first match in the order of the plan text (every condition at d_2 and d_3): 'un-searched' (ablated p > 0.10 and
+    |A| < 0.25 while the twin has p <= 0.01 and A >= 0.25); 'survives'; 're-routed'; 'undecided (twin does not re-find RSI)' if the twin
+    fails p <= 0.01 and A >= 0.25; else 'undecided' - the same as r2_unlearn_verdict.loop_rule (tested on 720 row combinations; review
+    unlearn_b-3 corrected the earlier 'gone first' precedence). The matched-size reference (seed-0 half of R1 RSI_a; R1-6) is left to r2_ana
+    as section 8 assigns it; q4b reports an in-session view of the rule only.
 20. Damage of each loop push: rk.damage's definition in the unmodified model (descriptive).
 21. Arm A: beta by rk.k6_direction's 0.03-nat rule (start 0.75 alpha_14, 3 evaluations, band 0.025-0.035) on the constant push alone
     (-beta unit(u_RSI), rk's cap rule, from the first user token). ConstPush adds sign beta min(|h_t|, cap_b) unit(u) with |h_t| the block
     output before any push (prepend hook), in rk's operand order: with a zero loop push it reproduces rk's own push exactly (tested).
-    G16 reference: 90 % interval of c(d_1) over the session's joint draws, seed-0 pairs = even indices of R1 'ev_RSI_a<SUF>_0'. If arm A
-    continues, the loop rule with the R1 seed-0 comparator is r2_ana's (R1-6).
+    G16 reference (Amendment 3 (a)): c(d_1) of the seed-0 pairs (even indices of R1 'ev_RSI_a<SUF>_0'); its 90 % prompt-bootstrap
+    percentile interval over the session's joint draws shifted by c - (bootstrap median), because the replicates of the cosine of a noisy
+    mean centre near c / sqrt(2 - rel) rather than at c (review unlearn_b-2; in MOCK c 0.657, unshifted [0.440, 0.661], median 0.565,
+    shifted [0.532, 0.753]). If arm A continues, the loop rule with the R1 seed-0 comparator is r2_ana's (R1-6).
 
 C-Q5
 22. mix = unit(unit(u_T_perp) + unit(sea)); F(RSI) = mean of the seed-0 ok pairs of 'ev_RSI_a<SUF>_0', F(SEA) = 'ev_SEA<SUF>_0'; rel_mix and
@@ -203,10 +239,17 @@ General
 29. Seeds (OD-G6): prompt bootstrap 31, statement bootstrap 32, object bootstrap 33; they and the thresholds are written into every JSON.
 30. GA(14) false -> label 'RGI axis not resolved' on the statements that use u_RGI_perp, u_diff or u_com (q3: u_RGI_perp, span, u_diff;
     q2: u_RGI_perp, u_diff, u_com); the measurements run anyway (OD-G5).
+31. Code fingerprint (item 3): the four files whose code determines a cached value (this script, r2_rk.py, r2_stimuli.py, rk_loop.py);
+    r2_axes.py is not in it because its outputs enter through the cached units' input signatures (directions, states). q2's validity
+    signature also covers the directions and statement sets, so a regenerated O2 output purges stale K6 entries too.
+32. Isolation in 'all' (item 6): the ST reload after a failure drops every unsaved in-memory entry of the failed stage; entries it saved
+    stay on disk and are reused by a later call when their validity check holds. MOCK-only test hook: env R2_UNLEARN_FAIL=<stage> makes
+    that stage fail after leaving a WriteOrth hook, a temperature, a steering switch and an unsaved state entry behind (ignored outside
+    MOCK).
 
 ## Deviations from the final plan
 
-None in a measurement, threshold or rule. Additions: in-session views of the rules decided in r2_ana; extra descriptive numbers (own-axis
+None in a measurement, threshold or rule; G16 follows Amendment 3 (a) (amendments file, 13 Nov 04:18 UTC). Additions: in-session views of the rules decided in r2_ana; extra descriptive numbers (own-axis
 gaps everywhere, damage of the opposite push sign, sigma on u_T and on the concept axes, RGI30 z_D, read-out stats of the C-Q5 pushes,
 q6 numbers at all four blocks and over held-out objects); the intra-stage cache under local/.
 

@@ -533,6 +533,7 @@ def stage_rsib(cx):
     try:
         rows = rk.run_loop(RSIB, start, 2, rounds=4)
     except Exception as e:                                     # G49: a loop that fails in two attempts is 'not run'; B-Q0 then has no cross-fit
+        rk.steer_off()                                         # a failure inside a pushed generation must not leave the push on for later stages (review rk-2)
         n = (json.load(open(att_p))["n"] if os.path.exists(att_p) else 0) + 1; R.write_json(att_p, dict(n=n, error=repr(e)))
         if n < 2: raise
         js = dict(_base(cx, "rsib"), status="not run (r2RSIb failed in two attempts; G49: no independent loop)", error=repr(e), attempts=n)

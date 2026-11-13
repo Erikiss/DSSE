@@ -2623,6 +2623,10 @@ def selftest(work=None):
     r1 = train([mup(ws=0, K=1)], fixed_steps=j1["checkpoint"], coord_check=False)
     e = _state_rel(r1.nets, 0, torch.load(os.path.join(mdir, "models", "bp_mup_W64_s0_K1_g0_wd1.pt")))
     ck("K = 1 control (fixed steps) = pc_meta.main K 1", e <= 1e-4, f"{j1['checkpoint']} updates", max_rel_diff=e)
+    b1_ = b2_all(r1.nets, [0], steps=20, eval_at=ftl)
+    eA1 = float(np.abs(b1_["acc"][0] - np.array(j1["finetune"]["all8"]["acc"])).max()); eR1 = float(np.abs(b1_["retention"][0] - np.array(j1["finetune"]["all8"]["retention"])).max())
+    ck("B2_all of a K = 1 control: retention on its own task = pc_meta job's all8 (review toy_defs-7)", eA1 <= 1 / 281 + 1e-9 and eR1 <= 1 / 145 + 1e-9,
+       f"max |d acc| {eA1:.4f} |d retention| {eR1:.4f}", mine=b1_["retention"][0], ref=j1["finetune"]["all8"]["retention"], max_abs_diff=max(eA1, eR1))
     dl = delta_stats(rm.nets, [0], [M.world(0)[0]])[0]
     err = max(abs(dl[h][k] - jm["delta"][h][k]) for h in ("h1", "h2") for k in dl[h])
     ck("delta_stats = pc_meta job's delta (1e-6)", err <= 1e-6, f"max abs diff {err:.1e}", mine=dl, ref=jm["delta"], max_abs_diff=err)
@@ -2732,10 +2736,21 @@ def selftest(work=None):
         ck("anchored search (alpha) = rgi_lib.learn_alpha", _rel(al, al_ref) <= 1e-3, f"rel {_rel(al, al_ref):.1e}", mine=al[0], ref=al_ref[0], max_rel_diff=_rel(al, al_ref))
         arrs = [tuple(np.random.default_rng(i).standard_normal((3, 40, 12))[:2]) + (np.random.default_rng(i + 9).standard_normal(40),) for i in range(3)]
         ok = all(_rel(t1_map(*a_, 0.01)[0], ns["t1_map"](*a_, 0.01)[0]) == 0 for a_ in arrs)
-        CA, CB = np.random.default_rng(5).standard_normal((2, 40, 12)); ok = ok and t1_choose_r(CA, CB) == ns["t1_choose_r"](CA, CB)
+        ok_emul, ok_min, n_away, ch_l, ref_l = True, True, 0, [], []
+        for sd_ in range(8):                                     # toy_defs-1: the ref compares the running sum with the stored mean
+            CA, CB = np.random.default_rng(5 + sd_).standard_normal((2, 40, 12)); errs = t1_loo_errors(CA, CB); emul = None
+            for r_, s_ in errs:
+                if emul is None or s_ < emul[1]:
+                    emul = (r_, s_ / CA.shape[1])
+            rf = ns["t1_choose_r"](CA, CB); ok_emul = ok_emul and emul == rf
+            means = [s_ / CA.shape[1] for _, s_ in errs]; ch = t1_choose_r(CA, CB); ok_min = ok_min and ch == (errs[int(np.argmin(means))][0], min(means))
+            n_away += int(np.argmin(means) != 0); ch_l.append(ch[0]); ref_l.append(rf[0])
         HA, HB = np.random.default_rng(6).standard_normal((2, NPRE * 20, 7))
         Sa, ba = stitch_fit(HA, HB, npair=20); Sb, bb_ = nsl["stitch_fit"](HA, HB, npair=20)
-        ck("t1_map / t1_choose_r / stitch_fit = rgi_pilot / rgi_lib (exact)", ok and np.array_equal(Sa, Sb) and ba == bb_, mine=[float(ba[0]), float(ba[1])], ref=[float(bb_[0]), float(bb_[1])])
+        ck("t1_map / stitch_fit = rgi_pilot / rgi_lib (exact); t1_loo_errors = rgi_pilot.t1_choose_r's per-grid errors (its sum-vs-mean comparison reproduced on them gives its choice exactly)",
+           ok and ok_emul and np.array_equal(Sa, Sb) and ba == bb_, mine=[float(ba[0]), float(ba[1])], ref=[float(bb_[0]), float(bb_[1])])
+        ck("t1_choose_r = the grid value with the smallest mean leave-one-anchor-out error (plan AT1; the ref returns the first value; review toy_defs-1)",
+           ok_min and n_away > 0, f"minimum away from the first grid value in {n_away} of 8 cases", mine=ch_l, ref=ref_l)
         lam_ref = ref_defs("sham", ["lam"], dict(acc_cols=ns["acc_cols"]))
         if lam_ref:
             L = lambda_line(net, [0, 1]); mine_v = [float(np.mean(L[b]["per_shift"][:NNEW])) for b in range(2)]; ref_v = [lam_ref["lam"](net.to_mlp(b), ws) for b, ws in enumerate((0, 1))]
@@ -2765,7 +2780,7 @@ def selftest(work=None):
             v3r, v4r = zip(*[nsl["t34_transfer"](A_, B_, 0, S_, j) for j in range(NNEW)])
             e3, e4 = _rel(out["v3"], np.stack(v3r)), _rel(out["v4"], np.stack(v4r))
             ck("T3 / T4 columns = rgi_lib.t34_transfer", e3 <= 1e-3 and e4 <= 1e-3, f"rel v3 {e3:.1e} v4 {e4:.1e}; T4 acc {np.round(out['t4_acc'], 3).tolist()}", max_rel_diff=[e3, e4])
-            nspt = ref_defs("rgi_lib", ["pair_transfer", "span_transfer", "learn_alpha"], dict(base_z1=ns["base_z1"], acc_cols=ns["acc_cols"], t1_choose_r=ns["t1_choose_r"],
+            nspt = ref_defs("rgi_lib", ["pair_transfer", "span_transfer", "learn_alpha"], dict(base_z1=ns["base_z1"], acc_cols=ns["acc_cols"], t1_choose_r=t1_choose_r,
                             t1_map=ns["t1_map"], t2_choose_r=ref_defs("rgi_pilot", ["t2_choose_r", "t2_map", "ridge_coef"])["t2_choose_r"],
                             t2_map=ref_defs("rgi_pilot", ["t2_map", "ridge_coef"])["t2_map"]))
             accfree = cols_accuracy(net, no, vA, stack_sets([new_task_sets(0, j) for j in range(NNEW)], "ho"))
@@ -2805,14 +2820,24 @@ def selftest(work=None):
         ok = ok and abs(rp - rp_ref) < 1e-12
         F2 = np.stack([np.cos(2 * np.pi * 3 * cv / P), np.sin(2 * np.pi * 3 * cv / P)], 1) @ np.random.default_rng(6).standard_normal((2, 20))
         ok = ok and abs(subspace_overlap(F2, cv, 1) - 1) < 1e-9 and subspace_overlap(np.random.default_rng(7).standard_normal((NPRE, 30)), cv, 1) < 1
-        st_ = structure_tests(net, 0, 0, nperm=20, nperm_loo=10, nperm_spec=20)
-        ck("ring_test / loo_ring / spec_rows / ridge_probe = c1_structure (exact); overlap(pure Fourier code) = 1", ok,
+        st_ = structure_tests(net, 0, 0, nperm=20, nperm_loo=10, nperm_spec=20); g_ = np.random.default_rng(500)
+        ra = nsc["ring_test"](T_, cv, g_, 20)                   # the generator stream of structure_tests, replayed with c1_structure's functions
+        for _ in range(2 * 20):
+            g_.permutation(cv)
+        lr_ = {f"K{K}": dict(real=float(nsc["loo_ring"](T_, cv, K)), null_p95=float(np.quantile([nsc["loo_ring"](T_, g_.permutation(cv), K) for _ in range(10)], 0.95))) for K in (1, 2, 3)}
+        ok = ok and ra == st_["a_taskcols"] and lr_ == st_["c_loo_ring_R2"]
+        ck("ring_test / loo_ring / spec_rows / ridge_probe = c1_structure (exact; restructured C-T0 code, review toy_num-3); structure_tests' nulls = c1_structure's on the same stream; overlap(pure Fourier code) = 1", ok,
            f"task-col max share {st_['a_taskcols']['max']:.3f} (null p99 {st_['a_taskcols']['null_max_p99']:.3f})", mine=[a1["max"], rp], ref=[a2["max"], rp_ref])
     nst = ref_defs("c4_traj", ["modes"])
     if nst:
         Xs = np.cumsum(np.random.default_rng(8).standard_normal((40, 25)), 0); mine, _ = trajectory_modes(Xs); ref, _ = nst["modes"](Xs)
-        ck("trajectory_modes = c4_traj.modes", all(abs(a["var"] - b["var"]) < 1e-3 and abs(a["lissajous_r"] - b["lissajous_r"]) < 1e-3 and a["emerge_snapshot"] == b["emerge_snapshot"] for a, b in zip(mine, ref)),
-           mine=[a["var"] for a in mine], ref=[b["var"] for b in ref])
+        U_, S_, _ = np.linalg.svd(Xs - Xs.mean(0), full_matrices=False); tt = np.arange(len(Xs))
+        plan_r = [abs(np.corrcoef(U_[:, i] * S_[i], np.cos(np.pi * (i + 1) * tt / len(Xs)))[0, 1]) for i in range(5)]
+        ok = all(abs(a["var"] - b["var"]) <= 5e-4 + 1e-12 and a["emerge_snapshot"] == b["emerge_snapshot"] for a, b in zip(mine, ref))   # the ref rounds to 3 decimals
+        ok = ok and np.allclose([a["lissajous_r"] for a in mine], plan_r, rtol=0, atol=1e-12)
+        dl = max(abs(a["lissajous_r"] - b["lissajous_r"]) for a, b in zip(mine, ref))
+        ck("trajectory_modes: variance shares and emergence = c4_traj.modes; |corr| with the plan's template cos(pi i t / T) (C-T6, OD-C13; the ref used t + 0.5; review toy_defs-5)",
+           ok and dl < 0.05, f"largest change against the ref's template {dl:.4f}", mine=[a["lissajous_r"] for a in mine], ref=[b["lissajous_r"] for b in ref], max_abs_diff=dl)
 
     # ---- (8) other worlds' training against their reference scripts (30 updates)
     _check_worlds(ck)
@@ -2855,6 +2880,20 @@ def selftest(work=None):
     Qx = torch.linalg.qr(Exc[:, :, :P - 1].double())[0].float(); spx = sum_probe(nb, [0, 1], ops=block_ops(Qx, ref_))
     ck("sum probe high in trained nets and destroyed by the x-span block (generic-damage positive control)", sp0.min() > 0.5 and spx.max() < sp0.min() - 0.2,
        f"base {np.round(sp0, 3).tolist()}, x-span block {np.round(spx, 3).tolist()}")
+    gq = torch.Generator().manual_seed(9); Htr_ = torch.randn(1, 120, 10, generator=gq); Hte_ = torch.randn(1, 400, 10, generator=gq)
+    wq = torch.randn(10, 5, generator=gq); ytr_ = (Htr_[0] @ wq + 0.5 * torch.randn(120, 5, generator=gq)).argmax(-1)[None]; yte_ = (Hte_[0] @ wq).argmax(-1)[None]
+    acc_m = float(mlp_probe(Htr_, ytr_, Hte_, yte_, 5, steps=60, seed=4)[0])
+    mu_, sd_ = Htr_.mean(1, keepdim=True), Htr_.std(1, keepdim=True) + 1e-6; Xtr_, Xte_ = (Htr_ - mu_) / sd_, (Hte_ - mu_) / sd_
+    g4 = torch.Generator().manual_seed(4); u1, u2 = 1 / math.sqrt(10), 1 / math.sqrt(64)
+    prm = [(torch.rand(1, 64, 10, generator=g4) * 2 - 1) * u1, (torch.rand(1, 64, generator=g4) * 2 - 1) * u1, (torch.rand(1, 5, 64, generator=g4) * 2 - 1) * u2, (torch.rand(1, 5, generator=g4) * 2 - 1) * u2]
+    prm = [t_.clone().requires_grad_(True) for t_ in prm]; opt_ = torch.optim.Adam(prm, lr=1e-2, weight_decay=1e-4)      # torch's default betas (0.9, 0.999)
+    fw = lambda X: torch.baddbmm(prm[3].unsqueeze(1), torch.tanh(torch.baddbmm(prm[1].unsqueeze(1), X, prm[0].transpose(1, 2))), prm[2].transpose(1, 2))
+    for _ in range(60):
+        opt_.zero_grad(); Fn.cross_entropy(fw(Xtr_).reshape(-1, 5), ytr_.reshape(-1), reduction="none").view(1, -1).mean(1).sum().backward(); opt_.step()
+    with torch.no_grad():
+        acc_r = float((fw(Xte_).argmax(-1) == yte_).float().mean())
+    ck("mlp_probe = torch.optim.Adam(lr 1e-2, weight decay 1e-4, default betas) on the same init and data (OD-C10, ref c1_structure; review toy_defs-4)", acc_m == acc_r,
+       f"accuracy {acc_m:.4f} vs {acc_r:.4f}", mine=acc_m, ref=acc_r)
     pr = task_answer_probes(task_answer_features(nb, [0, 1]), mlp=True)
     ck("task-identity / pooled-answer probes run (linear, MLP)", all(np.all((v >= 0) & (v <= 1)) for v in pr.values()), {k: np.round(v, 2).tolist() for k, v in pr.items()})
     f_ = lambda r_, lam: min(1.0, 0.1 * r_ * lam)
@@ -2863,7 +2902,10 @@ def selftest(work=None):
           and dm2["note"] == "partial removal at d* (Amendment 2)" and dm3["note"] == "partial removal at r0" and dm3["matched"] and dm3["r"] == 1)
     dm4 = damage_match(0.9, lambda r_, lam: min(0.3, 0.01 * r_ * lam), 1, 64)        # never reached up to W / 2: unmatched, lam 1
     ok = ok and not dm4["matched"] and dm4["lam"] == 1.0 and dm4["r"] == 32
-    ck("OD-C2 damage_match (ladder; overshoot at d* > r0 matched by partial removal, Amendment 2; bisection at r0; unreachable target unmatched)", ok,
+    dm5 = damage_match(0.31, lambda r_, lam: min(0.3, 0.01 * r_ * lam), 1, 64)        # not reached, but the W / 2 dimension is within 0.02: matched
+    dm6 = damage_match(0.25, lambda r_, lam: 0.3 if lam >= 0.5 else 0.0, 1, 64)       # a step: bisection cannot reach 0.02, the closest lam is kept
+    ok = ok and dm5["matched"] and dm5["r"] == 32 and dm5["note"] == "target not reached up to W/2" and not dm6["matched"] and dm6["drop"] == 0.3 and dm6["lam"] == 1.0
+    ck("OD-C2 damage_match (ladder; overshoot at d* > r0 matched by partial removal, Amendment 2; bisection at r0; unreachable target unmatched; within 0.02 at W / 2 matched; failed bisection keeps the closest lam, review toy_defs-3)", ok,
        f"{dm['ladder']}; d* bisection lam {dm2['lam']:.3f}; r0 bisection lam {dm3['lam']:.3f}")
     e_ = np.zeros((4, 10), int); xx = np.zeros((4, 10), int)
     perm_map = modal_shift_map(e_ + np.array([[1], [2], [3], [4]]), xx, xx, [0, 1, 2, 3]); conc = modal_shift_map(e_ + 5, xx, xx, [0, 1, 2, 3])

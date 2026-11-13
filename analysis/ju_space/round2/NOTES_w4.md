@@ -196,3 +196,8 @@ cells.json, `theta/parts/` during a stage, the descriptive collapse and fit diag
   no alignment entry (`core['align_reps']` empty) and `alignment_entries` lists it in `R3.alignment_RSI.not_entering` /
   `R3.alignment_GI.not_entering` as 'not entering (degenerate)'. Self-test: the verifier's two-mode construction.
 - theta_verdict-3 (refuted): no change.
+
+## Coordinator change (2026-11-13, after the review round)
+- `stage_rsib`: the except branch now calls `rk.steer_off()` first. The Qwen-library review (rk-2) showed that an exception inside a
+  pushed generation leaves rk's push set; after the second failed attempt the stage returns 'not run' and `r2_theta.py all` continues
+  with q0, checks and the cells in the same process, which would then run pushed. One line; no other change.

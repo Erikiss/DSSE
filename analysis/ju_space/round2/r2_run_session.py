@@ -163,6 +163,8 @@ R1_PC = ("gpu*/pc/jobs/pc_mup_*.json", "gpu*/pc/models/pc_mup_*.pt",
          "r1_finality.json")
 R1_G46 = ("gpu*/pc/jobs/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}.json",        # G46: the R1 BP cells that round 2 retrains (AT2, AT5,
           "gpu*/pc/models/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}.pt")         # B-T1/B-T2, C-T nets): every BP main cell without regulariser
+R1_QUICK = ("gpu*/pc/jobs/bp_mup_W{64,128}_s*_K12_g0_wd1_quick.json",       # self-test only: pc_meta QUICK's names in the mock tree, which
+            "gpu*/pc/models/bp_mup_W{64,128}_s*_K12_g0_wd1_quick.pt")       # r2_pc_toy looks for under QUICK (pc_mup_* matches already)
 R2_ALL = "*"                                                                # r2_ana: every output of the other sessions (see plan_r2)
 WAVE1 = ("r2_q1", "r2_q2", "r2_q3", "r2_t1", "r2_t2", "r2_t3", "r2_t4")
 SESSIONS = {   # start: G4 / G5 / the round-2 sessions that must be done first; shards: round-1 folders read (meta: version metadata only)
@@ -179,6 +181,14 @@ SESSIONS = {   # start: G4 / G5 / the round-2 sessions that must be done first; 
                    shards=("gpu1", "gpu2", "gpu3", "gpu4", "gpu5", "gpu6"), meta_shards=(), models=()),
 }
 STEP_ENV = {"r2_pc": dict(R1PC="{r1}", R2T1="{r2in}/r2_t1")}     # 9.3: R1PC = folder with the copied R1 PC files
+RERUN_ON_INPUT_CHANGE = ("r2_pc", "r2_ana")   # their finished steps are redone when the copied inputs changed since they ran
+PARTIAL_DIRS = {"r2_pc": ("pc_toy/partial",)}  # the scripts' own resume caches, cleared with the steps they belong to
+PACKING = {   # process packing against plan 7.2 (7.4: packing changes no measurement); written into session_done.json
+    "r2_q1": "5 processes (r2_axes; r2_unlearn_qwen 'all' = q3, q4a, q2, q4b, armA, q5, q6; r2_gen_loop at 14, b_lo, b_hi); 7.2 costs 3 "
+             "(one model load per block): about 60 s more",
+    "r2_q2": "3 processes (r2_theta 'all' per block), as in 7.2",
+    "r2_q3": "4 processes (r2_rgi_geom and r2_rgi_stats per model); 7.2 costs 2 model processes (the statistics load no model)",
+}
 
 # ======================================================================================================================================
 # Constants of the freeze and of the inputs
@@ -243,6 +253,7 @@ SHIM_SHA256 = {   # Appendix E: the repository's round-1 files that the referenc
     "analysis/ju_space/pc_common.py": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f",
 }
 REF_COMPARISON = "analysis/ju_space/round2/tests/ref_comparison_w5.json"     # 9.5: committed output of r2_toy_common.py selftest
+REF_COMPARISON_PORTS = ("r2_toy_common.py", "r2_sim.py")                     # its module_sha256 must match these files
 REF_COMPARISON_GLOBS = ("ref_comparison*", "ref_compare*", "ref_check*", "tests/*compar*", "ref/*comparison*", "ref/*compare*")
 GUARD_S_DEFAULT = 1200.0             # 7.4 / G48: 20 min
 EXIT_DONE, EXIT_FAILED, EXIT_GATE, EXIT_GUARD, EXIT_WAIT = 0, 1, 2, 3, 4
@@ -447,18 +458,16 @@ def r1_blocks(src):
     B3 = [b for b in (14, out["b_lo"], out["b_hi"]) if b is not None]
     out["B3"] = B3
     if d2 and all(dl(d2, b) is not None for b in B3):
-        val = {b: dl(d2, b) for b in B3}; rank = {out["b_lo"]: 0, 14: 1, out["b_hi"]: 2}
-        order = sorted(B3, key=lambda b: val[b]); ties = []
-        for _ in range(3):
-            for i in range(len(order) - 1):
-                a, c = order[i], order[i + 1]
-                if abs(val[a] - val[c]) <= 1e-4:
-                    ties.append(sorted((a, c)))
-                    if rank[a] > rank[c]:
-                        order[i], order[i + 1] = c, a
+        # OD-G3 / G9, the rule of r2_rk.delta_order (re-implemented: the runner does not import torch): sort by (delta, block); if
+        # b_lo and b_hi agree within 1e-4 the round-1 label decides (b_lo below b_hi); block 14 stays where its delta puts it
+        val = {b: dl(d2, b) for b in B3}; lo, hi = out["b_lo"], out["b_hi"]
+        order = sorted(B3, key=lambda b: (val[b], b))
+        if lo in order and hi in order and abs(val[lo] - val[hi]) <= 1e-4 and order.index(lo) > order.index(hi):
+            i, j = order.index(lo), order.index(hi); order[i], order[j] = order[j], order[i]
+        ties = [[a, c] for k, a in enumerate(order) for c in order[k + 1:] if abs(val[a] - val[c]) <= 1e-4]
         out["delta_last"] = {str(b): val[b] for b in B3}
         out["order"] = order
-        out["G9"] = dict(ok=not ties, ties=[list(t) for t in {tuple(t) for t in ties}])
+        out["G9"] = dict(ok=not ties, ties=ties, rule="sorted by (delta, block); b_lo before b_hi when they tie (OD-G3)")
     else:
         out["order"], out["G9"] = None, dict(ok=None, note="gpu2/dn_delta.json missing or incomplete")
     return out
@@ -552,13 +561,24 @@ def drive_meta(src, freeze_time):
 
 
 def gate_upstream(src, base, decl):
-    """Wave 2: r2_pc after r2_t1; r2_ana after every other session (session_done.json, or declared 'not run' after two attempts)."""
+    """Wave 2: r2_pc after r2_t1; r2_ana after every other session (7.2, 7.3). 'Done' = session_done.json with no session_partial.json
+    next to it (a later attempt that did not finish), and every output that its steps recorded present in dsse_runs/<session> (r2_pc
+    also needs r2_t1's AT5 nets). Only r2_ana accepts a session declared 'not run' after two recorded attempts (7.2)."""
     rec = dict(ok=True, waiting=[], sessions={}, declared_not_run=decl)
     for u in SESSIONS[base]["upstream"]:
         d = os.path.join(src, u)
-        if os.path.isfile(os.path.join(d, "session_done.json")):
-            rec["sessions"][u] = "done"
-        elif u in decl:
+        done, partial = load_json(os.path.join(d, "session_done.json")), os.path.isfile(os.path.join(d, "session_partial.json"))
+        if done is not None and not partial:
+            missing = sorted({rel for v in (done.get("steps") or {}).values() for rel in (v.get("outputs") or {})
+                              if not os.path.isfile(os.path.join(d, rel))})
+            if base == "r2_pc" and u == "r2_t1" and not rglob(d, "rgi_toy/models/at5_*.pt"):
+                missing.append("rgi_toy/models/at5_*.pt")
+            if missing:
+                rec["ok"] = False; rec["sessions"][u] = f"done, but {len(missing)} recorded outputs are missing"
+                rec["waiting"].append(f"dsse_runs/{u}: outputs listed in session_done.json are missing: {missing[:5]}")
+            else:
+                rec["sessions"][u] = "done"
+        elif u in decl and base == "r2_ana":
             n = len(load_json(os.path.join(d, "session_attempts.json")) or [])
             if n >= 2:
                 rec["sessions"][u] = f"declared 'not run' after {n} attempts"
@@ -566,15 +586,21 @@ def gate_upstream(src, base, decl):
                 rec["ok"] = False; rec["sessions"][u] = f"declared 'not run' but only {n} attempt(s) recorded"
                 rec["waiting"].append(f"{u}: declared 'not run' needs two recorded attempts, found {n}")
         else:
-            rec["ok"] = False; rec["sessions"][u] = "not done"; rec["waiting"].append(f"dsse_runs/{u}/session_done.json missing")
+            rec["ok"] = False; rec["sessions"][u] = "not done"
+            rec["waiting"].append(f"dsse_runs/{u}: session_partial.json next to session_done.json (a later attempt did not finish)"
+                                  if done is not None else f"dsse_runs/{u}/session_done.json missing")
+            if u in decl:
+                rec["waiting"].append(f"{u}: a declaration 'not run' applies to r2_ana only (7.2), not to {base}")
     return rec
 
 
 def plan_r1(src, patterns, blk=None):
     """The round-1 files of the copy list (7.3) as [(shard, rel, source path)], located by name across gpu1-gpu6. rk files only for
     the final blocks of B3. Duplicates (the same shard-relative path in several shards) by OD-G9: rk files and summaries from the
-    shard assigned to the block (gpu1 block 14, gpu2 b_lo, gpu3 b_hi); a PC job from the shard whose pc_expected lists it, if
-    several do the one with shard_done.json, then the most recent file. Returns (files, choices, skipped)."""
+    shard assigned to the block (gpu1 block 14, gpu2 b_lo, gpu3 b_hi); a duplicated PC job is chosen once for its JSON and its model
+    together (among the shards that hold both): the shard whose pc_expected lists it, if several do the one with shard_done.json,
+    then the newest jobs/<name>.json; both files come from that shard ('lacks' records a missing one). Returns (files, choices,
+    skipped)."""
     hits = {}
     for pat in expand(patterns):
         if not re.match(r"^gpu(\*|\d)/", pat):                       # a file in dsse_runs/ itself (r1_finality.json)
@@ -592,25 +618,47 @@ def plan_r1(src, patterns, blk=None):
     expected = {s: set(load_json(os.path.join(src, s, f"pc_expected_{s}.json")) or []) for s in SHARDS}
     done = {s: os.path.isfile(os.path.join(src, s, "shard_done.json")) for s in SHARDS}
     files, choices, skipped = [], [], []
+    stamp = lambda p: dict(mtime=iso(os.path.getmtime(p)), size=os.path.getsize(p))
+    jobs, job_pick = {}, {}                       # OD-G9 for a PC job: ONE shard for its JSON and its model together
+    for rel in hits:
+        if (mj := JOB_RE.match(rel)):
+            jobs.setdefault(mj.group(1), []).append(rel)
+    for name, rels in sorted(jobs.items()):
+        if all(len(hits[r]) == 1 for r in rels):
+            continue                              # no duplicate: every file comes from the only shard that has it
+        cand_all = sorted({s for r in rels for s in hits[r]})
+        both = [s for s in cand_all if all(s in hits[r] for r in rels)]
+        pool, rule = (both or cand_all), "most recent jobs/<name>.json"
+        lst = [s for s in pool if name in expected[s]]
+        if len(lst) == 1:
+            pool, rule = lst, "pc_expected lists it"
+        elif lst:
+            pool = lst
+        if len(pool) > 1 and any(done[s] for s in pool):
+            pool = [s for s in pool if done[s]]; rule = "shard_done.json, then most recent jobs/<name>.json"
+        jrel = next((r for r in rels if r.endswith(".json")), rels[0])
+        age = lambda s: os.path.getmtime(hits[jrel][s]) if s in hits[jrel] else max(os.path.getmtime(hits[r][s]) for r in rels if s in hits[r])
+        job_pick[name] = pick = max(pool, key=lambda s: (age(s), s))
+        choices.append(dict(job=name, paths=sorted(rels), chosen=pick, rule=rule, lacks=[r for r in sorted(rels) if pick not in hits[r]],
+                            candidates={r: {s: stamp(p) for s, p in hits[r].items()} for r in sorted(rels)}))
     for rel in sorted(hits):
         cand = hits[rel]
         m = RK_RE.match(rel)
         if m and blk is not None and int(m.group(1)) not in blk.get("final_blocks", []):
             skipped.append(dict(path=rel, shards=sorted(cand), why=f"block {m.group(1)} not a final block of B3"))
             continue
+        mj = JOB_RE.match(rel)
+        if mj and mj.group(1) in job_pick:
+            if job_pick[mj.group(1)] in cand:
+                files.append((job_pick[mj.group(1)], rel, cand[job_pick[mj.group(1)]]))
+            continue
         if len(cand) == 1 or PER_SHARD_RE.match(rel):
             files += [(s, rel, p) for s, p in sorted(cand.items())]
             continue
-        mb, mj = m or SUM_RE.match(rel), JOB_RE.match(rel)
+        mb = m or SUM_RE.match(rel)
         pool, rule = sorted(cand), "most recent file"
         if mb and assign.get(int(mb.group(1))) in cand:
             pool, rule = [assign[int(mb.group(1))]], "assigned shard of the block"
-        elif mj:
-            lst = [s for s in pool if mj.group(1) in expected[s]]
-            if len(lst) == 1:
-                pool, rule = lst, "pc_expected lists it"
-            elif lst:
-                pool = lst
         if len(pool) > 1 and any(done[s] for s in pool):
             pool = [s for s in pool if done[s]]; rule = "shard_done.json, then most recent file"
         pick = max(pool, key=lambda s: (os.path.getmtime(cand[s]), s))
@@ -806,7 +854,13 @@ def gate_G3(meta, shards_read):
                 r["label"] = "round-1 code differs between shards"; r["why"] = why
                 rec["labels"][m] = f"round-1 code differs between shards ({why})"; rec["ok"] = False
         rec["modules"][m] = r
-    if not commits:
+    missing = [s for s in shards_read if s not in commits]          # a shard read without a code commit cannot count as equal
+    if missing:
+        rec["shards_without_commit"] = missing; rec["ok"] = False
+        for m in R1_MODULES:
+            rec["labels"][m] = "round-1 code differs between shards (not checkable: no code commit of " + ", ".join(missing) + ")"
+            rec["modules"][m].update(label="round-1 code differs between shards", why=f"no code commit of {', '.join(missing)}")
+    if not shards_read:
         rec["note"] = "no round-1 shard read in this session: checkout hashes only"
     return rec
 
@@ -861,6 +915,14 @@ def references_record():
     comparison = dict(path=REF_COMPARISON, sha256=sha256_file(rc) if os.path.isfile(rc) else None,
                       status="ok" if os.path.isfile(rc) else "missing (9.5: committed before the first session)",
                       others={os.path.relpath(p, REPO): sha256_file(p) for p in comp if os.path.normpath(p) != os.path.normpath(rc)})
+    if os.path.isfile(rc):                    # the output must come from the ports that run now (9.5; NOTES_w5: regenerate after a change)
+        recorded = (load_json(rc) or {}).get("module_sha256") or {}
+        here = {n: os.path.join(SCRIPTS, n) if n in REF_COMPARISON_PORTS else os.path.join(AJS, n)
+                for n in REF_COMPARISON_PORTS + ("pc_meta.py", "pc_common.py")}
+        comparison["modules"] = {n: dict(recorded=recorded.get(n), checkout=sha256_file(p) if os.path.isfile(p) else None) for n, p in here.items()}
+        comparison["changed"] = [n for n, v in comparison["modules"].items() if v["recorded"] != v["checkout"]]
+        if any(n in REF_COMPARISON_PORTS for n in comparison["changed"]):
+            comparison["status"] = "stale (ports changed after the comparison)"
     return dict(dir=os.path.relpath(REF_DIR, REPO), files=files, n_ok=sum(f["status"] == "ok" for f in files.values()),
                 n_missing=sum(f["status"] != "ok" for f in files.values()), not_in_appendix_E=extra,
                 missing_txt_sha256=sha256_file(mt) if os.path.isfile(mt) else None, shim_modules=shim, comparison=comparison)
@@ -948,17 +1010,19 @@ def files_of(ctx, pats):
 
 def is_done(ctx, rs, by_name, _seen=None):
     """Done = the runner recorded the step's success and its outputs exist ('skipped when its output exists', 7.4). A step with
-    local-only outputs also needs them, unless every step that reads them is done (on a new machine it then runs again)."""
+    local-only outputs also needs them while a step that reads them is not done: an empty record of its local files, or one with a
+    missing file, then counts as not done (runner_steps-10; a repeat is cheap, the scripts skip their finished stages)."""
     m = load_json(rs.marker)
     if not m or m.get("status") != "ok":
         return False
     if not m.get("no_output"):
         if any(not hits for hits in files_of(ctx, rs.out).values()):
             return False
-    if rs.st.local and m.get("local"):
+    if rs.st.local:
         _seen = (_seen or set()) | {rs.name}
         consumers_done = all(c in _seen or is_done(ctx, by_name[c], by_name, _seen) for c in rs.needed_by)
-        if not consumers_done and not all(os.path.isfile(os.path.join(ctx.work, p)) for p in m["local"]):
+        loc = m.get("local") or []
+        if not consumers_done and (not loc or not all(os.path.isfile(os.path.join(ctx.work, p)) for p in loc)):
             return False
     return True
 
@@ -1050,11 +1114,15 @@ def exec_step(ctx, rs):
     outs = {}
     for p in sorted({f for h in list(found.values()) + list(files_of(ctx, rs.opt).values()) for f in h}):
         outs[os.path.relpath(p, ctx.work)] = dict(size=os.path.getsize(p), sha256=sha256_file(p))
-    after = local_snapshot(ctx)
-    local = sorted(k for k, v in after.items() if before.get(k) != v) if rs.st.local else []
+    after, local = local_snapshot(ctx), []
+    if rs.st.local:                                         # changed in this run, plus what an earlier record listed and still exists
+        prev = [q for q in ((load_json(rs.marker) or {}).get("local") or []) if os.path.isfile(os.path.join(ctx.work, q))]
+        local = sorted({k for k, v in after.items() if before.get(k) != v} | set(prev))
+        if not local and ok:                                # nothing new: the script found its arrays in place
+            local = sorted(after)
     rec = dict(name=rs.name, status="ok" if ok else "failed", rc=rc, seconds=secs, attempt=ctx.attempt, ended=iso(), code_commit=ctx.code_commit,
                block=rs.b, command=rs.cmdline(ctx, short=True), outputs=outs, missing=missing, no_output=bool(ok and missing),
-               local=local, note=note or None)
+               local=local, inputs_digest=ctx.inputs_digest, note=note or None)
     dump_json(rec, rs.marker)
     say(f"[done] {rs.name} rc={rc} ({secs:.0f}s){'' if ok else ' FAILED: ' + (note or f'exit code {rc}')}")
     return rec
@@ -1068,12 +1136,41 @@ def mirror_ana(ctx, rs):
         shutil.copy2(p, dst)
 
 
+def step_state(ctx, rs, st, by_name):
+    """The state a step takes before it would run: 'skipped' if done (a done step stays done whatever reason now applies,
+    runner_steps-6), 'not run' (G4 / G33, or an 'after' step not run), 'blocked' (an 'after' step not finished, or a 'settled' step
+    neither done nor 'not run'), else None (run it). st holds the states of the steps before it."""
+    OK, FINAL = ("ran", "skipped"), ("ran", "skipped", "not run")
+    if is_done(ctx, rs, by_name):
+        why = not_run_reason(ctx, rs)
+        return dict(state="skipped", note="output exists" + (f" (now also: {why})" if why else ""))
+    why = not_run_reason(ctx, rs)
+    dep_nr = [a for a in rs.after if st.get(a, {}).get("state") == "not run"]
+    if why or dep_nr:
+        return dict(state="not run", note=why or f"depends on {', '.join(dep_nr)} (not run)")
+    wait = [a for a in rs.after if st.get(a, {}).get("state") not in OK] + [a for a in rs.settled if st.get(a, {}).get("state") not in FINAL]
+    if wait:
+        return dict(state="blocked", note="waits for " + ", ".join(wait))
+    return None
+
+
+def would_run(ctx, steps):
+    """The steps that a run would execute now (a dry pass of run_steps: done steps count as finished, the others as run)."""
+    by_name, st, out = {s.name: s for s in steps}, {}, []
+    for rs in steps:
+        s = step_state(ctx, rs, st, by_name)
+        if s is None or s["state"] == "blocked":
+            out.append(rs.name); s = dict(state="ran")
+        st[rs.name] = s
+    return out
+
+
 def run_steps(ctx, steps):
-    """Steps in table order; a step whose 'after' steps did not finish waits; one retry of failed steps (round-1 pattern) if time
-    allows; time guard after every step that ran (7.4)."""
+    """Steps in table order; a step whose 'after' / 'settled' steps did not finish waits; one retry of failed steps (round-1 pattern)
+    if time allows; time guard after every step that ran (7.4)."""
     by_name = {s.name: s for s in steps}
     st, ran, guard = {}, [], False
-    OK, FINAL = ("ran", "skipped"), ("ran", "skipped", "not run")
+    FINAL = ("ran", "skipped", "not run")
     for rnd in (1, 2):
         for rs in steps:
             cur = st.get(rs.name, {}).get("state")
@@ -1081,22 +1178,17 @@ def run_steps(ctx, steps):
                 continue
             if rnd == 2 and cur == "failed" and st[rs.name].get("tries", 0) >= 2:
                 continue
-            why = not_run_reason(ctx, rs)
-            dep_nr = [a for a in rs.after if st.get(a, {}).get("state") == "not run"]
-            if why or dep_nr:
-                st[rs.name] = dict(state="not run", note=why or f"depends on {', '.join(dep_nr)} (not run)")
-                say(f"[not run] {rs.name}: {st[rs.name]['note']}")
-                continue
-            if is_done(ctx, rs, by_name):
-                st[rs.name] = dict(state="skipped", note="output exists"); say(f"[skip] {rs.name}: output exists")
-                if ctx.base == "r2_ana":
+            pre = step_state(ctx, rs, st, by_name)
+            if pre and pre["state"] in ("skipped", "not run"):
+                st[rs.name] = pre
+                say(f"[{'skip' if pre['state'] == 'skipped' else 'not run'}] {rs.name}: {pre['note']}")
+                if pre["state"] == "skipped" and ctx.base == "r2_ana":
                     mirror_ana(ctx, rs)
                 continue
             if guard:
                 st[rs.name] = dict(state="pending", note="time guard"); continue
-            wait = [a for a in rs.after if st.get(a, {}).get("state") not in OK]
-            if wait:
-                st[rs.name] = dict(state="blocked", note="waits for " + ", ".join(wait)); say(f"[wait] {rs.name}: {st[rs.name]['note']}")
+            if pre:                                                 # blocked
+                st[rs.name] = pre; say(f"[wait] {rs.name}: {pre['note']}")
                 continue
             rec = exec_step(ctx, rs); ran.append(rs.name)
             tries = st.get(rs.name, {}).get("tries", 0) + 1
@@ -1113,6 +1205,44 @@ def run_steps(ctx, steps):
         if rs.name not in st:
             st[rs.name] = dict(state="pending", note="time guard")
     return st, ran, guard
+
+
+def remove_done_record(ctx, why):
+    """A session that will run steps again is not done until it finishes: its old session_done.json goes (in <work> and on Drive), so
+    that wave 2 cannot start on a folder that is being redone (runner_steps-5, runner_gates-8). Error-tolerant."""
+    for d in (ctx.work, ctx.drive):
+        p = os.path.join(d, "session_done.json") if d else None
+        try:
+            if p and os.path.exists(p):
+                os.remove(p); say(f"removed {'Drive' if d == ctx.drive else 'local'} session_done.json: {why}")
+        except OSError as e:
+            say(f"could not remove an old session_done.json ({e})")
+
+
+def invalidate_changed(ctx, steps):
+    """r2_pc, r2_ana: a finished step whose record names other copied inputs than this attempt's (inputs_digest) is redone: its record,
+    its recorded outputs (required and optional), their mirror in <r2in>/r2_ana and the script's resume cache (pc_toy/partial) are
+    removed, locally and on Drive (runner_steps-4). Returns the names of the steps concerned."""
+    names = []
+    for rs in steps:
+        m = load_json(rs.marker)
+        if not m or m.get("status") != "ok" or m.get("inputs_digest") == ctx.inputs_digest:
+            continue
+        names.append(rs.name)
+        for rel in list((m.get("outputs") or {})) + [os.path.relpath(rs.marker, ctx.work)]:
+            for top in (ctx.work, ctx.drive, os.path.join(ctx.r2in, "r2_ana") if ctx.base == "r2_ana" else None):
+                try:
+                    if top and os.path.isfile(os.path.join(top, rel)):
+                        os.remove(os.path.join(top, rel))
+                except OSError as e:
+                    say(f"could not remove {rel} ({e})")
+    if names:
+        for rel in PARTIAL_DIRS.get(ctx.base, ()):
+            for top in (ctx.work, ctx.drive):
+                if top and os.path.isdir(os.path.join(top, rel)):
+                    shutil.rmtree(os.path.join(top, rel), ignore_errors=True)
+        say(f"copied inputs changed since these steps ran: {names}; their outputs were removed and they run again")
+    return names
 
 
 def finalize(ctx, steps, st, ran, guard, attempts, copied, t_attempt):
@@ -1142,9 +1272,15 @@ def finalize(ctx, steps, st, ran, guard, attempts, copied, t_attempt):
     attempts[-1].update(ended=iso(), seconds=round(time.time() - t_attempt, 1), elapsed_since_t0=round(ctx.elapsed(), 1), ran=ran,
                         result="done" if done else ("time guard" if guard and pending else "failed"), inputs_changed_during_session=integ)
     dump_json(attempts, os.path.join(ctx.work, "session_attempts.json"))
+    man = load_json(ctx.manifest_path) or {} if ctx.manifest_path else {}
     common = dict(session=ctx.base, attempts=attempts, steps=steps_rec, code_commit=ctx.code_commit,
+                  code_commits=(read_text(os.path.join(ctx.work, "code_commits.txt")) or "").split(),
                   plan_sha256=FROZEN_PLAN_SHA256, test_run=ctx.test, selftest=ctx.selftest,
-                  packing=[dict(attempt=a["attempt"], ran=a.get("ran", []), result=a.get("result")) for a in attempts],
+                  packing=[dict(attempt=a["attempt"], ran=a.get("ran", []), result=a.get("result"), invalidated=a.get("invalidated") or [])
+                           for a in attempts],
+                  packing_table=PACKING.get(ctx.base, "as in plan 7.2"),
+                  models={m: {k: (ctx.models.get(m) or {}).get(k) for k in ("repo", "revision", "sha256", "ok")} for m in SESSIONS[ctx.base]["models"]},
+                  references={k: (man.get("references") or {}).get(k) for k in ("shim_modules", "comparison")},
                   seconds_steps=round(sum((v["seconds"] or 0) for v in steps_rec.values()), 1),
                   not_run={n: v["note"] for n, v in steps_rec.items() if v["state"] == "not run"})
     if done:
@@ -1157,6 +1293,7 @@ def finalize(ctx, steps, st, ran, guard, attempts, copied, t_attempt):
                 say(f"could not remove an old session_partial.json: {e}")
         code, msg = EXIT_DONE, f"session {ctx.base} done"
     else:
+        remove_done_record(ctx, "this attempt did not finish")
         reason = "time guard (7.4)" if guard and pending else "steps failed"
         k_guard = sum(a.get("result") == "time guard" for a in attempts)
         nxt = ctx.base + "bcdefghijklmnopqrstuvwxyz"[k_guard - 1] if reason.startswith("time") else ctx.attempt

@@ -130,7 +130,7 @@ def read_json(path):
 
 def write_result(path, res):
     """A stage output: the result dict with the seeds of OD-G6 (SEEDS) added, written atomically."""
-    write_json(path, dict(res, seeds=SEEDS))
+    write_json(path, dict(res, rng_seeds=SEEDS))
 
 
 def save_bundle(path, nets, infos, extra=None):
@@ -1739,8 +1739,8 @@ def selftest(out):
         rr = read_json(tp)
         os.remove(tp)
         _check(res, "rgi_toy-3: write_result puts the SEEDS of OD-G6 into a stage output",
-               rr.get("seeds") == jsonable(SEEDS) and all(k in SEEDS for k in ("s_perm", "t1_shuffle", "loo_shuffle", "lambda_perm", "delta_floor",
-                                                                              "recipe", "other_split", "coding")), sorted(rr.get("seeds", {})))
+               rr.get("rng_seeds") == jsonable(SEEDS) and all(k in SEEDS for k in ("s_perm", "t1_shuffle", "loo_shuffle", "lambda_perm", "delta_floor",
+                                                                              "recipe", "other_split", "coding")), sorted(rr.get("rng_seeds", {})))
         # review rgi_toy-4: a net with non-finite weights drops out with a flag; the other models' lines are unchanged; phis never raises
         nets2 = tr.nets.clone()
         nets2.p["W2"][1] = float("nan")

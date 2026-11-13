@@ -56,6 +56,16 @@ TAUS = (0.1, 0.3, 0.5, 1.0, 2.0)
 ROUNDS = 6
 PILOT = dict(W=T1_WIDTHS[0], wd=1.0, seed=0)                                     # G27 pilot: W 64, wd 1, seed 0
 META_THR = 0.10                                                                  # P1: B2_meta > 0.10
+BOOT_SEED, BOOT_DRAWS = 0, 10000                                                 # tau_c regression: cluster bootstrap over seeds
+RNG_SEEDS = dict(                                                                # OD-G6: every random stream of these stages
+    net_init="torch.manual_seed(seed) (pc_meta's job seed = the world seed; the K 12 and K 1 nets alike; TC.init_seed)",
+    fresh_F="torch.manual_seed(50000 + 101 seed + j) (TC.fresh_seed; B2's fresh nets)",
+    coord_check_probe="torch.Generator().manual_seed(seed) (TC.train)",
+    delta_floor="torch.Generator().manual_seed(77 + seed): h1 then h2, 50 raw then 50 controlled label permutations (TC.delta_stats)",
+    w6_sampling="Gumbel-max uniforms from torch.Generator().manual_seed(7000 + 1000 ws + 100 j + 10 n), shared across tau and the two "
+                "starts (TC.self_train)",
+    tau_c_cluster_boot=f"pc_analyze.cluster_boot_ols(B={BOOT_DRAWS}, seed={BOOT_SEED}): np.random.default_rng({BOOT_SEED}) over the seeds",
+    torch_global="torch.manual_seed(0) at the start of every stage")
 
 
 # ====================================================================================================================== I/O
@@ -345,17 +355,21 @@ def intersect(a, b):
 def p3_transfer(rows, b_lo, b_hi, choice, W_lo=None, W_hi=None):
     """P3 (frozen): 'boundary transfers across width (muP)' if the W 64 and W 256 switch-on intervals intersect and at W 512 the lower
     bracketing wd has 0 of 2 seeds in meta and the upper 2 of 2 (W 1024 the same, descriptive, OD-B10); 'shifts' otherwise, with the
-    direction."""
+    direction. 'Not decidable' only where B-T2 cannot test the W 256 bracket: W 256 has no switch-on bracket, B-T2 ran at the fallback wd
+    values (OD-B6), or B-T2 has no W 512 net at a bracket wd value (review theta_toy-3). A W 64 switch-on outside the grid cannot
+    intersect, so the verdict is 'shifts' (review theta_toy-1); its direction comes from W 64's flag ('below grid': W 256 at higher wd;
+    any other flag: not determined)."""
     W_lo, W_hi = W_lo or T1_WIDTHS[0], W_hi or T1_WIDTHS[-1]
-    res = dict(widths=[W_lo, W_hi] + list(T2_WIDTHS))
-    if b_lo["on"] is None or b_hi["on"] is None:
-        res["verdict"] = f"not decidable (no switch-on bracket at W {W_lo if b_lo['on'] is None else W_hi})"
+    res = dict(widths=[W_lo, W_hi] + list(T2_WIDTHS), switch_on_flags={str(W_lo): b_lo.get("on_flag"), str(W_hi): b_hi.get("on_flag")})
+    if b_hi["on"] is None:
+        res["verdict"] = f"not decidable (no switch-on bracket at W {W_hi}: {b_hi.get('on_flag')})"
         return res
     if choice.get("descriptive"):
         res["verdict"] = "not decidable (B-T2 ran at the fallback wd values; descriptive)"
         return res
-    i_lo, i_hi = (b_lo["on"]["lo"], b_lo["on"]["hi"]), (b_hi["on"]["lo"], b_hi["on"]["hi"])
-    inter = intersect(i_lo, i_hi)
+    i_hi = (b_hi["on"]["lo"], b_hi["on"]["hi"])
+    i_lo = None if b_lo["on"] is None else (b_lo["on"]["lo"], b_lo["on"]["hi"])
+    inter = i_lo is not None and intersect(i_lo, i_hi)
     wl, wu = i_hi
     per = {}
     for W in T2_WIDTHS:
@@ -363,12 +377,22 @@ def p3_transfer(rows, b_lo, b_hi, choice, W_lo=None, W_hi=None):
         per[W] = dict(lower_wd=wl, lower_meta=cl["n_meta"], lower_n=cl["n"], upper_wd=wu, upper_meta=cu["n_meta"], upper_n=cu["n"],
                       inside=cl["n"] > 0 and cu["n"] > 0 and cl["n_meta"] == 0 and cu["n_meta"] == cu["n"])
     first = per[T2_WIDTHS[0]]
-    res.update(switch_on=dict(zip([str(W_lo), str(W_hi)], [i_lo, i_hi])), intervals_intersect=inter, larger_widths=per)
+    res.update(switch_on={str(W_lo): i_lo, str(W_hi): i_hi}, intervals_intersect=inter, larger_widths=per)
+    if first["lower_n"] == 0 or first["upper_n"] == 0:
+        res["verdict"] = (f"not decidable (B-T2 has no W {T2_WIDTHS[0]} nets at the W {W_hi} switch-on bracket wd {wl:g} / {wu:g}; it ran at "
+                          f"wd {choice.get('wds')})")
+        res["bracket_in_session"] = (choice.get("boundaries") or {}).get("on")
+        return res
     if inter and first["inside"]:
         res["verdict"] = "boundary transfers across width (muP)"
     else:
         d = []
-        if not inter:
+        if i_lo is None:
+            if b_lo.get("on_flag") == "below grid":
+                d.append(f"W {W_hi} switch-on at higher wd than W {W_lo} (W {W_lo} switch-on below grid)")
+            else:
+                d.append(f"W {W_lo} has no switch-on bracket ({b_lo.get('on_flag')}); direction not determined")
+        elif not inter:
             d.append(f"W {W_hi} switch-on at {'higher' if i_hi[0] > i_lo[1] else 'lower'} wd than W {W_lo}")
         if not first["inside"]:
             if first["lower_meta"] > 0:
@@ -378,6 +402,16 @@ def p3_transfer(rows, b_lo, b_hi, choice, W_lo=None, W_hi=None):
         res["verdict"] = "shifts"
         res["direction"] = d
     return res
+
+
+def od_g8_t2(choice, rows):
+    """OD-G8 for B-T2's wd values: the in-session choice (t2.json; it governs what ran) against the same decision recomputed from the
+    rows now in nets.json; a disagreement is reported, nothing else changes (review theta_toy-3)."""
+    rec = t2_choice(rows)
+    if not choice.get("wds") and str(choice.get("source", "")).startswith("t2 not run"):
+        return dict(in_session=None, recomputed=rec["wds"], agree=None, note="t2 not run")
+    a, b = [float(x) for x in choice.get("wds", [])], [float(x) for x in rec["wds"]]
+    return dict(in_session=a, recomputed=b, agree=a == b, in_session_source=choice.get("source"), recomputed_source=rec["source"])
 
 
 def p4_delta(rows, b_lo, b_hi, W_lo=None, W_hi=None):
@@ -439,7 +473,7 @@ def stage_t2(out):
     r1 = read_json(p1)
     cp = tdir(out, "t2.json")
     choice = read_json(cp) if os.path.exists(cp) else t2_choice(r1)
-    write_json(cp, dict(choice, widths=list(T2_WIDTHS), seeds=list(T2_SEEDS)))
+    write_json(cp, dict(choice, widths=list(T2_WIDTHS), seeds=list(T2_SEEDS), rng_seeds=RNG_SEEDS))
     say(f"t2: wd values {choice['wds']} ({choice['source']})")
     rows = []
     for W in T2_WIDTHS:
@@ -494,7 +528,7 @@ def stage_t5(out):
     res = dict(stage="t5", measurement="B-T5 self-training loop with a real temperature tau (W6)", quick=QUICK, taus=list(TAUS), rounds=ROUNDS,
                wds=list(T5_WDS), widths=list(T1_WIDTHS), seeds=list(SEEDS), pilot=dict(net=PILOT, values=gate_vals, passed=gate),
                G27=dict(passed=gate, label=None if gate else "no self-referential dynamics in the toy (phase map descriptive)"),
-               rows=allr, seconds=time.time() - t0,
+               rows=allr, seconds=time.time() - t0, rng_seeds=RNG_SEEDS,
                notes="per (net, tau), averaged over the 4 new tasks: S = A_6 - A_0 (true start), M_n = A_n(true) - A_n(wrong), kappa = (M_6 / "
                      "M_1)^(1/5) if M_1 > 0.01 and M_6 > 0, else 0 (OD-B5); nets without a checkpoint evaluated at MAXSTEPS (eval_point)")
     write_json(p, res)
@@ -512,7 +546,7 @@ def stage_rules(out):
         raise SystemExit("rules need theta_toy/rows_t1.json (stage t1) first")
     choice = read_json(tdir(out, "t2.json")) if os.path.exists(tdir(out, "t2.json")) else dict(wds=[], descriptive=True, source="t2 not run")
     t5 = read_json(tdir(out, "t5.json")) if os.path.exists(tdir(out, "t5.json")) else None
-    res = dict(stage="rules", measurement="B-T4 and the theta toy rules P1-P4, T5 phases (frozen, 4.2)", quick=QUICK,
+    res = dict(stage="rules", measurement="B-T4 and the theta toy rules P1-P4, T5 phases (frozen, 4.2)", quick=QUICK, rng_seeds=RNG_SEEDS,
                G_meta="label applied in r2_ana (G35: G-meta from the round-1 PC summaries); not evaluated here")
     P1, B = {}, {}
     for W in T1_WIDTHS:
@@ -525,7 +559,7 @@ def stage_rules(out):
     res["P3"] = p3_transfer(rows, B[T1_WIDTHS[0]], B[T1_WIDTHS[-1]], choice)
     res["P4"] = p4_delta(rows, B[T1_WIDTHS[0]], B[T1_WIDTHS[-1]])
     res["B_T2"] = dict(choice=choice, cells={str(W): {f"{wd:g}": {k: v for k, v in meta_counts(rows, W, wd, T2_SEEDS).items()}
-                                                      for wd in choice.get("wds", [])} for W in T2_WIDTHS})
+                                                      for wd in choice.get("wds", [])} for W in T2_WIDTHS}, od_g8=od_g8_t2(choice, rows))
     # B-T4: geometry and susceptibility per cell
     t4 = {}
     for W in list(T1_WIDTHS) + list(T2_WIDTHS):
@@ -556,6 +590,7 @@ def stage_rules(out):
     t4["delta_h2_at_switch_on"] = {str(W): (None if B[W]["on"] is None else
                                             {f"{wd:g}": t4[str(W)]["cells"].get(f"{wd:g}", {}).get("delta_h2") for wd in (B[W]["on"]["lo"], B[W]["on"]["hi"])})
                                    for W in T1_WIDTHS}
+    t4["peak"] = {str(W): t4[str(W)]["susceptibility_peak"] for W in list(T1_WIDTHS) + list(T2_WIDTHS) if str(W) in t4}
     res["B_T4"] = t4
     res["T5"] = t5_rules(t5) if t5 is not None else dict(note="t5 not run")
     write_json(p, res)
@@ -592,9 +627,10 @@ def t5_rules(t5):
         X = np.column_stack([[r["delta_h2"] for r in pts], [math.log2(r["W"]) for r in pts]])
         y = np.array([r["tau_c_mid"] for r in pts])
         try:
-            full, lo, hi = PA.cluster_boot_ols(X, y, [r["seed"] for r in pts], B=10000, seed=0)
+            full, lo, hi = PA.cluster_boot_ols(X, y, [r["seed"] for r in pts], B=BOOT_DRAWS, seed=BOOT_SEED)
             reg = dict(n=len(pts), y="tau_c (geometric midpoint of the switch pair)", coef_delta_h2=float(full[1]), ci_delta_h2=[float(lo[1]), float(hi[1])],
-                       coef_log2W=float(full[2]), ci_log2W=[float(lo[2]), float(hi[2])], clusters="seeds", draws=10000)
+                       coef_log2W=float(full[2]), ci_log2W=[float(lo[2]), float(hi[2])], clusters="seeds", draws=BOOT_DRAWS, boot_seed=BOOT_SEED,
+                       interval="2.5 / 97.5 percentiles of the cluster-bootstrap draws (pc_analyze.cluster_boot_ols)")
         except (ValueError, IndexError, np.linalg.LinAlgError) as e:
             reg = dict(n=len(pts), error=repr(e))
     return dict(G27=t5.get("G27"), descriptive=not t5.get("G27", {}).get("passed", False), phases=phases, tau_c=tauc, tau_c_per_net=per_net,
@@ -605,6 +641,50 @@ def t5_rules(t5):
 def _check(res, name, cond, info=""):
     res.append(dict(check=name, passed=bool(cond), info=jsonable(info)))
     print(f"[{'PASS' if cond else 'FAIL'}] {name}: {info}", flush=True)
+
+
+def _synth_rules_dir(out, scenario):
+    """Synthetic B-T1 / B-T2 rows, t2.json and t5.json for an end-to-end test of stage_rules (selftest only; no net is trained). On the
+    module's grid: W 64 in meta at every wd but the largest (switch-on 'below grid'), W 256 in meta from the second to the second-largest
+    wd (switch-on bracket = the two lowest wd values); B-T2 at the W 256 bracket ('fresh': 0 of 2 below, 2 of 2 above) or at two other wd
+    values ('stale': t2.json from an earlier decision); t5: every net bistable below a seed- and width-dependent tau, dissipative above."""
+    import shutil
+    if os.path.isdir(tdir(out)):
+        shutil.rmtree(tdir(out))
+
+    def R(W, wd, s_, K, b2, dh2, st):
+        d = None if K != NPRE else dict(h1=dict(delta=dh2, delta_ctrl=dh2, ring=0.0), h2=dict(delta=dh2, delta_ctrl=dh2, ring=0.0))
+        return dict(name=job_name(W, s_, K, wd), arm="bp_mup", W=W, seed=s_, K=K, gamma=0.0, wd_scale=wd, level1=K == NPRE, delta=d, B2_8=b2,
+                    stage=st, first95_cens=1000 if K == NPRE else None)
+
+    def meta_fill(rows):
+        for r in rows:
+            if r["K"] == NPRE:
+                k1 = [q for q in rows if q["K"] == 1 and q["W"] == r["W"] and q["seed"] == r["seed"] and q["wd_scale"] == r["wd_scale"]]
+                r["B2_meta"] = r["B2_8"] - k1[0]["B2_8"]
+        return rows
+    in64, in256 = (lambda wd: wd <= WDS[-2]), (lambda wd: WDS[1] <= wd <= WDS[-2])
+    r1 = meta_fill([R(W, wd, s_, K, (0.3 if f(wd) else 0.0) if K == NPRE else 0.0, 0.3 - 0.01 * i, "t1") for W, f in ((T1_WIDTHS[0], in64),
+                    (T1_WIDTHS[-1], in256)) for i, wd in enumerate(WDS) for s_ in SEEDS for K in (NPRE, 1)])
+    t2w = (WDS[0], WDS[1]) if scenario == "fresh" else (WDS[2], WDS[3])
+    r2 = meta_fill([R(W, wd, s_, K, (0.3 if wd == WDS[1] else 0.0) if K == NPRE else 0.0, 0.25, "t2") for W in T2_WIDTHS for wd in t2w
+                    for s_ in T2_SEEDS for K in (NPRE, 1)])
+    ch = t2_choice(r1)
+    if scenario != "fresh":
+        ch = dict(wds=list(t2w), source="an earlier in-session decision (selftest: stale t2.json)", descriptive=False, boundaries=ch["boundaries"])
+    write_json(tdir(out, "rows_t1.json"), r1)
+    write_json(tdir(out, "rows_t2.json"), r2)
+    write_json(tdir(out, "t2.json"), dict(ch, widths=list(T2_WIDTHS), seeds=list(T2_SEEDS), rng_seeds=RNG_SEEDS))
+    t5rows = []
+    for W in T1_WIDTHS:
+        for wd in T5_WDS:
+            for s_ in SEEDS:
+                thr = TAUS[1 + (s_ + int(W == T1_WIDTHS[-1])) % 3]
+                for tau in TAUS:
+                    b = tau < thr
+                    t5rows.append(dict(W=W, wd=wd, seed=s_, tau=tau, S=0.0, M6=0.3 if b else 0.0, kappa=0.9 if b else 0.0,
+                                       delta_h2=0.3 + 0.01 * s_ + 0.02 * int(W == T1_WIDTHS[-1])))
+    write_json(tdir(out, "t5.json"), dict(rows=t5rows, G27=dict(passed=True, label=None), rng_seeds=RNG_SEEDS))
 
 
 def selftest(out):
@@ -657,6 +737,42 @@ def selftest(out):
     sw, note = tau_switch((0.1, 0.3, 0.5, 1.0, 2.0), [True, True, False, False, False], [False, False, True, True, True])
     _check(res, "tau_c = the adjacent pair where bistable switches to dissipative", sw == (0.3, 0.5) and note is None, sw)
     _check(res, "tau_c absent when bistable throughout", tau_switch((0.1, 0.3), [True, True], [False, False]) == (None, "bistable at every tau"))
+    # review theta_toy-1: P3 'shifts' when W 64 has no switch-on bracket; 'not decidable' only when W 256 has none
+    bw = lambda f: p2_boundaries(wds, f)
+    b256 = bw([0, 0, 1, 1, 1, 0])
+    rows_b = []
+    for wd in (0.1, 0.3):
+        for s_ in T2_SEEDS:
+            rows_b += [dict(W=T2_WIDTHS[0], wd_scale=wd, seed=s_, K=NPRE, level1=True, B2_meta=0.3 if wd == 0.3 else 0.0)]
+    chb = dict(wds=[0.1, 0.3, 3.0, 10.0], descriptive=False, source="test")
+    pb = p3_transfer(rows_b, bw([1, 1, 1, 1, 1, 0]), b256, chb)
+    pn = p3_transfer(rows_b, bw([0.5, 0.5, 1, 1, 1, 0]), b256, chb)
+    pz = p3_transfer(rows_b, bw([1, 1, 1, 1, 1, 0]), bw([0, 0.25, 0.5, 0.5, 0.25, 0]), chb)
+    _check(res, "theta_toy-1: P3 'shifts' when only W 64 lacks a switch-on bracket (direction from its flag); 'not decidable' only without a "
+                "W 256 bracket", pb["verdict"] == "shifts" and "higher wd" in pb["direction"][0] and "below grid" in pb["direction"][0]
+           and pn["verdict"] == "shifts" and "direction not determined" in pn["direction"][0] and pz["verdict"].startswith("not decidable (no switch-on")
+           and pb["larger_widths"][T2_WIDTHS[0]]["inside"], dict(below=pb, not_bracketed=pn.get("direction"), no_256=pz["verdict"]))
+    # review theta_toy-1 / -2 / -3 end to end through stage_rules on synthetic files
+    sy = os.path.join(out, "synthetic_rules")
+    for scen in ("fresh", "stale"):
+        _synth_rules_dir(sy, scen)
+        stage_rules(sy)
+        v = read_json(tdir(sy, "verdict.json"))
+        reg = v["T5"]["tau_c_regression"]
+        if scen == "fresh":
+            _check(res, "theta_toy-1 (stage_rules): W 64 'below grid', W 256 bracketed, B-T2 inside -> P3 'shifts', W 256 at higher wd",
+                   v["P3"]["verdict"] == "shifts" and any("higher wd" in d_ for d_ in v["P3"]["direction"]), v["P3"])
+            _check(res, "theta_toy-2: rng_seeds in verdict.json, t2.json and t5.json; the tau_c regression records its bootstrap seed and interval",
+                   v.get("rng_seeds", {}).get("tau_c_cluster_boot", "").endswith(f"seed={BOOT_SEED}): np.random.default_rng({BOOT_SEED}) over the seeds")
+                   and reg.get("boot_seed") == BOOT_SEED and "percentile" in reg.get("interval", "") and reg.get("draws") == BOOT_DRAWS
+                   and "w6_sampling" in read_json(tdir(sy, "t5.json"))["rng_seeds"] and "rng_seeds" in read_json(tdir(sy, "t2.json")),
+                   {k: reg.get(k) for k in ("n", "boot_seed", "draws", "interval")})
+            _check(res, "theta_toy-3 (fresh): OD-G8 record agrees; B_T4 'peak' summary present", v["B_T2"]["od_g8"]["agree"] is True
+                   and set(v["B_T4"]["peak"]) == {str(W) for W in T1_WIDTHS + T2_WIDTHS if str(W) in v["B_T4"]}, v["B_T2"]["od_g8"])
+        else:
+            _check(res, "theta_toy-3 (stale t2.json): P3 'not decidable' instead of 'shifts' from empty cells; OD-G8 disagreement reported",
+                   v["P3"]["verdict"].startswith("not decidable (B-T2 has no") and v["B_T2"]["od_g8"]["agree"] is False
+                   and v["P3"]["larger_widths"][str(T2_WIDTHS[0])]["lower_n"] == 0, dict(P3=v["P3"]["verdict"], od_g8=v["B_T2"]["od_g8"]))
     if QUICK:
         # finetune_all against pc_meta.finetune(mode 'all') on one trained tiny net
         tr = TC.train([dict(W=16, ws=1, K=NPRE, wd=3.0)])

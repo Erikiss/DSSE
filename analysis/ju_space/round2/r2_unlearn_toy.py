@@ -537,6 +537,26 @@ def dm_public(dm):
     return {k: v for k, v in dm.items() if k != "R"}
 
 
+AMEND2 = "Amendment 2"
+
+
+def plan_text_full(dm, fwd):
+    """Plan-text counterpart of an Amendment-2 control (coordinator's request of 2026-11-13): when damage_match found the control by
+    bisecting one shared lam at d* > r0 (note 'partial removal at d* (Amendment 2)'), the frozen OD-C2 text would have used the same
+    NDRAW draws at d* with full removal (lam = 1), which overshoots the target by more than 0.02 and so is unmatched (G45). fwd(dm with
+    lam 1) returns that control's forward measures as per-seed arrays (no search, no relearning); each is stored with its t interval
+    and paired seed bootstrap (summ, key '<measure>_t'), with d*, lam 1, the ladder's drop at d* and matched. None for every other
+    control (field present, None = not an Amendment-2 control)."""
+    if AMEND2 not in str(dm.get("note", "")):
+        return None
+    vals = fwd(dict(dm, lam=1.0)); drop1 = next((float(d) for r, d in dm.get("ladder", []) if int(r) == int(dm["r"])), None)
+    out = dict(r=int(dm["r"]), lam=1.0, drop=drop1, matched=bool(drop1 is not None and abs(drop1 - dm["target"]) <= 0.02),
+               note="frozen plan text (before Amendment 2): the same draws at d* with full removal; forward measures only")
+    for k, v in vals.items():
+        out[k] = np.asarray(v, float); out[k + "_t"] = summ(v)
+    return out
+
+
 # ================================================================================================================ searches
 def _sl(a, idx, C):
     if a is None:
@@ -708,12 +728,16 @@ def t4b_forward(nets, tasks, layer, base, key, mlp=True):
                probes=probes(probe_feats(nets, tasks, allv, layer, ops=ops), mlp=mlp))
     target = float(np.mean(np.asarray(base["sp"]) - sp))
     dm = damage_match(nets, tasks, base["sp"], target, layer, mu, rank, f"{key}|dm|{layer}")
-    vv = np.repeat(allv, NDRAW); od = mk_ops(dm_items(dm, mu, allv, layer), W)
-    evd = eval_old(nets, tasks, vv, ops=od); spd = sum_probe_gen(nets, tasks, vv, ops=od)
-    prd = probes(probe_feats(nets, tasks, vv, layer, ops=od), mlp=mlp)
-    red = lambda a: np.asarray(a, float).reshape(B, NDRAW).mean(1)
-    out["dm"] = dict(match=dm_public(dm), acc=red(evd["mean"]), integrity=red(evd["integrity"]), sp=red(spd), probes={k: red(v) for k, v in prd.items()})
-    out["eraser"] = dict(Q=Q, mu=mu, dm_R=dm["R"], dm_lam=dm["lam"])     # removed before writing (C-T7 relaxation test)
+    vv = np.repeat(allv, NDRAW); red = lambda a: np.asarray(a, float).reshape(B, NDRAW).mean(1)
+
+    def fwd(d_):
+        o_ = mk_ops(dm_items(d_, mu, allv, layer), W); e_ = eval_old(nets, tasks, vv, ops=o_)
+        p_ = probes(probe_feats(nets, tasks, vv, layer, ops=o_), mlp=mlp)
+        return dict(acc=red(e_["mean"]), integrity=red(e_["integrity"]), sp=red(sum_probe_gen(nets, tasks, vv, ops=o_)), probes={k: red(v) for k, v in p_.items()})
+    f_ = fwd(dm)
+    dm["full_at_dstar"] = plan_text_full(dm, lambda d_: (lambda r_: dict(acc=r_["acc"], sp=r_["sp"], **r_["probes"]))(fwd(d_)))
+    out["dm"] = dict(match=dm_public(dm), **f_)
+    out["eraser"] = dict(Q=Q, mu=mu, dm_R=dm["R"], dm_lam=dm["lam"], dm_note=dm["note"])     # removed before writing (C-T7 relaxation)
     out["_jobs"] = dict(erase=per_chain(items, tasks.n), dm=dm_chain_items(dm, mu, allv, tasks.n, layer))
     return out
 
@@ -805,6 +829,13 @@ def unsearch(nets, ws_of, arms, rounds, steps, budgets, remove_budget, key, pc_e
         if dmc and r > 0:
             target = float(np.mean(base_sp[cb[z1c]] - rec["side_sp"][z1c, r]))
             dm = damage_match(nets, tasks, base_sp, target, "z1", ref, r, f"{key}|dmr")
+
+            def fwd_dmr(d_):
+                o_ = mk_ops([{"z1_U": d_["R"][cj[i] % NDRAW], "z1_ref": ref[cb[i]], "z1_lam": d_["lam"]} for i in dmc], W)
+                a_, s_ = eval_old(nets, tasks, cb[dmc], ops=o_)["mean"], sum_probe_gen(nets, tasks, cb[dmc], ops=o_)
+                per = lambda v: np.array([np.mean([v[k] for k, i in enumerate(dmc) if cb[i] == b]) for b in range(B)])
+                return dict(side_acc=per(a_), side_sp=per(s_))
+            dm["full_at_dstar"] = plan_text_full(dm, fwd_dmr)
             rec["dm"].append(dict(round=r, **dm_public(dm)))
             it = [{"z1_U": dm["R"][cj[i] % NDRAW], "z1_ref": ref[cb[i]], "z1_lam": dm["lam"]} for i in dmc]; o = mk_ops(it, W)
             rec["side_acc"][dmc, r] = eval_old(nets, tasks, cb[dmc], ops=o)["mean"]; rec["side_sp"][dmc, r] = sum_probe_gen(nets, tasks, cb[dmc], ops=o)
@@ -1249,6 +1280,8 @@ def t4_cell(out, arm, W):
             span[nm] = _draw_mean(_fwd(nets, tasks, vv, items=it), B)
         tgt = float(np.mean(base["sp"] - ops[nm]["sp"]))
         dmatch[nm] = damage_match(nets, tasks, base["sp"], tgt, "z1", ref, r0, f"{key}|dm|{nm}")
+        dmatch[nm]["full_at_dstar"] = plan_text_full(dmatch[nm], lambda d_: {k: v for k, v in _draw_mean(_fwd(nets, tasks, vv, items=dm_items(d_, ref, allv, "z1")), B).items()
+                                                                             if k in ("acc", "integrity", "sp")})
     dmf = {nm: _draw_mean(_fwd(nets, tasks, vv, items=dm_items(dmatch[nm], ref, allv, "z1")), B) for nm in names}
     # relearning of the old tasks (one batched search: intact net, every operation, every matched control, and T4b at h1 / h2 with
     # theirs), A_new (one batched search) and B2 with the operation on; the edited columns are replaced by the searched column, so
@@ -1305,6 +1338,8 @@ def t4_w4(out, W):
     for nm, (layer, it, center, r0) in opdef.items():
         o = mk_ops(it, W); m_ = meas(allv, o)
         dm = damage_match(nets, both, base["sp"], float(np.mean(base["sp"] - m_["sp"])), layer, center, r0, f"{key}|dm|{nm}")
+        dm["full_at_dstar"] = plan_text_full(dm, lambda d_: {k: np.asarray(v, float).reshape(B, NDRAW).mean(1)
+                                                             for k, v in meas(vv, mk_ops(dm_items(d_, center, allv, layer), W), prb=False).items()})
         md = meas(vv, mk_ops(dm_items(dm, center, allv, layer), W), prb=False)
         md = {k: np.asarray(v, float).reshape(B, NDRAW).mean(1) for k, v in md.items()}
         jobs[f"op|{nm}"] = per_chain(it, add.n); jobs[f"dm|{nm}"] = dm_chain_items(dm, center, allv, add.n, layer)
@@ -1717,11 +1752,64 @@ def selftest(work):
     check("damage_match runs (matched or flagged)", dm["r"] >= NPRE - 1 and isinstance(dm["matched"], bool), f"{dm_public(dm)}")
     pb = push_bisect(nets, tasks, U[:, :, 0].cpu(), e.mean(1) - 0.5 * (e.mean(1) - a_blk), np.ones(B))
     check("push bisection hits its target or flags it", np.all(pb["matched"] | (np.abs(pb["acc"] - pb["target"]) > 0.02)), f"beta {np.round(pb['beta'], 3)}")
+    # review unlearn_toy-2: the sign of the task PCs does not depend on the sign the SVD returns; the push size is the smallest beta
+    T_ = nets.task_cols()[:, :, :NPRE].double().cpu(); Tc_ = T_ - T_.mean(-1, keepdim=True); Uo, fl = orient_axes(U, Tc_); Un, _ = orient_axes(-U, Tc_)
+    C1 = torch.einsum("bw,bwt->bt", U[:, :, 0], Tc_); lead = torch.gather(C1, 1, C1.abs().argmax(1, keepdim=True))
+    check("unlearn_toy-2: task-PC sign rule (task_pcs output already oriented; -U from an SVD orients to the same axes)",
+          torch.equal(Uo, U) and torch.equal(Un, U) and bool((lead > 0).all()) and not fl.any(), "AXIS_SIGN_RULE")
+    plat = np.array([0.06, 0.06, 0.075, 0.5]); tg = np.full(4, 0.067); sc = np.array([1.0, 10.0, 1.0, 1.0])
+    pbs = push_bisect(None, None, None, tg, sc, acc_fn=lambda b_: np.maximum(plat, 0.96 - 0.3 * np.asarray(b_)))
+    exp_b = np.array([(0.96 - 0.067) / 0.3, (0.96 - 0.067) / 0.3, (0.96 - 0.087) / 0.3])
+    check("unlearn_toy-2: push size = the smallest beta reaching the target (crossing, from a start past it, band fallback; unreachable flagged)",
+          np.allclose(pbs["beta"][:3], exp_b, rtol=2e-3) and pbs["rule"] == ["crossing", "crossing", "band", "not reached"]
+          and list(pbs["matched"]) == [True, True, True, False], f"beta {np.round(pbs['beta'], 4).tolist()} {pbs['rule']}")
+    # review unlearn_toy-4: a partial result is reused only with the same code and inputs; saved nets only with the same trainer
+    pp = os.path.join(out, SUB, "partial", "selftest_prov.json"); write_json(dict(x=1, _provenance=dict(code_sha256={"r2_toy_common.py": "0" * 64})), pp)
+    ra = cached(out, "selftest_prov", lambda: dict(x=2)); rb = cached(out, "selftest_prov", lambda: (_ for _ in ()).throw(RuntimeError("recomputed")))
+    rc = cached(out, "selftest_prov", lambda: dict(x=3), extra=dict(changed=True))
+    check("unlearn_toy-4: stale partial recomputed, matching partial reused, changed inputs recomputed (meta.partials)",
+          ra["x"] == 2 and rb["x"] == 2 and rc["x"] == 3 and PROV["partials"][f"{SUB}/selftest_prov"]["reused"] is False and rb["_provenance"]["code_sha256"] == lib_sha256())
+    mpth = os.path.join(out, SUB, "models", f"onehot_{arm}_W{W}.json"); info0 = read_json(mpth); bad_info = json.loads(json.dumps(info0))
+    bad_info["code_sha256"]["r2_toy_common.py"] = "0" * 64; write_json(bad_info, mpth); stopped = False
+    try:
+        onehot_nets(out, arm, W)
+    except SystemExit:
+        stopped = True
+    os.environ["R2_REUSE_NETS"] = "1"
+    try:
+        onehot_nets(out, arm, W); note = PROV["nets"][f"onehot_{arm}_W{W}"]["note"]
+    finally:
+        del os.environ["R2_REUSE_NETS"]; write_json(info0, mpth)
+    check("unlearn_toy-4: saved nets of another r2_toy_common.py stop the stage; R2_REUSE_NETS=1 reuses them and records it", stopped and "R2_REUSE_NETS" in note, note)
     for st in STAGES:
         try:
             r = run_stage(out, st); check(f"stage {st} runs and writes JSON with a rule preview", "rule_preview" in r and r["meta"]["plan_sha256"] == PLAN_SHA256)
         except Exception as ex:                                                   # noqa: BLE001  (report and continue)
             import traceback; traceback.print_exc(); check(f"stage {st} runs and writes JSON with a rule preview", False, repr(ex))
+    try:                                         # reviews unlearn_toy-3 / -4 / -5 on the stage outputs
+        t1 = read_json(tdir(out, "t1.json")); c32 = t1["cells"][f"{CELLS[0][0]}_W{CELLS[0][1]}"]; base_acc = c32["base"]["acc"]; Wc = CELLS[0][1]
+        ok3 = all(Wc in c32["grids"][f] and all(np.allclose(c32["families"][f][str(Wc)][bs]["acc"], base_acc, atol=1e-9) for bs in ("pca", "iso")) for f in ("z1", "h2"))
+        check(f"unlearn_toy-3: C-T1 hidden grids include r = W = {Wc}, where the cut network equals the uncut net", ok3, str(c32["grids"]["z1"]))
+        m1 = t1["meta"]
+        check("unlearn_toy-4: stage meta lists the partials and net batches it used with their code hashes",
+              all(k.startswith(f"{SUB}/t1_") and v["code_sha256"] == m1["code_sha256"] for k, v in m1["partials"].items()) and len(m1["partials"]) == len(CELLS)
+              and all(v["reused"] for v in m1["nets"].values()) and len(m1["nets"]) == len(CELLS), f"{sorted(m1['partials'])} {sorted(m1['nets'])}")
+        miss = []
+
+        def walk(o, path):
+            if isinstance(o, dict):
+                if {"mean", "lo", "hi"} <= set(o) and "boot95" not in o and not path.endswith("alignment_bonferroni"):
+                    miss.append(path)
+                for k_, v_ in o.items():
+                    walk(v_, f"{path}.{k_}")
+            elif isinstance(o, list):
+                for i_, v_ in enumerate(o):
+                    walk(v_, f"{path}[{i_}]")
+        for st in STAGES:
+            walk(read_json(tdir(out, f"{st}.json"))["rule_preview"], st)
+        check("unlearn_toy-5: every stored t summary of the rule previews carries the paired seed bootstrap (Bonferroni interval excepted)", not miss, str(miss[:5]))
+    except Exception as ex:                                                       # noqa: BLE001
+        import traceback; traceback.print_exc(); check("unlearn_toy-3 / -4 / -5 checks on the stage outputs", False, repr(ex))
     p0 = tdir(out, "t0.json")
     if os.path.exists(p0):
         a = read_json(p0); os.remove(p0); b = run_stage(out, "t0")

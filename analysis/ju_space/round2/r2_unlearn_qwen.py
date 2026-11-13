@@ -2,8 +2,9 @@
 section 5.2 C-Q2 to C-Q6 with the shared objects of 2.4 (O1 fixed gap axes, O2 axes, O4 statement sets, O5 behavioural read-outs, O6
 random-direction controls), the gates of section 6 that are decided here (G13-G16, G43, G44; labels of G28) and the CLI of 9.2.
 
-Stages (one stage per process in the runner; a stage is skipped when unlearn/<stage>.json exists; its intermediate units are cached in
-<r2_dir>/local/unlearn_<stage>/ (local only) so that a crashed stage resumes):
+Stages (a stage is skipped when unlearn/<stage>.json exists; its intermediate units are cached in <r2_dir>/local/unlearn_<stage>/ (local
+only, keyed by input signature and code fingerprint) so that a crashed stage resumes; 'all' runs the seven in order in one process, see
+main(): a failing stage does not stop the independent later ones; q3, q4a and q2 need r2_axes.py's outputs in <r2_dir>, q4a also q3's):
   q3    C-Q3 unlearning by exact write-orthogonalisation (r2_rk.WriteOrth). 29 ablations: u_RSI, unit(u_RGI_perp), span(u_RSI,
         u_RGI_perp), u_diff, the O6 controls ('rand', 14, 2) = null 2, ('cov', 14, 0) = null 8 and [('cov', 14, 1), ('cov', 14, 2)], the 16
         null directions and the 8 two-dim null pairs [('rand', 14, i), ('cov', 14, i)]. Per ablation: damage (teacher-forced KL on the 8
@@ -26,8 +27,8 @@ Stages (one stage per process in the runner; a stage is skipped when unlearn/<st
         WriteOrth(u_RSI)) and unablated twin, same start and keys ('r2Q4B', n, p, 0, 14), 64 pairs, 3 rounds, both pushing unit(d_n
         orthogonalised against u_RSI); read-outs on u_T_perp with R1's nulls and the loop's own rel; Ue_n with its 90 % prompt bootstrap.
   armA  C-Q4 arm A: round 1 with the loop push along u_T_perp plus a constant -beta u_RSI on both sides (beta alone 0.03 nats, rk's cap
-        rule), keys ('r2ARMA', n, p, 0, 14); G16 against the 90 % prompt-bootstrap interval of c(d_1) of the seed-0 half of R1 RSI_a;
-        rounds 2-3 only if c_1 falls below it.
+        rule), keys ('r2ARMA', n, p, 0, 14); G16 against the 90 % prompt-bootstrap interval of c(d_1) of the seed-0 half of R1 RSI_a,
+        shifted so that the bootstrap median equals c (Amendment 3 (a)); rounds 2-3 only if c_1 falls below it.
   q5    C-Q5 pushes: superposition (alpha_14 (unit(u_T_perp) + unit(sea)) / sqrt 2, keys ('r2SUP', p)) and dose (2 alpha_14 along u_T_perp,
         keys ('r2DOSE', p)), 64 pairs each, against the round-1 read-backs of evaluation 0 (RSI_a seed-0 half, SEA).
   q6    C-Q6 nesting primitives and depth cap: rsi_direction.py's Q2' stimuli (288) with every state at blocks 8, 14, 18, 22; object-centred
@@ -42,7 +43,8 @@ Outputs (in <r2_dir>): unlearn/<stage>.json (rule inputs with intervals, gates, 
 per-pair arrays, texts as token ids, bootstrap draws). A stage whose round-1 inputs are missing or not final writes only its JSON with
 status 'not run (round-1 output missing)' (G4, G6); C-Q4b with a closed gate 'not testable (gate ...)'.
 Usage: python r2_unlearn_qwen.py <root> <r1_dir> <r2_dir> [q3 | q4a | q2 | q4b | armA | q5 | q6 | all | selftest]
-       env DEVICE, NT, MOCK; BLOCK (must be 14 if set)."""
+       env DEVICE, NT, MOCK; BLOCK (must be 14 if set). Exit code 0 if every requested stage is done ('ran', 'not run (...)', 'not testable
+       (...)' or done earlier), 1 if one failed or was skipped because a prerequisite failed (a per-stage summary is printed)."""
 import contextlib, gc, hashlib, json, math, os, shutil, subprocess, sys, time, traceback
 import numpy as np, torch
 

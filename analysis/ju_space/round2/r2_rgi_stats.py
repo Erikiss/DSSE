@@ -811,6 +811,14 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
 # ======================================================================================================================================
 # Self-test (CPU, MOCK=1): reference implementation, planted structure, calibration, end-to-end runs
 # ======================================================================================================================================
+def _para_step_dense(Ge, Psi):
+    """The first version of para_step (full Gram of the 60 half contrasts, then the four half combinations); reference for the test."""
+    T2 = torch.einsum("rcik,rxhckygdm->rxhciygdm", Psi, Ge); G = torch.einsum("rxhciygdm,rdjm->rxhciygdj", T2, Psi)
+    Pp = (G[:, :, 0, :, 0, :, 1, :, 1] + G[:, :, 0, :, 1, :, 1, :, 0] + G[:, :, 1, :, 0, :, 0, :, 1] + G[:, :, 1, :, 1, :, 0, :, 0]) / 4
+    Dg = torch.diagonal(torch.diagonal(G, dim1=1, dim2=5), dim1=2, dim2=5)
+    return Pp.permute(0, 1, 3, 2, 4), (Dg[:, 0, 0, 0, 1] + Dg[:, 0, 1, 0, 0] + Dg[:, 1, 0, 1, 1] + Dg[:, 1, 1, 1, 0]) / 4
+
+
 def _ref_stats(U, des, r_list):
     """Explicit reference (the RGI design's sim_tg.tg, extended to owner x substrate): for each draw / combination r, the cell
     contrasts d(c, h, i) are built one by one and every P is the mean of the Gram entries over the row pairs of its class; the P's are
@@ -892,7 +900,7 @@ def _synth_topics(D, NL, seed, n_topic=16):
 
 
 def _synth_world(path_r2, m, D, NL, seed, fg_of_delta, topics):
-    """A complete set of r2_rgi_geom.py outputs with planted structure: blocks 0-2 carry no contrast (C0 must fail), blocks 3.. carry
+    """A complete set of r2_rgi_geom.py outputs with planted structure: blocks 0-1 carry no contrast (C0 must fail), blocks 2.. carry
     FG(IMP-DES) = fg_of_delta(delta_b); topic states (_synth_topics); random pool covariances; planted causal gradients."""
     rng = np.random.default_rng(seed); P = paths(path_r2, m); S = STIM.sentences()
     rows = [(s["obj"], 0 if s["frame"] == "F1" else 1, GEOM.FAM_CODE[s["family"]], -1 if s["lexeme"] is None else s["lexeme"]) for s in S]
@@ -900,7 +908,7 @@ def _synth_world(path_r2, m, D, NL, seed, fg_of_delta, topics):
     LAST, MEAN, labels, dl = topics["LAST"], topics["MEAN"], topics["labels"], topics["dl"]; dlast = dl["last"]["delta"]
     dot = np.zeros((len(rows), NL, D), np.float32); obj = np.zeros_like(dot); W = np.zeros((NOBJ, 4, NL, D), np.float32); truth = []
     for b in range(NL):
-        sig = 0.0 if b < 3 else 1.0; f_imp = float(fg_of_delta(dlast[b]))
+        sig = 0.0 if b < 2 else 1.0; f_imp = float(fg_of_delta(dlast[b]))
         U, delta = _synth_units(rng, D, fg=dict(IMP=f_imp, CHG=0.3, WOR=0.5, PRA=0.4), signal=sig, self_extra=0.3)
         truth.append(dict(FG_IMP=_truth(delta, "IMP", "DES")["FG"] if sig else float("nan"), FG_CHG=_truth(delta, "CHG", "DES")["FG"] if sig else float("nan")))
         for f in range(2):
@@ -908,7 +916,7 @@ def _synth_world(path_r2, m, D, NL, seed, fg_of_delta, topics):
             dot[neu[f], b] = rng.standard_normal((NCELL, D))[CELL_OF] + 0.5 * rng.standard_normal((NOBJ, D))
         obj[:, b] = dot[:, b] + 0.3 * rng.standard_normal((len(rows), D)) / math.sqrt(D)
         for x, F in ((0, "IMP"), (1, "CHG")):
-            for h in range(2): W[:, 2 * x + h, b] = delta[F][CELL_OF] + 0.3 * rng.standard_normal((NOBJ, D)) / math.sqrt(D)
+            for h in range(2): W[:, 2 * x + h, b] = 0.0 if b == NL - 1 else delta[F][CELL_OF] + 0.3 * rng.standard_normal((NOBJ, D)) / math.sqrt(D)   # last block: 0 (A3)
     lexr = rng.standard_normal((len(rows), D)).astype(np.float32)
     os.makedirs(os.path.dirname(P["geom"]), exist_ok=True); os.makedirs(os.path.dirname(P["causal"]), exist_ok=True)
     fp = dict(version=GEOM.VERSION, model=m, mock=True, n_blocks=NL, hidden_size=D, path="synthetic")
@@ -946,6 +954,11 @@ def selftest(root, r2_dir):
     for r in range(3):
         rf = _ref_stats(Up, dd, [r]); err = max(err, max((abs(sd[k][r].item() - v) if np.isfinite(v) else (0.0 if not np.isfinite(sd[k][r].item()) else 1.0)) for k, v in rf.items()))
     check("per-draw values (Dirichlet weights, random splits) = explicit reference", err < 1e-9, f"{err:.1e}")
+    Ge9 = torch.tensor(rng.standard_normal((5, NX, 2, NCELL, 4, NX, 2, NCELL, 4))); Ps9 = weights(draw_design(5, seed=6))[1]; e1 = e2 = 0.0
+    for G_, P_ in ((Ge9, Ps9), (Ge9[0], Ps9)):
+        Pn, Rn = para_step(G_, P_); Pr, Rr = _para_step_dense(G_ if G_.dim() == 9 else G_[None].expand(5, *G_.shape), P_)
+        e1, e2 = max(e1, float((Pn - Pr).abs().max())), max(e2, float((Rn - Rr).abs().max()))
+    check("paraphrase step (reordered sums) = the dense construction, with and without a per-draw Ge", max(e1, e2) < 1e-10, f"{max(e1, e2):.1e}")
     dA, dB = draw_design(50), draw_design(50)
     check("draw design deterministic and Dirichlet weights normalised", all(np.array_equal(dA[k], dB[k]) for k in ("lex_w", "lex_split", "para_w", "para_split"))
           and np.allclose(dA["lex_w"][:, :4].sum(1), 1) and set(np.unique(dA["lex_split"])) <= {0, 1, 2})
@@ -1015,35 +1028,76 @@ def selftest(root, r2_dir):
     pz = np.zeros(28, bool); pz[2:9] = True; pz[12:19] = True; dl9 = np.arange(28) / 10.0; Pq, inf = passing_set(pz, dl9)
     pz2 = pz.copy(); pz2[12:28] = True; Pq2, inf2 = passing_set(pz2, dl9)
     check("passing set: longest run, tie by mean delta, >= 12", Pq == list(range(12, 19)) and inf["tie"] and not inf["ok"] and Pq2 == list(range(12, 28)) and inf2["ok"])
-    # 10. end-to-end on planted synthetic worlds for both models (r_DiD in the second run)
-    N_DRAWS, N_DBOOT = 48, 12; syn = os.path.join(work, "synth"); T17, T06 = _synth_topics(256, 28, 21), _synth_topics(256, 28, 22)
-    lo_, hi_ = (f(np.concatenate([T["dl"]["last"]["delta"][3:] for T in (T17, T06)])) for f in (np.min, np.max))
+    # 10. end-to-end on planted synthetic worlds for both models (16 blocks; the A3 gradient of the last block is zero, as in the real run)
+    N_DRAWS, N_DBOOT = 24, 12; NL_ = 14; last = NL_ - 1; syn = os.path.join(work, "synth"); T17, T06 = _synth_topics(256, NL_, 21), _synth_topics(256, NL_, 22)
+    lo_, hi_ = (f(np.concatenate([T["dl"]["last"]["delta"][2:] for T in (T17, T06)])) for f in (np.min, np.max))
     fgfun = lambda d: 0.35 + 0.5 * float(np.clip((d - lo_) / (hi_ - lo_), 0, 1))                  # one linear map for both models
-    W17 = _synth_world(syn, "qwen3-1.7b", 256, 28, 21, fgfun, T17); W06 = _synth_world(syn, "qwen3-0.6b", 256, 28, 22, fgfun, T06)
+    W17 = _synth_world(syn, "qwen3-1.7b", 256, NL_, 21, fgfun, T17); W06 = _synth_world(syn, "qwen3-0.6b", 256, NL_, 22, fgfun, T06)
     t1 = time.time(); r17 = run(syn, "qwen3-1.7b", force=True); te = time.time() - t1; r06 = run(syn, "qwen3-0.6b", force=True)
     fg = np.array(r17["per_block"]["pooled"]["FG|IMP-DES"]["point"]); tr = np.array([t["FG_IMP"] for t in W17["truth"]])
-    check("synthetic world: P = blocks 3-27 (no contrast in 0-2)", r17["gate"]["P"] == list(range(3, 28)) and r17["gate"]["G30_ok"], str(r17["gate"]["P"]))
-    check("synthetic world: FG(IMP-DES) per block recovered", np.nanmax(np.abs(fg[3:] - tr[3:])) < 0.12, f"max abs err {np.nanmax(np.abs(fg[3:] - tr[3:])):.3f}")
+    check("synthetic world: P = blocks 2-13 (no contrast in 0-1)", r17["gate"]["P"] == list(range(2, NL_)) and r17["gate"]["G30_ok"], str(r17["gate"]["P"]))
+    check("synthetic world: FG(IMP-DES) per block recovered", np.nanmax(np.abs(fg[2:] - tr[2:])) < 0.12, f"max abs err {np.nanmax(np.abs(fg[2:] - tr[2:])):.3f}")
     ob = r17["over_blocks"]["P"]["dFG"]
     check("synthetic world: dFG grows with delta (D > 0, Spearman > 0.5, CI)", ob["D"] > 0.05 and ob["spearman_mmlu"] > 0.5 and ob["D_ci"][0] > 0 and "r3" in ob and "r3_p_pos" in ob,
           f"D {ob['D']:.3f} {ob['D_ci']}, rho {ob['spearman_mmlu']:.2f}, r3 {ob.get('r3', float('nan')):.2f} p {ob.get('r3_p_pos', float('nan')):.3f}")
     bnd = r17["per_block"]["pooled"]["FG|IMP-DES"]
-    check("bands: simultaneous band wider than pointwise inside P, absent outside", all(bnd["sim_hi"][b] - bnd["sim_lo"][b] >= bnd["hi"][b] - bnd["lo"][b] - 1e-12 for b in range(3, 28))
-          and all(bnd["sim_lo"][b] is None or not np.isfinite(bnd["sim_lo"][b]) for b in range(3)))
-    check("synthetic world: causal statistics, composed gate, spillover and tau present", len(r17["gate"]["composed"]) == 28 and all(np.isfinite(r17["per_block"]["causal"]["FG|IMP-DES"]["point"][3:]))
-          and len(r17["spillover_g_self"]["z_self"]) == 28 and len(r17["delta"]["tau"]["dot"]["tau|IMP-DES"]) == 28)
-    check("r_DiD computed in the second model's run", np.isfinite(r06["r_DiD"].get("r_DiD", float("nan"))) and r06["r_DiD"]["n"] >= 12,
+    check("bands: simultaneous band wider than pointwise inside P, absent outside", all(bnd["sim_hi"][b] - bnd["sim_lo"][b] >= bnd["hi"][b] - bnd["lo"][b] - 1e-12 for b in range(2, NL_))
+          and all(bnd["sim_lo"][b] is None or not np.isfinite(bnd["sim_lo"][b]) for b in range(2)))
+    cfg = np.array(r17["per_block"]["causal"]["FG|IMP-DES"]["point"], dtype=np.float64)
+    check("synthetic world: causal statistics (undefined at the last block), composed gate, spillover and tau present", len(r17["gate"]["composed"]) == NL_
+          and np.isfinite(cfg[2:last]).all() and not np.isfinite(cfg[last]) and not r17["gate"]["composed"][last] and last not in r17["gate"]["P_composed"]
+          and len(r17["spillover_g_self"]["z_self"]) == NL_ and len(r17["delta"]["tau"]["dot"]["tau|IMP-DES"]) == NL_)
+    oc = r17["over_blocks"]["P"]["FG_causal|IMP-DES"]
+    check("rgi_stats-2: causal series over P use the finite blocks (last block dropped, its own surrogate pack)", oc.get("dropped_blocks") == [last]
+          and oc.get("blocks") == list(range(2, last)) and np.isfinite(oc.get("D", float("nan"))) and np.isfinite(oc.get("r3", float("nan")))
+          and all(r17["over_blocks"]["P"][k].get("dropped_blocks") == [] for k in ("dFG", "FG|IMP-DES")), f"dropped {oc.get('dropped_blocks')}, D {oc.get('D')}, r3 {oc.get('r3')}")
+    ef, er = r17["over_blocks"]["P_composed"]["FG_causal|IMP-DES"], r17["over_blocks"]["P_composed"]["rho_causal|IMP-DES"]
+    with np.load(paths(syn, "qwen3-1.7b")["draws"], allow_pickle=False) as zz:                                   # r2_rgi_verdict.causal_sim's construction
+        Dd = np.stack([zz[k].astype(np.float64)[:, e["top"]].mean(1) - zz[k].astype(np.float64)[:, e["bottom"]].mean(1) for e, k in ((ef, "causal__FG|IMP-DES"), (er, "causal__rho_S|IMP-DES"))], 1)
+    Dd = Dd[np.isfinite(Dd).all(1)]; m_, sd_ = Dd.mean(0), Dd.std(0, ddof=1); c_ = float(np.quantile(np.max(np.abs(Dd - m_) / sd_, 1), 0.95))
+    ref_ci = [[e["D"] - c_ * sd_[j], e["D"] + c_ * sd_[j]] for j, e in enumerate((ef, er))]
+    check("rgi_stats-1: causal line's simultaneous band stored (D_sim_ci, D_sim_crit) = the verdict script's construction from the draws file",
+          all("D_sim_ci" in e for e in (ef, er)) and abs(ef["D_sim_crit"] - c_) < 1e-4 and ef["D_sim_crit"] == er["D_sim_crit"] and 1.5 < c_ < 3.0
+          and max(abs(e["D_sim_ci"][q] - ref_ci[j][q]) for j, e in enumerate((ef, er)) for q in (0, 1)) < 1e-5 and all(e["D_sim_ci"][0] <= e["D"] <= e["D_sim_ci"][1] for e in (ef, er)),
+          f"c {ef['D_sim_crit']:.3f} (file: {c_:.3f}); FG_causal D {ef['D']:.3f} band {ef['D_sim_ci']} vs pointwise {ef['D_ci']}")
+    d17 = json.load(open(paths(syn, "qwen3-1.7b")["stats"]))["r_DiD"]; d06 = json.load(open(paths(syn, "qwen3-0.6b")["stats"]))["r_DiD"]
+    check("r_DiD computed in the second model's run, written into both JSONs with both sides' provenance", np.isfinite(r06["r_DiD"].get("r_DiD", float("nan")))
+          and r06["r_DiD"]["n"] >= 12 and d17 == d06 and set((d06.get("provenance") or {})) == set(DID_MODELS) and did_current(syn),
           f"r_DiD {r06['r_DiD'].get('r_DiD')} over {r06['r_DiD'].get('n')} blocks, p {r06['r_DiD'].get('p_pos')}")
     dz = np.load(paths(syn, "qwen3-1.7b")["draws"], allow_pickle=False)
-    check("draws file: per-draw arrays [n_draws, 28] and the design", dz["pooled__dFG"].shape == (48, 28) and "design_para_split" in dz.files)
+    check("draws file: per-draw arrays [n_draws, blocks] and the design", dz["pooled__dFG"].shape == (N_DRAWS, NL_) and "design_para_split" in dz.files)
     t1 = time.time(); run(syn, "qwen3-1.7b", force=True); tr2 = time.time() - t1
-    check("resume: the per-block cache is reused", tr2 < te, f"{te:.0f}s first, {tr2:.0f}s with the cache")
+    d06b = json.load(open(paths(syn, "qwen3-0.6b")["stats"]))["r_DiD"]
+    check("resume: the per-block cache is reused; a recompute of one model refreshes r_DiD in both JSONs", tr2 < te and d06b["computed"] >= d06["computed"]
+          and d06b["r_DiD"] == d06["r_DiD"] and did_current(syn), f"{te:.0f}s first, {tr2:.0f}s with the cache")
+    # rgi_stats-3: one model's statistics change behind the other's back (here: its dFG series edited) -> a skipped run of the other model refreshes r_DiD
+    p17 = paths(syn, "qwen3-1.7b")["stats"]; s17 = json.load(open(p17)); pt = np.array(s17["per_block"]["pooled"]["dFG"]["point"], dtype=np.float64)
+    pt[2:] = pt[2:][::-1]; s17["per_block"]["pooled"]["dFG"]["point"] = pt.tolist(); GEOM.write_json(p17, s17); stale_seen = not did_current(syn)
+    run(syn, "qwen3-0.6b"); a_, b_ = did_inputs(syn, "qwen3-1.7b"), did_inputs(syn, "qwen3-0.6b"); want = r_did(a_["dfg"], a_["delta"], a_["P"], b_["dfg"], b_["delta"], b_["P"], a_["draws"], b_["draws"])
+    n17, n06 = json.load(open(p17))["r_DiD"], json.load(open(paths(syn, "qwen3-0.6b")["stats"]))["r_DiD"]
+    check("rgi_stats-3: changed statistics of one model are seen (provenance) and r_DiD is recomputed in both JSONs", stale_seen and did_current(syn)
+          and abs(n06["r_DiD"] - want["r_DiD"]) < 1e-12 and n06["r_DiD"] != d06["r_DiD"] and n17 == n06, f"{d06['r_DiD']:.3f} -> {n06['r_DiD']:.3f}")
     GEOM.npz_save(paths(syn, "qwen3-1.7b")["geom"], dict(fingerprint={}), a=np.zeros(1))
     try: run(syn, "qwen3-1.7b", force=True); stale = False
     except RuntimeError: stale = True
     check("a local file that differs from geom_meta's sha256 is refused", stale)
+    # command line: -h and errors exit cleanly although the usage has '%'
+    import contextlib, io
+    codes = []
+    for argv in (["-h"], [root, "r1", work, "--model", "no-such-model"]):
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()): main(argv)
+            codes.append(None)
+        except SystemExit as e: codes.append(e.code)
+        except Exception as e: codes.append(repr(e))
+    check("command line: -h exits 0, a bad --model exits 2 (usage with '%' formats)", codes == [0, 2], str(codes))
     # 11. end-to-end on the MOCK model's outputs (r2_rgi_geom.py stages on rk_loop's tiny random model)
-    mw = os.path.join(work, "mock"); GEOM.run(root, mw, "qwen3-1.7b"); rm = run(mw, "qwen3-1.7b", force=True)
+    # (the geom selftest's outputs are reused when that test ran first in the same <r2_dir>; GEOM.run re-validates them by fingerprint and
+    # sha256 and recomputes whatever does not match)
+    mw = os.path.join(work, "mock"); src = os.path.join(r2_dir, "geom_selftest", "qwen3-1.7b"); N_DRAWS = 8
+    for sub in ("local", "rgi"):
+        if os.path.isdir(os.path.join(src, sub)): shutil.copytree(os.path.join(src, sub), os.path.join(mw, sub), dirs_exist_ok=True)
+    GEOM.run(root, mw, "qwen3-1.7b"); rm = run(mw, "qwen3-1.7b", force=True)
     check("MOCK model: statistics written, finite delta, gates evaluated", os.path.exists(paths(mw, "qwen3-1.7b")["stats"]) and len(rm["gate"]["C0"]) == 28
           and np.isfinite(rm["delta"]["mmlu"]["last"]["boot_sd"]).all(), f"P = {rm['gate']['P']}, flags {rm['flags']}")
     n_ok = sum(ok for _, ok in res); print(f"selftest r2_rgi_stats: {n_ok}/{len(res)} passed ({time.time() - t0:.0f}s)", flush=True)
