@@ -259,35 +259,47 @@ Fixture (in r2_impl/w2/r1): `MOCK=1 BLOCK=14 DEVICE=cpu NT=1 python rk_loop.py <
 `r2_unlearn_qwen.mock_fixture` (r2_rk.mock_r1's fake files: a would-have-read 'likely' summary_b14 with GO1 failed, dn_delta,
 blocks_chosen b_lo 8 / b_hi 20 without states, shard_done). O2 by `r2_axes.py ... all` (6 s).
 
-`MOCK=1 python r2_unlearn_qwen.py <root> r2_impl/w2/r1 r2_impl/w2/r2s selftest` from an empty work directory: **63/63 checks passed
-(267 s; final run after the last code change)**; result in r2_impl/w2/r2s/unlearn/selftest.json. The checks:
+`MOCK=1 python r2_unlearn_qwen.py <root> r2_impl/w2/r1 r2_impl/w2/r2s selftest` from an empty work directory: **78/78 checks passed
+(539 s; final run of 13 Nov after the review changes)**; result in r2_impl/w2/r2s/unlearn/selftest.json (the first version passed 63/63
+on 12 Nov). The checks:
 - rule functions on synthetic inputs: rule_unlearned (pass, random reference, baseline D, foreign axes, NaN, inverted), rule_suppressed
   (pass, M0 <= 0.1, damage band), rule_cue, restored_share (planted share 0.6 inside its interval; undefined if g_abl = g_0), LIKELY_wh
-  (incl. the would-have-read form), G14 attracted loop, G44 gate order, rule_loop (all five outcomes), G16, O5 regression and z_fin,
-  the calibration rule, the U-statistic, boot_g, z_against;
+  (incl. the would-have-read form), G14 attracted loop, G44 gate order, rule_loop (all five outcomes in the plan's order, incl. 'gone'
+  rows that are re-routed while the twin fails), G16, O5 regression and z_fin, the calibration rule, the U-statistic, boot_g, z_against;
+- review changes: rule_loop = r2_unlearn_verdict.loop_rule on 720 row combinations (twin and comparator); _rung's g_0 > 0 case and its
+  agreement with r2_linearity.linear_rung on 24 cases; Amendment 3 (a) centring on a synthetic draw set (the point value outside the
+  unshifted interval, inside the shifted one); the cache's code key (reuse only with the same signature and code; old units without a
+  code recomputed); q2_state_purge; stage_scope after a failure (no hook, temperature, steering or early-stop switch left, rk.ST reloaded);
 - CLI: every stage exits 0 and writes its outputs; a second run ('all') skips every stage; q5 rerun after removing its outputs
   reproduces its numbers from the intra-stage cache;
 - q3: g and the ratio draws recomputed from the stored states on O1's axes; z_D against the right null sets (a control without itself);
   span-ablated RGI texts regenerate from the O2 keys; ablation damage = rk.damage's KL with WriteOrth; D = 2 M of rk.logodds_matching
   under the ablation; the session's unprompted references = rk.references' texts (MOCK: identical to R1, match rate 1); in-session
   rule and C-Q4a choice; random reference = pooled 1-dim control percentile;
-- q4a: cue message format (OD-C3) and ablation choice; g_cue / g_abl / share; cued ablated texts regenerate;
+- q4a: cue message format (OD-C3) and ablation choice; g_cue / g_abl / share; the ceiling's own-axis gap; cued ablated texts regenerate;
 - q2: K6 entries 'k6_r2_*' and 'r2_b05_*' in the guarded state; RefKL.push = rk.damage exactly; statement scores =
   rk.logodds_matching; r2_rk.k6_direction reproduces R1.k6 tests['u_T_perp'] and its z_fin (MOCK H30[:4]); alpha_u calibration
   record; counter-pushed texts regenerate; z_fin at alpha_u from the recalibrated nulls; RGI30 null regression at the R1 push sizes;
-  content pairs regenerate (keys, prompts); rule inputs; k6.json fallback;
+  content pairs regenerate (keys, prompts); rule inputs; k6.json fallback; 'r2_q2_valid' written and nothing purged on a fresh run;
 - q4b / arm A: gate inputs; twin start s0 = unit(d_1^RSI_a without u_RSI) and its keys; ConstPush with a zero loop push = rk's push
-  (identical texts); arm A round 1 regenerates; G16 reference = seed-0 half of R1 RSI_a; attractor branch (modified mock summary and
+  (identical texts); arm A round 1 regenerates; G16 reference = seed-0 half of R1 RSI_a, shifted interval, unshifted interval, median
+  and the unshifted G16 value as Amendment 3 (a) says; attractor branch (modified mock summary and
   loops.json): gate open via G14, start from RND_1's start, 3 rounds each, every push orthogonal to u_RSI, ablated round regenerates
   with WriteOrth in the writer; closed gate: 'not testable (gate ...)', nothing generated;
-- q5: F(RSI) = seed-0 half; mix direction; coefficients solve the plane system; dose pairs regenerate;
+- q5: F(RSI) = seed-0 half; mix direction; coefficients solve the plane system; the bootstrap medians of the cosine intervals; dose pairs
+  regenerate;
 - q6: 288 stimuli and patch starts; all caps present; mode patches set the block-14 projection to m2's (rel. 1e-7); stored float16
   states reproduce the depth modes; DepthPatch leaves positions before the start unchanged and the random patch has the mode patch's
   norm per position;
 - variants: block 14 not final (no summary_b14): every model stage 'not run (round-1 output missing)' without O2, q6 runs with the
   model only and gives the same numbers; O2 'not run' at block 14 -> q3 'not run'; GA(14) forced true in a copy -> no 'RGI axis not
   resolved' label; block 14 at 1.5 alpha (rk_loop MOCK with ASCALE=1.5): q4b, armA, q5 read the '@1.5' keys and use alpha_14 = 1.5
-  alpha; env BLOCK != 14 refused.
+  alpha; env BLOCK != 14 refused;
+- 'all' (item 6), each in its own work directory: (a) env R2_UNLEARN_FAIL=q2 makes the middle stage q2 fail after leaving a WriteOrth
+  hook, a temperature, a steering switch and an unsaved state entry behind: q3, q4a, q4b, armA, q5 and q6 still write their outputs, q2
+  has none, the summary names the failure, exit code 1; (b) the rerun runs only q2 (the other outputs untouched), exit code 0; (c) every
+  JSON of (a) + (b) equals the one-process-per-stage JSON of the main run, finder logs included (versions excluded); (d) without the axes
+  output: q3 and q2 fail, q4a is skipped (prerequisite q3 failed), q4b, armA, q5 and q6 run, exit code 1.
 Single-stage CLI timings on the MOCK fixture: q3 56 s, q4a 6 s, q2 57 s, q4b 5 s, armA 7 s, q5 5 s, q6 13 s.
 
 ## Open points
@@ -296,10 +308,12 @@ Single-stage CLI timings on the MOCK fixture: q3 56 s, q4a 6 s, q2 57 s, q4b 5 s
   NaN, g_0 is tiny, the 0.05-nat calibration never reaches its band because the tiny model's damage saturates near 0.025 nats, the
   u_RSI ablation leaves the MOCK texts unchanged so the C-Q4a share is undefined, and R1's MOCK K6 regression has se about 0). These
   paths are covered by the synthetic tests of the rule functions; their production behaviour is untested.
-- Readings an amendment could state (they do not change a frozen rule, but a reviewer may prefer another reading): alpha_u calibrated on
-  the counter-push (13); the K6 start of rk.k6_direction when alpha_scale_14 != 1 (14); the C-Q6 angular readout's construction and the
-  block of the helix rule (25); the cap on all three relations and the object set of the KL fraction (27, 28); g_0 <= 0 and
-  gap_cross_X <= 0 treated as failing (4, 5).
+- The review confirmed three readings as consistent with the plan and they are kept: alpha_u calibrated on the counter-push (13), the K6
+  start of rk.k6_direction when alpha_scale_14 != 1 (14), g_0 <= 0 and gap_cross_X <= 0 treated as failing (4, 5). Still readings: the
+  C-Q6 angular readout's construction and the block of the helix rule (25); the cap on all three relations and the object set of the KL
+  fraction (27, 28).
+- The runner (r2_run_session.py of 13 Nov 04:47) calls `r2_unlearn_qwen.py ... all` once for r2_q1 (r1_reads None, after the axes step
+  settled); this matches item 6. Saving: 6 model loads compared with seven processes.
 - r2_ana (r2_unlearn_verdict.py, r2_linearity.py) computes the file-only parts assigned to it in section 8: the C-Q4b matched-size
   reference and arm A's comparator (R1-6), the C-Q5 SVD and +- symmetry (R1-5), the u_RSI K6 numbers (R1-7), the G-desc / G-blk labels.
   It can import the rule functions listed above.

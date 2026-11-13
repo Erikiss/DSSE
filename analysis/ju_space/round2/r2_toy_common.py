@@ -38,8 +38,8 @@ API (details in the docstrings; NOTES_w5.md has the list with the plan items eac
             anchored_param, coords_param
 - W8:       sum_probe, ridge_probe, mlp_probe, heldout_halves, task_answer_features, task_answer_probes, class_mean_eraser,
             damage_match (OD-C2), modal_shift_map (OD-C16)
-- RGI:      lambda_triples, lambda_line, learn_alpha, carry_alpha, s_perms, s_line, ridge_coef, t1_map, t1_choose_r, proj_linspan,
-            f_line, recipe_chains, recipe_depth, round_trip, pooling, warm_start, stitch_fit, all_h2, t3_t4
+- RGI:      lambda_triples, lambda_line, learn_alpha, carry_alpha, s_perms, s_line, ridge_coef, t1_map, t1_loo_errors, t1_choose_r,
+            proj_linspan, f_line, recipe_chains, recipe_depth, round_trip, pooling, warm_start, stitch_fit, all_h2, t3_t4
 - C-T0/C-T6: fourier_cols, share_by_k, ring_test, loo_ring, spec_rows, subspace_overlap, structure_tests, trajectory_modes,
             trajectory_basis, shuffled_increment_nulls
 - PC:       pc_relax (chains), pc_relax_inputs (whole nets), pc_eta (1 / pc_meta.lam_max), PC searches via column_search(pc=...)

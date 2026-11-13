@@ -613,7 +613,6 @@ def make_fixture(root, widths=(64, 128), seeds=(0, 1)):
         json.dump(dict(shard=sh, code_commit="fixture"), open(os.path.join(d, "shard_done.json"), "w"))
     dup = os.path.join(root, "gpu6", "pc"); os.makedirs(os.path.join(dup, "models"), exist_ok=True)        # duplicate: not expected there
     n0 = job_name("pc_mup", widths[0], seeds[0])
-    import shutil
     shutil.copy(os.path.join(root, shard_of[widths[0]], "pc", "models", n0 + ".pt"), os.path.join(dup, "models", n0 + ".pt"))
     return root
 

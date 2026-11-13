@@ -1723,16 +1723,17 @@ def mock_r1(root, dr, parts=("rk", "pc")):
 
 
 LIB_SELFTESTS = {   # the scripts' own code tests (plan 9; NOTES of the implementers), run by --selftest before the session's MOCK run.
-    # r2_q3: r2_rgi_geom.py selftest (about 35 s under MOCK on one CPU core); r2_rgi_stats.py selftest is left out (about 3 min; the
-    # session's MOCK run executes r2_rgi_stats end to end on the geometry it just wrote)
-    "r2_q1": ("stimuli", "rk", "axes", "gen14", "gen8"), "r2_q2": ("stimuli", "rk"), "r2_q3": ("stimuli", "geom"),
+    # r2_q3 (implementer 3's timings on one contended CPU core, MOCK): r2_rgi_geom.py selftest 39 s, the same for Qwen3-0.6B 40 s, then
+    # r2_rgi_stats.py selftest 54 s in the same folder (it reuses the 1.7B geometry of the first test; alone 74 s)
+    "r2_q1": ("stimuli", "rk", "axes", "gen14", "gen8"), "r2_q2": ("stimuli", "rk"), "r2_q3": ("stimuli", "geom", "geom06", "stats"),
     **{s: ("toy", "sim") for s in ("r2_t1", "r2_t2", "r2_t3", "r2_t4", "r2_pc", "r2_ana")},
 }
 
 
 def lib_selftests(base, root, st_root, dr):
     """r2_stimuli.py check with the real tokenizer; r2_rk.py, r2_axes.py and r2_gen_loop.py selftest (MOCK=1) on copies of the mock
-    round-1 tree (so that they cannot change it); r2_rgi_geom.py selftest (MOCK=1, its own tiny model); r2_toy_common.py selftest
+    round-1 tree (so that they cannot change it); r2_rgi_geom.py selftest for both models and r2_rgi_stats.py selftest (MOCK=1, their own
+    tiny models, one folder); r2_toy_common.py selftest
     (QUICK=1, incl. the W0 equivalence tests and the reference comparison) and r2_sim.py selftest. All on the CPU (MOCK_DEVICE, the
     device the mock tree was built on) with R2_LIB_NT threads (default 1), as their authors ran them. 0 if all pass."""
     def copy_mock(dst):
@@ -1757,17 +1758,19 @@ def lib_selftests(base, root, st_root, dr):
             cmd, ex = [sc("r2_axes.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1")
         elif t.startswith("gen"):
             cmd, ex = [sc("r2_gen_loop.py"), root, copy_mock(r1s), r2s, "selftest"], dict(MOCK="1", BLOCK=t[3:])
-        elif t == "geom":                                   # reads no round-1 file: an empty r1 folder
+        elif t in ("geom", "geom06", "stats"):              # read no round-1 file (an empty r1 folder); one <r2_dir> for the three
             os.makedirs(os.path.join(st_root, "geom_r1"), exist_ok=True)
-            cmd, ex = [sc("r2_rgi_geom.py"), root, os.path.join(st_root, "geom_r1"), os.path.join(st_root, "geom"), "selftest"], dict(MOCK="1")
+            cmd = [sc("r2_rgi_stats.py" if t == "stats" else "r2_rgi_geom.py"), root, os.path.join(st_root, "geom_r1"),
+                   os.path.join(st_root, "geom"), "selftest"] + (["--model", M06] if t == "geom06" else [])
+            ex = dict(MOCK="1")
         elif t == "sim":
             cmd, ex = [sc("r2_sim.py"), "selftest"], {}
         else:                                               # NOTES_w5: QUICK=1 NT=1 OMP_NUM_THREADS=1 python r2_toy_common.py selftest <dir>
             cmd, ex = [sc("r2_toy_common.py"), "selftest", os.path.join(st_root, "toy_common")], dict(QUICK="1", NT="1", OMP_NUM_THREADS="1")
         log, t0 = os.path.join(st_root, f"lib_{t}.log"), time.time()
         envs = " ".join("%s=%s" % kv for kv in ex.items())
-        say(f"[selftest] {envs} {os.path.basename(cmd[0])} {cmd[1] if t in ('stimuli', 'rk', 'toy', 'sim') else 'selftest'} "
-            f"(DEVICE={env['DEVICE']}, NT={dict(env, **ex)['NT']})")
+        say(f"[selftest] {envs} {os.path.basename(cmd[0])} {cmd[1] if t in ('stimuli', 'rk', 'toy', 'sim') else 'selftest'}"
+            f"{' --model ' + M06 if t == 'geom06' else ''} (DEVICE={env['DEVICE']}, NT={dict(env, **ex)['NT']})")
         with open(log, "w") as f:
             rc = subprocess.run([PY, "-u"] + cmd, env=dict(env, **ex), stdout=f, stderr=subprocess.STDOUT).returncode
         tail = (read_text(log) or "").strip().splitlines()

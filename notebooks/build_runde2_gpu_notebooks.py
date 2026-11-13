@@ -62,9 +62,13 @@ TEXT = {
                "zusammengeführten Manifest.", (7.9, 10.9, 14.8)),
 }
 NB_NAME = {s: "runde2_" + s[3:] + ".ipynb" for s in R.SESSIONS}        # r2_q1 -> runde2_q1.ipynb
+KONTO_A = ("r2_q1", "r2_q2", "r2_q3", "r2_pc", "r2_ana")              # Konto A = Drehscheibe (gpu1-gpu3); Konto B: r2_t1-r2_t4 (gpu4-gpu6)
+ZWEITER_ORDNER = "/content/drive/MyDrive/dsse_runs_B"                   # dsse_runs von Konto B als Verknüpfung in Konto A
+EXTRA_MIN = {"r2_q1": 1.0}    # Packung dieses Runners gegen 7.2 (R.PACKING): r2_q1 startet 5 statt 3 Modellprozesse (2 x 30 s Laden)
 _LIB = {"stimuli": "r2_stimuli.py check", "rk": "r2_rk.py selftest", "axes": "r2_axes.py selftest", "gen14": "r2_gen_loop.py selftest an Block 14",
         "gen8": "an Block 8", "toy": "r2_toy_common.py selftest mit den W0-Äquivalenztests und dem Referenzvergleich",
-        "sim": "r2_sim.py selftest"}
+        "sim": "r2_sim.py selftest", "geom": "r2_rgi_geom.py selftest", "geom06": "dasselbe für Qwen3-0.6B",
+        "stats": "r2_rgi_stats.py selftest"}
 LIB_TEXT = {s: ", ".join(_LIB[t] for t in R.LIB_SELFTESTS.get(s, ())) or "keine" for s in R.SESSIONS}
 
 
@@ -89,6 +93,9 @@ def steps_md(s):
 
 def markdown(s):
     title, what, (work, total, margin) = TEXT[s]
+    ex = EXTRA_MIN.get(s)
+    packung = (f" Dieser Runner packt die Sitzung anders ({R.PACKING[s]}): Arbeit {de(work + ex)} min, mit Einrichtung "
+               f"{de(total + ex)} min, mit Reserve {de(margin + 1.5 * ex)} min." if ex else "")
     m = R.SESSIONS[s]; need, opt = folders(s)
     wave = f"Welle {m['wave']}"
     if s in ("r2_q1", "r2_q2"):
@@ -96,27 +103,39 @@ def markdown(s):
                  "`summary_b<b_lo>.json` und `summary_b<b_hi>.json` sowie `gpu2/dn_delta.json`, `gpu2/blocks_chosen.json` und "
                  "`gpu3/blocks_chosen.json` vorliegen (Freigabe G4). Sonst wartet der Runner (Rückgabewert 4) und startet nichts.")
         reads = ("Liest aus Runde 1 `dsse_runs/gpu1`, `gpu2` und `gpu3` (Konto A); von `gpu4`–`gpu6` (Konto B) nur die "
-                 "Versionsangaben fürs Manifest – diese Ordner dürfen fehlen. Dazu `dsse_runs/r1_finality.json`, falls vorhanden.")
+                 "Versionsangaben fürs Manifest – diese Ordner dürfen fehlen. Ist `dsse_runs_B` verknüpft, kopiert die Zelle *Zweiter "
+                 "Ordner* sie einmal hierher (`r2_pc` und `r2_ana` brauchen sie ohnehin); das Kopieren zählt zur Zeitgrenze, darum am "
+                 "besten im ersten Lauf mit `NUR_SELBSTTEST = True`. Dazu `dsse_runs/r1_finality.json`, falls vorhanden.")
     elif s == "r2_pc":
         start = ("Welle 2: startet erst, wenn `dsse_runs/r2_t1/session_done.json` existiert und die PC-Ausgaben aller sechs "
                  "Runde-1-Teile endgültig sind (Freigabe G5: `shard_done.json`, sonst der Eintrag in `r1_finality.json`).")
-        reads = "Liest alle sechs Runde-1-Ordner `dsse_runs/gpu1` … `gpu6` (beide Konten) und aus Runde 2 `dsse_runs/r2_t1`."
+        reads = ("Liest alle sechs Runde-1-Ordner `dsse_runs/gpu1` … `gpu6` und aus Runde 2 `dsse_runs/r2_t1`; `gpu4`–`gpu6` und "
+                 "`r2_t1` liegen in Konto B und werden über `dsse_runs_B` einmal hierher kopiert (Zelle *Zweiter Ordner*).")
     elif s == "r2_ana":
         start = ("Welle 2: startet erst, wenn alle acht anderen Sitzungen `session_done.json` geschrieben haben und G4 und G5 erfüllt "
                  "sind. Eine Sitzung, die nach zwei Versuchen nicht fertig wurde, kann unten in `NICHT_GELAUFEN` eingetragen werden "
                  "(der Runner prüft die zwei Versuche).")
-        reads = ("Liest alle sechs Runde-1-Ordner `dsse_runs/gpu1` … `gpu6` (beide Konten) und alle Runde-2-Ordner `dsse_runs/r2_*`.")
+        reads = ("Liest alle sechs Runde-1-Ordner `dsse_runs/gpu1` … `gpu6` und alle Runde-2-Ordner `dsse_runs/r2_*`; `gpu4`–`gpu6` "
+                 "und `r2_t1`–`r2_t4` liegen in Konto B und werden über `dsse_runs_B` einmal hierher kopiert (Zelle *Zweiter Ordner*).")
     else:
         start = "Startet nach dem Einfrieren des Plans; braucht keine Ausgabe der Runde 1 und keine andere Sitzung."
         reads = ("Liest keine Runde-1-Ausgabe (nur die Änderungszeiten der Protokolle und Zusammenfassungen in `dsse_runs/gpu*` fürs "
                  "Manifest, falls sichtbar).")
-    accounts = ("**Zwei Konten.** Die Runde-1-Teile `gpu1`–`gpu3` liefen in einem Google-Konto (A), `gpu4`–`gpu6` in einem anderen (B). "
-                "Einen Ordner aus dem anderen Konto vorher dort freigeben (Leserecht genügt) und hier in *Meine Ablage › dsse_runs* über "
-                "*Verknüpfung zu Drive hinzufügen* einhängen, oder ihn in dieses Konto nach `dsse_runs/` kopieren. Der Runner liest diese "
-                "Ordner nur und schreibt ausschließlich nach `dsse_runs/" + s + "`.")
+    konto = "A" if s in KONTO_A else "B"
+    accounts = ("**Zwei Konten; Konto A ist die Drehscheibe.** Konto A hält in `dsse_runs` die Runde-1-Teile `gpu1`–`gpu3`; dort laufen "
+                "`r2_q1`, `r2_q2`, `r2_q3`, `r2_pc` und `r2_ana`. Konto B hält `gpu4`–`gpu6`; dort laufen `r2_t1`–`r2_t4`. Konto B "
+                "gibt seinen ganzen Ordner `dsse_runs` für Konto A frei (Leserecht genügt), und der Betreiber legt ihn in Konto A einmal "
+                "unter *Meine Ablage* als Verknüpfung mit dem Namen `dsse_runs_B` ab (*Verknüpfung zu Drive hinzufügen*). Die Zelle "
+                "*Zweiter Ordner* kopiert dann jeden Ordner, den die Sitzung liest und der in `dsse_runs` fehlt, aus `ZWEITER_ORDNER` "
+                "nach `dsse_runs`: ein vorhandener Ordner wird nie überschrieben, ein Runde-2-Ordner nur kopiert, wenn die Sitzung dort "
+                "fertig ist (`session_done.json`; bei `r2_ana` auch eine in `NICHT_GELAUFEN` eingetragene). Danach sind es gewöhnliche "
+                f"Ordner in `dsse_runs`. **Diese Sitzung läuft in Konto {konto}.** Der Runner liest die Ordner nur und schreibt "
+                f"ausschließlich nach `dsse_runs/{s}`.")
     if m["wave"] == 1:
-        accounts += (" Die Ergebnisse dieser Sitzung liest später `r2_ana`" + (" (und `r2_pc`)" if s == "r2_t1" else "") +
-                     ": läuft jene in einem anderen Konto, `dsse_runs/" + s + "` dort ebenso verfügbar machen.")
+        accounts += (" Ihre Ergebnisse liest später `r2_ana`" + (" (und `r2_pc`)" if s == "r2_t1" else "") +
+                     (" im selben Konto." if konto == "A" else
+                      " in Konto A; die Zelle *Zweiter Ordner* dort kopiert `dsse_runs/" + s + "` aus `dsse_runs_B`, sobald die Sitzung "
+                      "fertig ist."))
     final = ""
     if m["start"]:
         final = ("\n\n**Runde-1-Endstand (R1.final).** Fehlt in einem Runde-1-Ordner auch nach zwei Läufen seines Notebooks "
@@ -131,7 +150,7 @@ def markdown(s):
 {what}
 
 **Ausführen.** *Laufzeit → Laufzeittyp ändern → A100 GPU*, dann *Laufzeit → Alle ausführen*. Nur eine A100 ist zulässig
-(Freigabe G2). Erwartete Dauer (Plan 7.2): Arbeit {de(work)} min, mit Einrichtung {de(total)} min, mit Reserve {de(margin)} min.
+(Freigabe G2). Erwartete Dauer (Plan 7.2): Arbeit {de(work)} min, mit Einrichtung {de(total)} min, mit Reserve {de(margin)} min.{packung}
 
 **Zeitgrenze.** 20 Minuten nach der ersten Zelle hält der Lauf nach dem gerade laufenden Schritt an (Plan 7.4) und schreibt
 `session_partial.json`. Dann dieses Notebook in einer neuen Colab-Sitzung noch einmal ganz ausführen: es läuft als
@@ -143,10 +162,11 @@ Fortsetzungssitzung (`{s}b`) weiter, fertige Schritte werden übersprungen. Eben
 
 {accounts}{final}
 
-**Selbsttest.** Vor dem Hauptlauf laufen die eigenen Tests der Skripte ({LIB_TEXT[s]}) und dann die ganze Sitzung im
-MOCK/QUICK-Modus (winziges Zufallsmodell, Kurzläufe) auf einem Schein-`dsse_runs`, das die Runde-1-Skripte erzeugen – nur Code, keine
-Ergebnisse; einmal je Code-Stand. Er kostet einige Minuten der Zeitgrenze: am besten das Notebook zuerst einmal mit
-`NUR_SELBSTTEST = True` ausführen; der echte Lauf überspringt ihn dann.
+**Selbsttest.** Vor dem Hauptlauf prüft der Runner, dass alle Runde-2-Skripte mit dieser Python-Fassung übersetzbar sind, dann laufen
+die eigenen Tests der Skripte auf der CPU ({LIB_TEXT[s]}) und danach die ganze Sitzung im MOCK/QUICK-Modus auf der GPU (winziges
+Zufallsmodell, Kurzläufe) auf einem Schein-`dsse_runs`, das die Runde-1-Skripte auf der CPU erzeugen (auf demselben Gerät wie die Tests,
+die erzeugte Texte mit gespeicherten vergleichen) – nur Code, keine Ergebnisse; einmal je Code-Stand. Er kostet einige Minuten der
+Zeitgrenze: am besten das Notebook zuerst einmal mit `NUR_SELBSTTEST = True` ausführen; der echte Lauf überspringt ihn dann.
 
 **Ergebnisse** in Google Drive unter `dsse_runs/{s}` (Manifest `manifest_{s}.json`, `session_done.json` mit den Schrittzeiten).
 
@@ -173,6 +193,7 @@ PERSONA_REV = "{PERSONA_REV}"    # Anthropic/model-written-evals{q06}
 BRAUCHT = {need!r}    # Ordner in dsse_runs, die diese Sitzung liest
 OPTIONAL = {opt!r}    # nur Versionsangaben; dürfen fehlen
 NICHT_GELAUFEN = []          # nur r2_ana: Sitzungen, die nach zwei Versuchen als 'not run' gelten (z. B. ["r2_t4"])
+ZWEITER_ORDNER = "{ZWEITER_ORDNER}"    # dsse_runs des anderen Kontos (Verknüpfung dsse_runs_B); "" = aus
 SELBSTTEST = {selbsttest_default}            # MOCK/QUICK-Selbsttest vor dem Hauptlauf (einmal je Code-Stand){ana_note}
 NUR_SELBSTTEST = False       # True: nur einrichten und testen, kein Hauptlauf
 import os, sys, json, shutil, subprocess, hashlib, lzma, time
@@ -196,14 +217,53 @@ os.makedirs(WORK, exist_ok=True)
 if DRIVE and os.path.isdir(DRIVE) and os.listdir(DRIVE):
     shutil.copytree(DRIVE, WORK, dirs_exist_ok=True, ignore=shutil.ignore_patterns("*.tmp", "*.r2tmp"))
     print("Fortsetzung: bisheriger Stand aus Drive übernommen; fertige Schritte werden übersprungen.")
+print("Ergebnisse:", DRIVE or WORK)
+'''
+    zweiter = '''# Zweiter Ordner: was diese Sitzung liest und in dsse_runs fehlt, einmal aus dem dsse_runs des anderen Kontos (Verknüpfung
+# dsse_runs_B) hierher kopieren. Ein vorhandener Ordner wird nie überschrieben; ein Runde-2-Ordner nur, wenn die Sitzung dort fertig ist
+# (session_done.json ohne session_partial.json) oder in NICHT_GELAUFEN steht. Kopiert wird erst unter einem Hilfsnamen, dann umbenannt.
+fertig = lambda d: os.path.isfile(f"{d}/session_done.json") and not os.path.isfile(f"{d}/session_partial.json")
+ORDNER = BRAUCHT + OPTIONAL
+if not RUNS:
+    print("Kein Google Drive: nichts zu kopieren.")
+elif not ORDNER:
+    print("Diese Sitzung liest keine Ordner aus dsse_runs: nichts zu kopieren.")
+elif not ZWEITER_ORDNER:
+    print("ZWEITER_ORDNER ist leer: es wird nichts aus dem anderen Konto kopiert.")
+elif not os.path.isdir(ZWEITER_ORDNER):
+    print(f"Hinweis: {ZWEITER_ORDNER} fehlt - im anderen Konto dsse_runs freigeben und hier in Meine Ablage als Verknüpfung dsse_runs_B hinzufügen.")
+else:
+    kopiert, vorhanden, beide, offen = [], [], [], []
+    for f in ORDNER:
+        ziel, quelle = f"{RUNS}/{f}", f"{ZWEITER_ORDNER}/{f}"
+        if os.path.isdir(ziel):
+            vorhanden.append(f)
+            if f.startswith("r2_") and not fertig(ziel) and fertig(quelle):
+                print(f"Achtung: dsse_runs/{f} ist hier nicht fertig, in {ZWEITER_ORDNER} aber fertig - den Ordner hier löschen und diese Zelle erneut ausführen.")
+        elif not os.path.isdir(quelle):
+            beide.append(f)
+        elif f.startswith("r2_") and not fertig(quelle) and f not in NICHT_GELAUFEN:
+            offen.append(f)
+        else:
+            t, tmp = time.time(), f"{RUNS}/.{f}.kopie"
+            shutil.rmtree(tmp, ignore_errors=True)
+            shutil.copytree(quelle, tmp)
+            os.rename(tmp, ziel)
+            mb = sum(os.path.getsize(os.path.join(a, x)) for a, _, xs in os.walk(ziel) for x in xs) / 1e6
+            kopiert.append(f"{f} ({mb:.0f} MB, {time.time() - t:.0f} s)")
+    print("Aus", ZWEITER_ORDNER, "kopiert:", ", ".join(kopiert) or "nichts")
+    print("Schon in dsse_runs:", ", ".join(vorhanden) or "nichts")
+    if beide:
+        print("In beiden Ordnern nicht vorhanden:", ", ".join(beide))
+    if offen:
+        print("Im anderen Konto noch nicht fertig, darum nicht kopiert:", ", ".join(offen), "- nach deren Abschluss erneut ausführen.")
 if RUNS:                                   # nur Ordnernamen, kein Inhalt
     fehlt = [f for f in BRAUCHT if not os.path.isdir(f"{RUNS}/{f}")]
     print("Diese Sitzung liest aus dsse_runs:", ", ".join(BRAUCHT) or "nichts")
     if fehlt:
-        print("FEHLT:", ", ".join(fehlt), "- aus dem anderen Konto freigeben und hier verknüpfen oder kopieren; sonst wartet der Runner.")
+        print("FEHLT:", ", ".join(fehlt), "- im anderen Konto freigeben und als dsse_runs_B verknüpfen (siehe oben); sonst wartet der Runner.")
     if any(not os.path.isdir(f"{RUNS}/{f}") for f in OPTIONAL):
         print("Nicht sichtbar (nur Versionsangaben, darf fehlen):", ", ".join(f for f in OPTIONAL if not os.path.isdir(f"{RUNS}/{f}")))
-print("Ergebnisse:", DRIVE or WORK)
 '''
     code = '''# Pakete und Code: der Ordner analysis/ju_space (mit round2/) und der eingefrorene Plan; ohne --depth, denn der Runner prüft den
 # Einfrier-Commit (G1) und den Code der Runde-1-Teile (G3) in der Git-Geschichte (Dateiinhalte werden bei Bedarf nachgeladen)
@@ -269,8 +329,9 @@ for src, dst in SUMS["inputs"].items():
 json.dump(VERIFIED, open(f"{ROOT}/models/verified.json", "w"), indent=1)
 print("Modelle und Eingaben geprüft:", ", ".join(VERIFIED) or "keine Modelle nötig")
 '''
-    head = ("# Selbsttest (nur Code), einmal je Code-Stand (die Marke liegt danach in dsse_runs/<Sitzung>). Der Runner baut ein Schein-dsse_runs\n"
-            "# aus rk_loop.py MOCK=1 und pc_meta.py QUICK=1 (keine Runde-1-Ausgabe), führt die eigenen Tests der Skripte aus\n"
+    head = ("# Selbsttest (nur Code), einmal je Code-Stand (die Marke liegt danach in dsse_runs/<Sitzung>). Der Runner prüft, dass alle\n"
+            "# Runde-2-Skripte übersetzbar sind, baut ein Schein-dsse_runs aus rk_loop.py MOCK=1 und pc_meta.py QUICK=1 auf der CPU (keine\n"
+            "# Runde-1-Ausgabe), führt die eigenen Tests der Skripte auf der CPU aus\n"
             f"# ({LIB_TEXT[s]})\n"
             "# und dann die ganze Sitzung im MOCK/QUICK-Modus über denselben Code wie der Hauptlauf.\n")
     selftest = head + '''MARKE = f"{WORK}/selftest_ok_{COMMIT[:12]}.json"
@@ -341,8 +402,8 @@ if DRIVE:
 if RC not in (None, 0):
     raise SystemExit(MELDUNG.get(RC, f"Rückgabewert {RC}"))
 '''
-    return [("md", markdown(s)), ("code", p), ("code", drive), ("code", code), ("code", inputs), ("code", selftest), ("code", main),
-            ("code", summary), ("code", flush)]
+    return [("md", markdown(s)), ("code", p), ("code", drive), ("code", zweiter), ("code", code), ("code", inputs), ("code", selftest),
+            ("code", main), ("code", summary), ("code", flush)]
 
 
 def build(s):
