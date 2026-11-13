@@ -186,7 +186,8 @@ README. 'Haarneuronen' is read as 'H-Neuronen' (hallucination-associated neurons
   exists and no session_partial.json lies next to it (round 2's 'second folder' rule).
 - **A -> B** (new, SO-XFER): A shares only the folder dsse_runs/r1b_xfer with B (read access); in B it is the shortcut
   My Drive/r1b_xfer_A. It carries only r1b_R_S0's exports (dmg_ref_R16.json: the token ids of REF-R16; so_ax_ustar.pt: u*_b at 14, 18
-  and 6 with the sha256 of their round-2 sources); since C32 no tier-2 trigger crosses from A to B. No round-1 or round-2 file
+  and 6 with the sha256 of their round-2 sources) and xfer_manifest.json with their sha256 (B cannot read r1b_R_S0's step records; SG4
+  checks the copies against it); since C32 no tier-2 trigger crosses from A to B. No round-1 or round-2 file
   leaves account A.
 - Every copied file's path, source session (or shard), sha256 and Drive modification time go into the session manifest (SG4).
 
@@ -244,8 +245,8 @@ the names the parts use for it, which the harmonisation edits replace by the mai
 | **SO-LONGDOC** | L.LONGDOC: PG19 test split at a pinned revision, the first 24 books in file order with >= 36,000 tokens after skipping 2,000, slice [2,000, 34,768) | L | L (L2a); P0 uses qualifying books 25-28 (the next four in the same order) for timing only | L 'D.LONGCORPUS / L.LONGDOC' |
 | **SO-TURN** | Round-2 turn machinery, imported unchanged: r2_stimuli.TURN2_SUFFIX, turn2_ids, check_turn2, round_trip_stable (OD-B13 concatenation, history think blocks kept); the B-Q8 read convention ('read as the reply to the plain prompt'); r2_theta.stage_turn2; the R6 rule logic of r2_theta_verdict (K defined only if the denominator's 90 % interval excludes 0) | main (round-2 code at 8171b86) | R (R6.2, R6.3), D (D2, D2-f), K (K8b's history convention, G-K8), L (L3b, L4) | various |
 | **SO-GVRA** | The inverse-free generate-verify-revise-abstain convention (main §2.5): forward generator; verifier = a forward round trip through the unmodified model, decoupled from the generator, with three outcomes (correct / minor fix needed / critically flawed); reviser; attempt limit 3; abstentions counted and reported; the verifier's error rate measured on known cases before its outputs are read | K (r1b_gvra.py) | R (R5.5), D (D3 mode naming, INJ starts), K (K3e, K4, K7b), L (X5) | K 'SO-GVRA'; L 'K.GVRA' |
-| **SO-PVAL** | Round-wide interval, p-value and multiplicity utilities (main §2.4): percentile bootstrap (one- and two-level), one-sided bootstrap p = (1 + #replicates on the null side of the threshold) / 2,001, rank p = (1 + #{controls >= statistic}) / (N + 1), K's prediction-interval p, Holm, BH; codes for undefined replicates | main (r1b_common.py) | all | various |
-| **SO-KEYS** | The key-namespace registry (below) and a verbatim copy of rk_loop's keyseed and Gumbel with a sha256 check of the source lines against rk_loop.py (D's method; rk_loop is not imported where its model is not wanted) | main (r1b_common.py) | all | various |
+| **SO-PVAL** | Round-wide interval, p-value and multiplicity utilities (main §2.4): percentile bootstrap (one- and two-level), one-sided bootstrap p = (1 + #replicates on the null side of the threshold) / 2,001, rank p = (1 + #{controls >= statistic}) / (N + 1), K's prediction-interval p, Holm, BH; codes for undefined replicates | main (r1b_core.py) | all | various |
+| **SO-KEYS** | The key-namespace registry (below) and a verbatim copy of rk_loop's keyseed and Gumbel with a sha256 check of the source lines against rk_loop.py (D's method; rk_loop is not imported where its model is not wanted) | main (r1b_core.py) | all | various |
 | **SO-PILOT** | The pilot materials of r1b_P0 (below) | main | P0 | R 'throwaway prompts outside P256'; L 'rk_loop scene prompts' |
 | **SO-XFER** | The cross-account folders dsse_runs_B (B -> A) and r1b_xfer (A -> B), main §2.2 | main | all cross-account starts | - |
 
@@ -269,7 +270,7 @@ registered tag:
 | L | 'r1bL' | 'r1bL0', 'r1bL2', 'r1bL2b', 'r1bL2s', 'r1bL3', 'r1bL3t', 'r1bL4', 'r1bL5', 'r1bLX'; string seeds 'r1bL1rot', 'r1bL-ERA', 'r1bL2perm', 'r1bL-CTRL', 'r1bL5-FM', 'r1bL-BOOT', 'r1bL-SUR', 'r1bL-SHUF' |
 | main | 'r1bP0_' | pilot texts |
 
-- r1b_common.KEYS lists every tag. A code test asserts that the tags are unique across parts, differ from every round-1 and round-2
+- r1b_core.KEYS lists every tag. A code test asserts that the tags are unique across parts, differ from every round-1 and round-2
   tag ('ref', 'axis', 'mirror', the round-1 loop names with their SUF, 'r2GEN...', 'theta', 'theta2', 'r2PWR', 'r2fdt', 'r2CNT',
   'r2RSIb...', 'r2Q4B', 'r2ARMA', 'r2SUP', 'r2DOSE', 'r2CHK') except for R's stated reuse, and that no R loop name forms a tag equal to
   another R tag.
@@ -406,7 +407,7 @@ J = -C^-1, TAP or the graphical lasso to reconstruct anything. main §6.3's lint
 | C24 | Drive I/O: R plans copy-in and writes at 10 min / GB; the other parts assume faster copy-in; round 2's r2_ana spent about 650 s outside its steps for about 0.9 GB of inputs | 10 min / GB for every part until r1b_P0 measures the rate; I/O allowances for r1b_K_ana and r1b_D_ana (OD-M28) | Round 2's own record supports the placeholder |
 | C25 | K's composite A+ is an 'any of' over four Holm families (Q4, Q5, Q11, Q12), so its false-positive rate under the null can reach about 0.19; L has no round-level family | CF-K-link (Holm over the seven A+ members) and CF-L, as labels; K's and L's strings unchanged (main §2.4) | 'List exactly which verdicts are confirmatory' |
 | C26 | p-value details: L's 'bootstrap share on the null side' against R's and K's (1 + #) / 2,001 | (1 + #) / 2,001 round-wide (SO-PVAL) | One formula |
-| C27 | Time guard: R '<= 5 h', K 'elapsed < 5 h at the end of a step', the round-2 runner 20 min | SG5: the runner stops after the step that ends at >= 4.5 h since the notebook's first cell; steps <= 5 min; a continuation session resumes (OD-M27) | Leaves room for the final sync within Colab's limit |
+| C27 | Time guard: R '<= 5 h', K 'elapsed < 5 h at the end of a step', the round-2 runner 20 min | SG5: the runner stops after the step that ends at >= 4.5 h since that session's start (per session; slot notebooks, main §4.4); steps <= 5 min; a continuation session resumes (OD-M27) | Leaves room for the final sync within Colab's limit |
 | C28 | D's optional H covariate waits for K's G-K2, which K decides only in K-ana | It uses K's in-session preview of G-K2 from r1b_K_S1 (SG8 preview) if present when r1b_D_A starts; it is never waited for (OD-M25) | D's sessions stay input-free and parallel |
 | C29 | L-ANA runs 'on a CPU runtime inside the round-1b analysis session', which no part defines | L-ANA is a step of r1b_ana (CPU runtime, account A) (OD-M26) | No A100 time for CPU work |
 | C30 | R states that part D must recalibrate pushes per length | Moot: part D steers nothing (D.2) | - |
@@ -419,11 +420,11 @@ J = -C^-1, TAP or the graphical lasso to reconstruct anything. main §6.3's lint
 
 | # | Gate | Condition | If it fails | Decided in | Replaces |
 |---|---|---|---|---|---|
-| SG1 | Plan freeze | the sha256 of the five plan files and of every package file equal the constants in r1b_run_session.py (copied from runde1b_freeze.json); the freeze commit is an ancestor of the round-1b code commit | session stops before step 1 | every session except r1b_P0 | R RG1, K G1 |
+| SG1 | Plan freeze | the sha256 of the five plan files and of every package file equal the values in runde1b_freeze.json, whose own sha256 and this file's sha256 are constants in r1b_run_session.py (FREEZE_RECORD_SHA256, FROZEN_PLAN_SHA256); the freeze commit is an ancestor of the round-1b code commit | session stops before step 1 | every session except r1b_P0 | R RG1, K G1 |
 | SG2 | Runtime | an A100 (sm80, 40 or 80 GB) for every model session and every analysis session that is planned on an A100; a declared CPU runtime for r1b_ana | session stops | every session | R RG2, K G2 |
 | SG3 | Code freeze | rk_loop.py, rk_verdict.py, ufo_common.py, rsi_statements.py equal R's RG3 constants in the checkout and at every round-1 shard's code commit read; every imported round-2 module equals its sha256 at 8171b86 (main §6.1); every round-1b module equals its sha256 at the round-1b code commit | session stops | every session (r1b_P0: round-1 and round-2 modules only) | R RG3 |
 | SG4 | Inputs present and intact | every start condition of main §4.2 met; every copied file (incl. B -> A and A -> B copies) matches the sha256 recorded by its producing session | the session waits (exit code 4); a measurement whose input is missing after two attempts of its producer reads 'not run (input missing)' | every session | R RG4; the parts' contract fallbacks stay as written |
-| SG5 | Time guard and concurrency | the runner stops after the step that ends at >= 4.5 h since the notebook's first cell; steps <= 5 min and resumable; <= 2 concurrent sessions per account (an assumption) | session_partial.json; a continuation session (suffix b, c, ...) resumes; launches staggered | every session | R RG16, K G-K24, D and L time guards |
+| SG5 | Time guard and concurrency | the runner stops after the step that ends at >= 4.5 h since that session's start (per session, because a slot notebook runs several sessions in one runtime, main §4.4; the slot runner starts no session whose planned minutes would end beyond the runtime limit); steps <= 5 min and resumable; <= 2 concurrent sessions per account (an assumption) | session_partial.json; a continuation session (suffix b, c, ...) resumes; launches staggered | every session | R RG16, K G-K24, D and L time guards |
 | SG6 | Report hygiene | R9.1-R9.4 in every output of every part: provenance block (plan and code hashes, module sha256, config and stimulus hashes, inputs with source and sha256, GPU and versions, key namespaces, reduction level, tier, session, attempt), codes for missing values, labels, distributions next to means | the session is 'incomplete' and no analysis reads its outputs | every session; checked by r1b_ana | R RG17; K's and L's hygiene rules |
 | SG7 | Pilot-based trims | r1b_P0's measured rates and parity metrics are written into runde1b_freeze.json with each part's resulting trim level (R's RG18 reduction level; D's trims while D's projection exceeds 9.0 A100-h; K's drop order if decode or teacher-forced rates are > 30 % slower; L's trim order if any rate is below half its planning value), the round-level projection and the funded tier | no session starts | before the freeze | R RG18, D G-PIL, K's pilot rule, L G-pilot |
 | SG8 | H-set validity for parts D and L | K's G-K2 ('H-neurons replicated (in-domain detection)') on H_op, and H_op in {H_tq, H+} for L's TriviaQA measurements. What runs uses r1b_K_S1's in-session preview; verdict labels use r1b_K_ana's value; disagreements are reported (round-2 OD-G8) | D: the optional covariate is not reported; L: as L's former G-H ('no validated H-set'; H-specific verdicts in L2b-L5 'not testable (no H-set)') | r1b_K_S1 (preview), r1b_K_ana | D G-H, L G-H |
@@ -676,13 +677,16 @@ primary cells, the K8b main block, K8c). The trims and the resulting projection 
 
 ### 4.7 Runner behaviour (as round 2, adapted)
 
-- One notebook per session per account; the notebook names its account. Every session: SG1-SG4 at start, the copy-in of its inputs
+- One notebook per slot of main §4.4 (runde1b_P0, _A1, _A2, _B1, _B2, _A_T2, _B_T2, _ANA); the notebook names its account. The slot
+  runner r1b_run_slot.py runs the slot's sessions in order, each as its own process, and waits for each session's start conditions by
+  polling Drive (with a timeout); in account A it copies a finished B folder from dsse_runs_B as in round 2, and r1b_R_S0 publishes
+  its exports to dsse_runs/r1b_xfer with xfer_manifest.json. Every session: SG1-SG4 at start, the copy-in of its inputs
   (read-only under <work>/in/), its steps in order (each skipped when its outputs exist and the runner recorded its success), an
   incremental, error-tolerant Drive sync after every step, the time guard (SG5), session_done.json or session_partial.json.
 - A continuation session (suffix b, c, ...) uses the same work and Drive folder; finished steps are skipped. A packing change never
   changes a measurement, threshold or rule and is not an amendment.
 - A session that does not finish after two attempts may be declared 'not run' by the operator in dsse_runs/r1b_declared_not_run.json
-  (account A; the runner checks the two attempts), so that the analyses can start; its measurements read 'not run (session failed
+  (in the account where its consuming sessions run, A or B; the runner checks the two attempts), so that the analyses can start; its measurements read 'not run (session failed
   twice)'.
 - In-session decisions (L*, FB-1 / FB-2, RG11, RG13, RG14, G-K16, G-K22, K4's b*, K5a's variant, the D2 throughput fallback) follow
   round-2 OD-G8: the in-session value governs what ran; the analysis recomputes it and reports any disagreement.
@@ -727,16 +731,19 @@ deviation (amendments, 'not run', labels, tier-2 items not funded).
   (copied code is re-tested).
 - New behaviour lives only in new modules under analysis/ju_space/round1b/. rk_loop is imported only through r2_rk.open_block (it loads
   the model and registers hooks at import) or run as a subprocess (R1); model-free code never imports it; keyseed and Gumbel elsewhere
-  come from r1b_common's verified copy.
+  come from r1b_core's verified copy.
 
 ### 6.2 Modules
 
 | Module | Owner | Content | Reuses |
 |---|---|---|---|
-| r1b_common.py | main | SO-KEYS (registry, keyseed / Gumbel copy, uniqueness test), SO-PVAL (bootstraps incl. two-level, one-sided p, rank p, PI p, Holm, BH), R9.1-R9.4 helpers (provenance block, codes, labels, distributions), sha256-verified copy | rk_loop source lines (checked, not imported) |
-| r1b_run_session.py | main | runner: SESSIONS table of main §4.2, SG1-SG10, --pilot mode for r1b_P0 (SG1 off, output whitelist), --selftest, time guard 4.5 h, Drive sync, the B -> A and A -> B copies, the two-attempt rule | r2_run_session.py's structure (new file) |
+| r1b_contracts.py | main | the shared objects and every cross-session file (owner, producing session, path, format, keys), the sessions of main §4.2 with their start conditions, the slots of main §4.4, the Step class | - |
+| r1b_run_slot.py | main | slot runner: one notebook runtime runs a slot's sessions in order and waits for their start conditions; --mock-dry-run of all slots | - |
+| r1b_sessions_R/D/K/L.py | each part | the part's sessions and steps (registry read by the runner) | - |
+| r1b_common.py (merged into r1b_core.py) | main | SO-KEYS (registry, keyseed / Gumbel copy, uniqueness test), SO-PVAL (bootstraps incl. two-level, one-sided p, rank p, PI p, Holm, BH), R9.1-R9.4 helpers (provenance block, codes, labels, distributions), sha256-verified copy | rk_loop source lines (checked, not imported) |
+| r1b_run_session.py | main | runner: SESSIONS table of main §4.2 (from r1b_contracts), SG1-SG10, pilot mode for r1b_P0 (automatic: SG1 off, output whitelist), --selftest, time guard 4.5 h per session, Drive sync, the B -> A and A -> B copies, the two-attempt rule | r2_run_session.py's structure (new file) |
 | r1b_report.py | main | r1b_ana: L-ANA call, round-level families, labels, side-by-side tables, runde1b_summary.json, merged manifest, report check | - |
-| r1b_core.py | R | function-style multi-block core (push, read, damage, scores, soft-token generation, lens predictions); SO-DMG's function-style damage and calibrate for K and L (equivalence-tested against r2_unlearn_qwen.RefKL / calibrate to 1e-6) | rk_loop's push (CC4) |
+| r1b_core.py | main (shared core: models, SO-KEYS, SO-PVAL, SO-DMG function style, hooks, SO-JLENS loading, Ctx, R9.1-R9.4 helpers) and R | function-style multi-block core (push, read, damage, scores, soft-token generation, lens predictions); SO-DMG's function-style damage and calibrate for K and L (equivalence-tested against r2_unlearn_qwen.RefKL / calibrate to 1e-6) | rk_loop's push (CC4) |
 | r1b_rk.py | R | extra hooks through r2_rk.open_block: PUSH-NP, the 16-reference RefKL with both signs and top-1 change, the calibrated loop driver, generation-time capture, R1's reduced-state openers | r2_rk.open_block, CbarHook, r2_unlearn_qwen.calibrate / RefKL / ConstPush pattern |
 | r1b_stats.py | R | STAT-1b (centred pseudo-axes, disattenuated K1-s and A, joint bootstrap, SENS, size and power plants, joint MDEs, Holm F+ / F-, cross-fitted Ritz pairs) | r2_rk.prompt_bootstrap, halvings, stats_on_axis (n_prompts = 256), fixed_fold_axes; rk_verdict |
 | r1b_prompts_check.py, r1b_R0.py ... r1b_R8.py, r1b_R_verdict.py | R | R's measurement scripts and analysis (r1b_R0.py also writes SO-AX and the r1b_xfer exports) | as above |
@@ -762,7 +769,8 @@ deviation (amendments, 'not run', labels, tier-2 items not funded).
   mock model; SO-KEYS uniqueness; SO-GVRA verifiers on planted known cases; CC4 (r1b_core = rk push to 1e-6); SO-DMG function-style
   damage = r2_unlearn_qwen.RefKL to 1e-6; an inverse-free lint (no torch.linalg.inv / pinv, no numpy.linalg.inv / pinv / lstsq
   outside a whitelist of named fitting steps, each marked in the code with its main §2.5 entry).
-- r1b_run_session.py --selftest runs each session under MOCK / QUICK once per code commit before the main run (as round 2).
+- The MOCK dry run of every slot (r1b_run_slot.py --mock-dry-run, CPU) and r1b_run_session.py --selftest run once per code commit
+  before the first session; each slot notebook can repeat its sessions' MOCK run on its GPU (toggle, default off).
 - **Code review** by reviewers blinded to round-1b outputs, before the first session. Fixes that change no value returned by any
   measurement, gate or rule on any input are not amendments.
 
@@ -835,7 +843,7 @@ and RK-2 conditions); L's choices fixed in L.0 (core and extensions), L.2 (conve
   r1b_D_A starts; never waited for; descriptive.
 - **OD-M26 Round-level analysis.** r1b_ana runs on a CPU runtime in account A and includes L-ANA; SG2 requires a declared CPU runtime
   for it.
-- **OD-M27 Time guard.** 4.5 h since the notebook's first cell; steps <= 5 min.
+- **OD-M27 Time guard.** 4.5 h since the session's start (per session, slot notebooks); steps <= 5 min.
 - **OD-M28 Drive I/O.** 10 min / GB for planning until r1b_P0 measures it; allowances for r1b_K_ana (+10 min) and r1b_D_ana (+5 min).
 - **OD-M29 Accounts.** r1b_D_B, r1b_D_C, r1b_R_S5, r1b_R_S5L, r1b_R_S8, r1b_R_ana2, r1b_D_R and r1b_K_S6 run in account A; A shares
   only dsse_runs/r1b_xfer with B.

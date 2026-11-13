@@ -242,6 +242,30 @@ SLOTS = {
 }
 
 
+class Step:
+    """One step of a session (main §4.7: <= 5 min, resumable; skipped when its record says done and its outputs exist).
+    name      unique in the session
+    fn        'module:function' (or a callable) called as fn(ctx) in the session process (the model stays loaded across steps), or
+    script    a file in round1b/ run as a subprocess: args with {root} {work} {inp} {r1} {r2}; the script builds its context with
+              r1b_core.Ctx.from_env() (or wraps its function with r1b_core.run_script)
+    out       required outputs relative to the session folder (space separated; globs allowed); opt: optional outputs
+    after     steps of the session that must be done first (a 'not run' among them makes this step 'not run')
+    minutes   planned minutes (information; steps should stay <= 5 min)
+    item      a tier-2 item inside a tier-1 session (e.g. 'X2', 'D5-x'): runs only if funded, else 'NA:not_run:tier2_unfunded'
+    drop_if   trim IDs of the part (runde1b_freeze.json 'trims', SG7) that drop the step: 'NA:not_run:<trim>'
+    mock_out  outputs required under MOCK=1 (default: out)
+    example   an API example: allowed only under MOCK=1 (a real run with an example step stops at the gates)"""
+
+    def __init__(self, name, fn=None, script=None, args="", out="", opt="", after="", minutes=1.0, item=None, drop_if=(), mock_out=None,
+                 example=False, env=None, timeout_s=3600):
+        assert (fn is None) != (script is None), f"step {name}: exactly one of fn / script"
+        self.name, self.fn, self.script, self.args, self.minutes, self.item = name, fn, script, args, float(minutes), item
+        self.out, self.opt = out.split(), opt.split()
+        self.mock_out = None if mock_out is None else mock_out.split()
+        self.after = [x.strip() for x in after.split(",") if x.strip()]
+        self.drop_if, self.example, self.env, self.timeout_s, self.part = tuple(drop_if), bool(example), dict(env or {}), timeout_s, None
+
+
 def file_path(fid):
     """Path of a cross-session file relative to the run root (dsse_runs/), or the repository path of a package file."""
     f = FILES[fid]
@@ -288,6 +312,8 @@ def check():
                 errs.append(f"{s}: file condition {c['fid']} crosses accounts (use done() with files, or xfer())")
             if c["kind"] == "xfer" and (m["account"] != "B" or SESSIONS[c["session"]]["account"] != "A"):
                 errs.append(f"{s}: xfer condition only from A to B")
+            if c["kind"] in ("done", "trig") and m["account"] == "B" and SESSIONS[c["session"]]["account"] == "A":
+                errs.append(f"{s}: account B cannot read the A session {c['session']} (only r1b_xfer)")
     for fid, f in FILES.items():
         if f["session"] is not None and f["session"] not in SESSIONS:
             errs.append(f"file {fid}: unknown session {f['session']}")

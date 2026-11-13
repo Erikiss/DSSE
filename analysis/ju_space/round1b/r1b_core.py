@@ -9,7 +9,7 @@ Contents (API in IMPLEMENTATION.md):
   models      MODELS, register_loader, ensure_model, load_model (float32, TF32 off, 'highest' matmul; MOCK=1: rk_loop's tiny random
               model), chat_ids, user_start, pad_left, stop_tokens, generate (keyed Gumbel-max), mean_read, sdpa_efficient (SG9)
   SO-KEYS     KEYS, key_owner, check_keys, keyseed / gumbel_class (verbatim rk_loop lines, sha256-checked), write_keys
-  SO-PVAL     interval, p_one_sided, p_rank, holm, bh, boot_idx, boot_two_level, prompt_bootstrap (r2_rk's, P256 stratified)
+  SO-PVAL     interval, p_one_sided, p_rank, p_pi (K.4), holm, bh, boot_idx, boot_two_level, prompt_bootstrap (r2_rk's)
   SO-DMG      RefSet, Damage (= r2_unlearn_qwen.RefKL's formula), calibrate (push form and NSCALE_DN gain form), DELTA1, DELTA2
   hooks       Hooks: push at a block output from the first user-content token (rk_loop's operator), neuron read / scale / add / clamp /
               zero / mean-ablate on the MLP intermediate (down_proj input) of any block, per-token capture, stopped reads
@@ -217,6 +217,15 @@ def p_rank(stat, controls):
     """(1 + #{controls >= statistic}) / (N + 1)."""
     c = np.asarray(controls, dtype=float).ravel()
     return float((1 + int((c >= stat).sum())) / (c.size + 1))
+
+
+def p_pi(stat, controls):
+    """K.4's prediction-interval p: 1 - F_t,N-1((X - mean X_R) / (sd X_R sqrt(1 + 1/N))) over the N defined (finite) controls."""
+    from scipy.stats import t as tdist
+    c = np.asarray(controls, dtype=float).ravel(); c = c[np.isfinite(c)]; n = c.size
+    if n < 2 or not np.isfinite(stat):
+        return coded("NaN:undefined_prediction_interval")
+    return float(1 - tdist.cdf((stat - c.mean()) / (c.std(ddof=1) * math.sqrt(1 + 1 / n)), n - 1))
 
 
 def holm(pvals, alpha=0.05):
@@ -935,15 +944,15 @@ class Ctx:
         p = os.path.join(self.work, rel); os.makedirs(os.path.dirname(p), exist_ok=True); return p
 
     def input(self, session, rel, required=True):
-        """A copied file of an upstream session (<work>/in/<session>/<rel>). Producer declared 'not run': NotRun('input missing') if
-        required, else None."""
+        """A copied file of an upstream session (<work>/in/<session>/<rel>); None if absent and not required; a required file of a
+        producer declared 'not run' raises NotRun('input missing')."""
         p = os.path.join(self.inp, session, rel)
         if os.path.exists(p):
             return p
-        if session in self.declared:
-            if required:
-                raise NotRun("input missing")
+        if not required:
             return None
+        if session in self.declared:
+            raise NotRun("input missing")
         raise FileNotFoundError(f"input {session}/{rel} not copied (start conditions in r1b_contracts.SESSIONS['{self.session}'])")
 
     def xfer(self, name):
@@ -1048,6 +1057,23 @@ class Ctx:
         return self._sidecar(rel, config, seeds, labels)
 
 
+EXIT_NOT_RUN, EXIT_YIELD = 75, 76      # script steps: exit codes for NotRun (reason in $R1B_STEP_STATUS) and StepYield
+
+
+def run_script(fn):
+    """Entry point of a script step: fn(Ctx.from_env()); NotRun -> exit 75 (reason written to $R1B_STEP_STATUS), StepYield -> 76."""
+    ctx = Ctx.from_env()
+    try:
+        fn(ctx)
+    except NotRun as e:
+        if os.environ.get("R1B_STEP_STATUS"):
+            dump_json(dict(not_run=e.reason), os.environ["R1B_STEP_STATUS"])
+        raise SystemExit(EXIT_NOT_RUN)
+    except StepYield:
+        raise SystemExit(EXIT_YIELD)
+    raise SystemExit(0)
+
+
 def check_output(path):
     """SG6 on one output file: JSON with a complete provenance block and no raw NaN, or a sidecar <file>.prov.json. Returns a problem
     string or None."""
@@ -1137,6 +1163,7 @@ def selftest(root):
     _ok(keyseed("r1bD1", 3, "x") == int(hashlib.sha256("r1bD1|3|x".encode()).hexdigest()[:12], 16), "keyseed formula", errs)
     _ok(abs(p_one_sided(np.arange(2000) - 100.0, 0.0) - 102 / 2001) < 1e-12, "one-sided bootstrap p = (1 + #null) / 2001", errs)
     _ok(abs(p_rank(5.0, [1, 5, 7, 2]) - 3 / 5) < 1e-12, "rank p", errs)
+    _ok(abs(p_pi(0.0, [-1.0, 1.0, np.nan]) - 0.5) < 1e-12 and p_pi(3.0, [0.0, 1.0, 2.0]) < 0.2, "prediction-interval p (K.4)", errs)
     a, r = holm([0.01, 0.04, 0.03]); _ok(np.allclose(a, [0.03, 0.06, 0.06]) and r == [True, False, False], "Holm", errs)
     a, r = bh([0.01, 0.04, 0.03, 0.5], 0.1); _ok(np.allclose(a, [0.04, 0.0533333, 0.0533333, 0.5], atol=1e-6), "BH", errs)
     x = np.r_[np.arange(90.0), [np.nan] * 10]; lo, _ = interval(x)
