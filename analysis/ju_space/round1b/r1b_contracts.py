@@ -186,7 +186,7 @@ SESSIONS = {
     "r1b_R_S0": S("R", 1, "A", 1, (), 22.2, (), "R0, R8.1, R9.5; SO-AX package (AX1, U*, leave-loop-out modes, SG10); r1b_xfer exports",
                   r1=R1_S0, r2=R2_S0),
     "r1b_R_S2_14": S("R", 1, "A", 1, (), 58.5, (M17,), "R2.1 (axis texts), R2.2 at 14; AX-1b(14)", r1=R1(14), r2=R2_Q0(14)),
-    "r1b_R_S1": S("R", 1, "A", 1, (done("r1b_R_S0"),), 35.9, (M17,), "R1 closed and open loop", r1=R1_ALL),
+    "r1b_R_S1": S("R", 1, "A", 1, (done("r1b_R_S0"),), 35.9, (M17,), "R1 closed and open loop", r1=R1_ALL + ("gpu*/rk/b*/pilot*.json",)),
     "r1b_R_S2_18": S("R", 1, "A", 2, (done("r1b_R_S2_14", ("ax1b/**",)),), 60.8, (M17,), "R2.1 reads, R2.2 at 18; AX-1b(18)", r1=R1(18),
                      r2=R2_Q0(18)),
     "r1b_R_S2_06": S("R", 1, "A", 2, (done("r1b_R_S2_14", ("ax1b/**",)),), 60.8, (M17,), "R2.1 reads, R2.2 at 6; AX-1b(6)", r1=R1(6),
