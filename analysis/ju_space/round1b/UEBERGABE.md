@@ -35,3 +35,7 @@
 
 ## Stand
 - 13.11. 23:50 MEZ: Kern in Arbeit (r1b_contracts.py vorhanden). Teile R, K, D, L und Integration noch offen.
+- 14.11. 00:05 MEZ: Kern fertig und im Mock-Modus getestet (r1b_contracts.py, r1b_core.py, r1b_run_session.py, r1b_run_slot.py,
+  IMPLEMENTATION.md, notebooks/build_runde1b_gpu_notebooks.py; 15 Änderungen am Rahmenplan, u. a. Zeitwächter je Sitzung). Die vier
+  Teile R, K, D, L laufen jetzt parallel; danach Integrationstest. Offen laut Kern: Einfrier-Konstanten und runde1b_freeze.json,
+  r1b_report.py (Rundenauswertung), J-Lens-Download-URL, GPU-/Colab-Test, Inversfrei-Lint.
