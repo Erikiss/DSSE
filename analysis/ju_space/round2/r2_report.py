@@ -158,6 +158,17 @@ def lt(a, b): return fin(a) and fin(b) and float(a) < float(b)
 # ======================================================================================================================================
 # Round-2 inputs: <r2_root>/<session>/<rel> (the expected session first), then any session folder, then the folder of <out.json>
 # ======================================================================================================================================
+def set_threads():
+    """torch CPU threads = NT (set by r2_run_session.py), if given; results do not depend on it."""
+    nt = os.environ.get("NT")
+    if not nt: return None
+    try:
+        import torch
+        torch.set_num_threads(max(1, int(nt))); return int(nt)
+    except Exception:                                                             # noqa: BLE001
+        return None
+
+
 def expected_session(rel):
     for pre, s in EXPECTED:
         if rel.startswith(pre): return s
@@ -588,7 +599,7 @@ def part_A(rv, info, pcg):
                                   causal_general=v.get("causal_general"), causal_absorption=v.get("causal_absorption"), labels=v.get("labels"),
                                   FG=get(v, "numbers", "FG"), dFG=get(v, "numbers", "dFG"), dFG_sim=get(v, "numbers", "dFG_sim")) for b, v in pb.items()},
                rsi_into_rgi={k: get(ob, "rsi_into_rgi", k) for k in ("D_rho_S", "D_rho_S_ci", "D_sigma_self", "D_sigma_self_ci", "absorbed_top", "self_specific_top")},
-               causal_line={k: get(ob, "causal_line", k) for k in ("D_FG_causal", "D_FG_causal_ci", "D_rho_causal", "D_rho_causal_ci")},
+               causal_line={k: get(ob, "causal_line", k) for k in ("D_FG_causal", "D_FG_causal_ci", "D_FG_causal_sim", "D_rho_causal", "D_rho_causal_ci", "D_rho_causal_sim", "intervals", "verdict_with_pointwise_intervals")},
                spillover_u_T_perp={b: {k: v.get(k) for k in ("z_self", "z_other", "FR", "verdict", "status")} for b, v in (rv.get("A3_u_T_perp_spillover") or {}).items() if isinstance(v, dict)},
                spillover_g_self=get(rv, "A7", "g_self_spillover"),
                pull_and_delta={k: get(rv, "A6", "pull_and_delta", k) for k in ("X", "ci90", "diff_high_minus_low", "diff_ci90", "entering", "middle_clause", "non_overlap_form")},
@@ -666,7 +677,7 @@ def part_C(uv, q1, pcg):
                                   named_modes=get(uv, "C_Q5", "svd", "named_mode_cos_with_top_modes"))),
                C_Q6=dict(statement=get(uv, "C_Q6", "statement"), rsi_specific=get(uv, "C_Q6", "rsi_specific"),
                          relations={r: dict(helix=v.get("helix_primary"), depth_cap=v.get("depth_cap"), caps=v.get("caps"), self_repair=v.get("self_repair")) for r, v in (get(uv, "C_Q6", "relations") or {}).items()}),
-               C_T7=dict(verdict=get(uv, "C_T7", "verdict"), family_size=get(uv, "C_T7", "family", "family_size"), claims=get(uv, "C_T7", "family", "claims"),
+               C_T7=dict(verdict=get(uv, "C_T7", "verdict"), family_size=get(uv, "C_T7", "family", "family_size"), claims=get(uv, "C_T7", "family", "claims"), under_plan_text=get(uv, "C_T7", "under_plan_text"),
                          items=[{k: r.get(k) for k in ("W", "item", "n", "mean", "lo", "hi", "p", "p_holm", "claim", "testable")} for r in (get(uv, "C_T7", "family", "items") or [])]))
     return dict(status="ran", verdicts=uv.get("summary"), key_numbers=key, toy=compact_toy(uv),
                 gates=dict(uv.get("gates") or {}, G42=None if q1 is None else q1.get("G42"), G43=get(uv, "C_Q3", "G43"), G44=get(uv, "C_Q4b", "gate"), G16=get(uv, "C_Q4_armA", "G16")),
@@ -715,9 +726,15 @@ IMPLEMENTER8_READINGS = (
     "A7 dynamics: the damage condition (OD-A5) is applied per rule to the loops the rule reads; a control loop above 0.15 nats makes the self-loop rule 'not decidable'; the control exclusion ('generic attractor') also applies to the mirror",
     "A7: BA's 'C0 for IMP-CHG' uses the simultaneous lower bound (the pointwise one is reported); 'falls' (V3) mirrors 'present at >= 2 top-third blocks' to the bottom third; robustness = the point-estimate form of GI and (IS or BA) in the whitened metric and every leave-one-out",
     "A7: the RSI-into-RGI series are the frames-pooled rho_S and sigma_self; 'absorbed' / 'self-specific' per block need both frames",
+    "A7 V5: if GI and (IS or BA) hold at some block but nowhere in the whitened metric and under every leave-one-out, the verdict is 'V5: no RGI geometry' with that statement (neither of the plan's two sub-labels applies)",
+    "A7 pull and delta: a block enters with G-blk(b), GA(b) and RSI_a's own counted pushes within 0.15 nats (OD-A5: 'the loop read'); with the 0.6B arm run but r_DiD not computable, V1's r_DiD condition counts as not met (V2)",
+    "A7 causal line: 'with simultaneous intervals' = sup-t 95 % intervals over the two statistics D(FG_causal) and D(rho_causal), from r2_rgi_stats.py's per-draw series (rgi/geom_draws); the verdict with the pointwise interval is reported next to it and is used, flagged, if the draws file is missing",
     "A3: w = mean of the two IMP-DES half gradients per model object (r2_rgi_stats.spill_inputs)",
     "AT8: ABSENT / present levels and the recursion rule use per-world means of the level-1 models over the valid worlds; recursion at the natural condition (pooling: the natural-condition entry; the all-conditions pooling is reported)",
     "AT8: a line 'not testable' (G39) blocks every answer except 'no RGI geometry'; 'not delta' may hold per line by either clause; family S-gain over the worlds whose B net passes level 1",
+    "AT8: 'perturbation-driven' is read from the reduced model for every line (also a regulariser-specific one); a line's 'verdict' is 'ABSENT' where the ABSENT condition holds, the two-step verdict stays in 'rule_verdict'",
+    "Amendment 2 (post hoc): Part C verdicts use the damage-matched controls as the producers ran them (the amended OD-C2); 'under_plan_text' gives the frozen text's reading next to every affected result (control unmatched: specificity 'not testable', G45; 'unlearns' / 'causal' False where the accuracy half fails, else not computable because the plan-text control was not run; the C-T4 ladder and C-T7's Holm family are evaluated with these three values)",
+    "C-T4 ladder: if the span block unlearns and its isotropic control neither unlearns nor keeps 0.9 x base, the rung is 'undecided (...)'; in W4 'specific' is the retain criterion alone",
     "AT7: NW = the number of valid worlds, ninit 3, seed 1, pjit 0.03 (reference); with fewer than 2 valid worlds the noise is measured on all worlds (flagged)",
     "AT5: slopes over the BP models of r2_t1 plus the PC models of the G-PC widths (receiver means from the pairs with testable nets)",
     "G46: every retrained cell is compared per round-2 source; first95 None on both sides counts as agreement; weights are not compared; r2_rgi_toy's r1_job_name is not used (the job name is derived from the net name)",
@@ -863,7 +880,10 @@ def gate_table(inp, info, pcg, sess, files, repro, d34, c41):
     G["G40"] = dict(get(rv, "AT8", "family", "G40") or {}, name="ReLU calibration (AT4)"); G["G41"] = dict(c41 or {}, name="C-T3 circle gate")
     G["G42"] = dict((q1 or {}).get("G42") or {}, name="C-Q1 calibration"); G["G43"] = dict(get(uv, "C_Q3", "G43") or {}, name="C-Q3 pass -> C-Q4a ablation")
     G["G44"] = dict(get(uv, "C_Q4b", "gate") or {}, name="C-Q4b gate")
-    G["G45"] = dict(name="damage-matched control", not_testable=[x for x in collect_values(uv, ("specificity", "verdict_z1", "verdict_col")) if "damage-matched" in x[1]])
+    g45 = [x for x in collect_values(uv, ("specificity", "verdict_z1", "verdict_col")) if "damage-matched" in x[1] and not x[0].startswith("amendment_2")]
+    G["G45"] = dict(name="damage-matched control", not_testable=[x for x in g45 if "under_plan_text" not in x[0]],
+                    not_testable_under_plan_text=[x for x in g45 if "under_plan_text" in x[0]], amendment_2_affected=get(uv, "amendment_2", "n_affected"),
+                    note="'not_testable': with the controls as run (Amendment 2); 'not_testable_under_plan_text': results whose control is unmatched under the frozen OD-C2")
     G["G46"] = dict(name="reproduction of retrained BP nets", compared=get(repro, "compared"), differing=get(repro, "differing"), not_compared=get(repro, "not_compared"))
     G["G47"] = dict(name="versions for common random numbers", session=get(axj, "versions"), r1_gpu1=get(axj, "r1_meta_gpu1"), match_rate=get(axj, "match_rate"), manifests=mg("G47"))
     G["G48"] = dict(name="session time guard", time_guard_stops={s: v["time_guard_stops"] for s, v in packing(sess).items() if v["present"]},

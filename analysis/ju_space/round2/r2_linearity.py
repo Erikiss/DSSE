@@ -420,7 +420,7 @@ def statement(lin, nlv):
 # Driver
 # ======================================================================================================================================
 def run(r1_dir, r2_root, out_path):
-    t0 = time.time(); dev = device(); inp = RP.Inputs(r1_dir, r2_root, out_path)
+    t0 = time.time(); RP.set_threads(); dev = device(); inp = RP.Inputs(r1_dir, r2_root, out_path)
     info = RP.r1_info(r1_dir); g41 = RP.g41(inp); labels = RP.desc_labels(info, 14)
     out = dict(script="r2_linearity.py", plan=RP.PLAN_REL, plan_sha256=RP.PLAN_SHA256, part="C-Q1", block=14, device=str(dev), mock=MOCK, seeds=SEEDS,
                settings=dict(n_flip=N_FLIP, n_perm=N_PERM, n_calibration=N_CAL, top_pcs=N_TOP, ridge=f"{RIDGE} x tr(Sigma) / D", ridge_quadratic=RIDGE_Q,
@@ -560,6 +560,32 @@ def selftest(work):
           and nonlinear_verdict(False, True, True) == "no nonlinear residue found")
     check("statements combine both rungs", statement("one direction", "pattern (within the top-32 PCs)") == "one direction, with a nonlinear residue (pattern within the top-32 PCs)"
           and statement("one direction", "no nonlinear residue found") == "one direction; no nonlinear residue found" and statement(None, "no nonlinear residue found") == "no nonlinear residue found")
+    # end to end with every input: a synthetic round-1 tree (u_T = the RSI plant direction), tok14.pt with the six token sets (RSI: linear
+    # plant; RGI: XOR plant; sea: none), C-Q3's ratios and the circle gate
+    import r2_rk as R
+    R.MOCK = True
+    def full(name, g41_ok=True, GA14=True, failed=()):
+        r1f, r2f = os.path.join(work, name, "r1"), os.path.join(work, name, "r2")
+        pr, an, fo, f1, _ = _synth_tokens(kind="linear", seed=11, P=32, L=16); gp, ga, _, _, _ = _synth_tokens(kind="xor", seed=12, P=32, L=16, strength=1.5); sp, sa, _, _, _ = _synth_tokens(kind="none", seed=13, P=32, L=16)
+        RP.synth_r1(r1f, D=40, NP=16, summaries={14: dict(block=14, verdict=dict(verdict="likely", PC_PASS=True, label_attractor=False, gates=dict(failed=list(failed), source="pilot.json")))})
+        sp_ = R.find_r1(r1f, "rk/b14/state.pt", 14); ST = torch.load(sp_, map_location="cpu", weights_only=False); ST["axes"]["u_T"] = f1.float(); torch.save(ST, sp_)
+        os.makedirs(os.path.join(r2f, "r2_q1", "axes"), exist_ok=True)
+        torch.save(dict(block=14, fold=fo, sets=dict(R1_RSI_PRO=dict(tok=pr), R1_RSI_ANTI=dict(tok=an), RGI_PRO=dict(tok=gp), RGI_ANTI=dict(tok=ga), R1_SEA_PRO=dict(tok=sp), R1_SEA_ANTI=dict(tok=sa))),
+                   os.path.join(r2f, "r2_q1", "axes", "tok14.pt"))
+        RP.write_json(os.path.join(r2f, "r2_q1", "unlearn", "q3.json"), dict(status="ran", GA14=GA14, linear_rung=dict(inputs=dict(RSI_1dim=dict(ratio=0.4, g0=1.0), RSI_span=dict(ratio=0.3, g0=1.0),
+                                                                                                                         RGI_1dim=dict(ratio=0.7, g0=1.0), RGI_span=dict(ratio=0.3, g0=1.0)))))
+        RP.write_json(os.path.join(r2f, "r2_t3", "unlearn_toy", "t3.json"), dict(gate=dict(K1=dict(ring=[dict(ws=i, zero_shot=0.99) for i in range(5)], pring=[dict(ws=i, zero_shot=0.05 if g41_ok else 0.6) for i in range(5)]))))
+        return run(r1f, r2f, os.path.join(work, name, "out", "unlearn", "q1.json"))
+    of = full("full")
+    check("end to end with every input: G42 passes at u_T's d'; RSI 'one direction; no nonlinear residue found', RGI 'two-dimensional span, with a nonlinear residue', sea no residue",
+          of["G42"]["pass_"] is True and of["calibration"]["n_rep"] == 50 and of["statements"]["RSI"] == "one direction; no nonlinear residue found"
+          and of["statements"]["RGI"] == "two-dimensional span, with a nonlinear residue (pattern within the top-32 PCs)" and of["statements"]["sea"] == "no nonlinear residue found"
+          and of["concepts"]["RSI"]["labels"] == [] and of["G41"]["passes"] is True and RP.load_json(os.path.join(work, "full", "out", "unlearn", "q1.json")) is not None,
+          (of["G42"], of["statements"], round(of["calibration"]["d_T"], 2)))
+    og = full("full41", g41_ok=False, GA14=False, failed=("GO1",))
+    check("end to end with G41 failed: the pattern claim is withheld; labels G-desc (every concept) and 'RGI axis not resolved' (RGI, GA(14) false)",
+          og["statements"]["RGI"] == "two-dimensional span; pattern claim withheld (G41: circle gate failed)" and og["concepts"]["RSI"]["labels"] == [RP.LBL_GDESC]
+          and og["concepts"]["RGI"]["labels"] == [RP.LBL_GDESC, RP.LBL_RGI] and og["statements"]["RSI"] == "one direction; no nonlinear residue found", og["statements"])
     # end to end on a synthetic r2_root without round-1 files: concepts that need R1 'not run', RGI computed, calibration 'not run'
     r2 = os.path.join(work, "r2"); r1 = os.path.join(work, "r1"); os.makedirs(os.path.join(r2, "r2_q1", "axes"), exist_ok=True); os.makedirs(r1, exist_ok=True)
     pro, anti, fold, _, _ = _synth_tokens(kind="linear", seed=7)
