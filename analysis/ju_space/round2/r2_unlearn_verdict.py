@@ -183,7 +183,8 @@ def cq4a(q4a, c3, labels14):
     return dict(status="ran", verdict=v, ablation=used, passed_C_Q3_r2_ana=passed, passed_C_Q3_in_session=q4a.get("passed_C_Q3"),
                 restored_share=share, restored_share_ci90=q4a.get("restored_share_ci90"), share_defined=q4a.get("share_defined"),
                 g_cue=q4a.get("g_cue"), g_abl=q4a.get("g_abl"), g0=q4a.get("g0"), ceiling=q4a.get("ceiling"), labels=list(labels14),
-                descriptive_share=not passed, in_session=sess, agrees_in_session=agree(v, sess))
+                descriptive_share=not passed, in_session=sess, agrees_in_session=agree(v, sess),
+                own_axis={k: x for k, x in q4a.items() if "own_axis" in k} or None)                       # descriptive (critique v2-4): the own-axis gaps as the producer wrote them
 
 
 # ======================================================================================================================================
@@ -260,21 +261,53 @@ def cq4b(q4b, info, ref0, labels14):
     return out
 
 
+TRANSLATION = "translation (as predicted), not un-searched"
+
+
+def g16_reference(armA):
+    """G16's reference of arm A, read defensively. Amendment 3 (a): 'ci90' is the percentile interval of the 2,000 replicates shifted so
+    that their median coincides with the point estimate, [q05 + c - m, q95 + c - m]; the unshifted percentile interval ('ci90_percentile'),
+    the median ('boot_median') and the G16 value the unshifted interval would have given are stored next to it. Returns dict(lo (the
+    lower end G16 uses), recentred (None if the new fields are absent: an output written before the amendment), consistent (the stored
+    'ci90' equals the shifted interval), percentile, median, unshifted_in_session, unshifted_r2_ana)."""
+    ref = armA.get("reference_seed0_RSI_a") or {}; c1 = armA.get("c1"); lo = get(ref, "ci90", 0)
+    pct = next((ref[k] for k in ("ci90_percentile", "ci90_unshifted", "percentile_ci90") if isinstance(ref.get(k), (list, tuple)) and len(ref[k]) == 2), None)
+    med = next((ref[k] for k in ("boot_median", "median", "bootstrap_median") if fin(num(ref.get(k)))), None)
+    stored = next((d[k] for d in (ref, armA, armA.get("G16") if isinstance(armA.get("G16"), dict) else {}) for k in sorted(d)
+                   if isinstance(d[k], bool) and ("unshifted" in k or "percentile" in k or "plan_text" in k)), None)
+    cons = None
+    if pct is not None and med is not None and fin(num(ref.get("c"))) and isinstance(ref.get("ci90"), (list, tuple)) and len(ref["ci90"]) == 2:
+        cons = bool(all(fin(num(x)) for x in list(pct) + list(ref["ci90"])) and all(abs(num(ref["ci90"][i]) - (num(pct[i]) + num(ref["c"]) - num(med))) <= 1e-9 for i in (0, 1)))
+    return dict(lo=lo, recentred=None if pct is None else True, consistent=cons, percentile=list(pct) if pct is not None else None, median=med,
+                unshifted_in_session=stored, unshifted_r2_ana=None if pct is None else bool(lt(c1, pct[0])))
+
+
 def arm_a(armA, ref0, labels14):
     st = not_run(armA, "unlearn/armA.json")
     if st != "ran": return dict(status=st)
-    c1, lo = armA.get("c1"), get(armA, "reference_seed0_RSI_a", "ci90", 0)
+    g = g16_reference(armA); c1, lo = armA.get("c1"), g["lo"]
     cont_r2 = bool(lt(c1, lo)); cont_s = bool(armA.get("continues")); ran_rounds = int(armA.get("rounds") or len(armA.get("rows") or []))
-    out = dict(status="ran", c1=c1, reference=armA.get("reference_seed0_RSI_a"), G16=dict(r2_ana=cont_r2, in_session=cont_s, agrees=cont_r2 == cont_s),
+    out = dict(status="ran", c1=c1, reference=armA.get("reference_seed0_RSI_a"),
+               G16=dict(r2_ana=cont_r2, in_session=cont_s, agrees=cont_r2 == cont_s, interval=("percentile interval recentred on the point estimate (Amendment 3 (a))" if g["recentred"] else
+                                                                                               "as stored (no unshifted interval next to it: written before Amendment 3)"),
+                        ci90_is_recentred_percentile=g["consistent"], unshifted_percentile_interval=g["percentile"], boot_median=g["median"],
+                        unshifted_would_continue=dict(in_session=g["unshifted_in_session"], r2_ana=g["unshifted_r2_ana"])),
                rounds_ran=ran_rounds, labels=list(labels14), od_g8=[] if cont_r2 == cont_s else [f"G16: r2_ana {cont_r2}, in session {cont_s}"])
+    if g["consistent"] is False: out["od_g8"].append("G16: the stored ci90 is not the percentile interval shifted by (point - median)")
     if ran_rounds <= 1 or not cont_s:
-        out["verdict"] = "translation (as predicted), not un-searched"
+        out["verdict"] = TRANSLATION
     else:
         comp = {d: r for d, r in (get(ref0, "rows") or {}).items()} if ref0 else None
         comp = {int(k): v for k, v in comp.items()} if comp else None
         out["verdict"] = loop_rule(rows_by_d(armA.get("rows")), comp, "the R1 seed-0 comparator")
         out["comparator"] = {d: {k: comp[d].get(k) for k in ("c", "p", "A", "rel")} for d in (comp or {}) if d in (2, 3)}
     out["in_session"] = armA.get("verdict_in_session")
+    # Amendment 3 (a) is declared post hoc: the frozen text's reading (G16 with the unshifted percentile interval) next to the result
+    up = g["unshifted_r2_ana"]; continued = not (ran_rounds <= 1 or not cont_s)
+    if up is None: out["under_plan_text"] = None
+    elif up == continued: out["under_plan_text"] = dict(G16=up, verdict=out["verdict"], same_as_amended=True)
+    elif continued: out["under_plan_text"] = dict(G16=False, verdict=TRANSLATION, same_as_amended=False, note="with the unshifted percentile interval arm A stops after round 1; rounds 2-3 would not have run")
+    else: out["under_plan_text"] = dict(G16=True, verdict="not computable (with the unshifted percentile interval arm A continues, but rounds 2-3 were not generated)", same_as_amended=False)
     return out
 
 
@@ -327,7 +360,8 @@ def cq5(q5, info, r1_dir, labels14):
     out.update(status="ran", superposition=dict(holds=holds, verdict="superposition holds" if holds else "superposition does not hold", cos_disatt=cd,
                                                 cos=sp.get("cos"), cos_disatt_ci90=sp.get("cos_disatt_ci90"), coef_RSI=cr, coef_SEA=cs,
                                                 coef_RSI_ci90=sp.get("coef_RSI_ci90"), coef_SEA_ci90=sp.get("coef_SEA_ci90"), rel_mix=get(sp, "rel_mix", "rel"),
-                                                rel_sum=get(sp, "rel_sum", "rel"), coef_band=list(SUP_COEF), in_session=sess, agrees_in_session=agree(holds, sess)),
+                                                rel_sum=get(sp, "rel_sum", "rel"), coef_band=list(SUP_COEF), in_session=sess, agrees_in_session=agree(holds, sess),
+                                                descriptive={k: x for k, x in sp.items() if "median" in k or k in ("cos_ci90",)} or None),
                dose=dict(q5.get("dose") or {}, linear_prediction=dict(norm_ratio=2.0, cos_debiased=1.0), note="descriptive"))
     return out
 
@@ -837,7 +871,7 @@ def run(r1_dir, r2_root, out_path):
             if isinstance(out[k], dict): out[k].setdefault("labels", []).append(RP.LBL_GMETA + " (meta-level statements: B2)")
     out["od_g8"] = [x for k in ("C_Q2", "C_Q3", "C_Q4b", "C_Q4_armA", "C_Q6") for x in (get(out, k, "od_g8") or [])]
     if get(out, "C_Q4a", "agrees_in_session") is False: out["od_g8"].append(f"C-Q4a: r2_ana {out['C_Q4a']['verdict']!r}, in session {out['C_Q4a']['in_session']!r}")
-    out["amendment_2"] = amendment_2(out)
+    out["amendment_2"] = amendment_2(out); out["amendment_3"] = amendment_3(out)
     out["summary"] = summary(out)
     out.update(pc_gates=dict(G_meta=pcg.get("G_meta"), G_meta_source=pcg.get("G_meta_source"), G_PC=pcg.get("G_PC"), labels=pcg.get("labels")),
                inputs=inp.record([f"unlearn/{s}.json" for s in J] + [f"unlearn_toy/{s}.json" for s in T] + ["pc_toy/t7.json"]),
@@ -877,6 +911,22 @@ def amendment_2(o):
     return dict(amendment="Amendment 2 (OD-C2: partial removal at the found dimension d*, one shared lambda), declared post hoc", n_affected=len(aff), affected=aff,
                 reading="verdicts use the controls the producers ran (the amended procedure); 'under_plan_text' gives the frozen text's reading: the control is unmatched there, "
                         "specificity 'not testable' (G45), and 'unlearns' / 'causal' cannot be evaluated against a control that was not run")
+
+
+def amendment_3(o):
+    """Amendment 3 (a) (G16's reference interval recentred on the point estimate; declared post hoc with respect to round 1): arm A under
+    the amendment (as run) and under the frozen text (the unshifted percentile interval)."""
+    a = o.get("C_Q4_armA") or {}; g = a.get("G16") or {}; up = a.get("under_plan_text")
+    aff = []
+    if up is not None and not up.get("same_as_amended"):
+        aff.append(dict(where="C-Q4 arm A (G16)", under_amendment=dict(G16=g.get("in_session"), verdict=a.get("verdict")), under_plan_text=up))
+    return dict(amendment="Amendment 3 (a) (G16: the percentile interval shifted so that the bootstrap median coincides with the point estimate), declared post hoc with respect to round 1",
+                status=a.get("status"), G16_under_amendment=g.get("in_session"), G16_under_plan_text=get(g, "unshifted_would_continue", "r2_ana"),
+                G16_under_plan_text_in_session=get(g, "unshifted_would_continue", "in_session"), same_under_both=None if up is None else bool(up.get("same_as_amended")),
+                n_affected=len(aff), affected=aff,
+                reading="the in-session G16 (amended interval) governs what was generated; 'under_plan_text' is G16 with the unshifted percentile interval: where it would have "
+                        "stopped arm A after round 1 the frozen text's verdict is 'translation (as predicted), not un-searched'; where it would have continued but the session "
+                        "stopped, rounds 2-3 do not exist. Parts (b) and (c) of the amendment are clarifications of the theta rules (r2_theta_verdict.py)")
 
 
 def summary(o):

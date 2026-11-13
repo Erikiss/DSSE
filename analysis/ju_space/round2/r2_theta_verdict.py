@@ -27,6 +27,8 @@ TC_RANGE, TC_RANGE_EXT = (0.2, 1.1), (0.1, 1.4)       # R2: 'T_c located' window
 DMG_LIMIT = 0.15                                      # R1: a crossing above 0.15 nats is 'damage-limited'
 ALIGN_P, ALIGN_COS, PWR_COS, GENERIC_COS = 0.01, 0.25, 0.7, 0.5
 G23_LO = 0.8
+NONFINITE_MAX = 0.05                                  # a rule bound is undefined when the point value is not finite or more than 5 % of the
+                                                      # bootstrap replicates are not finite (Amendment 3 (b): R6's '>= 95 %' convention)
 CELL_A0 = TH.cell_name(1, 0.7)
 POWER_REPS = int(os.environ.get("R2_THETA_POWER_REPS", "400"))
 LIMIT_T = "for weak T-dependence (slope about 0.5) nothing locates T_c at this budget"
@@ -37,7 +39,23 @@ G1_NOTE = "G = 1 is the threshold of the constructed self-steering map under its
 def S(x): return TH.summ(x)
 
 
-def lohi(x): s = TH.summ(x); return s["lo"], s["hi"]
+def nf_share(x):
+    """Share of the bootstrap rows 1.. of a replicate array that are not finite (NaN, or +-inf of a censored quantity); NaN without rows."""
+    v = TH._np(x).reshape(-1)[1:]; return float((~np.isfinite(v)).mean()) if len(v) else float("nan")
+
+
+def bounds_ok(x):
+    """A rule may use the bounds of x: finite point value (row 0) and at most 5 % non-finite bootstrap rows (Amendment 3 (b))."""
+    v = TH._np(x).reshape(-1); return bool(len(v) > 1 and np.isfinite(v[0]) and (~np.isfinite(v[1:])).mean() <= NONFINITE_MAX)
+
+
+def lohi(x):
+    """The bounds a rule compares: the 90 % interval over the bootstrap rows, or (NaN, NaN) when the point value is not finite or more
+    than 5 % of the bootstrap rows are not finite (a gain is undefined where its attenuation replicate is 0: 'mode not resolved' blocks,
+    the norm gain in the switch case). Every bound comparison is then False: the rule is undecided, a reserve condition is not met.
+    The reported intervals (S) stay the percentiles of the finite rows, with n_finite; every rule output carries the non-finite share."""
+    if not bounds_ok(x): return float("nan"), float("nan")
+    s = TH.summ(x); return s["lo"], s["hi"]
 
 
 def fin(x): return TH.fin(x)
@@ -103,7 +121,8 @@ def rule_R1(a, reps, half=None, curve=None, window_reps=None, band=None):
     else: v = "UNDECIDED"
     G = np.stack([_np(r) for r in reps], 1); dn, up = crossings(a, G)
     out = dict(verdict=v, a=a.tolist(), points=[S(r) for r in reps], alpha_star=censored(dn, a.min(), a.max()),
-               alpha_up=censored(up, a.min(), a.max()), labels=[], resolvable_band=band)
+               alpha_up=censored(up, a.min(), a.max()), labels=[], resolvable_band=band, nonfinite_share=[nf_share(r) for r in reps],
+               bounds_undefined=[not bounds_ok(r) for r in reps])
     if curve:
         ast = out["alpha_star"]; out["D_star"] = dict(pt=damage_at(ast["pt"], curve), lo=damage_at(ast["lo"], curve), hi=damage_at(ast["hi"], curve),
                                                       censoring="0 = below the damage grid, inf = above (no extrapolation, OD-B9)")
@@ -119,7 +138,8 @@ def rule_R1(a, reps, half=None, curve=None, window_reps=None, band=None):
     i1 = next((i for i in range(C) if abs(a[i] - 1) < 1e-9), None)
     if half is not None and i1 is not None:
         d = _np(reps[half]) - _np(reps[i1]); l, h = lohi(d)
-        out["onset"] = dict(verdict="soft" if l > 0 else ("hard" if h < 0 else "onset undecided"), diff=S(d), rule="paired g(0.5 alpha_0) - g(alpha_0)")
+        out["onset"] = dict(verdict="soft" if l > 0 else ("hard" if h < 0 else "onset undecided"), diff=S(d), rule="paired g(0.5 alpha_0) - g(alpha_0)",
+                            nonfinite_share=nf_share(d), bounds_undefined=not bounds_ok(d))
     else: out["onset"] = dict(verdict="onset undecided", note="no 0.5 alpha_0 cell at this block")
     return out
 
@@ -146,19 +166,28 @@ def rule_R2(T, reps, extended=False, T0=0.7):
     out = dict(T=T.tolist(), points=[S(r) for r in reps], extended=bool(extended), limit=LIMIT_T)
     if C < 2: out["verdict"] = "not decidable (fewer than two temperatures)"; return out
     Y = np.log(np.clip(np.stack([_np(r) for r in reps], 1), 1e-6, None)); Y[~np.isfinite(np.stack([_np(r) for r in reps], 1))] = np.nan
-    B, Sg = wls(T, Y, 1, T0); rows = np.isfinite(B[1:]).all(1); Bb = B[1:][rows]
+    B, Sg = wls(T, Y, 1, T0); rows = np.isfinite(B[1:]).all(1); Bb = B[1:][rows]; rng = TC_RANGE_EXT if extended else TC_RANGE
+    nfs = float((~rows).mean()) if len(rows) else float("nan"); pt_ok = bool(np.isfinite(B[0]).all()); und = (not pt_ok) or not (nfs <= NONFINITE_MAX)
+    und_v = "undecided (gain undefined " + ("" if pt_ok else "at the point estimate and ") + f"in {100 * nfs:.1f} % of the replicates)"
+    out.update(slope=S(B[:, 1]), intercept_T07=S(B[:, 0]), n_fits=int(rows.sum()), nonfinite_share=nfs, bounds_undefined=bool(und))
+    if not rows.any():                                         # no finite replicate fit at all: nothing to take percentiles of
+        out.update(T_c_point=float("nan"), verdict=und_v, T_c=dict(pt=float("nan"), lo=float("nan"), hi=float("nan"), share_crossing=float("nan"),
+                                                                   window=list(rng), direction=None))
+        return out
     grid = np.linspace(T.min(), T.max(), 15); band = Bb[:, :1] + Bb[:, 1:2] * (grid[None] - T0)
     blo, bhi = np.percentile(band, 5, 0), np.percentile(band, 95, 0)
-    out.update(slope=S(B[:, 1]), intercept_T07=S(B[:, 0]), n_fits=int(rows.sum()), band_lo=np.exp(blo).tolist(), band_hi=np.exp(bhi).tolist(), grid=grid.tolist())
+    out.update(band_lo=np.exp(blo).tolist(), band_hi=np.exp(bhi).tolist(), grid=grid.tolist())
     s0 = B[0, 1]; out["T_c_point"] = float(T0 - B[0, 0] / s0) if fin(s0) and s0 != 0 else float("nan")
     cross = (np.sign(Bb[:, 1]) == np.sign(s0)) & (Bb[:, 1] != 0); share = float(cross.mean()) if len(Bb) else float("nan")
-    tc = T0 - Bb[cross, 0] / Bb[cross, 1]; rng = TC_RANGE_EXT if extended else TC_RANGE
+    tc = T0 - Bb[cross, 0] / Bb[cross, 1]
     out["T_c"] = dict(pt=out["T_c_point"], lo=float(np.percentile(tc, 5)) if len(tc) else float("nan"), hi=float(np.percentile(tc, 95)) if len(tc) else float("nan"),
                       share_crossing=share, window=list(rng), direction="downward" if s0 < 0 else "upward")
     if (blo > 0).all(): v = "above 1 throughout"; out["margin"] = dict(min_lower_band=float(np.exp(blo.min())))
     elif (bhi < 0).all(): v = "below 1 throughout"; out["margin"] = dict(max_upper_band=float(np.exp(bhi.max())))
     elif share >= 0.95 and out["T_c"]["lo"] >= rng[0] and out["T_c"]["hi"] <= rng[1]: v = "T_c located"
     else: v = "undecided"
+    if und:                                                    # Amendment 3 (b): the fit, slope and T_c stay reported, the rule is undecided
+        v = und_v; out.pop("margin", None)
     out["verdict"] = v
     if C >= 4:
         B2, _ = wls(T, Y, 2, T0); out["curvature"] = S(B2[:, 2]) if B2 is not None else None
@@ -176,9 +205,12 @@ def rule_R3(entries, what):
     d = _np(rh) - _np(rl); l, h = lohi(d); (lol, hil), (loh, hih) = lohi(rl), lohi(rh); mp = float(_np(mid[2])[0]) if mid else None
     falls = h < 0 and (mid is None or (fin(mp) and mp <= hil)); rises = l > 0 and (mid is None or (fin(mp) and mp <= hih))
     v = f"{what} falls with delta" if falls else (f"{what} rises with delta" if rises else "no monotone relation")
+    if not (bounds_ok(d) and bounds_ok(rl) and bounds_ok(rh)): v += " (undecided: a bound is undefined, more than 5 % of the replicates not finite)"
     if mid is None: v += " (two blocks entered; middle clause not applicable)"
     out.update(verdict=v, low=dict(block=bl, **S(rl)), high=dict(block=bh, **S(rh)), middle=None if mid is None else dict(block=mid[0], **S(mid[2])),
-               paired_difference=S(d), non_overlap=bool(hil < loh or hih < lol))
+               paired_difference=S(d), non_overlap=bool(hil < loh or hih < lol),
+               nonfinite_share=dict(low=nf_share(rl), high=nf_share(rh), paired_difference=nf_share(d), middle=None if mid is None else nf_share(mid[2])),
+               bounds_undefined=not (bounds_ok(d) and bounds_ok(rl) and bounds_ok(rh)))
     return out
 
 
@@ -188,7 +220,8 @@ def rule_R5(rel4_rsi_a, gamma):
     l, h = lohi(gamma); persists = fin(rel4_rsi_a) and rel4_rsi_a >= 0.5
     v = "direction persists but the loop does not sustain itself" if (persists and h < 1) else None
     return dict(verdict=v, rel_d4_RSI_a=rel4_rsi_a, persistence="rel >= 0.5 (L / nu >= sqrt(2), N-dependent)" if persists else "rel < 0.5",
-                Gamma=S(gamma), self_sustainment="lower bound > 1" if l > 1 else ("upper bound < 1" if h < 1 else "undecided"))
+                Gamma=S(gamma), self_sustainment="lower bound > 1" if l > 1 else ("upper bound < 1" if h < 1 else "undecided"),
+                nonfinite_share=nf_share(gamma), bounds_undefined=not bounds_ok(gamma))
 
 
 def rule_R6(K, d1, G):
@@ -196,7 +229,9 @@ def rule_R6(K, d1, G):
     bound > 1, 'dissipative at T' if its upper bound < 1, otherwise undecided. Transfer test: log K - log G (G = the cell's decision gain)
     only if K > 0 and G > 0 in the point estimate and in >= 95 % of the replicates (interval over the replicates with both positive);
     'transfers' if the interval lies inside (-log 1.25, +log 1.25), 'different criteria' if it excludes 0, otherwise 'undecided'."""
-    K, d1, G = _np(K), _np(d1), _np(G); l1, h1 = lohi(d1); out = dict(K=S(K), u_read_d1=S(d1), G=S(G))
+    K, d1, G = _np(K), _np(d1), _np(G); l1, h1 = lohi(d1)
+    out = dict(K=S(K), u_read_d1=S(d1), G=S(G), nonfinite_share=dict(u_read_d1=nf_share(d1), K=nf_share(K), G=nf_share(G)),
+               bounds_undefined=not (bounds_ok(d1) and bounds_ok(K)))
     if not (l1 > 0 or h1 < 0):
         out.update(defined=False, verdict="K not defined (turn-1 stance not resolved)", transfer=None); return out
     kl, kh = lohi(K); out.update(defined=True, verdict="self-sustaining at T" if kl > 1 else ("dissipative at T" if kh < 1 else "undecided"))
@@ -244,13 +279,14 @@ def alignment(U, m, axes, k5=None, ga=None):
     if axes.get("u_S_perp", (None,))[0] is not None and axes.get("u_RGI_perp", (None,))[0] is not None:
         uS = R.unit(torch.as_tensor(axes["u_S_perp"][0]).double()); uG = R.unit(torch.as_tensor(axes["u_RGI_perp"][0]).double())
         uSo, uGo = R.unit(uS - (uS @ uG) * uG), R.unit(uG - (uG @ uS) * uS); sp = sT * (U @ uSo - U @ uGo)
-        out["specificity"] = dict(diff=S(sp), rule="s (cos(u_crit, u_S perp to u_RGI) - cos(u_crit, u_RGI perp to u_S)), s = sign of the RSI cosine")
+        out["specificity"] = dict(diff=S(sp), rule="s (cos(u_crit, u_S perp to u_RGI) - cos(u_crit, u_RGI perp to u_S)), s = sign of the RSI cosine",
+                                  nonfinite_share=nf_share(sp), lower_bound=lohi(sp)[0])
     if k5:
         out["z_beh"] = {k: float(torch.as_tensor(v["wU_perp"]).double() @ U[0]) / float(v["sigma"]) for k, v in k5.items()}
     rT, rS, rG = res.get("u_T_perp"), res.get("u_S_perp"), res.get("u_RGI_perp")
     rsi = bool(rT and rT["p"] <= ALIGN_P and abs(rT["corrected"]["pt"]) >= ALIGN_COS and rS is not None and np.sign(rS["cos"]["pt"]) == np.sign(rT["cos"]["pt"]))
     gi = bool(rG and rG["p"] <= ALIGN_P and abs(rG["corrected"]["pt"]) >= ALIGN_COS)
-    spec = bool(rsi and "specificity" in out and out["specificity"]["diff"]["lo"] > 0)
+    spec = bool(rsi and "specificity" in out and out["specificity"]["lower_bound"] > 0)
     out.update(RSI_aligned=rsi, GI_aligned=gi if rG else None, RSI_specific=spec if "specificity" in out else None, _reps=reps_)
     if rG is None: out["labels"].append("GI alignment not available (O2 axes missing)")
     elif ga is False: out["labels"].append("RGI axis not resolved")
@@ -358,17 +394,22 @@ def reserves(cores):
     if c14 and "CT" in c14:
         CT = c14["CT"]; dec = lambda n: CT[n]["all"]["dec"] if n in CT else None
         l2 = lohi(dec(TH.cell_name(2, 0.7)))[0] if dec(TH.cell_name(2, 0.7)) is not None else float("nan")
-        out["reserve1_a4_T0.7"] = dict(enters=bool(l2 > 1), condition="G(2 alpha_0) lower bound > 1", value=l2, present=TH.cell_name(4, 0.7) in CT)
+        sh = lambda n: nf_share(dec(n)) if dec(n) is not None else float("nan")
+        out["reserve1_a4_T0.7"] = dict(enters=bool(l2 > 1), condition="G(2 alpha_0) lower bound > 1", value=l2, present=TH.cell_name(4, 0.7) in CT,
+                                       nonfinite_share=sh(TH.cell_name(2, 0.7)))
         l10 = lohi(dec(TH.cell_name(1, 1.0)))[0] if dec(TH.cell_name(1, 1.0)) is not None else float("nan")
         h03 = lohi(dec(TH.cell_name(1, 0.3)))[1] if dec(TH.cell_name(1, 0.3)) is not None else float("nan")
-        out["reserve2_T1.3"] = dict(enters=bool(l10 > 1), condition="G(1.0) lower bound > 1", value=l10, present=TH.cell_name(1, 1.3) in CT)
-        out["reserve2_T0.15"] = dict(enters=bool(h03 < 1), condition="G(0.3) upper bound < 1", value=h03, present=TH.cell_name(1, 0.15) in CT)
+        out["reserve2_T1.3"] = dict(enters=bool(l10 > 1), condition="G(1.0) lower bound > 1", value=l10, present=TH.cell_name(1, 1.3) in CT,
+                                    nonfinite_share=sh(TH.cell_name(1, 1.0)))
+        out["reserve2_T0.15"] = dict(enters=bool(h03 < 1), condition="G(0.3) upper bound < 1", value=h03, present=TH.cell_name(1, 0.15) in CT,
+                                     nonfinite_share=sh(TH.cell_name(1, 0.3)))
     ext = {b: c for b, c in cores.items() if b != 14 and "CT" in c and CELL_A0 in c["CT"]}
     if ext:
         pts = {b: float(c["CT"][CELL_A0]["all"]["dec"][0]) for b, c in ext.items()}; best = max(pts, key=lambda b: (pts[b] if fin(pts[b]) else -np.inf, -b))
         lo = lohi(ext[best]["CT"][CELL_A0]["all"]["dec"])[0]
         out["reserve3_a2_T0.7"] = dict(block=best, point_estimates={str(k): v for k, v in pts.items()}, lower_bound=lo, enters={str(b): bool(b == best and lo > G23_LO) for b in ext},
-                                       condition="only the extra block with the higher G(alpha_0) point estimate, and only if its lower bound > 0.8")
+                                       condition="only the extra block with the higher G(alpha_0) point estimate, and only if its lower bound > 0.8",
+                                       nonfinite_share=nf_share(ext[best]["CT"][CELL_A0]["all"]["dec"]))
     out["reserve5_turn2_a2_T0.7"] = dict(enters=True, condition="always run; enters R6 like any carry cell (G25)")
     return out
 
@@ -456,6 +497,7 @@ def r4_block(core, b, F, AXB, labels):
         iv = {L: lohi(g) for L, g in gam.items()}; best = max(gam, key=lambda L: float(gam[L][0]) if fin(float(gam[L][0])) else -np.inf)
         first = all(iv[best][0] > iv[L][1] for L in gam if L != best)
         out["i"] = dict(applies=True, converged=conv, Gamma={L: S(g) for L, g in gam.items()}, verdict=f"'{best}' first" if first else "degenerate",
+                        nonfinite_share={L: nf_share(g) for L, g in gam.items()},
                         alignment={L: alignment(P[(L, 3)].mean(), math.sqrt(rel4[L]), axes, core.get("k5"), ga) for L in ["RSI_a"] + conv})
         if first and best != "RSI_a":
             out["u_crit"] = f"unit(d_4^{best}) (R4 (i))"; out["default"] = out["i"]["alignment"][best]
@@ -483,12 +525,29 @@ def r4_block(core, b, F, AXB, labels):
     elif d["GI_aligned"]: v = "GI-aligned"
     elif generic: v = "generic attractor"
     else: v = "unaligned"
-    if d["RSI_specific"]: v += " (RSI-specific)"
+    deg = out["u_crit"].startswith("degenerate")              # R4 (i): no single critical mode (Amendment 3 (c))
+    if d["RSI_specific"] and not deg: v += " (RSI-specific)"
     out.update(verdict=v, random_start_debiased_cos=deb, labels=out["labels"] + d["labels"])
-    core["align_reps"] = d.get("_reps", {})
+    core["align_reps"] = {} if deg else d.get("_reps", {})
     for x in [out["default"], out.get("ii", {}).get("alignment")] + list(out.get("i", {}).get("alignment", {}).values()):
         if isinstance(x, dict): x.pop("_reps", None)
     return out
+
+
+def alignment_entries(E, blocks, cores, dl):
+    """Entries of R3's alignment form (R4: 'alignment per block against delta in the R3 form'): every entering block with an R4 verdict,
+    with the sign-aligned corrected cosine of its critical mode with u_T_perp (and with u_RGI_perp). A block whose R4 (i) is 'degenerate'
+    has no single critical mode: it does not enter and is listed as 'not entering (degenerate)' (Amendment 3 (c)).
+    Returns (RSI entries, GI entries, {block: 'not entering (degenerate)'})."""
+    al, ag, deg = [], [], {}
+    for b in E:
+        r4 = blocks[str(b)].get("R4", {}); v = r4.get("verdict")
+        if v is None: continue
+        if str(v).startswith("degenerate"): deg[str(b)] = "not entering (degenerate)"; continue
+        rp = cores[b].get("align_reps", {})
+        if rp.get("u_T_perp") is not None: c = rp["u_T_perp"]; al.append((b, dl[b], torch.sign(c[0]) * c))
+        if rp.get("u_RGI_perp") is not None: c = rp["u_RGI_perp"]; ag.append((b, dl[b], torch.sign(c[0]) * c))
+    return al, ag, deg
 
 
 def turn2_block(core, T2, W, labels):
@@ -501,7 +560,7 @@ def turn2_block(core, T2, W, labels):
         r6 = rule_R6(K, d1, core["CT"][t["cell"]]["all"]["dec"])
         out["cells"][name] = dict(a=t["a"], T=t["T"], reserve=t.get("reserve"), n_pairs=len(t["keys"]), n_ok2=int(torch.as_tensor(t["ok2"]).sum()),
                                   n_turn1_not_round_trip=t.get("n_turn1_not_round_trip"), R6=r6, norm_ratio=S(nr), K_u_T_perp=S(KT), _K=K)
-    a1 = [n for n, x in out["cells"].items() if abs(x["a"] - 1) < 1e-9 and x["R6"]["defined"] and x["R6"]["K"]["lo"] > 0]
+    a1 = [n for n, x in out["cells"].items() if abs(x["a"] - 1) < 1e-9 and x["R6"]["defined"] and lohi(x["_K"])[0] > 0]
     if len(a1) >= 2:
         r = rule_R2([out["cells"][n]["T"] for n in a1], [out["cells"][n]["_K"] for n in a1]); out["T_slope_logK"] = dict(cells=a1, slope=r["slope"], fit_verdict=r["verdict"], T_c=r["T_c"])
     else: out["T_slope_logK"] = dict(cells=a1, verdict="not computed (fewer than two alpha_0 cells with K's interval above 0)")
@@ -656,13 +715,9 @@ def analyse(r1_dir, r2_root, power_reps=POWER_REPS):
             a, reps_, _, _ = r1_series(cores[b], b, RS); dn, _ = crossings(a, np.stack([_np(r) for r in reps_], 1))
             Ds.append((b, dl[b], np.array([damage_at(x, cores[b]["curve"]) if not np.isnan(x) else np.nan for x in dn])))
     R3["D_star"] = rule_R3(Ds, "D*") if len(Ds) >= 2 else dict(verdict="not decidable (D* located at fewer than two blocks)", blocks=[x[0] for x in Ds])
-    al, ag = [], []
-    for b in E:
-        r4 = blocks[str(b)].get("R4", {}); rp = cores[b].get("align_reps", {})
-        if r4.get("verdict") is not None and rp.get("u_T_perp") is not None: c = rp["u_T_perp"]; al.append((b, dl[b], torch.sign(c[0]) * c))
-        if r4.get("verdict") is not None and rp.get("u_RGI_perp") is not None: c = rp["u_RGI_perp"]; ag.append((b, dl[b], torch.sign(c[0]) * c))
-    R3["alignment_RSI"] = rule_R3(al, "RSI alignment (sign-aligned corrected cos with u_T_perp)")
-    R3["alignment_GI"] = rule_R3(ag, "GI alignment (sign-aligned corrected cos with u_RGI_perp)")
+    al, ag, deg = alignment_entries(E, blocks, cores, dl)
+    R3["alignment_RSI"] = dict(rule_R3(al, "RSI alignment (sign-aligned corrected cos with u_T_perp)"), not_entering=dict(deg))
+    R3["alignment_GI"] = dict(rule_R3(ag, "GI alignment (sign-aligned corrected cos with u_RGI_perp)"), not_entering=dict(deg))
     out["R3"] = R3; out["blocks"] = blocks
     for b in B3:
         r = blocks[str(b)]; r["sentence"] = sentence(b, r.get("R1"), r.get("R2"), r.get("R4"), r.get("R6"), R3, order["order"]) if r.get("R2") else f"Block {b}: {r.get('status')}"
