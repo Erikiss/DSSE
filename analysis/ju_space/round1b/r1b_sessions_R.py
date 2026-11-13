@@ -144,10 +144,12 @@ def mock_inputs(runs_A, runs_B, root):
         tv["blocks"][str(b)]["B_Q0"]["image_cos_d1_u_star"] = {L: float(dirs[L][1] @ u / dirs[L][1].norm()) for L in dirs}
     os.makedirs(os.path.join(runs_A, "r2_ana"), exist_ok=True)
     json.dump(tv, open(os.path.join(runs_A, "r2_ana", "theta_verdict.json"), "w"))
-    blk = {str(l): {"C0": l >= 4, "C0_parts": {"P_cell_lo>0|IMP-DES": l >= 4, "q>=0.2|IMP-DES": True, "P_cell_lo>0|CHG-DES": l >= 2,
-                                                  "q>=0.2|CHG-DES": True}, "uncomposed": l < 6} for l in range(28)}
-    pooled = {str(l): {k: {"point": 0.7 + 0.01 * (l % 5), "lo": 0.6, "hi": 0.8, "n_nan_draws": 0}
-                       for k in ("FG|CHG-DES", "FG|WOR-DES", "P_cell|IMP-DES", "P_cell|CHG-DES", "q|IMP-DES", "q|CHG-DES")} for l in range(28)}
+    NL = 28; parts = {"P_cell_lo>0|IMP-DES": [l >= 4 for l in range(NL)], "q>=0.2|IMP-DES": [True] * NL,
+                      "P_cell_lo>0|CHG-DES": [l >= 2 for l in range(NL)], "q>=0.2|CHG-DES": [True] * NL}
+    fg = [0.7 + 0.01 * (l % 5) if l >= 12 else 0.85 for l in range(NL)]
+    pooled = {k: dict(point=fg, lo=[x - 0.05 for x in fg], hi=[x + 0.05 for x in fg], n_nan_draws=[0] * NL)
+              for k in ("FG|CHG-DES", "FG|WOR-DES", "P_cell|IMP-DES", "P_cell|CHG-DES", "q|IMP-DES", "q|CHG-DES")}
+    gate = dict(C0=[l >= 4 for l in range(NL)], C0_parts=parts, uncomposed=[x > 0.8 for x in fg], passing=[], P=[], n_P=0, runs=[])
     gp = os.path.join(runs_A, "r2_q3", "rgi"); os.makedirs(gp, exist_ok=True)
-    json.dump(dict(mock=True, gate=dict(blocks=blk, passing=[], P=[], n_P=0, runs=[]), per_block=dict(pooled=pooled)),
+    json.dump(dict(mock=True, gate=gate, per_block=dict(pooled=pooled), blocks=list(range(NL))),
               open(os.path.join(gp, "geom_stats_qwen3-0.6b.json"), "w"))

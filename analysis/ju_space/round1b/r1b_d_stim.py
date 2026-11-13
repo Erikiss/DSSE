@@ -586,7 +586,7 @@ def streams(ctx, tk):
     else:
         if c.mock:
             rng = np.random.default_rng(GEN_SEED + 9)
-            pas = [" ".join(rng.choice(MOCK_SENT, size=6)) for _ in range(4000)]
+            pas = [" ".join(rng.choice(MOCK_SENT, size=20)) for _ in range(1500)]
             d1, _ = load_pkg(ctx, "d1_stimuli.json", tk.tok)
             S = build_streams(tk, iter(pas), banned_words(tk, d1), n=c.n_streams, min_tok=c.stream_min, margin=50)
             S["source"] = "MOCK synthetic sentences"

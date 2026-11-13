@@ -52,6 +52,17 @@ def bank(ctx):
     return _BANK[d]
 
 
+def jl(ctx, model):
+    """SO-JLENS through ctx.jlens(); MOCK: maps of the mock model's size when the file's maps do not fit (code tests only)."""
+    J = ctx.jlens()
+    D = model.config.get_text_config().hidden_size if hasattr(model.config, "get_text_config") else model.config.hidden_size
+    if J["maps"].shape[-1] != D:
+        if not ctx.mock:
+            raise RuntimeError(f"J-lens maps {tuple(J['maps'].shape)} do not fit the model (hidden {D})")
+        J = RC.load_jlens(None, mock=True, D=D, n=max(len(RC.layers_of(model)) - 1, 1)); ctx.jlens_sha256 = J["sha256"]
+    return J
+
+
 def ref_k16(ctx):
     p = os.path.join(RC.REPO, RC.C.PLAN_DIR, "ref_k16.json")
     if not os.path.exists(p):

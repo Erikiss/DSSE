@@ -54,14 +54,20 @@ class LCE:
 
     @staticmethod
     def crop(cache, n):
-        cache.crop(int(n))
+        """Crop every layer to n tokens (transformers 5.x: crop(-k) removes k tokens)."""
+        for layer in cache.layers:
+            k = layer.get_seq_length() - int(n)
+            if k > 0:
+                layer.crop(-k)
         return cache
 
     @staticmethod
     def crop_layers(cache, n, upto):
         """Per-layer crop of layers 0..upto (after a forward stopped after block upto, the later layers did not grow)."""
         for l in range(int(upto) + 1):
-            cache.layers[l].crop(int(n))
+            k = cache.layers[l].get_seq_length() - int(n)
+            if k > 0:
+                cache.layers[l].crop(-k)
         return cache
 
     @staticmethod
