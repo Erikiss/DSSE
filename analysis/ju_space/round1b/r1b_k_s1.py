@@ -262,6 +262,7 @@ def k2_diag(ctx):
         for k in (r.abs() >= 0.7).nonzero().flatten().tolist():
             hp[(k // npl, k % npl)] = max(hp.get((k // npl, k % npl), 0.0), float(r[k].abs()))
     Hplus = Hs + [list(n) for n in sorted(hp, key=lambda n: (-freq.get(n, 0.0), -hp[n]))]
+    Hplus = Hplus[:12] if ctx.mock else Hplus                # MOCK: bounded size for the CPU code test
     w2 = HN.l2_full(X, y); top = torch.topk(w2, max(len(Hs), 1)).indices.tolist()
     dg3 = len({tuple(x) for x in Hs} & {(k // npl, k % npl) for k in top}) / max(len(Hs), 1)
     save(ctx, "k/k2/h_tq.pt", dict(H=Hs, F=F, C_star=C, theta=w.cpu().to_sparse(), b=float(b), boot=boots, jaccard=jac,

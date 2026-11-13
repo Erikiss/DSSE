@@ -130,6 +130,8 @@ def row_stats(blk, ev, X, axc, boot=True):
         AS = blk.axset(us); axc[key] = (AS.get(t.ones(1, blk.NP, dtype=t.float64), [nm])[nm], AS.get(blk.W, [nm])[nm] if boot else None)
         Q = None if nm.endswith("raw") else _basis(AS, nm)
         axc[key + ("null",)] = S.centred_nulls(blk.diff[top], blk.keep[top], R.NULL_SEED[top] - 300, Q)        # round-1 seeds 11-14
+    if boot and axc[key][1] is None:
+        axc[key] = (axc[key][0], blk.axset(us).get(blk.W, [nm])[nm])
     a1, aW = axc[key]; row = S.Row(ev["delta"], ev["ok"], ev["prompt_of"], blk.NP)
     rd = S.readout(row, a1, blk.fold, blk.H); out = dict(c_cf=rd["c_cf"], c=rd["c"], A=rd["A"], rel=rd["rel"], kappa=rd["kappa"])
     stored = {"u_T_perp": "u_T_perp", "sea": "sea", "sports": "sports", "tone": "tone"}.get(X)

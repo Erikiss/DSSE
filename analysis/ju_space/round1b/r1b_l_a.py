@@ -129,8 +129,9 @@ def selector(X, y, C, exclude=None):
     """SO-HN selector (K's r1b_hn.select if importable; else L1 logistic by FISTA at C*, positive weights)."""
     try:
         import r1b_hn
-        return r1b_hn.select(X, y, C, exclude), "K selector"
-    except Exception:
+        w = r1b_hn.select(X, y.float(), C, exclude)
+        return (w[0] if isinstance(w, tuple) else w), "K selector (r1b_hn.select)"
+    except ImportError:
         return S.l1_select(X, y, C, exclude), "L FISTA fallback selector"
 
 

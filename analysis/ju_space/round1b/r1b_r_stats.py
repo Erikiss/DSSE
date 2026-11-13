@@ -309,3 +309,23 @@ def full_ritz(Xc, Sc, wt, cbar, v0, k=20):
     t = T(); f = lambda v: Xc.T @ (wt * (Sc @ v)) / cbar; g = lambda v: Sc.T @ (wt * (Xc @ v)) / cbar
     ev, Y = arnoldi(f, v0, k); i = int(t.argmax(ev.real)); el, Z = arnoldi(g, v0, k); j = int(t.argmin((el - ev[i]).abs()))
     return complex(ev[i]), Y[:, i], Z[:, j]
+
+
+def axes_for(ax1b, names, W, dev="cpu", extra=None):
+    """AX-1b of a block (r1b_R_S2 file) as an AxisSet: full-sample axes and the joint-bootstrap replicates W for the names."""
+    t = T(); AS = AxisSet(ax1b["diff"], ax1b["keep"], ax1b["fold"], ax1b["u_star"], ax1b["u_neg"], ax1b["block"], dev, extra)
+    P = len(ax1b["fold"]); return AS, AS.get(t.ones(1, P, dtype=t.float64), names), (AS.get(W, names) if W is not None else None)
+
+
+def stat_row(row, a1, aW, fold, H, W, two_sided=False, boot_t=False, keep_draws=False):
+    """STAT-1b of one evaluation on one axis: A_n (cross-fitted, disattenuated) with its 90 % joint-bootstrap interval, c^cf, in-sample c,
+    rel, kappa, K1-s p_s (sign-flip or bootstrap-t (RG6); one-sided toward the pro pole, two-sided on request) with Wilcoxon and t."""
+    out = readout(row, a1, fold, H)
+    k = k1s(bvals(row, a1, fold), two_sided=two_sided, boot_t=boot_t); out.update(p_s=k["p_s"], p_wilcoxon=k["p_wilcoxon"], p_t=k["p_t"], stat=k["stat"],
+                                                                              share_pos=k.get("share_pos"))
+    if aW is not None:
+        rb = readout(row, aW, fold, H, W=W); A = rb["A"].cpu().numpy(); lo, hi = iv(A); out.update(A_lo=lo, A_hi=hi)
+        alo, ahi = iv(np.abs(A)); out.update(absA_lo=alo, absA_hi=ahi)
+        if keep_draws:
+            out["A_draws"] = A; out["rel_draws"] = rb["rel"].cpu().numpy()
+    return out

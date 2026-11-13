@@ -426,3 +426,18 @@ def logit_choice(model, tok, ctx_ids, cands, batch=32):
         ls = torch.log_softmax(lg, -1)
         out.append(ls[:, ct].cpu().numpy())
     return np.concatenate(out) if out else np.zeros((0, len(cands)))
+
+
+def choice_rows(model, tok, ctx_ids, cand_ids, batch=32):
+    """Batched forced choice with per-row candidate token ids: log q(cand_ids[r][j] | ctx_ids[r]) -> [N, k]."""
+    torch = _t()
+    dev = K.model_device(model)
+    out = []
+    for i in range(0, len(ctx_ids), batch):
+        ids, am, pad = K.pad_left(ctx_ids[i:i + batch], tok.pad_token_id)
+        with torch.no_grad():
+            lg = model(input_ids=ids.to(dev), attention_mask=am.to(dev),
+                       position_ids=(am.cumsum(-1) - 1).clamp_min(0).to(dev), logits_to_keep=1).logits[:, -1].float()
+        ls = torch.log_softmax(lg, -1)
+        out.append(ls.gather(1, torch.tensor(cand_ids[i:i + batch], device=dev)).cpu().numpy())
+    return np.concatenate(out) if out else np.zeros((0, len(cand_ids[0]) if cand_ids else 0))

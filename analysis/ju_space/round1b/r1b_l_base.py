@@ -125,6 +125,12 @@ def rng(*key):
 # ==================================================================================================================================
 # contract inputs
 # ==================================================================================================================================
+def inj(ctx, session, rel, required=True):
+    """A contract input as parsed JSON (None if absent; under MOCK a missing file is allowed and replaced by a stand-in)."""
+    p = ctx.input(session, rel, required=required and not ctx.mock)
+    return K.load_json(p) if p else None
+
+
 def _need_mock(ctx, d, what):
     if d is None or is_mock_file(d):
         if not ctx.mock:
@@ -146,9 +152,9 @@ def hn(ctx, model):
     """SO-HN (hn_set.json, hn_meta.json, sg8_preview.json, hn_detectors.pt): P per L.1, H_tq, H+, boot sets, C*, SG8 preview, REF-W
     (None if absent: L's fallback). Neurons as flat ids layer * I + index."""
     L, I = dims(model)
-    d = K.load_json(ctx.input("r1b_K_S1", "hn/hn_set.json"))
-    meta = K.load_json(ctx.input("r1b_K_S1", "hn/hn_meta.json", required=False) or "", {}) or {}
-    sg8 = K.load_json(ctx.input("r1b_K_S1", "sg8_preview.json", required=False) or "", {}) or {}
+    d = inj(ctx, "r1b_K_S1", "hn/hn_set.json")
+    meta = inj(ctx, "r1b_K_S1", "hn/hn_meta.json", required=False) or {}
+    sg8 = inj(ctx, "r1b_K_S1", "sg8_preview.json", required=False) or {}
     labels = []
     if _need_mock(ctx, d, "hn_set"):
         g = rng("mock_hn")
@@ -185,9 +191,12 @@ def hn(ctx, model):
     if len(boots) < 10:
         labels.append("selection-robustness not computed (fewer than 10 boot sets)")
     refw = None
-    rw = meta.get("REF_W") or meta.get("ref_w")
-    if isinstance(rw, dict) and all(k in rw for k in ("mu_z", "sd_z", "mu_cett", "sd_cett")):
-        refw = {k: np.asarray(rw[k], dtype=np.float32).ravel() for k in ("mu_z", "sd_z", "mu_cett", "sd_cett")}
+    rw = meta.get("refw") or meta.get("REF_W")
+    if isinstance(rw, dict) and all(k in rw for k in ("z_mu", "z_sd", "c_mu", "c_sd")):
+        refw = {a: np.asarray(rw[b], dtype=np.float32).ravel() for a, b in (("mu_z", "z_mu"), ("sd_z", "z_sd"), ("mu_cett", "c_mu"),
+                                                                             ("sd_cett", "c_sd"))}
+        if refw["mu_z"].size != L * I:
+            refw = None
     return dict(P=P, P_name=pname, H_tq=htq, H_plus=hplus[:200], boot=boots, C_star=float(cstar or 0.05), sg8_ok=sg8_ok,
                 sg8_preview=gk2, H_op_name=name, refw=refw, labels=labels, L=L, I=I, sel_freq=d.get("sel_freq"))
 
@@ -208,25 +217,48 @@ def _mock_lab(tok):
     return items
 
 
+def kbank(ctx):
+    """K's K1 label bank (TriviaQA question texts and aliases, NE items, arithmetic items) through part K's loader."""
+    try:
+        import r1b_k_base as KB
+        return KB.bank(ctx)
+    except K.NotRun:
+        raise
+    except Exception:
+        return None
+
+
 def lab(ctx, tok):
-    """SO-LAB (so_lab.json) items: id -> dict(split, cls, question, aliases, ans0 (sample-0 answer ids), span0)."""
-    d = K.load_json(ctx.input("r1b_K_S1", "lab/so_lab.json"))
+    """SO-LAB (so_lab.json: split, class, 10 answers with keys, span0) joined with K's label bank (question text, aliases; NE items):
+    id -> dict(split, cls, question, aliases, ans0 (sample-0 answer ids), span0 [a, b))."""
+    d = inj(ctx, "r1b_K_S1", "lab/so_lab.json")
     labels = []
     if _need_mock(ctx, d, "so_lab"):
         items, labels = _mock_lab(tok), ["MOCK stand-in for SO-LAB"]
     else:
-        items = d.get("items") or {}
+        items = dict(d.get("items") or {})
+        b = kbank(ctx) or {}
+        tq = {r["qid"]: r for r in b.get("tqa", [])}
+        for iid, it in items.items():
+            r = tq.get(iid, {})
+            it.setdefault("question", r.get("question", "")); it.setdefault("aliases", r.get("aliases", []))
+        for r in b.get("ne", []):
+            items.setdefault(r["id"], dict(split="NE", cls="NE", question=r["prompt"].replace("\nAnswer with only the answer.", ""),
+                                           aliases=[], answers=[]))
+        if any(not it.get("question") for it in items.values()):
+            raise K.NotRun("input missing (SO-LAB question texts: K label bank)")
     out = {}
     for iid, it in items.items():
         a = (it.get("answers") or [{}])[0]
         ids = a.get("text_ids") or a.get("ids") or []
-        sp = (it.get("spans") or [[0, len(ids)]])[0]
+        sp = it.get("span0")
+        sp = [0, int(sp)] if isinstance(sp, (int, float)) else (list(sp) if sp else (it.get("spans") or [[0, len(ids)]])[0])
         split = it.get("split") or it.get("set")
         cls = it.get("cls") or it.get("class")
         if split in ("NE", "FAB") or cls in ("NE", "FAB"):
             split, cls = "NE", "NE"
         out[iid] = dict(split=split, cls=cls, question=it.get("question") or it.get("text") or "", aliases=it.get("aliases") or
-                        it.get("gold") or [], ans0=list(ids), span0=list(sp), id=iid)
+                        it.get("gold") or [], ans0=list(ids), span0=list(sp) if ids else [], id=iid)
     return out, labels
 
 
@@ -253,13 +285,24 @@ def _mock_gating(n=24):
 def gating(ctx):
     """K4's gated A-lens pool items (k4_gating.json; prompts and truth sets from the item store when the export lacks them):
     id -> dict(stratum known / prone, answers (greedy + 4), prompt, V, steps, subexprs, I_plus)."""
-    p = ctx.input("r1b_K_S2a", "lab/k4_gating.json", required=False)
-    d = K.load_json(p) if p else None
+    d = inj(ctx, "r1b_K_S2a", "lab/k4_gating.json", required=False)
     labels = []
     if _need_mock(ctx, d, "k4_gating"):
         items, labels = _mock_gating(), ["MOCK stand-in for K4 gating"]
     else:
-        items = d.get("items") or {}
+        items = dict(d.get("items") or {})
+        b = kbank(ctx) or {}
+        ach = {r["id"]: r for r in b.get("ach_short", [])}
+        sym = {"+": "+", "-": "-", "*": "×"}
+        for iid, it in items.items():
+            r = ach.get(iid)
+            if r and not it.get("prompt"):
+                P_, I_, A_ = r["P"], r["I"], r["A"]
+                prev, steps, subs = P_[0], [], []
+                for o, bb, v in zip(r["ops"], P_[1:], I_ + [A_]):
+                    steps.append([prev, o, bb, v]); subs.append(f"{prev} {sym[o]} {bb}"); prev = v
+                it.update(prompt=r["prompt"], question=r["prompt"], expr=r["expr"], V=P_ + I_ + [A_], steps=steps, subexprs=subs,
+                          I_plus=r.get("Iplus", []), ops=r.get("nops"), a_cal=bool(r.get("cal")))
     out = {}
     for iid, it in items.items():
         st = it.get("stratum")
@@ -338,6 +381,9 @@ def ref_sets(ctx, tok, items, cf):
                                          [K.enc(tok, f"A calm scene with {i} trees and a pond.") for i in range(4)], "REF-R16 (MOCK)")
         labels.append("MOCK stand-in for REF-R16")
     p = os.path.join(K.REPO, C.PLAN_DIR, "ref_k16.json")
+    if not os.path.exists(p) and ctx.mock:
+        kbank(ctx)
+        p = os.path.join(ctx.root, "mock_pkg", "ref_k16.json")
     if os.path.exists(p):
         k16 = K.RefSet.from_json(p, "REF-K16")
     elif ctx.mock:
@@ -454,8 +500,8 @@ def _norm(s):
 
 def scorers():
     try:
-        import r1b_k_scorers as S                      # part K's frozen scorers (SO-LAB), if present
-        return S.alias_match, S.is_refusal, "K scorers"
+        import r1b_k_labels as KL                      # part K's frozen scorers (SO-LAB)
+        return (lambda text, aliases: KL.alias_match(text, aliases) == "correct"), KL.refusal, "K scorers (r1b_k_labels)"
     except Exception:
         return (lambda text, aliases: any(_norm(a) and _norm(a) in _norm(text) for a in aliases),
                 lambda text: any(w in text.lower() for w in REFUSAL_LEXICON), "L fallback scorers (K scorer module not importable)")

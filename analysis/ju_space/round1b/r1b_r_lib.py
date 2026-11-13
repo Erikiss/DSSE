@@ -345,7 +345,7 @@ def read_win(m, prompts, conts, b, fd=None, F=None, batch=32, extra=None):
 def ref16(ctx, m, b):
     """REF-R16 at block b: R1.state[b]['ref'] continuations of round-1 prompts 0-7 (RSI-topic) and 32-39 (scene), with rk_loop's
     prompt ids (SO-DMG)."""
-    st = r1_state(ctx, b); pr = r1_prompts(ctx.mock); P = list(range(8)) if ctx.mock else [0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 34, 35, 36, 37, 38, 39]
+    st = r1_state(ctx, b if b in BLOCKS else 14); pr = r1_prompts(ctx.mock); P = list(range(8)) if ctx.mock else [0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 34, 35, 36, 37, 38, 39]
     return K.RefSet.from_prompt_conts([m.ids(pr[p]) for p in P], [list(map(int, st["ref"]["conts"][p])) for p in P], f"REF-R16(b{b})")
 
 

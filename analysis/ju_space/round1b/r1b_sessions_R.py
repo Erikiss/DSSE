@@ -89,16 +89,18 @@ STEPS["r1b_R_S5"] = [Step("s5_lens", fn="r1b_r_s5:lens", out="r5/lens.json", min
 STEPS["r1b_R_S6"] = [*[Step(f"s6_r61_b{b}", fn="r1b_r_s6:r61", out=f"r6/r61_b{b}.json", minutes=4.0) for b in (14, 18, 6)],
                      *[Step(f"s6_r61it_b{b}", fn="r1b_r_s6:r61_iter", out=f"r6/r61it_b{b}.json", minutes=3.0, drop_if=(RL1 if b != 14 else ("RL2",)))
                        for b in (14, 18, 6)],
-                     Step("s6_r62_T0.7", fn="r1b_r_s6:r62", out="r6/r62_T0.7.pt", minutes=4.5),
-                     Step("s6_r62_T1.0", fn="r1b_r_s6:r62", out="r6/r62_T1.0.pt", minutes=4.5),
+                     Step("s6_r62_T0.7", fn="r1b_r_s6:r62", out="r6/r62_T0.7.pt", minutes=5.0),
+                     Step("s6_r62_T1.0", fn="r1b_r_s6:r62", out="r6/r62_T1.0.pt", minutes=5.0),
                      Step("s6_r62_rnd", fn="r1b_r_s6:r62_rnd", out="r6/r62_rnd.pt", minutes=2.0),
                      Step("s6_r63", fn="r1b_r_s6:r63", out="r6/r63.pt", minutes=1.5)]
 STEPS["r1b_R_S7"] = [Step("s7_r71_select", fn="r1b_r_s7:select", out="r7/r71_select.json", minutes=2.0),
                      Step("s7_r71_texts", fn="r1b_r_s7:texts", out="r7/r71.json", after="s7_r71_select", minutes=4.0),
+                     Step("s7_r71_others", fn="r1b_r_s7:others", out="r7/r71_others.json", after="s7_r71_texts", minutes=3.5),
                      Step("s7_r72", fn="r1b_r_s7:cue", out="r7/r72.json", after="s7_r71_texts", minutes=0.6),
                      Step("s7_r73", fn="r1b_r_s7:q4b", out="r7/r73.json", after="s7_r71_texts", minutes=3.0)]
 STEPS["r1b_R_S5L"] = [Step("s5l_texts", fn="r1b_r_s5:refit_texts", out="r5l/texts.pt", minutes=2.0),
-                      *[Step(f"s5l_fit_{k}", fn="r1b_r_s5:refit_fit", out=f"r5l/fit_{k}.pt", after="s5l_texts", minutes=4.5) for k in range(16)],
+                      *[Step(f"s5l_fit_{k}", fn="r1b_r_s5:refit_fit", out=f"r5l/fit_{k}.json", after="s5l_texts" if k == 0 else f"s5l_fit_{k - 1}",
+                             minutes=4.5) for k in range(16)],
                       Step("s5l_lens", fn="r1b_r_s5:refit_lens", out="r5l/lens_j1b.pt", after=", ".join(f"s5l_fit_{k}" for k in range(16)), minutes=0.5),
                       *[Step(f"s5l_r51_b{b}", fn="r1b_r_s5:r51_block", out=f"r5l/r51_b{b}.json", after="s5l_lens", minutes=1.5)
                         for b in (2, 6, 10, 14, 18, 22, 24, 26)],
