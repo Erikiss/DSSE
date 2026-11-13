@@ -1,0 +1,211 @@
+{
+ "session": "r2_ana",
+ "attempts": [
+  {
+   "attempt": "r2_ana",
+   "n": 1,
+   "started": "2026-11-13T11:17:23+00:00",
+   "ended": "2026-11-13T11:17:32+00:00",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "gpu": "NVIDIA A100-SXM4-40GB",
+   "t0": "2026-11-13T11:13:01+00:00",
+   "result": "waiting",
+   "waiting": [
+    "dsse_runs/r2_pc/session_done.json missing"
+   ],
+   "ran": []
+  },
+  {
+   "attempt": "r2_ana",
+   "n": 2,
+   "started": "2026-11-13T12:42:04+00:00",
+   "ended": "2026-11-13T12:42:06+00:00",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "gpu": "NVIDIA A100-SXM4-40GB",
+   "t0": "2026-11-13T12:41:54+00:00",
+   "result": "waiting",
+   "waiting": [
+    "dsse_runs/r2_pc/session_done.json missing"
+   ],
+   "ran": []
+  },
+  {
+   "attempt": "r2_ana",
+   "n": 3,
+   "started": "2026-11-13T13:05:42+00:00",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "gpu": "NVIDIA A100-SXM4-40GB",
+   "t0": "2026-11-13T13:04:17+00:00",
+   "invalidated": [],
+   "ended": "2026-11-13T13:21:39+00:00",
+   "seconds": 976.7,
+   "elapsed_since_t0": 1042.0,
+   "ran": [
+    "linearity",
+    "theta_verdict",
+    "rgi_verdict",
+    "unlearn_verdict",
+    "report"
+   ],
+   "result": "done",
+   "inputs_changed_during_session": []
+  }
+ ],
+ "steps": {
+  "linearity": {
+   "state": "ran",
+   "note": null,
+   "block": null,
+   "seconds": 18.9,
+   "ran_in": "r2_ana",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "outputs": {
+    "unlearn/q1.json": {
+     "size": 31718,
+     "sha256": "aeeca58332e62484018cb1bb37d5115e8ed16b5f9b78bfa4d6cc7b3261cd5f37"
+    }
+   }
+  },
+  "theta_verdict": {
+   "state": "ran",
+   "note": null,
+   "block": null,
+   "seconds": 132.5,
+   "ran_in": "r2_ana",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "outputs": {
+    "theta_verdict.json": {
+     "size": 273256,
+     "sha256": "628d6d45b2fd7b85c2b09ad72a2f58239996f024e7508681442fb18acb83f481"
+    }
+   }
+  },
+  "rgi_verdict": {
+   "state": "ran",
+   "note": null,
+   "block": null,
+   "seconds": 171.5,
+   "ran_in": "r2_ana",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "outputs": {
+    "rgi_verdict.json": {
+     "size": 215983,
+     "sha256": "ff4d768f858e604c85f09ba3b1d8740c7923f5f65ff15a2777b9302da4b44996"
+    }
+   }
+  },
+  "unlearn_verdict": {
+   "state": "ran",
+   "note": null,
+   "block": null,
+   "seconds": 3.5,
+   "ran_in": "r2_ana",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "outputs": {
+    "unlearn_verdict.json": {
+     "size": 276960,
+     "sha256": "1a594f2789f49605c5bd34b32926d85ad6c3f876f736277138c69366d8934db9"
+    }
+   }
+  },
+  "report": {
+   "state": "ran",
+   "note": null,
+   "block": null,
+   "seconds": 2.5,
+   "ran_in": "r2_ana",
+   "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+   "outputs": {
+    "pc_toy/gates.json": {
+     "size": 20676,
+     "sha256": "fdd768601027d0ac27b6e1cc4ebfb46bb5856b186f39943fe9510cb9ffe8d15a"
+    },
+    "r2_manifest.json": {
+     "size": 798115,
+     "sha256": "0a76f5f5d63f02a5be8e931a5779f3cfc1a0348ec274aa244b0951e58377e424"
+    },
+    "round2_summary.json": {
+     "size": 357523,
+     "sha256": "1af16af8003be7a0a19bdf379c5b6e060128ffb3b7c69a5e5a1414b22d45d06a"
+    }
+   }
+  }
+ },
+ "code_commit": "8171b8677591391429f786f1e08a40c22be3775c",
+ "code_commits": [
+  "8171b8677591391429f786f1e08a40c22be3775c"
+ ],
+ "plan_sha256": "5e476340dfdb1d827582c869f2dfc08e32ed8e9a9dbebf7642acceb5bb5edc2d",
+ "test_run": false,
+ "selftest": false,
+ "packing": [
+  {
+   "attempt": "r2_ana",
+   "ran": [],
+   "result": "waiting",
+   "invalidated": []
+  },
+  {
+   "attempt": "r2_ana",
+   "ran": [],
+   "result": "waiting",
+   "invalidated": []
+  },
+  {
+   "attempt": "r2_ana",
+   "ran": [
+    "linearity",
+    "theta_verdict",
+    "rgi_verdict",
+    "unlearn_verdict",
+    "report"
+   ],
+   "result": "done",
+   "invalidated": []
+  }
+ ],
+ "packing_table": "as in plan 7.2",
+ "models": {},
+ "references": {
+  "shim_modules": {
+   "analysis/ju_space/pc_meta.py": {
+    "expected": "b69e314a2ca442ba56e9e31916578d718f9fdee4ec4bee329d3aa358a27bc0ae",
+    "sha256": "b69e314a2ca442ba56e9e31916578d718f9fdee4ec4bee329d3aa358a27bc0ae",
+    "ok": true
+   },
+   "analysis/ju_space/pc_common.py": {
+    "expected": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f",
+    "sha256": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f",
+    "ok": true
+   }
+  },
+  "comparison": {
+   "path": "analysis/ju_space/round2/tests/ref_comparison_w5.json",
+   "sha256": "f6e0ff2160dda419c951a3ef6c3cdd1b9215823689fd66a17b097d21d603cf1b",
+   "status": "ok",
+   "others": {},
+   "modules": {
+    "r2_toy_common.py": {
+     "recorded": "3c14161416d65916dae476998736aed1dec399e950ff2adfcec7f83c53c9d96a",
+     "checkout": "3c14161416d65916dae476998736aed1dec399e950ff2adfcec7f83c53c9d96a"
+    },
+    "r2_sim.py": {
+     "recorded": "6969201447628f493a7ff8da9bfe66a732f1318e24343e45eb4342e37e89f323",
+     "checkout": "6969201447628f493a7ff8da9bfe66a732f1318e24343e45eb4342e37e89f323"
+    },
+    "pc_meta.py": {
+     "recorded": "b69e314a2ca442ba56e9e31916578d718f9fdee4ec4bee329d3aa358a27bc0ae",
+     "checkout": "b69e314a2ca442ba56e9e31916578d718f9fdee4ec4bee329d3aa358a27bc0ae"
+    },
+    "pc_common.py": {
+     "recorded": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f",
+     "checkout": "2d72a47405d656d4699dbaf38bc8a00bea24fbcb1121f777d977a1d2ffbc476f"
+    }
+   },
+   "changed": []
+  }
+ },
+ "seconds_steps": 328.9,
+ "not_run": {},
+ "finished": "2026-11-13T13:21:39+00:00"
+}
