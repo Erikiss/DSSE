@@ -60,3 +60,9 @@ Nur Analogien zur Schleife; für die Durchführung:
   der Kettenlänge; Neuron Lens mit Rundweg-Prüfung. Qwen3-1.7B hat keinen MTP-Kopf.
 - Vorgabe des Nutzers: Wird etwas rückkonstruiert, dann inversfrei wie bei DeepMinds Aletheia (Erzeugen, vorwärts Prüfen,
   Überarbeiten oder Enthalten), nicht über invertierte Matrizen wie bei Fus Aletheia (regularisierte inverse Konfusionsmatrix).
+- Frage des Nutzers (13.11.2026): Lassen sich die Erkenntnisse zu H-Neuronen und Kettenlinse durch einen linsenfreien Ansatz mit
+  holographischen Prinzipien erweitern (vgl. EBM-Reasoner, Nicht-Gleichgewicht; Schleifen-Transformer → Agent → als Ising-System
+  modellierbar → Kollaboration → entitätenbildend)? Wird als linsenfreier, inversfreier Arm geprüft: Wiederherstellbarkeit aus
+  zufälligen Neuronen-Teilmengen (lokal gegen holographisch verteilt), wechselseitige Information zwischen Vergangenheit und Zukunft
+  aus den Log-Wahrscheinlichkeiten des Modells, paarweises Maximum-Entropie-Modell (Ising) der H-Neuronen mit Energiemulden,
+  Attraktor-Rekonstruktion aus einer Messgröße (Takens), Kreuzabbildung zwischen Kanälen, Token-Cluster über die Tiefe.
