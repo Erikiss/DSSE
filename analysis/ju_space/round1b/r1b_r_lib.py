@@ -353,8 +353,8 @@ class Dmg:
     """dmg_sym (R3.1): mean of the + and - push damage on REF-R16 at block b; the 8 scene references' top-1 change ('neutral top-1
     change'); REF-K16 (+ push, descriptive) for the REF-U32 report when the package file exists."""
 
-    def __init__(self, ctx, m, b, cap):
-        self.m, self.b, self.cap = m, b, cap; self.dm = K.Damage(m.model, ref16(ctx, m, b)); self.k16 = None
+    def __init__(self, ctx, m, b, cap, refs=None):
+        self.m, self.b, self.cap = m, b, cap; self.dm = K.Damage(m.model, refs or ref16(ctx, m, b)); self.k16 = None
         p = os.path.join(PKG, "ref_k16.json")
         if os.path.exists(p):
             self.k16 = K.Damage(m.model, K.RefSet.from_json(p, "REF-K16"))
