@@ -730,7 +730,7 @@ IMPLEMENTER8_READINGS = (
     "C-Q1: plant scale a = d'_T x token SD along the plant direction / 2 (overall token SD of the unplanted sea states); u_T = R1.state[14]['axes']['u_T']",
     "C-Q1: INLP r* per direction (A -> B, B -> A), the larger one as summary; AUC_cf halves: one default_rng(25), fold True's permutation first",
     "C-Q1: linear rung needs g_0 > 0 (else 'not decidable (no baseline gap)'); no pattern claim if G41 explicitly fails (literal 'anywhere in Part C')",
-    "C-Q4b / arm A: the loop rule is applied as an ordered list (un-searched, survives, re-routed, undecided (reference does not re-find RSI), undecided); r2_unlearn_qwen's in-session view tests 'gone' first",
+    "C-Q4b / arm A: the loop rule is applied as an ordered list (un-searched, survives, re-routed, undecided (reference does not re-find RSI), undecided), every condition at d_2 and d_3; a different in-session verdict of r2_unlearn_qwen.py is listed under od_g8",
     "C-Q4a: 'an ablation passed C-Q3' = r2_ana's C-Q3 verdict of the ablation that ran (the in-session choice governs what ran, OD-G8)",
     "C-Q6: the helix rule is evaluated per block, block 14 primary; self-repair at the r* cap over all 24 objects with every validated readout (18, 22); r* per relation",
     "C-T0 .. C-T7: rules recomputed from the stage JSONs and compared with the producers' previews; quorum '>= 4 of 5' = ceil(0.8 n); C-T3 j* = contiguous reading; C-T5 '> 24' counts as 25; C-T2 Bonferroni level fixed at 98.33 %",

@@ -98,17 +98,33 @@ def sig_of(*parts):
     return h.hexdigest()
 
 
+CODE_FILES = (os.path.abspath(__file__), os.path.join(HERE, "r2_rk.py"), os.path.join(HERE, "r2_stimuli.py"), os.path.join(JU, "rk_loop.py"))
+_CODE = {}
+
+
+def code_sha256():
+    """Code fingerprint (review unlearn_a-1): sha256 over the bytes of this script, r2_rk.py, r2_stimuli.py and rk_loop.py. Every cached
+    unit and q2's round-2 state entries are valid only for it, so a resume after a code change never mixes two code versions."""
+    if "sha" not in _CODE:
+        h = hashlib.sha256()
+        for p in CODE_FILES:
+            h.update(os.path.basename(p).encode()); h.update(b"|"); h.update(open(p, "rb").read()); h.update(b"|")
+        _CODE["sha"] = h.hexdigest()
+    return _CODE["sha"]
+
+
 class Cache:
     """Units of one stage in <r2_dir>/local/unlearn_<stage>/ (local only, never synced): a unit is computed once and reused when the
-    stage is rerun after a crash; each unit carries the signature of its inputs and is recomputed if it differs."""
-    def __init__(self, r2_dir, stage): self.dir = os.path.join(r2_dir, "local", f"unlearn_{stage}")
+    stage is rerun after a crash; each unit carries the signature of its inputs and the code fingerprint (code_sha256) and is recomputed
+    if either differs."""
+    def __init__(self, r2_dir, stage, code=None): self.dir = os.path.join(r2_dir, "local", f"unlearn_{stage}"); self.code = code or code_sha256()
 
     def get(self, name, sig, fn):
         p = os.path.join(self.dir, name + ".pt")
         if os.path.exists(p):
             obj = torch.load(p, map_location="cpu", weights_only=False)
-            if obj.get("sig") == sig: return obj["val"]
-        val = fn(); R.torch_save(p, dict(sig=sig, val=val)); return val
+            if obj.get("sig") == sig and obj.get("code") == self.code: return obj["val"]
+        val = fn(); R.torch_save(p, dict(sig=sig, code=self.code, val=val)); return val
 
 
 # ======================================================================================================================================
@@ -302,25 +318,33 @@ def q4b_gate(G13, G15, attracted):
     return dict(open=False, branch=None, verdict=f"not testable (gate: {'; '.join(why)})")
 
 
-def rule_loop(abl, twin=None, comparator=None):
-    """C-Q4b rule on the ablated loop at d_2 and d_3 (abl / twin: {n: dict(c, p, A, rel, Ue, Ue_ci90)} for n = 2, 3). 'un-searched' if
-    p > 0.10 and |A| < 0.25 while the twin (or, for arm A, the R1 seed-0 comparator) has p <= 0.01 and A >= 0.25; 'survives' if p <= 0.01,
-    c > 0 and A >= 0.25; 're-routed' if rel >= 0.5, Ue >= 0.25 with its 90 % interval above 0 and |A| < 0.25; 'undecided (twin does not
-    re-find RSI)' if the twin fails p <= 0.01 and A >= 0.25; otherwise 'undecided'. Every condition at both d_2 and d_3."""
-    ref = twin if twin is not None else comparator
-    ns = (2, 3)
-    if any(n not in abl for n in ns): return "undecided (rounds missing)"
+def rule_loop(abl, twin=None, comparator=None, ref_name=None):
+    """C-Q4b rule on the ablated loop at d_2 and d_3 (abl / twin: {n: dict(c, p, A, rel, Ue, Ue_ci90)} for n = 2, 3), first match in the
+    order of the plan text (review unlearn_b-3; the same order as r2_unlearn_verdict.loop_rule, OD-G8): 'un-searched' if p > 0.10 and
+    |A| < 0.25 while the twin (or, for arm A, the R1 seed-0 comparator) has p <= 0.01 and A >= 0.25; 'survives' if p <= 0.01, c > 0 and
+    A >= 0.25; 're-routed' if rel >= 0.5, Ue >= 0.25 with its 90 % interval above 0 and |A| < 0.25; 'undecided (<reference> does not
+    re-find RSI)' if the reference fails p <= 0.01 and A >= 0.25; otherwise 'undecided'. Every condition at both d_2 and d_3."""
+    ref = twin if twin is not None else comparator; name = ref_name or ("twin" if twin is not None else "the R1 seed-0 comparator")
+    ns = (2, 3); g = lambda r, k: r.get(k) if isinstance(r, dict) else None
+    if abl is None or any(n not in abl for n in ns): return "undecided (rounds d_2, d_3 missing)"
     allv = lambda f, rows: all(f(rows[n]) for n in ns)
-    gone = allv(lambda r: fin(r["p"]) and r["p"] > RULE["p_unsearched"] and fin(r["A"]) and abs(r["A"]) < RULE["A_small"], abl)
-    refind = ref is not None and all(n in ref for n in ns) and allv(lambda r: fin(r["p"]) and r["p"] <= RULE["p_sig"] and fin(r["A"]) and r["A"] >= RULE["A_big"], ref)
-    surv = allv(lambda r: fin(r["p"]) and r["p"] <= RULE["p_sig"] and fin(r["c"]) and r["c"] > 0 and fin(r["A"]) and r["A"] >= RULE["A_big"], abl)
-    rer = allv(lambda r: fin(r.get("rel")) and r["rel"] >= RULE["rel_rerouted"] and fin(r.get("Ue")) and r["Ue"] >= RULE["ue_rerouted"]
-               and fin(r["Ue_ci90"][0]) and r["Ue_ci90"][0] > 0 and fin(r["A"]) and abs(r["A"]) < RULE["A_small"], abl)
-    if gone: return "un-searched" if refind else "undecided (twin does not re-find RSI)"
+    gone = allv(lambda r: fin(g(r, "p")) and r["p"] > RULE["p_unsearched"] and fin(g(r, "A")) and abs(r["A"]) < RULE["A_small"], abl)
+    refind = ref is not None and all(n in ref for n in ns) and allv(lambda r: fin(g(r, "p")) and r["p"] <= RULE["p_sig"] and fin(g(r, "A")) and r["A"] >= RULE["A_big"], ref)
+    surv = allv(lambda r: fin(g(r, "p")) and r["p"] <= RULE["p_sig"] and fin(g(r, "c")) and r["c"] > 0 and fin(g(r, "A")) and r["A"] >= RULE["A_big"], abl)
+    rer = allv(lambda r: fin(g(r, "rel")) and r["rel"] >= RULE["rel_rerouted"] and fin(g(r, "Ue")) and r["Ue"] >= RULE["ue_rerouted"]
+               and isinstance(g(r, "Ue_ci90"), (list, tuple)) and fin(r["Ue_ci90"][0]) and r["Ue_ci90"][0] > 0 and fin(g(r, "A")) and abs(r["A"]) < RULE["A_small"], abl)
+    if gone and refind: return "un-searched"
     if surv: return "survives"
     if rer: return "re-routed"
-    if not refind: return "undecided (twin does not re-find RSI)"
+    if not refind: return f"undecided ({name} does not re-find RSI)"
     return "undecided"
+
+
+def centred_interval(c, draws, level=LEVEL):
+    """Amendment 3 (a) (G16): the percentile interval [q_lo, q_hi] of the bootstrap draws shifted so that their median m coincides with the
+    point value c: [q_lo + c - m, q_hi + c - m]. Returns dict(ci90 (shifted), ci90_percentile (unshifted), boot_median)."""
+    lo, hi = R.interval(draws, level); m = pct(draws, 50); s = c - m if (fin(c) and fin(m)) else float("nan")
+    return dict(ci90=[lo + s, hi + s], ci90_percentile=[lo, hi], boot_median=m)
 
 
 def arma_continues(c1, ref_lo):
@@ -551,8 +575,8 @@ class Ctx:
 
 
 def base_info(stage, extra=None):
-    d = dict(script="r2_unlearn_qwen.py", plan=PLAN, plan_sha256=PLAN_SHA256, stage=stage, block=BLOCK, mock=R.MOCK, seeds=dict(SEEDS),
-             n_boot=N_BOOT, level=LEVEL, rule_thresholds=RULE)
+    d = dict(script="r2_unlearn_qwen.py", plan=PLAN, plan_sha256=PLAN_SHA256, amendments="Amendments 1-3 (G16: Amendment 3 (a))", stage=stage,
+             block=BLOCK, mock=R.MOCK, seeds=dict(SEEDS), n_boot=N_BOOT, level=LEVEL, rule_thresholds=RULE, code_sha256=code_sha256())
     if R.BLK: d.update(alpha_14=R.BLK.get("alpha"), alpha_scale=R.BLK.get("alpha_scale"), suffix=R.BLK.get("suffix"), cap=R.BLK.get("cap"))
     d.update(extra or {}); return d
 
@@ -665,8 +689,8 @@ def stage_q3(ctx):
                                    t["m_concept"], D_hi=h["D_ci90_statements"][1])
         rules[nm]["ctrl_p5"] = ctrl_p5[nm]; rules[nm]["controls"] = ["rand_14_2", "cov_14_0"] if nm == "u_RSI" else ["ctrl2 (cov_14_1, cov_14_2)"]
     chosen = "u_RSI" if rules["u_RSI"]["unlearned"] else ("span" if rules["span"]["unlearned"] else None)
-    rung = dict(RSI=_rung(J["u_RSI"]["texts"]["RSI"]["ratio"], J["span"]["texts"]["RSI"]["ratio"]),
-                RGI=_rung(J["u_RGI_perp"]["texts"]["RGI"]["ratio"], J["span"]["texts"]["RGI"]["ratio"]),
+    rung = dict(RSI=_rung(J["u_RSI"]["texts"]["RSI"]["ratio"], J["span"]["texts"]["RSI"]["ratio"], J["u_RSI"]["texts"]["RSI"]["g0"]),
+                RGI=_rung(J["u_RGI_perp"]["texts"]["RGI"]["ratio"], J["span"]["texts"]["RGI"]["ratio"], J["u_RGI_perp"]["texts"]["RGI"]["g0"]),
                 inputs=dict(RSI_1dim=dict(ablation="u_RSI", **_ratio_view(J["u_RSI"]["texts"]["RSI"])), RSI_span=dict(ablation="span", **_ratio_view(J["span"]["texts"]["RSI"])),
                             RGI_1dim=dict(ablation="u_RGI_perp", **_ratio_view(J["u_RGI_perp"]["texts"]["RGI"])), RGI_span=dict(ablation="span", **_ratio_view(J["span"]["texts"]["RGI"]))),
                 note="C-Q1 causal linear rung inputs (g_abl / g_0 on the fixed axes); decided in r2_linearity.py")
@@ -688,9 +712,14 @@ def a_dim(A, nm): return A[dict(rand_14_2="null2", cov_14_0="null8").get(nm, nm)
 def _ratio_view(t): return dict(ratio=t["ratio"], ratio_ci90=t["ratio_ci90"], g=t["g"], g0=t["g0"])
 
 
-def _rung(r1, r2):
-    """C-Q1's causal linear rung (in-session view; r2_linearity.py decides): 'one direction' if the 1-dim ablation leaves g_abl / g_0 <= 0.5;
-    'two-dimensional span' if it does not but the span ablation does; otherwise 'not removed within the tested 2-dim span'."""
+RUNG_NO_BASELINE = "not decidable (no baseline gap: g_0 <= 0)"                    # r2_linearity.linear_rung's string
+
+
+def _rung(r1, r2, g0):
+    """C-Q1's causal linear rung (in-session view; r2_linearity.py decides): not decidable unless g_0 > 0 (as everywhere in this script,
+    review unlearn_a-2); 'one direction' if the 1-dim ablation leaves g_abl / g_0 <= 0.5; 'two-dimensional span' if it does not but the span
+    ablation does; otherwise 'not removed within the tested 2-dim span'."""
+    if not (fin(g0) and g0 > 0): return RUNG_NO_BASELINE
     if fin(r1) and r1 <= RULE["gap_point"]: return "one direction"
     if fin(r2) and r2 <= RULE["gap_point"]: return "two-dimensional span"
     return "not removed within the tested 2-dim span"
@@ -752,12 +781,14 @@ def stage_q4a(ctx):
     den = g0 - G_abl["g"]; ceil_share = (G_ceil["g"] - G_abl["g"]) / den if defined else float("nan")
     try: own_cue = R.axis_from_texts(abl["X"], Xa_abl, ctx.fold, basis=ref["Q"], n_null=0)["gap_perp_cross"]
     except Exception: own_cue = float("nan")
+    try: own_ceil = R.axis_from_texts(una["X"], ref["Xa"], ctx.fold, basis=ref["Q"], n_null=0)["gap_perp_cross"]   # review unlearn_a-3
+    except Exception: own_ceil = float("nan")
     verdict = rule_cue(share, hi, passed is not None)
     lens = [len(r[0]) for r in rows]
     js = base_info("q4a", dict(status="ran", ablation=use, passed_C_Q3=passed is not None, g_cue=G_cue["g"], g_abl=G_abl["g"], g0=g0,
                                g_abl_q3=J3["ablations"][dict(rand_14_2="null2", cov_14_0="null8").get(use, use)]["texts"]["RSI"]["g"],
                                restored_share=share, restored_share_ci90=[lo, hi], share_defined=defined, own_axis_gap_cue=own_cue, ceiling=dict(g=G_ceil["g"], share=ceil_share, ratio_g0=G_ceil["g"] / g0 if g0 else float("nan"),
-                               ci90_g=list(R.interval(d_ceil.numpy(), LEVEL))), kept=dict(cue=G_cue["kept"], abl=G_abl["kept"], ceiling=G_ceil["kept"]),
+                               ci90_g=list(R.interval(d_ceil.numpy(), LEVEL)), own_axis_gap=own_ceil), kept=dict(cue=G_cue["kept"], abl=G_abl["kept"], ceiling=G_ceil["kept"]),
                                verdict_in_session=verdict, rule="shallow if share >= 0.5; deep if share < 0.2 with 90 % upper end < 0.35; otherwise partial; "
                                "'not applicable (nothing removed)' if no ablation passed C-Q3 (G43)", cue_prompt_tokens=dict(min=min(lens), max=max(lens), mean=float(np.mean(lens))),
                                keys="the O2 RSI_PRO keys (keyseed('axis', 'rsi', p))", empty=dict(ablated=sum(len(c) == 0 for c in abl["conts"]), unablated=sum(len(c) == 0 for c in una["conts"]))))
@@ -980,11 +1011,13 @@ def stage_q4b(ctx):
 
 
 def ref_seed0_c(ctx, ev):
-    """G16's reference: c(d_1) of the seed-0 half of R1 RSI_a's evaluation 0 and its 90 % prompt-bootstrap interval (the session's draws)."""
+    """G16's reference (Amendment 3 (a)): c(d_1) of the seed-0 half of R1 RSI_a's evaluation 0; the 90 % prompt-bootstrap percentile interval
+    of its replicates (the session's draws) shifted by c - (bootstrap median) is 'ci90'; the unshifted interval ('ci90_percentile') and the
+    median ('boot_median') are kept next to it."""
     r0 = seed0_rows(ev, ctx.NP); dl, ok, po = ev["delta"][r0].double(), torch.as_tensor(ev["ok"])[r0], torch.as_tensor(ev["prompt_of"])[r0]
     d = dl[ok].mean(0); Db = R.boot_mean(dl, po, ctx.W, ok); e = ctx.u_rsi
-    cb = ((Db @ e) / Db.norm(dim=1)).numpy(); lo, hi = R.interval(cb, LEVEL)
-    return dict(c=R.cosf(d, e), ci90=[lo, hi], n_pairs=int(ok.sum())), cb
+    cb = ((Db @ e) / Db.norm(dim=1)).numpy(); c = R.cosf(d, e)
+    return dict(c=c, n_pairs=int(ok.sum()), **centred_interval(c, cb)), cb
 
 
 def stage_armA(ctx):
@@ -995,6 +1028,8 @@ def stage_armA(ctx):
     hook = ConstPush(rk, u, beta["f"], -1.0); hs = sig_of("ConstPush", u, beta["f"], -1.0)
     rows, evs, dd = run_loop_variant(ctx, "armA", "r2ARMA", ctx.uT, 1, alpha, hooks=(hook,), hook_sig=hs)
     c1 = rows[0]["c"]; cont = arma_continues(c1, ref["ci90"][0])
+    ref = dict(ref, continues_with_percentile_interval=arma_continues(c1, ref["ci90_percentile"][0]),
+               amendment="Amendment 3 (a): ci90 = the percentile interval shifted by c - boot_median; G16 uses ci90[0]")
     if cont: rows, evs, dd = run_loop_variant(ctx, "armA", "r2ARMA", ctx.uT, 3, alpha, hooks=(hook,), hook_sig=hs, first=evs[0])
     verdict = "translation (as predicted), not un-searched" if not cont else "continued (rounds 2-3 ran; the C-Q4b loop rule with the R1 seed-0 comparator is applied in r2_ana)"
     js = base_info("armA", dict(status="ran", beta=beta, reference_seed0_RSI_a=dict(ref, key=key), c1=c1, continues=cont, rounds=len(rows), rows=rows,
@@ -1026,7 +1061,7 @@ def stage_q5(ctx):
     E, _ = torch.linalg.qr(torch.stack([R.unit(ctx.uT), R.unit(sea)], 1)); cm, cr, cs = Bm @ E, Br @ E, Bs @ E
     A = torch.stack([cr, cs], 2); coef = torch.linalg.lstsq(A, cm[..., None]).solution[..., 0]
     Bsum = (Br + Bs) / math.sqrt(2); cosb = ((Bm * Bsum).sum(1) / (Bm.norm(dim=1) * Bsum.norm(dim=1))).numpy()
-    lo_c, hi_c = R.interval(cosb, LEVEL)
+    lo_c, hi_c = R.interval(cosb, LEVEL); med_c = pct(cosb, 50)                    # Amendment 3 (a): the bootstrap median is reported too
     sup_view = bool(fin(dis) and dis >= RULE["sup_cos"] and all(RULE["sup_coef"][0] <= sup[k] <= RULE["sup_coef"][1] for k in ("coef_RSI", "coef_SEA")))
     # dose: |F(2 alpha)| / |F(alpha)| (U-statistic norms) and debiased cos
     n1, n2 = u_norm2(rsi0["delta"], rsi0["ok"]), u_norm2(ev_dose["delta"], torch.as_tensor(ev_dose["ok"]))
@@ -1038,8 +1073,10 @@ def stage_q5(ctx):
                               superposition=dict(sup, cos_disatt=dis, rel_mix=rel_mix, rel_sum=rel_sum, cos_ci90=[lo_c, hi_c],
                                                  coef_RSI_ci90=list(R.interval(coef[:, 0].numpy(), LEVEL)), coef_SEA_ci90=list(R.interval(coef[:, 1].numpy(), LEVEL)),
                                                  cos_disatt_ci90=[x / math.sqrt(rel_mix["rel"] * rel_sum["rel"]) for x in (lo_c, hi_c)] if fin(dis) else [float("nan")] * 2,
+                                                 cos_boot_median=med_c, cos_disatt_boot_median=med_c / math.sqrt(rel_mix["rel"] * rel_sum["rel"]) if fin(dis) else float("nan"),
                                                  holds_in_session=sup_view, coef_band=list(RULE["sup_coef"])),
-                              dose=dict(norm_ratio=ratio, cos_debiased=cosd, norm2_alpha=n1, norm2_2alpha=n2, ratio_ci90=list(R.interval(rb, LEVEL)), cos_ci90=list(R.interval(cb, LEVEL))),
+                              dose=dict(norm_ratio=ratio, cos_debiased=cosd, norm2_alpha=n1, norm2_2alpha=n2, ratio_ci90=list(R.interval(rb, LEVEL)), cos_ci90=list(R.interval(cb, LEVEL)),
+                                        cos_boot_median=pct(cb, 50)),
                               references=dict(RSI=f"{k_rsi} seed-0 half ({int(rsi0['ok'].sum())} ok pairs)", SEA=f"{k_sea} ({int(sea1['ok'].sum())} ok pairs)"),
                               read_outs=dict(mix=round_stats(ctx, ev_mix, mix, float("nan"))[0], dose=round_stats(ctx, ev_dose, ctx.u_rsi, float("nan"))[0]),
                               note="rel_mix, rel_sum from the K2 halvings (rk.stats's formula); disattenuated cos interval with the rels fixed at their point estimates; "

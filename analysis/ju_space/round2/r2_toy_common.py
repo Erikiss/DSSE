@@ -1499,15 +1499,16 @@ def fresh_F(arm, W, seeds, nshots=(8, 4), tasks=range(NNEW), steps=None, eval_at
 def b2_all(nets, ws_of, tasks=range(NNEW), steps=None, eval_at=None, nshot=NSHOT):
     """pc_meta.finetune mode 'all' for BP nets: per net and new task j a copy of the pretrained net trained with all weights (make_opt:
     fresh AdamW, lr 1e-3, decay 1e-3 per update whatever the run's wd_scale) on the nshot shots for FT_STEPS updates; held-out accuracy
-    at FT_EVAL and the retention = pooled held-out accuracy on the pretraining tasks afterwards. Returns dict(acc [B, n_tasks,
-    len(eval_at)], retention [B, n_tasks])."""
+    at FT_EVAL and the retention = pooled held-out accuracy on the net's own pretraining tasks afterwards (pc_meta's Xva: the K tasks of
+    the net's spec, e.g. one task for a K = 1 control; the 12 world tasks for nets without a spec such as round-1 checkpoints; review
+    toy_defs-7). Returns dict(acc [B, n_tasks, len(eval_at)], retention [B, n_tasks])."""
     eval_at = FT_EVAL if eval_at is None else tuple(eval_at); steps = max(eval_at) if steps is None else steps; tasks = list(tasks)
     idx = np.repeat(np.arange(nets.B), len(tasks)); cp = nets.subset(idx)
     sets = [new_task_sets(ws_of[b], j, nshot=nshot) for b in range(nets.B) for j in tasks]
     sx, sy, sl = (torch.as_tensor(a, device=DEV) for a in stack_sets(sets, "shot")); hx, hy, hl = (torch.as_tensor(a, device=DEV) for a in stack_sets(sets, "ho"))
     slot = torch.as_tensor([[s["slot"]] * nshot for s in sets], device=DEV)
     Xs = cp.features(sx, sy, slot); Xh = cp.features(hx, hy, slot[:, :1].expand(-1, hx.shape[1]))
-    tss = [taskset_w1(ws_of[b]) for b in idx]; vx, vy, vt, vl = (torch.as_tensor(np.stack([ts[k] for ts in tss]), device=DEV) for k in ("vx", "vy", "vt", "vlab"))
+    own = [taskset_from_spec(nets.meta[b]["spec"]) if isinstance(nets.meta[b], dict) and "spec" in nets.meta[b] else taskset_w1(ws_of[b]) for b in range(nets.B)]
     opt = AdamWB(cp.p, LR, 1.0, hidden=cp.hidden(), W=cp.W, mup=cp.param == "mup"); accs = []
     for s in range(1, steps + 1):
         for kk in cp.p:
@@ -1520,9 +1521,15 @@ def b2_all(nets, ws_of, tasks=range(NNEW), steps=None, eval_at=None, nshot=NSHOT
         if s in eval_at:
             with torch.no_grad():
                 accs.append((cp.logits(Xh).argmax(-1) == hl).float().mean(1))
+    ret = np.zeros(cp.B); by_n = {}
+    for c, b in enumerate(idx):
+        by_n.setdefault(len(own[b]["vx"]), []).append(c)
     with torch.no_grad():
-        ret = (cp.logits(cp.features(vx, vy, vt)).argmax(-1) == vl).float().mean(1)
-    return dict(acc=torch.stack(accs, 1).cpu().numpy().reshape(nets.B, len(tasks), len(eval_at)), retention=ret.cpu().numpy().reshape(nets.B, len(tasks)))
+        for cs in by_n.values():
+            sub = cp.subset(cs)
+            vx, vy, vt, vl = (torch.as_tensor(np.stack([own[idx[c]][k] for c in cs]), device=DEV) for k in ("vx", "vy", "vt", "vlab"))
+            ret[cs] = (sub.logits(sub.features(vx, vy, vt)).argmax(-1) == vl).float().mean(1).cpu().numpy()
+    return dict(acc=torch.stack(accs, 1).cpu().numpy().reshape(nets.B, len(tasks), len(eval_at)), retention=ret.reshape(nets.B, len(tasks)))
 
 
 def b2(nets, ws_of, arm=None, nshots=(8, 4), steps=None, eval_at=None, pc_eta_of=None, with_all=False):
@@ -1716,9 +1723,10 @@ def ridge_probe(Htr, ytr, Hte, yte, ncls, lam=1e-2, standardise=True):
 
 
 def mlp_probe(Htr, ytr, Hte, yte, ncls, hid=64, steps=300, lr=1e-2, wd=1e-4, seed=0):
-    """One-hidden-layer MLP probe (OD-C10): 64 tanh units, Adam lr 1e-2 with weight decay 1e-4 (L2, torch.optim.Adam semantics), 300
-    full-batch steps, features standardised with the training mean / SD (+1e-6, as c1_structure.mlp_probe), init as nn.Linear's
-    default from torch.Generator(seed). Batched over a leading dim: Htr [Q, Ntr, D] ... Returns accuracy [Q] (numpy)."""
+    """One-hidden-layer MLP probe (OD-C10): 64 tanh units, Adam lr 1e-2 with weight decay 1e-4 (L2) and torch.optim.Adam's default betas
+    (0.9, 0.999), as ref c1_structure.mlp_probe (review toy_defs-4), 300 full-batch steps, features standardised with the training mean /
+    SD (+1e-6, as c1_structure.mlp_probe), init as nn.Linear's default from torch.Generator(seed). Batched over a leading dim: Htr
+    [Q, Ntr, D] ... Returns accuracy [Q] (numpy)."""
     Htr, Hte = torch.as_tensor(Htr, dtype=F32, device=DEV), torch.as_tensor(Hte, dtype=F32, device=DEV)
     ytr, yte = torch.as_tensor(ytr, device=DEV), torch.as_tensor(yte, device=DEV)
     Q, N, D = Htr.shape
@@ -1738,7 +1746,7 @@ def mlp_probe(Htr, ytr, Hte, yte, ncls, hid=64, steps=300, lr=1e-2, wd=1e-4, see
         grads = torch.autograd.grad(L, list(prm.values()))
         with torch.no_grad():
             for (k, v), gk in zip(prm.items(), grads):
-                v.requires_grad_(False); gk = gk.add(v, alpha=wd); _adam_q(v, gk, ms[k], vs[k], s, float(lr))
+                v.requires_grad_(False); gk = gk.add(v, alpha=wd); _adam_q(v, gk, ms[k], vs[k], s, float(lr), b1=0.9, b2=0.999)
     with torch.no_grad():
         return (fwd(Xte).argmax(-1) == yte).float().mean(1).cpu().numpy()
 
@@ -1833,9 +1841,10 @@ def damage_match(target, drop_of, r0, W, ndraw=5, tol=0.02, iters=30):
     -> mean drop over ndraw random r-dim subspaces (and the seeds), the caller's random subspaces at dimension r with partial removal
     z - lam P z. Ladder r0, 2 r0, 4 r0, ... (<= W / 2; r0 always tried); d* = the smallest dimension whose mean drop reaches the target;
     if the mean drop at d* exceeds the target by more than tol, bisection of ONE lam in (0, 1] at d*, shared by the draws (plan: only
-    at d* = r0; Amendment 2 of 2026-11-12 extends it to every d*; the r0 case is unchanged); a target below tol is matched by the
-    equal-dimension random subspace (lam 1). Matched = |drop - target| <= tol (G45). Returns dict(r, lam, drop, matched,
-    ladder [(r, drop)], note); r = d*."""
+    at d* = r0; Amendment 2 of 2026-11-12 extends it to every d*; the r0 case is unchanged); if bisection does not reach tol the
+    evaluated lam closest to the target is kept and the control is unmatched (Amendment 2); a target below tol is matched by the
+    equal-dimension random subspace (lam 1). Matched = |drop - target| <= tol (G45), also for the largest dimension when no dimension
+    up to W / 2 reaches the target. Returns dict(r, lam, drop, matched, ladder [(r, drop)], note); r = d*."""
     ladder = []
     if target < tol:
         d0 = float(drop_of(r0, 1.0)); return dict(r=r0, lam=1.0, drop=d0, matched=True, ladder=[(r0, d0)], note="target below tol")
@@ -1844,21 +1853,23 @@ def damage_match(target, drop_of, r0, W, ndraw=5, tol=0.02, iters=30):
         dr = float(drop_of(r, 1.0)); ladder.append((r, dr))
         if dr >= target:
             if dr - target > tol:                                    # Amendment 2: partial removal at the found dimension d*, not only at r0
-                lo, hi, lam, dl = 0.0, 1.0, 1.0, dr
+                lo, hi = 0.0, 1.0; best = (1.0, dr)                  # the evaluated (lam, drop) closest to the target (review toy_defs-3)
                 for _ in range(iters):
                     mid = 0.5 * (lo + hi); dm = float(drop_of(r, mid))
-                    lam, dl = mid, dm
                     if abs(dm - target) <= tol:
-                        break
+                        best = (mid, dm); break
+                    if abs(dm - target) < abs(best[1] - target):
+                        best = (mid, dm)
                     if dm < target:
                         lo = mid
                     else:
                         hi = mid
+                lam, dl = best
                 return dict(r=r, lam=lam, drop=dl, matched=abs(dl - target) <= tol, ladder=ladder,
                             note="partial removal at r0" if r == r0 else "partial removal at d* (Amendment 2)")
             return dict(r=r, lam=1.0, drop=dr, matched=abs(dr - target) <= tol, ladder=ladder, note="ladder")
-        if 2 * r > W // 2:
-            return dict(r=r, lam=1.0, drop=dr, matched=False, ladder=ladder, note="target not reached up to W/2")
+        if 2 * r > W // 2:                                           # within tol below the target still counts as matched (G45)
+            return dict(r=r, lam=1.0, drop=dr, matched=abs(dr - target) <= tol, ladder=ladder, note="target not reached up to W/2")
         r *= 2
 
 
@@ -2000,16 +2011,28 @@ def t1_map(CA, CB, vA, r):
 T1_GRID = (1e-4, 1e-3, 1e-2, 3e-2, 1e-1, 3e-1, 1.0)
 
 
-def t1_choose_r(CA, CB, grid=T1_GRID):
-    """Ref rgi_pilot.t1_choose_r: lambda by leave-one-anchor-out column error (relative)."""
-    best = None
+def t1_loo_errors(CA, CB, grid=T1_GRID):
+    """Leave-one-anchor-out column error of t1_map for every grid value, computed exactly as ref rgi_pilot.t1_choose_r's inner loop:
+    list of (r, sum over the anchors k of |t1_map(others)(C_A,k) - C_B,k|^2 / |C_B,k - mean of B's other anchors|^2)."""
+    out = []
     for r in grid:
         err = 0.0
         for k in range(CA.shape[1]):
             keep = [i for i in range(CA.shape[1]) if i != k]; pred, _ = t1_map(CA[:, keep], CB[:, keep], CA[:, k], r)
             ref = CB[:, keep].mean(1); err += np.sum((pred - CB[:, k]) ** 2) / np.sum((CB[:, k] - ref) ** 2)
-        if best is None or err < best[1]:
-            best = (r, err / CA.shape[1])
+        out.append((r, err))
+    return out
+
+
+def t1_choose_r(CA, CB, grid=T1_GRID):
+    """AT1: lambda by leave-one-anchor-out column error = the grid value with the smallest mean relative error (ties: the first);
+    returns (r, mean error). Deviation from ref rgi_pilot.t1_choose_r (plan AT1 governs, 9.5; review toy_defs-1): the ref compares the
+    running sum with the stored mean, so it returns the first grid value (1e-4) almost always; the per-grid errors are the ref's."""
+    best = None
+    for r, err in t1_loo_errors(CA, CB, grid):
+        m = err / CA.shape[1]
+        if best is None or m < best[1]:
+            best = (r, m)
     return best
 
 
@@ -2242,11 +2265,12 @@ def structure_tests(nets, i, ws, nperm=1000, nperm_loo=1000, nperm_spec=500, ks=
 
 
 def trajectory_modes(X, k=5):
-    """C-T6 (ref c4_traj.modes): SVD of the snapshot matrix X [n_snap, dim] centred over time; per mode i the variance share and
-    |corr(time course, cos(pi i (t + 0.5) / T))| (Lissajous template) and the emergence snapshot. Returns (list of dicts, top-5 var)."""
+    """C-T6 (ref c4_traj.modes): SVD of the snapshot matrix X [n_snap, dim] centred over time; per mode i (1-based) the variance share,
+    |corr(time course, cos(pi i t / T))| with t = 0 .. T - 1 (the plan's template, C-T6 rule and OD-C13; the ref used t + 0.5, review
+    toy_defs-5) and the emergence snapshot. Returns (list of dicts, top-5 var)."""
     Xc = X - X.mean(0); U, S, Vt = np.linalg.svd(Xc, full_matrices=False); var = S ** 2 / (S ** 2).sum(); T = len(X); t = np.arange(T); out = []
     for i in range(k):
-        tc = U[:, i] * S[i]; lis = np.cos(np.pi * (i + 1) * (t + 0.5) / T); r = abs(np.corrcoef(tc, lis)[0, 1])
+        tc = U[:, i] * S[i]; lis = np.cos(np.pi * (i + 1) * t / T); r = abs(np.corrcoef(tc, lis)[0, 1])
         fin = tc[-1] - tc[0]; half = np.argmax(np.abs(tc - tc[0]) >= 0.5 * abs(fin)) if abs(fin) > 0 else -1
         out.append(dict(var=float(var[i]), lissajous_r=float(r), emerge_snapshot=int(half)))
     return out, float(var[:5].sum())

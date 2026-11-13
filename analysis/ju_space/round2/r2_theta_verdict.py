@@ -920,13 +920,15 @@ def selftest(work, r1_dir=None, r2_root=None):
           and r2N["verdict"].startswith("undecided (gain undefined at the point estimate") and "slope" in r2N and "T_c" in r2N and r2N["nonfinite_share"] > 0.05
           and not RSN["reserve1_a4_T0.7"]["enters"] and not RSN["reserve2_T0.15"]["enters"] and fin(RSN["reserve2_T0.15"]["nonfinite_share"])
           and r5N["self_sustainment"] == "undecided" and fin(r5N["nonfinite_share"]), (r1N["verdict"], r2N["verdict"], r1N["nonfinite_share"]))
-    # (2) the 5 % share: a defined point with 4 % undefined replicates keeps its verdict, with 8 % the rule is undecided
-    arr = lambda v, sh, sd: np.r_[v, np.where(np.random.default_rng(sd).random(2000) < sh, np.nan, np.random.default_rng(sd + 1).normal(v, 0.03, 2000))]
+    # (2) the 5 % share: a defined point with 4 % undefined replicates keeps its verdict, with 8 % the rule is undecided (one NaN mask for
+    # all cells, as in the data: the cells of a block share their attenuation replicates)
+    msk = np.random.default_rng(99).random(2000)
+    arr = lambda v, sh, sd: np.r_[v, np.where(msk < sh, np.nan, np.random.default_rng(sd + 1).normal(v, 0.03, 2000))]
     s4 = rule_R1([0.5, 1, 2], [arr(0.7, 0.04, 1), arr(0.6, 0.04, 3), arr(0.5, 0.04, 5)], 0); s8 = rule_R1([0.5, 1, 2], [arr(0.7, 0.08, 1), arr(0.6, 0.08, 3), arr(0.5, 0.08, 5)], 0)
     t4 = rule_R2([0.3, 0.7, 1.0], [arr(0.7, 0.04, 7), arr(0.6, 0.04, 9), arr(0.5, 0.04, 11)]); t8 = rule_R2([0.3, 0.7, 1.0], [arr(0.7, 0.08, 7), arr(0.6, 0.08, 9), arr(0.5, 0.08, 11)])
     q4 = rule_R3([(8, 0.1, arr(1.0, 0.04, 13)), (20, 0.2, arr(0.6, 0.04, 15))], "loop gain"); q8 = rule_R3([(8, 0.1, arr(1.0, 0.08, 13)), (20, 0.2, arr(0.6, 0.08, 15))], "loop gain")
     tn = rule_R2([0.3, 0.7, 1.0], [np.r_[0.5, np.full(2000, np.nan)]] * 3)
-    check("Amendment 3 (b): 4 % undefined replicates keep SUB / 'below 1 throughout' / 'falls', 8 % give undecided in R1, R2 and R3; no finite replicate fit: no error, slope and T_c kept",
+    check("Amendment 3 (b): 4 % undefined replicates (shared by the cells) keep SUB / 'below 1 throughout' / 'falls', 8 % give undecided in R1, R2 and R3; no finite replicate fit: no error, slope and T_c kept",
           s4["verdict"] == "SUB" and s8["verdict"] == "UNDECIDED" and t4["verdict"] == "below 1 throughout" and t8["verdict"].startswith("undecided (gain undefined in")
           and q4["verdict"].startswith("loop gain falls with delta") and "undecided: a bound is undefined" in q8["verdict"] and q8["bounds_undefined"]
           and tn["verdict"].startswith("undecided (gain undefined in 100.0 %") and "slope" in tn and "T_c" in tn and abs(s8["nonfinite_share"][0] - 0.08) < 0.02,

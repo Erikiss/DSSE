@@ -155,11 +155,18 @@ def npz_meta(path):
     with np.load(path, allow_pickle=False) as z: return json.loads(str(z["_meta"]))
 
 
+_SHA_MEMO = {}
+
+
 def sha256_file(path, chunk=1 << 22):
+    """sha256 of a file; memoised per process by (path, inode, size, mtime_ns), so a large file is hashed once unless it changes (every
+    output here is written by os.replace, which gives the file a new inode)."""
+    st = os.stat(path); key = (os.path.abspath(path), st.st_ino, st.st_size, st.st_mtime_ns)
+    if key in _SHA_MEMO: return _SHA_MEMO[key]
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for b in iter(lambda: f.read(chunk), b""): h.update(b)
-    return h.hexdigest()
+    _SHA_MEMO[key] = h.hexdigest(); return _SHA_MEMO[key]
 
 
 def load_pt(path):
@@ -508,11 +515,11 @@ def export_pool_ref(ufo_pool_pt, out_json):
 # Directions and meta
 # ======================================================================================================================================
 def stage_dirs(P, m, fp):
-    t0 = time.time()
+    t0 = time.time(); src = sha256_file(P["geom"])
     with np.load(P["geom"], allow_pickle=False) as z:
         unit, _ = sentence_layout(z["s_obj"], z["s_frame"], z["s_family"], z["s_lexeme"]); dr = directions(z["dot"], unit)
     out = {k: v.float() for k, v in dr.items()}; out["g_b"], out["s_b"] = out["g"], out["s"]          # the plan's names (shared storage)
-    torch_save(P["dirs"], dict(**out, fingerprint=fp, model_objects=[OBJECTS[o]["text"]["F1"] for o in range(48)], self_objects=SELF_OBJ,
+    torch_save(P["dirs"], dict(**out, fingerprint=fp, src_geom_sha256=src, model_objects=[OBJECTS[o]["text"]["F1"] for o in range(48)], self_objects=SELF_OBJ,
                                definition=dict(c_o="[NL, 48, D]: per model object, mean over IMP lexemes minus mean over DES lexemes of the frame-pooled "
                                                     "'.' states (raw metric)", g="[NL, D] g_b = mean over the 48 c_o (IMP-DES, frames pooled)",
                                                d_self="[NL, D] mean over the 12 SELF objects of c_o", s="[NL, D] s_b = d_self minus its projection on unit(g)",
@@ -568,6 +575,20 @@ def stage_meta(P, m, fp, summaries, minfo, mrec):
     return meta
 
 
+def dirs_stale(P):
+    """rgi_geom-1: dirs is stale when it was computed from another A1 file than the one on disk (also across invocations, e.g. a1
+    recomputed by an interrupted earlier call), or when it does not record its source. Without the local A1 file nothing is compared."""
+    if not (os.path.exists(P["dirs"]) and os.path.exists(P["geom"])): return False
+    return load_pt(P["dirs"]).get("src_geom_sha256") != sha256_file(P["geom"])
+
+
+def meta_stale(P):
+    """geom_meta is stale when a file it certifies exists with another sha256 than the one recorded (files absent here are not compared)."""
+    if not os.path.exists(P["meta"]): return False
+    outs = json.load(open(P["meta"])).get("outputs") or {}
+    return any(os.path.exists(P[k]) and (outs.get(k) or {}).get("sha256") != sha256_file(P[k]) for k in ("geom", "delta", "pool", "causal", "dirs"))
+
+
 def stage_summary(P, k):
     """The summary dict stored in a stage's output (for the meta stage after a resume)."""
     p = P[STAGE_OUT[k]]
@@ -589,7 +610,7 @@ def run(root, r2_dir, m="qwen3-1.7b", stages=STAGES, model_path=None, force=(), 
         return M
     for k in stages:
         p = P[STAGE_OUT[k]]
-        stale = (k == "dirs" and "a1" in redone) or (k == "meta" and redone)          # outputs derived from recomputed stages are redone
+        stale = (k == "dirs" and ("a1" in redone or dirs_stale(P))) or (k == "meta" and (bool(redone) or meta_stale(P)))   # derived outputs follow their inputs
         if (k in force or stale) and os.path.exists(p): os.remove(p); log(f"{k}: recomputed ({'forced' if k in force else 'its inputs were recomputed'})")
         if os.path.exists(p):
             have = file_meta(p); want = fp or dict(version=VERSION, model=m, mock=MOCK)    # without loading the model where possible
@@ -671,6 +692,8 @@ def selftest(root, r2_dir, m="qwen3-1.7b"):
     check("A3 gradients = finite differences (float64 model, 5-point stencil)", max(errs) < 1e-3, f"max rel err {max(errs):.1e}")
     rel32 = float((c["W"][[3, 50]].double() - G64).norm() / G64.norm())
     check("A3 float32 run = float64 gradients", rel32 < 1e-3, f"rel {rel32:.1e}")
+    check("A3 at the last block is identically zero (a leaf at the object positions cannot reach the last position): A3 undefined there",
+          float(c["W"][:, :, -1].abs().max()) == 0.0 and float(c["W"][:, :, -2].abs().max()) > 0)
     # O7: selection and delta against dn_delta.py's own code (executed unchanged on the MOCK tokenizer; fisher by ast)
     ns = dict(tok=M.tok, data=os.path.join(root, "dn_out", "mmlu_topics.json"), np=np, json=json, os=os)
     for k in ("NMAX", "LQ", "MINQ"): os.environ.pop(k, None)
@@ -724,6 +747,29 @@ def selftest(root, r2_dir, m="qwen3-1.7b"):
     os.remove(P["geom"]); run(root, work, m); mt1 = {k: os.path.getmtime(v) for k, v in P.items()}
     check("resume after a lost local A1 file: A1, dirs and meta recomputed, the rest kept", all(mt1[k] != mt0[k] for k in ("geom", "dirs", "meta"))
           and all(mt1[k] == mt0[k] for k in ("causal", "delta", "pool")) and json.load(open(P["meta"]))["outputs"]["geom"]["sha256"] == sha256_file(P["geom"]))
+    # rgi_geom-1: A1 recomputed by an earlier, interrupted call (stage a1 alone); the next 'all' must redo dirs and meta
+    mt2 = {k: os.path.getmtime(v) for k, v in P.items()}; run(root, work, m, stages=("a1",), force=("a1",)); run(root, work, m)
+    mt3 = {k: os.path.getmtime(v) for k, v in P.items()}; mt_ = json.load(open(P["meta"]))
+    check("rgi_geom-1: A1 recomputed in an earlier call -> dirs and meta redone, certified hashes = files", all(mt3[k] != mt2[k] for k in ("geom", "dirs", "meta"))
+          and all(mt3[k] == mt2[k] for k in ("causal", "delta", "pool")) and load_pt(P["dirs"])["src_geom_sha256"] == sha256_file(P["geom"])
+          and all(mt_["outputs"][k]["sha256"] == sha256_file(P[k]) for k in ("geom", "delta", "pool", "causal", "dirs")))
+    dz_ = dict(torch.load(P["dirs"], map_location="cpu", weights_only=False)); dz_.pop("src_geom_sha256"); torch_save(P["dirs"], dz_); mt4 = os.path.getmtime(P["dirs"])
+    run(root, work, m); ok_old = load_pt(P["dirs"]).get("src_geom_sha256") == sha256_file(P["geom"]) and os.path.getmtime(P["dirs"]) != mt4
+    gtmp = P["geom"] + ".moved"; os.replace(P["geom"], gtmp); mt5 = os.path.getmtime(P["dirs"])
+    try: run(root, work, m, stages=("dirs",)); ok_nogeom = os.path.getmtime(P["dirs"]) == mt5
+    except Exception: ok_nogeom = False
+    finally: os.replace(gtmp, P["geom"])
+    check("rgi_geom-1: a dirs file without its source hash is redone; 'dirs' alone without the local A1 file keeps it", ok_old and ok_nogeom)
+    # argparse usage with '%' (help and errors exit cleanly)
+    import contextlib, io
+    codes = []
+    for argv in (["-h"], [root, "r1", work, "--model", "no-such-model"]):
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()): main(argv)
+            codes.append(None)
+        except SystemExit as e: codes.append(e.code)
+        except Exception as e: codes.append(repr(e))
+    check("command line: -h exits 0, a bad --model exits 2 (usage with '%' formats)", codes == [0, 2], str(codes))
     Pb = out_paths(os.path.join(work, "foreign"), m); npz_save(Pb["geom"], dict(fingerprint=dict(fp, version="other")), a=np.zeros(1))
     try: run(root, os.path.join(work, "foreign"), m, stages=("a1",)); refused = False
     except RuntimeError: refused = True
@@ -738,7 +784,7 @@ def main(argv=None):
     if argv and argv[0] == "export_pool_ref":
         if len(argv) != 3: raise SystemExit(__doc__)
         ref = export_pool_ref(argv[1], argv[2]); print(json.dumps(dict(top5_eigenvalues=ref["top5_eigenvalues"], source_sha256=ref["source_sha256"]))); return 0
-    ap = argparse.ArgumentParser(description="r2_rgi_geom.py (plan 9.2)", usage=__doc__)
+    ap = argparse.ArgumentParser(description="r2_rgi_geom.py (plan 9.2)", usage=__doc__.replace("%", "%%"))   # argparse %-formats the usage
     ap.add_argument("root"); ap.add_argument("r1_dir"); ap.add_argument("r2_dir"); ap.add_argument("stage", nargs="?", default="all")
     ap.add_argument("--model", default="qwen3-1.7b", choices=MODELS); ap.add_argument("--model-path", default=None)
     ap.add_argument("--force", action="store_true", help="recompute the given stage even if its output exists")

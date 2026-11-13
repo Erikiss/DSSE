@@ -985,7 +985,7 @@ def selftest(root, r2_dir):
 
 # ======================================================================================================================================
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="r2_rgi_stats.py (plan 9.2)", usage=__doc__)
+    ap = argparse.ArgumentParser(description="r2_rgi_stats.py (plan 9.2)", usage=__doc__.replace("%", "%%"))   # argparse %-formats the usage
     ap.add_argument("root"); ap.add_argument("r1_dir"); ap.add_argument("r2_dir"); ap.add_argument("stage", nargs="?", default="all")
     ap.add_argument("--model", default="qwen3-1.7b", choices=GEOM.MODELS); ap.add_argument("--force", action="store_true")
     a = ap.parse_args(argv); torch.set_num_threads(int(os.environ.get("NT", "3")))

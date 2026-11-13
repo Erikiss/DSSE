@@ -31,6 +31,7 @@ API (every function documented below; 'rk' = the rk_loop module returned by open
     unit, cosf, perp_basis(vectors), project_out(V, Q)
     axis_from_texts(Xp, Xa, fold, seed=None, basis=None, n_null=2000)
     fixed_fold_axes(Xp, Xa, fold, basis) -> (a_A, a_B); gap_on_fixed_axes(Xp, Xa, fold, a_A, a_B) -> dict(g, kept, per_prompt)   (O1)
+    cross_fit_on_axes(Xp, Xa, fold, a_A, a_B) -> dict(auc, paired_win, gap_cross, kept)     (rk_loop.axes()'s statistics on given axes)
     axis_rel(diff, keep=None, Q=None, extra=None)
     stats_on_axis(ev, axis, null, n_prompts=None)
     halvings(n_prompts)                                             = rk.HALV for the same prompt count
@@ -348,10 +349,12 @@ def st_put(key, value, do_save=True):
 def k6_direction(name, d, H, M0):
     """rk.k6_direction (O5: push calibrated to 0.03 nats, Ue_fin, A_fin, V) under the round-2 name rule (2.3, critique v2-12g): the name
     must be 'r2_<dir>', so the entry is 'k6_r2_<dir>'; a round-1 name such as 'u_T_perp' would silently return the cached round-1 entry
-    and is refused. z_fin is not part of rk.k6_direction's entry (rk.k6 adds it from the null regression; O5's formula)."""
+    and is refused. z_fin is not part of rk.k6_direction's entry (rk.k6 adds it from the null regression; O5's formula). rk.damage and
+    rk.logodds_matching clear rk's push only after a successful forward, so the push is cleared here on every exit (review rk-2)."""
     rk = _need(); key = f"k6_{name}"
     if not str(name).startswith("r2_") or key in _GUARD["keys"]: raise StateGuardError(f"K6 direction name {name!r} must be 'r2_<dir>' (2.3)")
-    return rk.k6_direction(name, d, H, M0)
+    try: return rk.k6_direction(name, d, H, M0)
+    finally: rk.steer_off()
 
 
 # ---------------------------------------------------------------- reading
@@ -496,6 +499,20 @@ def gap_on_fixed_axes(Xp, Xa, fold, a_A, a_B):
     keep = ~(torch.isnan(Xp).any(1) | torch.isnan(Xa).any(1)); diff = torch.nan_to_num(Xp - Xa)
     per = torch.where(fold, diff @ a_B.double(), diff @ a_A.double()); per[~keep] = float("nan")
     return dict(g=float(per[keep].mean()) if keep.any() else float("nan"), kept=int(keep.sum()), per_prompt=per)
+
+
+def cross_fit_on_axes(Xp, Xa, fold, a_A, a_B):
+    """rk_loop.axes()'s cross-fitted centred statistics on given fold axes (a_A fitted on the fold-True prompts, a_B on the fold-False
+    prompts): every prompt's pro and anti texts are scored on the other fold's axis, centred on that fold's midpoint ((mean pro + mean
+    anti) / 2 of the training fold); AUC over all pro x anti pairs, paired win share, gap = mean(pro - anti) (the midpoints cancel, so on
+    O1's fixed axes the gap is gap_perp_cross). Prompts with an empty text drop out. With a_A = unit(dA), a_B = unit(dB) these are
+    axis_from_texts's auc, paired_win and gap_cross. Used for projected axes such as u_RGI_perp and u_RGI_perpT (review axes-3)."""
+    Xp, Xa = torch.as_tensor(Xp).double(), torch.as_tensor(Xa).double(); fold = torch.as_tensor(fold, dtype=torch.bool)
+    keep = ~(torch.isnan(Xp).any(1) | torch.isnan(Xa).any(1)); Xp, Xa, fold = Xp[keep], Xa[keep], fold[keep]; uA, uB = a_A.double(), a_B.double()
+    mA = ((Xp[fold].mean(0) + Xa[fold].mean(0)) / 2) @ uA; mB = ((Xp[~fold].mean(0) + Xa[~fold].mean(0)) / 2) @ uB
+    sp = torch.cat([Xp[~fold] @ uA - mA, Xp[fold] @ uB - mB]); sa = torch.cat([Xa[~fold] @ uA - mA, Xa[fold] @ uB - mB])
+    return dict(auc=float((sp[:, None] > sa[None, :]).double().mean()), paired_win=float((sp > sa).double().mean()), gap_cross=float((sp - sa).mean()),
+                kept=int(keep.sum()))
 
 
 def _rel(r):
@@ -776,8 +793,8 @@ def evaluate_variant(d, alpha, keyfn, nseed=1, prompts=None, T=None, signs=(1.0,
         if entropy: rk.Gumbel = _entropy_gumbel(rk, ent_store)
         try:
             rk.capped_reset(); conts = rk.generate(rows, d, alpha, batch=batch); cs = rk.capped_share() if d is not None else float("nan")
-        finally:
-            rk.Gumbel = Gum
+        finally:                                    # review rk-2: rk.generate clears the push only after model.generate returned, so an
+            rk.Gumbel = Gum; rk.steer_off()         # exception inside a pushed generation must not leave rk.STEER set
     rp = [list(rk.PIDS[p] if read_ids is None else read_ids(p)) for p in prompt_of for _ in (0, 1)]
     Wn = read_windows(rp, conts, batch=batch, n_first=n_first); ok = Wn["ok"]["all"]
     ev = dict(delta=Wn["delta"]["all"].float(), ok=ok, xp=Wn["xp"]["all"].float(), xm=Wn["xm"]["all"].float(), prompt_of=torch.tensor(prompt_of),
@@ -886,13 +903,20 @@ def mock_r1(root, r1_dir, spec=((14, "gpu1", ("all",)), (8, "gpu2", ("pilot", "l
     summaries): runs 'MOCK=1 BLOCK=<b> python rk_loop.py <root> <r1_dir>/<shard>/rk <stage>' for every stage whose block has no
     loops.json yet (subprocesses, DEVICE=cpu), then writes gpu2 / gpu3 dn_delta.json and blocks_chosen.json, summary_b<b>.json (block 14:
     a 'would have read' verdict with GO1 failed, PC_PASS true; b_lo: entering; b_hi: PC_PASS false; or 'summaries' {b: dict}), and
-    shard_done.json. Test use only."""
+    shard_done.json. The blocks it builds itself are recorded with their device ('cpu') in <r1_dir>/mock_fixture.json (fixture_device);
+    blocks that already existed are left as they are and not recorded. Test use only."""
+    built = []
     for b, shard, stages in spec:
         out = os.path.join(r1_dir, shard, "rk")
         if os.path.exists(os.path.join(out, f"b{b}", "loops.json")): continue
         os.makedirs(out, exist_ok=True); env = dict(os.environ, MOCK="1", BLOCK=str(b), DEVICE="cpu", NT=nt, OMP_NUM_THREADS=nt)
         env.pop("ASCALE", None)
         for st in stages: subprocess.run([sys.executable, os.path.join(JU, "rk_loop.py"), root, out, st], env=env, check=True)
+        built.append(b)
+    if built:
+        mf = os.path.join(r1_dir, "mock_fixture.json"); rec = json.load(open(mf)) if os.path.exists(mf) else dict(builder="r2_rk.mock_r1", blocks={})
+        rec["blocks"].update({str(b): dict(device="cpu", torch=torch.__version__, built=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())) for b in built})
+        rec["device"] = "cpu" if all(v["device"] == "cpu" for v in rec["blocks"].values()) else "mixed"; write_json(mf, rec)
     fd = fake_delta(); tmp = os.path.join(r1_dir, "_fake_delta.json"); write_json(tmp, fd)
     lo, hi, val = rk_verdict.choose_blocks(tmp); os.remove(tmp)
     assert (lo, hi) == (FAKE_BLOCKS["b_lo"], FAKE_BLOCKS["b_hi"]), (lo, hi)
@@ -911,16 +935,42 @@ def mock_r1(root, r1_dir, spec=((14, "gpu1", ("all",)), (8, "gpu2", ("pilot", "l
     return dict(b_lo=lo, b_hi=hi)
 
 
+def fixture_device(r1_dir):
+    """The device a MOCK round-1 fixture was built on, if the fixture records it: <r1_dir>/mock_fixture.json ['device'] (mock_r1), else a
+    'device' field of gpu1/shard_done.json or of a mock_fixture.json one level up; None if not recorded."""
+    for p in (os.path.join(r1_dir, "mock_fixture.json"), os.path.join(r1_dir, "gpu1", "shard_done.json"), os.path.join(os.path.dirname(os.path.abspath(r1_dir)), "mock_fixture.json")):
+        try:
+            v = json.load(open(p)).get("device")
+            if v: return str(v)
+        except (OSError, ValueError, AttributeError): pass
+    return None
+
+
+def same_device_note(r1_dir, test_device=None):
+    """One-line diagnosis for a failed check that compares texts or reads made in the test process with those stored in a MOCK fixture
+    (review rk-1): they agree only if fixture and test were made on the same device, because CPU and CUDA random streams (rk.Gumbel's
+    torch.Generator) and kernels differ (plan 2.3). Names the fixture's recorded device and the test device."""
+    fd = fixture_device(r1_dir); td = test_device or BLK.get("device") or os.environ.get("DEVICE", "cpu")
+    return (f"fixture and test must be made on the same device (CPU and CUDA random streams differ; plan 2.3): fixture device "
+            f"{fd if fd else 'not recorded'}, test device {td}")
+
+
 # ---------------------------------------------------------------- code test (MOCK)
 def selftest(root, work):
     """MOCK code test of every helper against rk_loop itself. Writes <work>/r2_rk_selftest.json; returns True if every check passed."""
     assert MOCK, "selftest needs MOCK=1"
     r1, r2 = os.path.join(work, "r1"), os.path.join(work, "r2_selftest_rk"); res = []
 
-    def check(name, cond, info=""):
+    def check(name, cond, info="", same_device=False):
+        """same_device: the check compares texts or reads made here with the fixture's stored ones; a failure names both devices (rk-1)."""
+        if same_device and not cond: info = f"{info} | {same_device_note(r1)}"
         res.append(dict(test=name, ok=bool(cond), info=str(info))); print(f"[{'PASS' if cond else 'FAIL'}] {name} {info}", flush=True)
     if not (os.path.exists(os.path.join(r1, "gpu1", "rk", "b14", "loops.json")) and os.path.exists(os.path.join(r1, "gpu2", "dn_delta.json"))):
         mock_r1(root, r1, spec=((14, "gpu1", ("pilot", "loops")),))                 # existing MOCK states are kept
+    dn = os.path.join(work, "r2_selftest_devnote"); shutil.rmtree(dn, ignore_errors=True); os.makedirs(dn)
+    n0 = same_device_note(dn, "cpu"); write_json(os.path.join(dn, "mock_fixture.json"), dict(device="cuda")); n1 = same_device_note(dn, "cpu")
+    check("rk-1 diagnosis: a failed same-device check names the fixture's recorded device and the test device",
+          "not recorded" in n0 and "test device cpu" in n0 and "fixture device cuda" in n1 and "same device" in n1, n1)
 
     # finder on a synthetic layout (empty placeholder files)
     fx = os.path.join(work, "r2_selftest_finder"); shutil.rmtree(fx, ignore_errors=True)
@@ -974,7 +1024,7 @@ def selftest(root, work):
     B = read_all_blocks(seqs[:3], conts[:3], blocks=[rk.BL]); check("read_all_blocks: block subset", float((B["X"][:, 0] - X1[:3]).abs().max()) < 1e-9)
     ev = rk.ST["ev_RSI_a_0"]; rp = [rk.PIDS[p] for p in ev["prompt_of"].tolist() for _ in (0, 1)]
     Wn = read_windows(rp, ev["conts"]); e3 = float((Wn["delta"]["all"] - ev["delta"].double()).abs().max() / ev["delta"].abs().max())
-    check("read_windows: 'all' reproduces rk.evaluate's delta; first_div as rk", e3 < 1e-5 and Wn["first_div"] == ev["first_div"], f"{e3:.2e}")
+    check("read_windows: 'all' reproduces rk.evaluate's delta; first_div as rk", e3 < 1e-5 and Wn["first_div"] == ev["first_div"], f"{e3:.2e}", same_device=True)
     a = conts[0]; pr = [seqs[0], seqs[0], seqs[0], seqs[0]]; cc = [a, list(a), a, a[:2] + [a[2] + 1 if a[2] + 1 < 151000 else 5] + a[3:]] if len(a) > 3 else None
     if cc:
         W2 = read_windows(pr, cc); T1 = read_all_blocks([seqs[0]], [a], blocks=[rk.BL], token_blocks=[rk.BL])["tok"][rk.BL][0].double()
@@ -996,6 +1046,10 @@ def selftest(root, work):
     check("O1 fixed axes: g_0 = rk's gap_perp_cross (Delta_T); other texts read on the same fixed axes, not their own",
           abs(g0["g"] - Ar["gap_perp_cross"]) < 1e-12 and abs(g0["g"] - ax["gap_perp_cross"]) < 1e-5 * max(1, abs(ax["gap_perp_cross"])) and abs(gs["g"] - man) < 1e-12 and gs["g"] != own,
           (g0["g"], ax["gap_perp_cross"], gs["g"], own))
+    c_raw = cross_fit_on_axes(S["Xp"], S["Xa"], ax["fold"], unit(Ar["dA"]), unit(Ar["dB"])); c_fix = cross_fit_on_axes(S["Xp"], S["Xa"], ax["fold"], aA, aB)
+    check("cross_fit_on_axes: on the raw fold axes = axis_from_texts (and rk) AUC / gap; on O1's axes the gap is g_0 (axes-3)",
+          c_raw["auc"] == Ar["auc"] == ax["auc"]["rsi"] and c_raw["paired_win"] == Ar["paired_win"] and abs(c_raw["gap_cross"] - Ar["gap_cross"]) < 1e-12
+          and abs(c_fix["gap_cross"] - g0["g"]) < 1e-12 and 0 <= c_fix["auc"] <= 1, (c_raw, c_fix))
     s1, d1 = rk.stats(ev); s2, d2 = stats_on_axis(ev, ax["u_T_perp"], ax["null_u_T_perp"])
     check("stats_on_axis equals rk.stats on u_T_perp", all(abs(s1[k] - s2[k]) < 1e-12 or (s1[k] != s1[k] and s2[k] != s2[k]) for k in ("c", "p", "Q", "rel", "A", "r")), {k: (s1[k], s2[k]) for k in ("c", "p", "rel")})
     rr = axis_rel(Ar["diff_all"], Ar["keep"], Q=Q); s3, _ = rk.stats(dict(delta=Ar["diff_all"].float(), ok=Ar["keep"], prompt_of=torch.arange(rk.NP)), "sea")
@@ -1010,10 +1064,12 @@ def selftest(root, work):
     # evaluate_variant reproduces a round-1 evaluation (common random numbers on the same device)
     u = ax["u_T_perp"].double(); al = rk.ST["alpha"]["alpha"] * rk.ASCALE
     E = evaluate_variant(u, al, lambda p, s: rk.keyseed("RSI_a" + rk.SUF, 0, p, s, rk.BL), nseed=2, T=0.7, entropy=True)
-    check("evaluate_variant reproduces rk.evaluate (RSI_a n = 0)", E["conts"] == ev["conts"] and float((E["delta"] - ev["delta"]).abs().max()) < 1e-5 * float(ev["delta"].abs().max()) and E["first_div"] == ev["first_div"])
+    check("evaluate_variant reproduces rk.evaluate (RSI_a n = 0)", E["conts"] == ev["conts"] and float((E["delta"] - ev["delta"]).abs().max()) < 1e-5 * float(ev["delta"].abs().max()) and E["first_div"] == ev["first_div"],
+          f"identical texts {sum(a == b for a, b in zip(E['conts'], ev['conts']))}/{len(ev['conts'])}", same_device=True)
     bank = o3_bank(rk.ST, rk.ST["loops"], 14); e0 = rk.ST["ev_RND_1_0"]
     E2 = evaluate_variant(bank["RND_1"]["start"], e0["alpha"], lambda p, s: rk.keyseed("RND_1" + rk.SUF, 0, p, s, rk.BL), nseed=1, cbar=False)
-    check("O3 bank: RND_1 start reproduces round-1 evaluation; d_n, rel", E2["conts"] == e0["conts"] and not bank["_missing"] and torch.equal(bank["RSI_a"]["d"][2], rk.ST["dir_RSI_a_2"].double()) and bank["SEA"]["rel"][3] == rk.ST["loops"]["SEA"][2]["rel"])
+    check("O3 bank: RND_1 start reproduces round-1 evaluation; d_n, rel", E2["conts"] == e0["conts"] and not bank["_missing"] and torch.equal(bank["RSI_a"]["d"][2], rk.ST["dir_RSI_a_2"].double()) and bank["SEA"]["rel"][3] == rk.ST["loops"]["SEA"][2]["rel"],
+          f"identical texts {sum(a == b for a, b in zip(E2['conts'], e0['conts']))}/{len(e0['conts'])}", same_device=True)
     st2 = unit(ax["u_T_perp"].double()); rows2 = rk.run_loop("r2SELF", st2, 1, rounds=4)              # a round-2 loop, as B-Q0's r2RSIb
     b2 = o3_bank(rk.ST, rk.ST["loops"], 14, extra={"r2SELF": dict(ST=rk.ST, rows=rows2, start=st2)})
     check("O3 bank: a round-2 run_loop loop (r2RSIb's path) enters with its own rows", "r2SELF" in b2 and torch.equal(b2["r2SELF"]["d"][4], rk.ST["dir_r2SELF_4"].double())
@@ -1030,6 +1086,27 @@ def selftest(root, work):
     M1 = evaluate_variant(-u, al, lambda p, s: rk.keyseed("r2CHK", "mirror", p), prompts=range(4), cbar=False)
     M2 = evaluate_variant(u, al, lambda p, s: rk.keyseed("r2CHK", "mirror", p), prompts=range(4), signs=(-1.0, 1.0), cbar=False)
     check("evaluate_variant: sign per row (mirror: -u with +1 equals u with -1)", M1["conts"] == M2["conts"])
+
+    class Boom:                                                                      # rk-2: a failure inside a pushed forward
+        def __init__(self, when): self.when = when
+
+        def _h(self, mod, inp, out):
+            x = out[0] if isinstance(out, tuple) else out
+            if self.when(x): raise RuntimeError("injected failure inside a pushed forward")
+
+        def __enter__(self): self.h = rk.LAY[rk.BL].register_forward_hook(self._h); return self
+
+        def __exit__(self, *a): self.h.remove()
+    try: evaluate_variant(u, al, lambda p, s: rk.keyseed("r2CHK", "boom", p), prompts=range(4), hooks=[Boom(lambda x: x.shape[1] == 1)], cbar=False); ok = False
+    except RuntimeError: ok = True
+    ok = ok and rk.STEER["v"] is None and rk.STEER["V"] is None and rk.TEMP == 0.7
+    Z2 = evaluate_variant(None, 0.0, lambda p, s: rk.keyseed("r2CHK", "zero", p), prompts=range(4), cbar=False)
+    with Boom(lambda x: rk.STEER["v"] is not None):
+        try: k6_direction("r2_boom", ax["sea"].double(), rk.persona_sets()["H30"][:2], 0.0); ok2 = False
+        except RuntimeError: ok2 = True
+    check("rk-2: after a failure inside a pushed generation (evaluate_variant) or K6 forward the push is cleared; unsteered pairs identical again",
+          ok and ok2 and rk.STEER["v"] is None and "k6_r2_boom" not in rk.ST and all(fd == -1 for fd in Z2["first_div"]) and Z2["conts"] == Z["conts"],
+          f"identical pairs after the failure {sum(fd == -1 for fd in Z2['first_div'])}/4")
     pro, anti = rk.INSTR["rsi"]; ins = lambda p, s: (rk.enc(rk.chat(rk.PROMPTS[p] + " " + pro)), rk.enc(rk.chat(rk.PROMPTS[p] + " " + anti)))
     I = evaluate_variant(None, 0.0, lambda p, s: rk.keyseed("axis", "rsi", p), gen_ids=ins, cbar=False)
     rows = [r for p in range(rk.NP) for r in ((ins(p, 0)[0], rk.keyseed("axis", "rsi", p), 1), (ins(p, 0)[1], rk.keyseed("axis", "rsi", p), -1))]
