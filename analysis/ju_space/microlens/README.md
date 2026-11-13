@@ -69,3 +69,28 @@ Runde-1-Zustände. Die Effekte in T4 sind Mittelwerte über 64 Fortsetzungen.
 python analysis/ju_space/microlens/mlpp_probe.py <root> results/ju_space/microlens/mlpp_probe_b14.json   # NP=32 NNEW=40, ~28 min auf 4 Kernen, ~13 GB RAM
 ```
 `<root>` braucht `models/qwen3-1.7b` und `jlens/Qwen3-1.7B_jacobian_lens.pt`. Kurztest: `NP=2 NNEW=8` (~2 min).
+
+## Gegenprüfung (13.11.2026, Koordination; nicht vom Autor des Probelaufs)
+
+Drei Prüfer (Aufbau, Zahlen, Folgen für Runde 2) und ein abschließender Skeptiker haben Skript, JSON und Behauptungen geprüft,
+ohne das Modell neu zu rechnen. Alle Zahlen des JSON ließen sich aus dem JSON nachrechnen. Volltext: `results/ju_space/microlens/mlpp_probe_check.json`.
+
+| Aussage | Urteil | Kern |
+|---|---|---|
+| T3: Fremdanteil 0,345 in der J-Metrik | teils gestützt | Rechnung stimmt. Die vier Fremdachsen sind in M_J fast eine Richtung (größter Eigenwert ihrer 4×4-Korrelation ≥ 2,61), also ein gemeinsamer Anteil, nicht drei. Vergleich nur mit isotropen Zufallsrichtungen, ohne Kreuzvalidierung und Intervall. |
+| „Euklidisch zieht zu viel ab“ | teils gestützt | Relativ zur M_J-Projektion gilt das per Konstruktion; aussagekräftig nur, wenn M_J der richtige Maßstab ist. |
+| T4: −u_T_perp schiebt zu Sport/Meer/Ton | teils gestützt | 29–41 % der genannten Werte steigen bei Schub in jede Richtung (gerader Anteil, auch bei RSI-Wörtern). Der vorzeichentreue Anteil ist 0,18–0,27 nats gegen 0,63 bei RSI-Wörtern. Keine Nullrichtungen, keine neutralen Wortmengen, keine Intervalle, kein erzeugter Text. |
+| J-senkrechte Achse neutral für Sport/Meer | teils gestützt | Für diesen Lauf ja; beim Ton nicht (vorzeichentreu +0,71). Die Tonmenge enthält „!“, das die Metrik ausschließt. |
+| Signierte Spezifität belohnt den Gegenanteil | teils gestützt | Gilt für das eigene Maß des Probelaufs; Runde 1 (K8) und Runde 2 (OD-C6) messen zweiseitig. |
+| Logit- und J-Lens lesen fast disjunkt (1/15) | teils gestützt | Zählung stimmt; nach Wortfamilien größere Überlappung, keine Vergleichsbasis. |
+| Positionsfilter ändert wenig | gestützt | Kosinus 0,99; T4 innerhalb 0,03. |
+| Fremdkontrollen „blind“ | nicht gestützt | Null per Konstruktion sind nur Kosinusse von Richtungen. Die entscheidenden Kontrollen (K8, K5 in Runde 1; OD-C6 und C-Q2 in Runde 2) messen zweiseitig an erzeugten Texten oder Gradienten. |
+
+Folgen:
+- Runde 2 bleibt unverändert; keine M_J-Orthogonalisierung, keine M_J-Kriterien. C-Q2 prüft die textnahe Form derselben Frage bei
+  gleichem Schaden (0,05 nats).
+- Nach Runde 2, als nachträglich gekennzeichnete beschreibende Auswertung: signierte Fremdanteile aus C-Q2 (c) mit Prompt-Bootstrap,
+  neben dem Anteil, den der RSI-Inhalt allein erwarten lässt.
+- Für Runde 1b: T4 mit Nullrichtungen bei gleichem Schaden, mindestens 20 frequenzgleichen neutralen Wortmengen, Prompt-Bootstrap,
+  Positivkontrolle je Fremdachse, ohne „!“ in der Tonmenge und mit erzeugtem Text; T3 gegen Text-Kontrast-Nullachsen und
+  kreuzvalidiert; vorher die Brücke prüfen (J-Lens-Vorhersage der Wortmengen-Verschiebung gegen die gemessenen vorzeichentreuen Anteile).
