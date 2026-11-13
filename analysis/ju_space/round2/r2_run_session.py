@@ -1284,7 +1284,7 @@ def finalize(ctx, steps, st, ran, guard, attempts, copied, t_attempt):
     attempts[-1].update(ended=iso(), seconds=round(time.time() - t_attempt, 1), elapsed_since_t0=round(ctx.elapsed(), 1), ran=ran,
                         result="done" if done else ("time guard" if guard and pending else "failed"), inputs_changed_during_session=integ)
     dump_json(attempts, os.path.join(ctx.work, "session_attempts.json"))
-    man = load_json(ctx.manifest_path) or {} if ctx.manifest_path else {}
+    man = (load_json(ctx.manifest_path) or {}) if ctx.manifest_path else {}
     common = dict(session=ctx.base, attempts=attempts, steps=steps_rec, code_commit=ctx.code_commit,
                   code_commits=(read_text(os.path.join(ctx.work, "code_commits.txt")) or "").split(),
                   plan_sha256=FROZEN_PLAN_SHA256, test_run=ctx.test, selftest=ctx.selftest,

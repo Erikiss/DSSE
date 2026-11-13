@@ -640,7 +640,7 @@ def review_checks(work, out, r1, check):
     if py311:
         code = "import sys\nfor p in sys.argv[1:]:\n    compile(open(p).read(), p, 'exec')\n"
         cp = subprocess.run([py311, "-c", code, os.path.join(_HERE, "r2_pc_toy.py"), os.path.join(_HERE, "r2_unlearn_toy.py")], capture_output=True, text=True)
-        check("pc_toy-1: r2_pc_toy.py and r2_unlearn_toy.py compile under Python 3.11", cp.returncode == 0, cp.stderr.strip()[-300:])
+        check("pc_toy-1: r2_pc_toy.py and r2_unlearn_toy.py compile under Python 3.11", cp.returncode == 0, "" if cp.returncode == 0 else cp.stderr.strip()[-300:])
     else:
         print("[SKIP] pc_toy-1: python3.11 not found", flush=True)
     # pc_toy-2: the exact QUICK names the finder looks for (R1PC.find unchanged; the mock tree must carry these names)

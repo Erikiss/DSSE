@@ -64,7 +64,8 @@ TEXT = {
 NB_NAME = {s: "runde2_" + s[3:] + ".ipynb" for s in R.SESSIONS}        # r2_q1 -> runde2_q1.ipynb
 KONTO_A = ("r2_q1", "r2_q2", "r2_q3", "r2_pc", "r2_ana")              # Konto A = Drehscheibe (gpu1-gpu3); Konto B: r2_t1-r2_t4 (gpu4-gpu6)
 ZWEITER_ORDNER = "/content/drive/MyDrive/dsse_runs_B"                   # dsse_runs von Konto B als Verknüpfung in Konto A
-EXTRA_MIN = {"r2_q1": 1.0}    # Packung dieses Runners gegen 7.2 (R.PACKING): r2_q1 startet 5 statt 3 Modellprozesse (2 x 30 s Laden)
+EXTRA_MIN = {"r2_q1": (1.0, "5 Prozesse statt 3: r2_axes, r2_unlearn_qwen.py all (C-Q2 bis C-Q6 mit Arm A) und je eine GEN-Schleife an 14, b_lo "
+                          "und b_hi, also zwei Modellladungen à 30 s mehr")}    # Packung dieses Runners gegen 7.2 (R.PACKING)
 _LIB = {"stimuli": "r2_stimuli.py check", "rk": "r2_rk.py selftest", "axes": "r2_axes.py selftest", "gen14": "r2_gen_loop.py selftest an Block 14",
         "gen8": "an Block 8", "toy": "r2_toy_common.py selftest mit den W0-Äquivalenztests und dem Referenzvergleich",
         "sim": "r2_sim.py selftest", "geom": "r2_rgi_geom.py selftest", "geom06": "dasselbe für Qwen3-0.6B",
@@ -93,8 +94,8 @@ def steps_md(s):
 
 def markdown(s):
     title, what, (work, total, margin) = TEXT[s]
-    ex = EXTRA_MIN.get(s)
-    packung = (f" Dieser Runner packt die Sitzung anders ({R.PACKING[s]}): Arbeit {de(work + ex)} min, mit Einrichtung "
+    ex, wie = EXTRA_MIN.get(s, (None, None))
+    packung = (f" Dieser Runner packt die Sitzung anders ({wie}): Arbeit {de(work + ex)} min, mit Einrichtung "
                f"{de(total + ex)} min, mit Reserve {de(margin + 1.5 * ex)} min." if ex else "")
     m = R.SESSIONS[s]; need, opt = folders(s)
     wave = f"Welle {m['wave']}"
