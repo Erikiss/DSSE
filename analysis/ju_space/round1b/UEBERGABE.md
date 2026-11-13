@@ -49,3 +49,9 @@
   (stdlogits/neuron-lens).
 - Aufwand: Adapter im Kern-Lader (Hook-Punkte, Chat-Vorlage, Fensteraufmerksamkeit bei langem Kontext), J-Lens-Anpassung, H-Menge,
   Schadenseichung; grob 4-8 A100-Stunden für K und L (plus D), als eigener Teil G mit eigenem kurzen Plan vor dem Lauf.
+- Vom Nutzer genannte Gemma-4-Fassungen (14.11.2026): gemma-4-31b-it-qat-w4a16-ct, gemma-4-12b-it-qat-w4a16-ct,
+  gemma-4-e4b-it-qat-w4a16-ct, gemma-4-e2b-it-qat-w4a16-ct (QAT, 4-Bit-Gewichte, 16-Bit-Aktivierungen, vermutlich
+  compressed-tensors; Konfiguration und Lizenz vor dem Plan prüfen). Vorschlag: e2b/e4b als nicht quantisierte Originale voll
+  (mit MTP-Drafter als zweiter nativer Mehr-Token-Linse); 31b in 4 Bit (etwa 16 GB, passt auf A100-40GB) nur mit
+  Vorwärts-Messungen aus K und L (gradientenbasierte Verfahren bräuchten entpackte Gewichte, etwa 62 GB); 12b als Brücke zur
+  Neuron Lens für Gemma 4 12B.
