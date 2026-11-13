@@ -1,0 +1,557 @@
+{
+ "designs": [
+  {
+   "key": "lean",
+   "total_a100_hours": 2.9,
+   "falsifiers": [
+    "Against local storage in the H-neurons: L1 returns 'H privileged but one of several representations' (reselection drop ratio ρ_2 lower bound >= 0.5), 'distributed without a privileged set', 'dense', or any verdict labelled 'latent-scalar redundancy' (one uncertainty-like scalar explains >= 90 % of fragment information).",
+    "Against holographic storage: random fragments of <= 64 neurons carry information above the permutation floor (m_0 <= 64, excluding any threshold above 64 units and the strict half-the-units reading), or the synergy Σ(m) does not exceed the planted dense reference, or L1 returns 'localised'.",
+    "Against an H-neuron attractor not bound to length: L3 returns 'no H-attractor (driven / dissipative like controls)' (K_H upper bound < 1, ΔK inside ±0.25, no H-specific stickiness or persistence beyond surrogates and 40 comparison populations), together with R-L2a 'coincides' or 'no H-rise' and R-L2b 'no length effect beyond information'. K_H < 1 with H-specific carry is snowballing, not an attractor.",
+    "Against the chain-lens break-off / H-pattern belonging to the model: R-L2c returns 'break-off belongs to the lens' (lens breaks off before the model's own information horizon and does not track it) or 'lens H-pattern not mirrored by the model' (lens-free H-activity slope inside ±0.2 SD while the lens's FOV_H rises).",
+    "Against an RT-like (logarithmic) holographic length scaling of the model's captured information: the equal-partition growth class is 'power law' or 'saturating' (descriptive).",
+    "Against 'loop -> agent -> Ising -> collaboration -> entity': L4 returns 'no collaboration' (J_c at or below the shuffled-partner q95, upper bound < 0.07) or 'collaboration without entity (field-dominated)' (J_c - |h| interval < 0); at unit level, L3 'pairwise structure not H-specific'.",
+    "Against H-neurons as the coupling constant: L4 returns 'H gain acts like damage' or 'no effect of H gain on coupling' (DD inside ±0.13).",
+    "Against the non-equilibrium / EBM framing adding anything: the coupling asymmetry A_J and the irreversibility d̂ at H-entry do not exceed the control populations, and the energy at H-entry does not differ from matched windows (descriptive).",
+    "Not evidence either way: 'not testable' or 'not decidable' outcomes (no validated H-set, failed calibration, push too weak, format) and every 'undecided'."
+   ]
+  },
+  {
+   "key": "energy_ising",
+   "total_a100_hours": 5.5,
+   "falsifiers": [
+    "L2 and L3 negative: H64 inside the 99 controls on history dependence, excess stickiness and within-item bistability, and the push-and-release persistence contrast inside +-0.01 (fraction of units on) in both arms -> no lens-free H-neuron attractor; with a model-side length effect this is a length artefact, without one the chain lens's length dependence has no counterpart in the model.",
+    "L11 'break-off belongs to the lens': lens confabulation grows with chain length while the model's pre-answer H-score and per-step H-state do not predict it (inside +-0.15) and H-occupancy does not grow along the model's own chain.",
+    "L1 'collective, but no more than any L1-selected set (selection effect)' or 'generic population structure (not H-specific)'; 'not Ising-modellable' or 'independent H-detectors' contradict the Ising link for the H-population.",
+    "L4(b) 'detailed balance not rejected' at H-entry together with L2 'no well' (no energy descent at entry): the non-equilibrium / EBM reading of H-entry is not supported.",
+    "L5 'split only with two-voice input': the readout detects the two-voice split, but single-voice (and self-generated) texts show no more bimodality or dwell than their sentence-shuffled versions at 8-16k tokens -> no force splitting one entity into two up to 16,384 tokens; catfish flux line 'detailed balance not rejected'.",
+    "L8 'no detectable inter-agent coupling' (agents not Ising-modellable at this design) or 'merge into one entity' (collaboration forms one entity, not two).",
+    "L8 'H gain does not act as coupling': scaling H64 by 2 or 0 changes the inter-agent coupling no more than damage-matched random scaling (inside +-0.25).",
+    "L8 'competitor captures or dilutes the stance' or 'no catfish effect': an opposing partner does not sustain an agent's stance more than a neutral partner by a factor 1.25.",
+    "L9 'not a threshold (holographic) code' (random 64-unit fragments carry at least half of H64's information) together with 'no completion beyond controls': no holographic or associative-memory storage of the H-state.",
+    "L10 'saturating' growth class: no RT-like or critical growth of the captured information (descriptive only).",
+    "Not counted against (inconclusive by construction): S_macro <= 0 (L7, L8), any 'not testable' or 'not decidable' verdict, and the strict holographic threshold reading, which cannot be confirmed at about 1,200 labelled items."
+   ]
+  },
+  {
+   "key": "holographic",
+   "total_a100_hours": 5.41,
+   "falsifiers": [
+    "L1a 'break-off owned by the lens': on items the model computes correctly (known stratum) the chain lens's FOREIGN readouts still grow from step 3 to 12 (lower bound > 0) and FOREIGN carries most of the growth (Omega upper bound < 0.5) - the length effect of confabulation belongs to the lens, not to the model.",
+    "L1b 'H-pattern owned by the lens': break-off co-varies with the lens's FOV_H across seeds of the same state (rho_w > 0) while the model-frame a_H(t*) does not predict item-level break-off (rho_b within +/-0.10).",
+    "L1c 'length effect on H is information-limited': H's rise with continuation length vanishes (within +/-0.10 SD per e-fold) once the context-specific information iota is partialled out - a length artifact in information units.",
+    "L2a 'no stickiness beyond surrogates' or 'sticky but not H-specific', and L2b 'H dissipates like random': no lens-free H attractor; together with L1c this is V-ATT 'length artifact (information-limited)'.",
+    "L3 'H downstream (delayed)' or 'H independent', or 'boundary does not encode H': H is not an upstream driver of the output side, and the lens's H field of view has no lens-free counterpart.",
+    "L4 growth class power law or saturating (not logarithmic): no RT-like holographic scaling of captured information on equal partitions.",
+    "L5a 'not a strict threshold code (falsified)' together with 'localised', 'redundant (objective)' or 'dense-distributed' with I3_c > 0: the hallucination signal is ordinary classical coding, not holographic; 'localised' additionally means the 0.1 % are a real local unit.",
+    "L5b 'H causally privileged' or absence of 'graceful degradation': not holographic in the associative-memory sense either.",
+    "L2c 'uncertainty regime at entry' or 'no energy signature at entry': the EBM energy-well reading of confabulation fails.",
+    "L6 'reversible within resolution': no non-equilibrium (irreversibility) signature at H entry.",
+    "L7 'independent H detectors' or 'generic population structure (not H-specific)': the H population is not Ising-modellable as a collective H code.",
+    "L8 'uncoupled pair', no consensus, no coexistence, 'no pair macro beyond uncoupled agents' and 'no contagion beyond damage': the chain agent -> Ising -> collaboration -> entity-forming breaks; L reports the first negative link.",
+    "A positive Psi or a lag-0 cross-map never counts as support: independent persistent parts give Psi > 0 (checked in simulation) and lag-0 coupling is structural within a front."
+   ]
+  }
+ ],
+ "judges": [
+  {
+   "scores": [
+    {
+     "design": "lean",
+     "fidelity": 6,
+     "decisiveness": 9,
+     "confounds": 7,
+     "statistics": 8,
+     "feasibility": 9,
+     "completeness": 7,
+     "notes": "Strongest decisiveness and hygiene: L-CAL known-answer suite run on CPU before the freeze, with simulations already run. Under item heterogeneity the item-stratified surrogate kept size 0/6, while a pooled surrogate gave false positives in 6/6 (scratch_L_lean/sim_het_out.txt). L1 locus tree has planted codes calibrated at matched I_ref, knock-out reselection (rho_2, R_rep), a rotated basis, a latent-scalar Lambda and a pre-answer PIP. R-L2b separates length from anchor information iota, with an equivalence band at or above the MDE. L3 uses R6 correctly: an attractor needs K_H lower bound > 1, and K < 1 with H-specific carry is 'snowballing-type'. Twin keys and R1/R2/R3 reads split the KV route from the token route. The L-ALL combination is frozen. Cost 2.9 A100-h. Weaknesses: lowest fidelity. It drops 4 of the 6 README-listed lens-free tools: the static pairwise max-ent model with energy wells, Takens/RQA, cross-mapping and depth clusters. EBM and non-equilibrium are descriptive only, and the channel hierarchy and vector quantity are delegated to K. There is no within-item bistability test, the alternative attractor criterion lit_chain demands. R-L2a (H-rise within +/-1 octave of L_sat, on a grid of about 5 octaves) can come out by chance. R-L2b has neither an H-versus-control contrast nor item effects. The L1 permutation floor exists only at 3 sizes. The L4 null re-pairs partners across items with no item fields, and the probes run with the H push active. R-L2c's input format matches none of the K designs."
+    },
+    {
+     "design": "holographic",
+     "fidelity": 9,
+     "decisiveness": 7,
+     "confounds": 5,
+     "statistics": 7,
+     "feasibility": 6,
+     "completeness": 9,
+     "notes": "Most faithful to the user's words. It has a 40-element word table and an L.9 'measurable vs metaphor' table. Holographic verdicts are reported per sense: RT growth class on equal partitions to 32k, a code profile (XH family, bias-corrected I3_c, planted G-cal), bulk from boundary via CCM verified by intervention under generate-verify-revise-abstain, and causal erasure with the model as decoder (L5b). EBM (L2c) and non-equilibrium (L6) lines are decisive, and V-CHAIN names the first broken link. L1a (TRUE/MODEL/FOREIGN with own-CoT and sub-answer value sets) and L1b (between-item vs within-seed association) are the sharpest lens-vs-model tests of the three. They are built on the outputs K actually delivers: arithmetic items, digit runs, B_hal, FOV_H(q) and the 11 gating answers. Weaknesses: the attractor core is confounded. The Delta-gamma surrogate is pooled per family x position bin, so frailty produces false stickiness, and H, selected to separate items, has the most heterogeneity. S_TT against per-trajectory IAAFT is invalid under position trends, which is exactly the length artefact. K uses live in-window Delta-a as its denominator. EOS is masked to 1,024 tokens, so length is studied on forced continuation. In L7, P_H = H+ (the |r|>0.7 hull) is compared with a P_SEL that has no hull. L8 cross-pairs across settings without setting fields. The entity link counts consensus OR coexistence OR a pair macro, so it can hardly fail. Only 2 damage-matched sets are used. The CCM error rate comes from noisy logistic maps. Cost 5.41 h, 10.6 h at half the planning rates."
+    },
+    {
+     "design": "energy_ising",
+     "fidelity": 8,
+     "decisiveness": 7,
+     "confounds": 7,
+     "statistics": 8,
+     "feasibility": 6,
+     "completeness": 8,
+     "notes": "Broadest coverage of the user's chain and asides. L1 is a static pairwise max-ent model (pseudo-likelihood, G-M check, I2/IN on 10-unit subsets) with zero-temperature basins, i.e. the README's 'Energiemulden'. Criticality gets a shared-driver refit and a Rostami check. It uses 99 controls (Holm over 4 attainable) and SEL64 with an unrelatedness gate G-L5, and it tests within-item bistability (BI). Decisive lines: the EBM line and S_dot at H entry. Sagawa sigma comes with an integral-fluctuation-theorem pipeline check. The H-DUAL bridge (L5 two communities with a two-voice positive control, catfish flux, catfish carry) is fully specified. It has the best dyad design: topic fields, re-pairing within topic, a frozen-frame readout decoupled from the push, and C-half/C-opp/C-solo arms. L.gv measures a verifier error rate. Weaknesses: the holographic core is ceded to 'the holographic arm' (no I3/monogamy), and L9c has no planted calibration. L3's 'self-sustaining H-state' means only post-release persistence above controls, yet it feeds 'H-attractor beyond length' (R6 violated). The length line has no information denominator. The frailty proxy (tercile of the other seed's occupancy) controls frailty only partly. The entity link is contradictory: 'merge into one entity' is counted against the hypothesis while consensus maps to entity-forming. L11 needs at least 100 TriviaQA items overlapping K's arithmetic chain lens, so it is likely not testable. L5/L6 duplicate part D. 13 measurements, about 20 new code components, 5.5 h."
+    }
+   ],
+   "ranking": [
+    "lean",
+    "holographic",
+    "energy_ising"
+   ],
+   "base_recommendation": "Base: lean. With fidelity and decisiveness double-weighted, lean scores 61 and holographic 60, a near tie, so the deciding factor was which core holds up. A base must carry the H-CHAIN core (attractor vs length artefact) with valid nulls and sharp rules. Lean is the only design whose stickiness null was tested for size under item heterogeneity, and the only one that keeps round-2 R6 for the attractor verdict. It runs every statistic through a pre-freeze known-answer suite (L-CAL, L1-C), and at 2.9 A100-h it leaves about 3 h for grafts. Before the freeze lean needs three fixes: a permutation floor at every grid size in L1; item fields plus within-item re-pairing in L4 (take energy_ising's L8 machinery); and R-L2c remapped to K's arithmetic chain-lens outputs, or replaced by holographic L1a/L1b. Then graft holographic's fidelity layer: ownership L1a/L1b, causal erasure L5b, the XH family and I3_c, decisive EBM (L2c) and irreversibility (L6) rules, the boundary-encodes-H rank test, per-sense V-HOLO reporting and the word tables. Graft energy_ising's static max-ent with energy wells, within-item bistability BI, CTRL99 and the dyad controls. Estimated merged work is about 170-180 A100-min, about 4.5 h with setup and the x1.5 margin, inside the 6-h envelope. Holographic is the fallback base. It would need its L2a null, its L2b readout, its L7 control and its EOS policy rebuilt along lean's lines.",
+   "grafts": [
+    "holographic L1a: classify every K chain-lens digit run as TRUE (truth set), MODEL (lens-free own-CoT values plus isolated sub-answers; keys r1bL COT/SUB) or FOREIGN. Rule: G_F(known), and Omega = G_M/(G_M+G_F) with Holm, margins +/-0.04. It replaces lean's R-L2c break-off branch, which expects an output format K does not produce.",
+    "holographic L1b: between-item rho_b (pre-answer a_H(t*), read in an unmodified teacher-forced pass) against the within-item rho_w across seed ranks of FOV_H. Holm; margins +/-0.05 and +/-0.10. It replaces R-L2c's H-pattern branch.",
+    "holographic L1c: for 'H rises beyond information', require the H-minus-random contrast (mean over the 39 random sets) to lie above 0, with within-trajectory demeaning. Add both to lean R-L2b, which currently has neither a control contrast nor item effects.",
+    "holographic L5b: causal erasure with the model as decoder. Nested random mean-ablations at 2^-12..2^-4 of all neurons, H, H+ and 3 damage-matched sets. Verdicts 'threshold-like within f <= 1/16' / 'graceful degradation' / 'robust'; 'H causally privileged' with Holm over CI-wrong and FAB-non-refusal. This is the associative-memory sense, and it avoids the parity code that probes cannot learn.",
+    "holographic L5a: add the XH fragment family (uniform, excluding H+) with the XH ratio m_0.5(XH)/m_0.5(U), and I3_c bias-corrected on the planted localist code, to lean's L1 tree.",
+    "holographic L2c: decisive EBM rule. Delta-e and Delta-TT at H entry against position-matched windows: 'energy-well entry' / 'uncertainty regime at entry' / 'no energy signature', margins +/-0.1 nats and +/-0.3. Replaces lean's descriptive L3d energy line.",
+    "holographic L6: decisive irreversibility rule, d-hat = D_3 - D_2 at H entry against matched windows, Holm over a_H and s. Use lean's item-stratified, position-matched Markov surrogates as the band instead of IAAFT.",
+    "holographic L3 (holographic verdict only): 'boundary encodes the H channel beyond random channels'. The output block B = (s, e) must cross-map or predict a_H above all random channels. It is cheap and sits next to lean's latent-scalar Lambda as the bulk-from-boundary sense; drop the per-pair CCM direction claims unless budget allows.",
+    "holographic L.5 V-HOLO and L.9: report each holographic sense separately (RT, code, reconstruction, associative memory), never merged into one word. Add the L.1 element rows for 'zu ueberwinden' (likely 'zu ueberpruefen'), 'halluziniert' (model vs lens), 'Durchsatz' and 'Folge vs Reihe'. Add the rule that 'positive must be earned': Psi > 0 and lag-0 cross-maps never count.",
+    "holographic L8: pair-macro Delta-Psi against cross-paired dialogues (V = y_A + y_B, Gaussian-copula MI; simulated MDE about 0.023 nats), redundant vs synergistic. Re-pair within topic (see the energy_ising L8 graft).",
+    "holographic L4 G-MI: copy control and sentence-shuffle control for lean's equal-partition estimator, plus the own-text vs natural-text deficit rule R(L) (Lin and Tegmark).",
+    "energy_ising L1: static pairwise max-ent by pseudo-likelihood. G-M check (held-out PL gain, P(K) in band for >= 9 of 11, triplets), I_2/I_N on 20 ten-unit subsets, zero-temperature basins (the README's 'Energiemulden'), Rostami check, covariate-field shared-driver refit, planted L.plant with G-L4. It runs on spins lean's L2 already captures (raw |z| binarised at the unit q95).",
+    "energy_ising L.CTRL99: 99 layer-matched control populations (p_min 0.01, Holm over up to 4 attainable) instead of lean's 39 (p_min 1/40).",
+    "energy_ising L2(D): within-item bistability BI. 200 items x 8 seeds at T 1.0; 'split' items (>= 2 seeds with late occupancy >= 0.3 and >= 2 with <= 0.02) against L.surr. It is the alternative attractor criterion next to K_H > 1, which lean lacks.",
+    "energy_ising L8 dyad controls, replacing lean L4's null and readout: topic/item fields h_topic in the kinetic fit; re-pairing within topic and configuration; stance read in a frozen frame by the unmodified model, decoupled from the H push, with gate G-L12 (u_stance AUC >= 0.8, Spearman with Yes/No log-odds >= 0.5); C-half / C-opp / C-solo arms; the catfish carry rule log K_B(C-opp) - log K_B(C-half) against +/-log 1.25; C-Hdown/C-Rdown.",
+    "energy_ising G-L5: the selection-matched label must be unrelated to hallucination (|phi| < 0.1, >= 300 per class). Apply it to lean's 'Who' label in L.SELCTRL.",
+    "energy_ising L2(A): natural-text position control beta_O,nat (H occupancy on neutral passages read at the same positions), giving 'chain-specific length effect' next to R-L2b.",
+    "energy_ising L4(a): Sagawa sentence-reversal sigma on the model's own T 1.0 samples, with the integral-fluctuation-theorem pipeline check G-L6 at T 3 and T 4 (descriptive). Also L4(c) A_k: joint-state log-loss asymmetry with a frozen reading that it shows non-stationarity only, as the explicit counterpart of the user's 'vektorielle Groesse'.",
+    "energy_ising under-power rule: realised bootstrap SE > 1.5 x planning SE turns an equivalence verdict into 'not decidable (underpowered)'.",
+    "energy_ising G-L7 and the L3 push-out arm: twin integrity (pre-push identity in >= 99 % of pairs, sham >= 31/32 identical), the push-out arm with alpha 0 at H-high twins, and cross-reads of random pushes on H units ('generic H rise under damage').",
+    "energy_ising L.gv: generate-verify-revise with a verifier error rate measured on known answers, required for any statement about what a basin or community 'is' (the user's Aletheia rule)."
+   ],
+   "fatal_flaws": [
+    "lean L4 DUET: the shuffled-partner null re-pairs A and B across items, and the kinetic fit has no item field. A shared item prior then yields a false 'collaboration' and possibly 'entity-forming' (J_c - |h| > 0). Judge CPU check (scratchpad/r1b/judge_L1/sim_item_confound.py): with J_c = 0 and an item-field SD of 0.5 logit, J_c-hat = +0.19 (MDE 0.07). The false-positive rate is 1.00 with the across-item shuffle and 0.07 with re-pairing within items. Also, B's stance probes run with the H push active, so a shift in B's readout can look like a change in coupling.",
+    "lean R-L2c: it expects K.CHAINCORPUS to hold lens-scored continuation token ids, LH(k) and k*_lens on TriviaQA-type families. All three K designs score their chain lens on programmatic arithmetic items against truth sets (B_hal, k*_hal, FOV_H(q)). As written, the model-vs-lens verdict, which is the user's 'erweitern', will read 'not testable (no lens outputs)'.",
+    "lean L1: the permutation floor is computed only at m in {|H|, 64, 1,024}, but m_0 (F_small) and Syn need it at every grid size. The floor moves strongly with m: in lean's own simulation an uninformative code gives I-hat -0.004 bits at m = 8 and -0.17 bits at m = 1,024. So the 'holographic-like' and 'distributed without a privileged set' branches are undefined as written.",
+    "holographic L2a: the Delta-gamma null is a Markov surrogate pooled per family x 64-token bin, with no prompt or item effects. Frailty alone then produces stickiness: in lean's simulation the pooled test gave gamma-hat 0.46 at gamma = 0 and false positives in 6/6 runs. S_TT against per-trajectory IAAFT is invalid under position trends, the very length artefact to be excluded. H is selected to separate items and so has the most heterogeneity, which makes 'H-specific stickiness' a likely artefact. G-surr (surrogate-of-surrogate) can detect neither problem.",
+    "holographic L2b: K = post-release Delta-a divided by the live in-window Delta-a over the last 8 push tokens. Unless a_H is captured before the scaling hook (not specified), the denominator is set mechanically by alpha. 'H-state self-sustaining (R6 convention)' is then not the R6 quantity, and 'capture' and 'restoring' compare the mechanical scales of different unit sets. Only 2 damage-matched sets are used.",
+    "holographic L7: P_H = H+ (H plus its |r| > 0.7 CETT partners) is compared with P_SEL and random populations that have no partner hull, so the 'Ising-modellable collective H code' verdict is partly built in by construction.",
+    "holographic V-CHAIN and L8: the entity link is positive if consensus OR coexistence OR a pair macro holds. Consensus and coexistence are near-complementary, so the link can hardly fail. The collaboration link is a 3-way OR without correction. 'Vgl. EBM reasoner, non-equilibrium' are made links of the chain. L8's cross-pairing across settings and entities, without setting fields, has the same shared-driver false coupling as lean L4. This includes 'H coupling between agents' through a shared FAB-entity drive.",
+    "holographic L.TB: EOS is masked for all 1,024 tokens, so L1c, L2, L3, L6 and L7 study length on forced continuation past the model's natural end. That can manufacture the length and H-rise effects being tested.",
+    "energy_ising L3 and L.3: 'self-sustaining H-state' means only that post-release persistence C exceeds the damage-matched controls in either arm; no K > 1 is required. It feeds the combined 'H-attractor beyond length', so decaying (K < 1) H-specific persistence gets the attractor label. That contradicts round-2 R6 and lit_chain's verifier correction; only the separate turn-carry rule uses K_H lower bound > 1.",
+    "energy_ising L8 and L.7: 'merge into one entity' is listed as counting against the hypothesis, while L.6 maps dyad consensus to 'entitaetenbildend'. The entity link therefore has contradictory readings and no outcome that clearly supports the user's chain.",
+    "energy_ising L11: gate G-L15 needs at least 100 K chain-lens items overlapping L.R (TriviaQA CC/CI, FAB, OPEN). K's chain lens runs on arithmetic items, so L11, the only lens-vs-model test in this design, will read 'not testable' unless L.R is rebuilt on K's items.",
+    "energy_ising L9(c): the holographic fragment rule ('not a threshold code' / 'localised') has no planted-code calibration, and I3/monogamy is ceded entirely. The design's only code-sense holographic verdict is therefore uncalibrated."
+   ],
+   "missing_everywhere": [
+    "Uncertainty as a common driver. No stickiness, carry or length rule conditions on the model's next-token entropy, and none uses an entropy-matched control channel or population. H-neurons may simply track uncertainty (semantic-entropy probes, entropy neurons, Cavus et al.), so 'H-specific' could mean 'uncertainty is sticky'.",
+    "Hull-matched selection control. H+ and H64 include K's |r| > 0.7 partners or selection-frequency units, but no design extends its selection-matched control (SEL64, P_SEL, L.SELCTRL) the same way. Coupling and collectivity verdicts (lean L3c when |H| < 10, holographic L7, energy_ising L1) are therefore partly built in.",
+    "Between-set variance of the 2-4 damage-matched random pushes. The prompt bootstrap treats the sets as fixed, so 'H-specific carry or persistence' can reflect idiosyncrasies of a few random sets. Set-level resampling or at least 19 sets per arm is needed.",
+    "A pre-registered H-push dose ladder (for example alpha 0, 0.5, 1.5, 2, 3) that brackets a separatrix. The designs disagree on whether persistence after a push-out supports an H-attractor (energy_ising, hysteresis) or contradicts it (holographic, 'restoring'), and none reconciles this.",
+    "Propagation of K's non-unique H selection (bootstrap Jaccard 0.45-0.69) into L's verdicts. No design re-runs its key statistics on K's bootstrap H-sets or reports their spread.",
+    "A lens-free per-step test with exact error labels on the model's own multi-step arithmetic chains (K's labelled items). The question is whether H activity before step k predicts the model's own first error beyond step index and anchor information. This would tie 'H rises' to 'the model errs' without a lens or a judge; holographic L1b treats it only descriptively.",
+    "A single interface contract with K for chain-lens outputs. Each design assumes a different format (continuation ids plus LH(k); overlap with TriviaQA rollouts; arithmetic digit runs). It must be fixed before the freeze to K's ITEMS-ARITH, B_hal/k*_hal, FOV_H(q) and GEN-K chain ids.",
+    "H carry over several follow-up answers (AUSWERTUNG section 5, step 5). Every design stops at one follow-up turn or measures carry within a turn.",
+    "The 'Loop Transformer' link in depth. All designs declare 'no counterpart in depth'. None considers a toy time-homogeneous looped network, which the rules allow when Qwen cannot answer, to test loop -> attractor -> Ising directly."
+   ]
+  },
+  {
+   "scores": [
+    {
+     "design": "lean",
+     "fidelity": 7,
+     "decisiveness": 8,
+     "confounds": 8,
+     "statistics": 8,
+     "feasibility": 8,
+     "completeness": 7,
+     "notes": "Best validity on the decisive attractor question (c). HD is a Mantel-Haenszel log-odds ratio over item x position-bin strata. The exit-hazard gamma uses item fixed effects against item-specific two-way Markov surrogates. Its own frailty simulation (sim_het_out.txt) shows why this matters: the pooled test gave 6/6 false positives, the stratified test 0/6. The incidental-parameter bias is removed by a surrogate-corrected Δγ. The 40 comparison populations include the selection-matched L.SELCTRL, and Holm at 1/41 is attainable. The causal line follows round-2 R6 ('self-sustaining' only if K_H's lower bound > 1) with a graded 'H-specific carry without self-sustainment (snowballing-type)' verdict and a KV-vs-token route split. L1 has a decision tree calibrated by planted codes on the real CETT matrix, knock-out reselection (which answers Cavus's non-uniqueness directly), latent-scalar and rotated-basis controls, and an honest 'threshold >64 not testable'. MDEs are backed by simulations. I re-ran sim_agents (seed 1): SE(J_c) 0.020-0.029 (consistent with the claim), but shuffled-partner null size 0.10, not the claimed 0.03, so L-CAL(d)'s ≤0.10 is borderline. Reuse is explicit: rk_loop byte-identical, stage_turn2, rule_R6, calibrate/RefKL, CbarHook, prompt_bootstrap. The cost re-derives for L2: 33-53 s per 32k document, 2.7M teacher-forced tokens ≈ 9 min, twins ≈ 14-16 min. Three items are under-costed: L4 assumes a batched ragged-cache two-agent engine that does not exist (re-prefill ≈ 25-40 min instead of 13); L1-C's SNR bisection plus about 100 K.SELECT calls is ≈ 20-30 min, not 15; the ≥1.1 GB K.CETTMAT copy-in is unpriced. Realistic total ≈ 3.3 h, still the cheapest. Defects: (1) the read set for K_rand,i is unspecified (a cross-read on the H channel makes d_rand^(1) ≈ 0 and ΔK undefined). (2) R-L2a compares an absolute position (p_H) with an equal-partition block length (L_sat) on coarse log2 grids at ±1 octave with no null, so it is weakly identified. (3) R-L2b has no item fixed effects, so EOS-censoring composition can produce β_k. (4) L4 tells the agents to 'agree', so entity-forming is instructed; also J_c - |h| ignores J_s. (5) There is no within-item bistability route. (6) Entropy is never used as a covariate. (7) The ΔK margin of 0.25 is below the stated MDE of 0.3. (8) The 'Who' selection label is not checked for independence from hallucination. (9) There is no fallback for D.LONGCORPUS."
+    },
+    {
+     "design": "holographic",
+     "fidelity": 9,
+     "decisiveness": 7,
+     "confounds": 5,
+     "statistics": 7,
+     "feasibility": 6,
+     "completeness": 8,
+     "notes": "Most faithful to the user's question. Each holographic sense is operationalised and reported separately:\n- RT growth class on equal partitions around a common cut c = 16,384, within 32,768 positions, with copy/shuffle estimator controls (G-MI) and cached-vs-full parity (G-LCE).\n- Code profile with U/LM/XH/ROT families, I3 bias-corrected by a planted localist code, a planted XOR gate and a frozen 'what then'.\n- Boundary-to-bulk via CCM with Ye's lag convention, G-ccm calibration (delay, common driver, synchrony) and twin-intervention verification. This is a proper generate-verify-revise-abstain loop.\n- Associative memory via causal erasure with the model as decoder (L5b), which sidesteps unlearnable parity codes.\n\nIt also has the most decisive ownership tests of the chain-lens break-off: L1a (TRUE/MODEL/FOREIGN readouts on exact-label items) and L1b (between-item model-frame a_H(t*) vs within-seed FOV_H). L1c is a clean information-limited length test with trajectory fixed effects, an H-minus-39-random contrast and an equivalence margin.\n\nValidity problems:\n- L2a(ii): both the hazard model and the 'position-matched' surrogate rates are pooled per family x bin with no prompt effects. Frailty then yields Δγ < 0 under memoryless dynamics. H, selected on item-level labels, is likely more heterogeneous than random sets, so 'H-specific stickiness' can be an artefact. The holographic's own sim_sticky.py uses per-prompt rates and so does not test the spec.\n- V-ATT accepts 'capture' or 'restoring' (relative persistence, K < 1 allowed) as attractor evidence.\n- No dynamics test includes a selection-matched control; P_SEL appears only in L7.\n- L1a builds M_i from T 1.0 CoT samples and 10 T 1.0 sub-answer samples with no chance-match (foreign-M) null, which biases Omega toward 'model-owned'. L1a/L1b also need K's arithmetic lens corpus.\n- EOS is masked to force 1,024 tokens. This creates an unnatural post-end regime that can drive both ι and a_H, and p_EOS is not used in any rule.\n- L2b has 2 random sets and an unjustified planning SD of 0.6.\n- TB-L's 64 CC + 64 CI items are only required to lie outside split (a), not outside the H-selection split.\n\nFeasibility: the budget re-derives from costs_L.py (205.6 min work, 5.41 h planned). But the claim that the trim order keeps a half-rate run (10.6 h) at ≤ 6 h is false: the four trims save ≈ 45 planned minutes. It also needs the heaviest novel tooling of the three: GPU CCM, RQA with multivariate IAAFT, PIP up to 172,032 features with MLP probes, a dialogue engine, and a position-addressable Gumbel advance."
+    },
+    {
+     "design": "energy_ising",
+     "fidelity": 7,
+     "decisiveness": 6,
+     "confounds": 5,
+     "statistics": 7,
+     "feasibility": 6,
+     "completeness": 8,
+     "notes": "Most complete specification. It has an 'If missing' fallback for every consumed object, 16 gates, and 99 control populations (minimum p 0.01, so Holm over 3-4 statistics is attainable). Further strengths:\n- An under-power rule.\n- Planted Ising calibration of basins and criticality, a shared-driver covariate refit and the Rostami check.\n- A Sagawa IFT pipeline check at T 3/4.\n- S4 shuffled texts with an S2 positive control.\n- Push-in and push-out arms with a damage-doubling fallback.\n- Within-item bistability from 8 seeds, the criterion the lit_chain verifier asked for.\n- L.gv as a real Aletheia loop with a known-answer verifier (S2 voices).\n\nThe budget re-derives: I ran final_budget.py and got 208.4 min of work and 332.6 min (5.54 h) planned.\n\nThe flagship verdict is not valid:\n- HD is pooled over items within position bins, so between-item occupancy heterogeneity alone gives HD > 0. H, selected on item-level hallucination labels, should be more heterogeneous than random sets.\n- ξ's frailty control is only a tercile of the other seed's occupancy.\n- SEL64 is reported but is not part of the L2/L3 decision sets.\n- L3's 'self-sustaining H-state' means only C > 0, i.e. post-release displacement above damage-matched random sets. C is not normalised by the in-window displacement in each population's own units. This contradicts round-2 R6 and the verified lit_chain correction.\n- So 'H-attractor beyond length' (L2 distinct AND L3 'self-sustaining') can be reached with neither carry > 1 nor bistability.\n\nOther weaknesses:\n- No information-based control of the length effect; only a natural-text position control.\n- 'Holographic' is reduced to associative memory plus a descriptive growth law.\n- L5/L6 (≈ 43 min) answer H-DUAL questions that belong to part D.\n- The new-code burden is very heavy for ≈ 0.5 h of slack: GPU pseudo-likelihood plus K-pairwise fits, Gibbs sampling, C(T) scans, exact 10-unit max-ent fits, depth Gram nulls, S_dot/D_n, a dyad engine with frozen-frame re-reads, and L.gv."
+    }
+   ],
+   "ranking": [
+    "lean",
+    "holographic",
+    "energy_ising"
+   ],
+   "base_recommendation": "Use lean as the base.\n\nWhy lean:\n- It is the only design whose decisive attractor test is robust to between-item heterogeneity. HD uses Mantel-Haenszel over item x position-bin strata. Δγ uses item fixed effects against item-specific surrogates, validated by its own frailty simulation.\n- It keeps the selection-matched control inside the decision set.\n- It uses round-2 R6 for self-sustainment and adds a graded 'snowballing-type' verdict.\n- Every statistic is calibrated on known answers (L-CAL, and L1-C on the real matrix).\n- It costs 2.9 A100-h, ≈ 3.3 h after re-costing L4 and L1-C. The design rules already split the 30 h envelope as R 12 + D 9 + K 9, so lean's slack matters.\n\nFix before merging:\n1. Define K_rand,i as a self-read on each random set's own channel; the cross-read on H is descriptive only.\n2. Drop the 'agree' instruction from L4.\n3. Add within-item demeaning to R-L2b.\n4. Replace R-L2a with holographic's L1c.\n5. Capture surprisal and entropy per token and use them as covariates.\n6. Re-cost L4 with re-prefill.\n\nThen apply the grafts below. The merged part comes to ≈ 4.8 A100-h, within the 6 h allotted.",
+   "grafts": [
+    "holographic L1a: ownership of the break-off. Classify each lens readout on exact-label items as TRUE, MODEL or FOREIGN, with G_F(known) and Omega. Add it to lean L2 as R-L2d with two fixes. (a) Add a chance-match null: classify every readout against a foreign item's M_j from the same stratum. (b) Build M_i only from greedy and T 0.7 own CoT and sub-answers. It runs only if K delivers an exact-label (arithmetic) chain-lens corpus; otherwise 'not testable'.",
+    "holographic L1b: split the break-off/H association into between-item (model-frame a_H at the pre-answer position t*) and within-item (FOV_H across seeds of one state), with a within-item seed-permutation null. Add it to lean R-L2c's H-pattern line.",
+    "holographic L1c: within-trajectory demeaned (Frisch-Waugh) slopes beta_pos^0 and beta_pos^iota, beta_iota, the H-minus-mean-of-39-random contrast and the ±0.10 SD equivalence margin. This replaces lean R-L2a (the p_H vs L_sat coincidence). L_sat becomes descriptive only, and the same within-item demeaning goes into R-L2b.",
+    "holographic L4 controls for lean L.EQMI: G-MI (copy control Y := X giving ≥ 5x Î at every L ≤ 2^12; sentence-shuffled Î(2^13) below the real one, paired upper bound < 0), G-LCE (B = 1 chunked log-probs vs a full pass, relative difference < 1e-4 at 16k and 32k), and the own-text deficit rule R(L) = I_self/I_nat with the [0.9, 1.1] equivalence band.",
+    "holographic L5b causal erasure with the model as decoder: mean ablation of nested random fragments of 2^-12..2^-4 of all neurons (3 nested draws), H, H+ and 3 damage-matched random sets. Verdicts 'threshold-like within f ≤ 1/16' / 'graceful degradation' / 'robust', and 'H causally privileged' with Holm over 2. Add it to lean L1 as L1(vii); ≈ 13 min of work.",
+    "holographic L8: (a) pair-macro ΔPsi against 39 cross-paired dialogues, using the supervenient V = y_A + y_B and Gaussian-copula MI; this replaces lean L4's descriptive S_macro on a binary macro. (b) G-L8-manip: H scaling must first change agent A's own behaviour beyond damage-matched random before any H-coupling or contagion verdict. (c) The ALI instructed-agreement positive control for the readout.",
+    "holographic realised-SD rule: an equivalence verdict becomes 'undecided (underpowered)' when the realised bootstrap SD exceeds 1.25 x the planning SD. Apply it to every lean 'no effect' branch; it also repairs the ΔK margin (0.25) vs MDE (0.3) mismatch.",
+    "holographic TB-L per-front channels: capture surprisal s_t, entropy e_t and p_EOS(t) during lean L2 generation at zero extra passes. Use e_t as a covariate in R-L2b and as a stratum or covariate in L3a's HD and Δγ, to address uncertainty as a common driver.",
+    "energy_ising L2(D) within-item bistability BI. Data: R-B, 200 items x 8 seeds at T 1.0, 384 tokens. An item is split if ≥ 2 seeds have late occupancy ≥ 0.3 and ≥ 2 have ≤ 0.02; compare against L.surr and the controls. Add it to lean L3a as a third observational statistic (Holm over HD, Δγ, BI) and as an alternative attractor route in L3's combined verdict: K_H lower bound > 1 OR H-specific BI. ≈ 11 min.",
+    "energy_ising L3 push-out arm: α = 0 on H for 16 tokens at the twin's first H-high step in [8, 128], with the hook active only on eligible rows. Use 4 damage-matched random push-outs with the frozen doubling fallback (used when α_r = 0 reaches < 90 % of H's damage). Also take G-L7 twin integrity (sham α = 1 rows identical to the twin in ≥ 31/32) and the G-L8 manipulation gate (in-window displacement ≥ 3 SD of sham). All of this goes into lean L3b.",
+    "energy_ising L.CTRL99: 99 layer-matched control populations, so min rank p = 0.01 and Holm over 3 statistics stays attainable. Use it in lean L3a and L3c; the cost is only extra captured bits.",
+    "energy_ising G-L5 for lean L.SELCTRL: a frozen list of unrelated labels ('Who', digit in question, digit in alias); take the first with |phi(label, hallucinated)| < 0.1 and ≥ 300 items per class, balanced.",
+    "energy_ising L8 condition structure in place of lean L4's 'agree' task, keeping D.FORK-F1 items and D.PROBE spins: C-half (one neutral agent) for collaboration, C-opp for the entity line, a C-solo baseline, and the length-matched catfish carry K_B (opposing vs neutral partner). The entity criterion becomes the consensus share (lower bound ≥ 0.5 = merge, upper bound ≤ 0.2 = two entities persist) instead of J_c - |h|.",
+    "energy_ising L.1 'If missing' fallback table, adapted to lean's inputs. In particular: K.CETTMAT is recomputed in-session by teacher-forcing K's answers (energy_ising L0(a)/(e), ≈ 2 min) instead of a ≥ 1.1 GB copy-in, and D.LONGCORPUS falls back to holographic's pinned PG19 slice set L.LONGDOC.",
+    "Optional, holographic L3 reconstruction sense: 'boundary (s,e) encodes the H channel beyond all 39 random channels' with G-ccm, as the dynamic counterpart of lean L1's static latent-scalar Λ."
+   ],
+   "fatal_flaws": [
+    "energy_ising: 'H-attractor beyond length' can be reached without any attractor evidence, so as specified it is meaningless. (a) L2's HD is pooled over items within position bins. Between-item occupancy heterogeneity alone gives HD > 0, and H, selected on item-level hallucination labels, is expected to be more heterogeneous than the 99 random sets. HD alone can carry 'H dynamics distinct'. (b) L3's 'self-sustaining H-state' means only C > 0: post-release displacement above damage-matched random sets, not normalised by in-window displacement in each population's own units. That contradicts round-2 R6 (self-sustaining iff K's lower bound > 1) and the verified lit_chain correction (an attractor needs K_H > 1 or within-item bistability).",
+    "holographic: the L2a Markov-hazard test pools both the hazard model and the 'position-matched' surrogate rates per family x position bin, with no prompt effects. Frailty therefore produces Δγ < 0 under memoryless dynamics; lean's simulation of the pooled test gave 6/6 false positives. H's larger between-item heterogeneity can yield 'H-specific stickiness'. Because V-ATT also accepts 'capture' or 'restoring' (relative persistence, K < 1), 'H-attractor beyond length (lens-free)' can result from artefacts.",
+    "holographic: L1a builds the MODEL set M_i from 4 T 1.0 CoT samples and 10 T 1.0 sub-answer samples per sub-expression, with no chance-match null. Lens numbers land in M_i by chance, which inflates G_M and Omega. 'break-off owned by the model' / 'shared', and so V-OWN, are biased and uninterpretable until a foreign-M_j null is added.",
+    "lean, as written: L3 reads K.CH-H (the H channel) and defines K_rand,i 'likewise'. If the damage-matched random pushes are cross-read on H, d_rand^(1) ≈ 0, so K_rand is undefined and so is ΔK. 'H-specific carry' and 'carry like damage-matched controls' become unreachable, and the combined L3 verdict collapses to 'mixed'. The read must be fixed as a self-read on each random set's own channel.",
+    "lean: the L4 task message tells the agents to 'agree on the {attribute}'. Convergence, and 'entity-forming (coupling dominates priming)', is therefore instruction-following, and the verdict cannot speak to emergent entity formation. J_c - |h| > 0 also ignores the self-coupling J_s, so it is not the condition for flipping a listener against its own primed state."
+   ],
+   "missing_everywhere": [
+    "Uncertainty as a common driver. No design conditions its attractor or length rules (HD, stickiness, carry, β_k) on the model's own next-token entropy, or compares H with an entropy- or uncertainty-selected control population. The 'question starts with Who' selection-matched control does not match H's likely latent driver (lit_chain confounds list).",
+    "No lens-free, position-resolved measure of the model's own factual errors along its own chain. All designs tie H only to first-answer labels or to FAB items that are confabulated by construction. An 'H-rise along the chain' is therefore never shown to coincide with actual model hallucination later in the chain (lit_chain §3.4, meaning (c)).",
+    "Causal contrasts rest on 2-4 damage-matched random sets with prompt-only bootstraps. Between-set variance is ignored: no design resamples control sets, uses a random-effects model, or uses ≥ 19 sets in the causal arms. A 'H-specific' contrast can therefore reflect the idiosyncrasy of the chosen sets.",
+    "Agent-coupling tests have no non-social control for lexical priming or copying. An example would be the partner's message inserted as a quoted document, or a scripted fixed-content partner. Without it, a positive J_c / J_cross may be in-context copying rather than collaboration.",
+    "No hysteresis loop. No design runs a push dose series in both directions from matched H-low and H-high states, the direct causal signature of bistability. Each arm uses one or two doses.",
+    "No L-specific throughput pilot before the freeze. Untested: hooked batch decode at ~1k context with many captured populations, 16-32k fp32 B = 1 prefill with hooks, and ragged multi-agent caches with append-and-crop probes. All costs are planning rates.",
+    "No power or MDE for the conjunctive combined verdicts (L-ALL, L.3, V-ATT/V-OWN). How often they will return 'mixed / not decidable' under realistic effect sizes is unknown."
+   ]
+  }
+ ],
+ "merged_meta": {
+  "measurements": [
+   {
+    "id": "L0 PILOT (core)",
+    "what": "Core, engineering only, before the freeze. Measures:\n- hooked decode at batch 32 and 0.5-1.1k context with the full capture set;\n- R1 / R3 read rates;\n- B = 1 16k / 32k prefill with hooks;\n- duet re-prefill cost and carried-cache parity;\n- RefKL hooks time;\n- Drive throughput.\nUses stand-in random sets; the texts are excluded from all analyses. Defines G-pilot and freezes the cost table.",
+    "a100_minutes": 10,
+    "session": "L-P (account B, before the freeze)"
+   },
+   {
+    "id": "L-CAL (core)",
+    "what": "Core. Known-answer calibration on synthetic data at the planned sizes, items (a)-(n):\n- PIP tree;\n- item-stratified stickiness and HD rank test;\n- within-item bistability;\n- static and kinetic Ising;\n- EQMI growth classifier;\n- length-against-information slopes;\n- irreversibility d-hat against a detailed-balance band;\n- RQA difference-in-differences;\n- cross-map;\n- agent J_ex with item fields;\n- pair-macro Delta Psi;\n- ownership classifier with chance matches;\n- step-error conditional hazard.\nA failed item makes the dependent verdicts 'not testable (pipeline calibration failed)'.",
+    "a100_minutes": 0,
+    "session": "CPU before the freeze (about 120 CPU-min; repeated as code tests)"
+   },
+   {
+    "id": "L1 LOCUS (core)",
+    "what": "Core; code and associative-memory senses. Is the hallucination signal in the H-neurons a local store, one of several representations, distributed, dense, or holographic-like? Tools:\n- PIP over uniform, matched (99), rotated-basis and excluding-H fragments, with a permutation floor at every size;\n- knock-out reselection;\n- onset synergy against a dense reference and bias-corrected I3 monogamy;\n- latent scalars;\n- pre-answer PIP;\n- planted-code calibration on the real CETT matrix.\nAlso causal erasure with the model as decoder (nested random mean-ablations 2^-12..2^-4, P, and 8 damage-matched sets with set-level resampling): threshold against graceful degradation, and causal privilege. Flags: 'not a strict threshold code (falsified)', selection robustness over K's 20 bootstrap H-sets.",
+    "a100_minutes": 41,
+    "session": "L-A"
+   },
+   {
+    "id": "L2 HORIZON (core)",
+    "what": "Core.\n- L2a, RT sense: growth class of captured MI on equal partitions of natural text to 32,768 tokens, with copy / shuffle / parity checks, and the model's own-text deficit R(L).\n- L2b: length against information along the model's own 1,024-token chains, by within-chain demeaned slopes of H activity on log position with and without anchor information and entropy. H-minus-99-controls contrast; SEL+, UNC+ and natural-position controls. Verdicts 'information-limited' / 'H rises beyond information loss' / 'no length trend'.\n- L2c, reconstruction sense: does the output boundary (surprisal, entropy) cross-map the H channel beyond 99 random channels?\nBuilds the L.R chain corpus (512 + 768 chains with per-token captures).",
+    "a100_minutes": 55.5,
+    "session": "L-B"
+   },
+   {
+    "id": "L3 ATTRACT (core)",
+    "what": "Core.\n- L3a: item-stratified HD, surrogate-corrected stickiness and within-item bistability against 99 controls, SEL+ and UNC+ / entropy.\n- L3b: twin push and return with R6 carry pooled over 5 turns, 6 damage-matched random sets per sign (two-level bootstrap), self-reads, KV against token route.\n- L3c: static pairwise max-ent (G-M check, I2/IN, energy basins, Rostami check, shared-driver refit) and kinetic Ising against 99 controls and a hull-matched SEL+.\n- L3d: EBM energy-well rule (Delta e, Delta TT) and irreversibility at H entry against a detailed-balance null; Sagawa sigma and A_k descriptive.\nCombined into an attractor line and a specificity line.",
+    "a100_minutes": 51,
+    "session": "L-A (L3b, 34.5 min) and L-B (L3a 6, L3c 8, L3d 2.5)"
+   },
+   {
+    "id": "L4 DUET (core)",
+    "what": "Core. Two Qwen agents on 32 fictional-entity forks x 2 configurations x 4 seeds, with no instruction to agree.\n- Conditions C-opp, C-half, C-doc (non-social: the same messages as documents), C-Hup and C-Rup (H gain against damage-matched random gain in the neutral listener).\n- Context-free stance readout by the unmodified model; kinetic Ising with item fixed effects.\n- Coupling J_ex = excess over within-item re-pairing, with item-cluster bootstrap.\nLinks: Ising-modellable pair, collaboration beyond lexical priming, entity-forming (consensus beyond re-pairing), H gain as coupling (behind a manipulation gate), catfish carry (to part D); pair-macro Delta Psi descriptive.",
+    "a100_minutes": 34.4,
+    "session": "L-A"
+   },
+   {
+    "id": "L5 OWNER (core)",
+    "what": "Core; model or lens?\n- L5a: classifies K's arithmetic chain-lens digit runs as TRUE / MODEL / FOREIGN. The model-own values come from gating answers, greedy and T 0.7 CoT, and sub-answers, with a foreign-item chance-match null. Verdicts: break-off owned by the lens / the model / shared.\n- L5b: model-frame pre-answer H (between items) against lens-only seed variation of FOV_H (within items).\n- L5c: within-item conditional hazard. Does H before step k predict the model's own exact first arithmetic error beyond step, position and entropy, against 99 controls?",
+    "a100_minutes": 3.1,
+    "session": "L-A (generation); L-ANA (analysis, CPU)"
+   },
+   {
+    "id": "L-ANA (core)",
+    "what": "Core. Verdict assembly: L-ALL (H-chain lens-free reading), V-OWN, V-HOLO per sense, V-CHAIN link by link, selection-robustness labels. No new test.",
+    "a100_minutes": 0,
+    "session": "Round-1b analysis session on a CPU runtime (about 30 CPU-min; about 0.3 A100-h if run on an A100 VM)"
+   },
+   {
+    "id": "X1 L3-DOSE (extension)",
+    "what": "Extension. Dose ladder from matched H-low (alpha 1.5, 2, 3) and H-high (alpha 0.5, 0) states, twin protocol with draw-and-discard key advance. Post-release retention rho(alpha) against damage-matched random sets. Verdicts: 'capture above a dose threshold (bistable)', 'monostable relaxation', and 'hysteresis'. Adds attractor route A3.",
+    "a100_minutes": 8.5,
+    "session": "L-B"
+   },
+   {
+    "id": "X2 L4-DOWN (extension)",
+    "what": "Extension. H suppression in the dyad: C-Hdown (alpha 0) against C-Rdown (damage-matched). Holm over the up and down H-coupling lines.",
+    "a100_minutes": 15.3,
+    "session": "L-A"
+   },
+   {
+    "id": "X3 TOY-LOOP (extension)",
+    "what": "Extension. Weight-tied looped toy network on the round-2 shift world: the depth loop Qwen lacks. Tests wrong fixed points, toy H-units as an attractor across iterations (push-release against 19 random sets), and Ising-modellability of fixed-point units.",
+    "a100_minutes": 5,
+    "session": "L-B (or CPU)"
+   },
+   {
+    "id": "X4 COMPLETE (extension)",
+    "what": "Extension. Associative completion: clamp 25 % / 50 % of P's units to the H-high template; completion of the unclamped units against damage-matched random populations and against the static Ising model's prediction.",
+    "a100_minutes": 2.5,
+    "session": "L-B"
+   },
+   {
+    "id": "X5 L.gv (extension)",
+    "what": "Extension. The only reconstruction in L: an Aletheia-style generate-verify-revise-abstain loop naming what an energy basin is by lexical statistics. Verifier error rate measured on planted basins and self-consistency cases.",
+    "a100_minutes": 3,
+    "session": "L-B"
+   },
+   {
+    "id": "X6 L4-SOLO (extension)",
+    "what": "Extension. Single primed agent alone: self-coupling J_s and stance carry K_solo, the descriptive 'loop -> agent' baseline.",
+    "a100_minutes": 2.6,
+    "session": "L-A"
+   }
+  ],
+  "total_a100_hours": 6,
+  "metaphor_mapping": [
+   {
+    "element": "'H-Neuronen' ('Haarneuronen', speech-to-text slip)",
+    "counterpart": "K.HSET as the push/read set P: the channel a_t (L2, L3), the Ising population (L3c), the PIP and erasure target (L1), the coupling knob (L4)"
+   },
+   {
+    "element": "'ca. 0,1 % im Netz'",
+    "counterpart": "|H| / 172,032 from K. Gao's 0.01-0.35 per mille imply 2-60 neurons; 0.1 % (172) is a loose upper bound. L1 tests whether the set is privileged (99 matched sets, XH ratio, reselection) or one readout of a distributed code"
+   },
+   {
+    "element": "'Chain Lens'",
+    "counterpart": "K's chain-lens substitute (Qwen3-1.7B has no MTP head). L runs no lens and classifies K's per-chain records (L5)"
+   },
+   {
+    "element": "'konkretes Abbruchkriterium ... wo sie halluziniert'",
+    "counterpart": "L5a: the FOREIGN break-off B_F against the model-own break-off B_M, with a chance-match null. Lens-free horizons: k*_free (L2b) and the model's own first error step (L5c)"
+   },
+   {
+    "element": "'Blickbereich ... mit den H-Neuronen korreliert'",
+    "counterpart": "L5b: model-frame pre-answer H against break-off between items (rho_b) against lens-only seed variation of FOV_H (rho_w). L2c: does the output boundary carry H beyond random channels?"
+   },
+   {
+    "element": "'halluziniert' (two meanings)",
+    "counterpart": "H_model (K's labels; L5c exact arithmetic step errors) and H_lens (L5a FOREIGN readouts), kept apart"
+   },
+   {
+    "element": "'ein Artefakt der Länge'",
+    "counterpart": "L2b 'length effect on H is information-limited' (within-chain slopes with and without anchor information and entropy), with natural-position, control-population and uncertainty contrasts; L-ALL 'length artefact (information-limited), no H-attractor'"
+   },
+   {
+    "element": "'H-Neuronen-Attraktor, nicht unmittelbar an die Statistik der Länge gebunden'",
+    "counterpart": "L3 attractor line: R6 self-sustainment (pooled 5-turn carry K_H > 1) with H-specific carry against 6 damage-matched sets per sign, or within-item bistability, or (X1) capture beyond a dose threshold. Also requires H-specific stickiness or persistence against 99 controls and SEL+. Combined with L2b in L-ALL"
+   },
+   {
+    "element": "'andere Mechanismen ..., welche ... verstärken'",
+    "counterpart": "L3b 'H-specific carry' with K < 1 (a snowballing-type amplifier, not an attractor), KV against token route; L4 H gain as agent coupling"
+   },
+   {
+    "element": "'linsenfreier Ansatz'",
+    "counterpart": "All of L: the model's own log-probabilities, activations, sampled text and forced-choice log-odds; no logit / tuned / J / J++ / chain lens, no MTP head, no vocabulary projection of a hidden state"
+   },
+   {
+    "element": "'erweitern' (extend the chain-lens insights)",
+    "counterpart": "V-OWN (L5a, L5b, L5c) and the lens-free H-chain reading L-ALL"
+   },
+   {
+    "element": "'holographische Prinzipien' (general)",
+    "counterpart": "Four classical senses, reported separately and never merged (V-HOLO): code (L1), RT / area law (L2a), reconstruction (L1(iv) Lambda and L2c), associative memory (L1(vii), L3, X4)"
+   },
+   {
+    "element": "Holographic principle: boundary encodes bulk",
+    "counterpart": "Output-side entropy predicts the internal label (Lambda, L1(iv)); the (surprisal, entropy) delay embedding cross-maps the H channel above 99 random channels (L2c)"
+   },
+   {
+    "element": "Ryu-Takayanagi / area or log law",
+    "counterpart": "L2a growth class of captured MI on equal partitions to 32,768 tokens; only logarithmic counts as RT-like. No counterpart: bulk metric, minimal surfaces, central charge; no fixed cut, because the KV cache grows linearly"
+   },
+   {
+    "element": "Holographic error-correcting code (threshold recovery, no privileged region)",
+    "counterpart": "L1 PIP tree with floors at every size, the 'not a strict threshold code (falsified)' flag and the XH ratio. A threshold above about 64 units is falsifiable but not confirmable at n ~ 1,200. Quantum aspects (no-cloning, complementary recovery) have no counterpart: classical units can copy"
+   },
+   {
+    "element": "Monogamy of mutual information (I3 <= 0)",
+    "counterpart": "L1 I3_c, bias-corrected with the planted localist code (true I3 = 0)"
+   },
+   {
+    "element": "Page curve, scrambling, Hayden-Preskill",
+    "counterpart": "No counterpart: forward pass plus sampling is many-to-one and dissipative (no unitarity); only the half-threshold classical shadow is addressed (not testable beyond 64 units)"
+   },
+   {
+    "element": "Holographic memory (Plate's HRR; distributed traces plus clean-up)",
+    "counterpart": "L1(vii) graceful degradation without causal privilege under damage-matched erasure; L3 attractor dynamics (clean-up); X4 completion from a partial cue"
+   },
+   {
+    "element": "AdS/CFT bulk, gravity, quantum entanglement, conformal boundary",
+    "counterpart": "No counterpart: no gravitating bulk, no conformal boundary, no quantum state"
+   },
+   {
+    "element": "'vgl. EBM reasoner'",
+    "counterpart": "Energy E = -log q of the model's own text (exact ARM-EBM bijection). L3d energy-well rule at H entry (entropy falls, trapping rises, beyond 99 controls). 'Incorrect fixed point' maps to self-sustaining H (L3b), a descriptive H-basin (L3c) and wrong fixed points in the toy loop (X3)"
+   },
+   {
+    "element": "Energy descent at inference (EBR / EBT style)",
+    "counterpart": "No counterpart: Qwen computes one forward pass per token and samples from exp(-E); it never descends E"
+   },
+   {
+    "element": "'non-equilibrium'",
+    "counterpart": "L3d path irreversibility d-hat = D_3 - D_2 at H entry against a detailed-balance surrogate band and matched windows; kinetic-Ising coupling asymmetry A_J (L3c); Sagawa sigma on own samples with an IFT check (descriptive)"
+   },
+   {
+    "element": "Heat, physical temperature, dissipation",
+    "counterpart": "No counterpart: only information-theoretic quantities; sampling T and max-ent model T are parameters"
+   },
+   {
+    "element": "'da Loop Transformer'",
+    "counterpart": "Measured loops: token loop (L2, L3a), turn loop (L3b 5-turn carry, X6 solo agent), dialogue loop (L4). No counterpart in Qwen's depth (28 distinct blocks); X3 weight-tied toy loop as the depth stand-in"
+   },
+   {
+    "element": "'--> Agent'",
+    "counterpart": "A Qwen3-1.7B instance with its own context, acting in turns (L4; format gate G-duet)"
+   },
+   {
+    "element": "'--> Ising modellierbar'",
+    "counterpart": "Units: static pairwise max-ent (pseudo-likelihood, G-M check, I2/IN, energy basins) and kinetic Ising of the H-population against 99 controls and a hull-matched SEL+ (L3c). Agents: kinetic Ising of stance spins with item fixed effects (L4)"
+   },
+   {
+    "element": "'--> Kollaboration'",
+    "counterpart": "L4 coupling beyond lexical priming: J_ex with a live partner minus J_ex with the same messages framed as archive documents (C-doc), with J_ex the excess over within-item re-pairing"
+   },
+   {
+    "element": "'--> entitätenbildend'",
+    "counterpart": "L4 'merge into one entity (consensus)': late consensus share >= 0.5 under opposite priming and agreement beyond within-item re-pairing. Pair-macro Delta Psi (descriptive holographic sense) and L3c collectivity at unit level"
+   },
+   {
+    "element": "'....' (open continuation of the chain)",
+    "counterpart": "No counterpart: unspecified"
+   },
+   {
+    "element": "The arrows of the chain",
+    "counterpart": "Measured link by link (V-CHAIN); an arrow is a causal claim only where L manipulates H gain (L3b, L4)"
+   },
+   {
+    "element": "'Multitoken Prediction ... Gradient Through Routing'",
+    "counterpart": "No counterpart in L: Qwen3-1.7B has no MTP head and no gradients flow at inference (part K)"
+   },
+   {
+    "element": "'Folge, nicht Reihe'",
+    "counterpart": "Folge = the model's own sequential continuation (L2 chains; token route in L3b R1/R3 reads). Reihe = the parallel KV route, measured as the KV share (L3b); a direct k-step readout needs a lens (part K)"
+   },
+   {
+    "element": "'vorderste Front ... Reihen von Tokenfronten'",
+    "counterpart": "Per-front channels captured during generation: a_t of P and comparison populations, entropy e_t, surprisal s_t"
+   },
+   {
+    "element": "'verschiedene Kanäle', 'hierarchisch', 'äußere Gegebenheiten'",
+    "counterpart": "Channel hierarchy belongs to part K. L reports only directed kinetic couplings among units (L3c) and between agents (J_c(A <- B) against J_c(B <- A), L4), with family and T as external conditions (descriptive)"
+   },
+   {
+    "element": "'Durchsatz' (a front predicting the next, next-next fronts)",
+    "counterpart": "Anchor-information profile iota(k) and the decoupling horizon k*_free along the model's own chains (L2b); descriptive cross-map lag profile (L2c)"
+   },
+   {
+    "element": "'vektorielle Größe' (front predicts preceding against following fronts)",
+    "counterpart": "A_k, the joint-state log-loss asymmetry (L3d, descriptive). For any stationary process it is balanced, reversible or not, so a non-zero A_k means non-stationarity. Irreversibility is measured separately (L3d rule)"
+   },
+   {
+    "element": "'zu überwinden' (probably 'zu überprüfen')",
+    "counterpart": "Every L rule has an outcome that counts against the hypothesis (falsifiers)"
+   },
+   {
+    "element": "H-DUAL 'Catfish-Effekt' (a competitor keeps the group active)",
+    "counterpart": "L4 catfish carry: B's stance carry with an opposing against a neutral partner (log ratio against +-log 1.25), reported to part D"
+   },
+   {
+    "element": "H-DUAL 'Catfishing = Hyperlong-Kontext'",
+    "counterpart": "L2a captured MI up to the native 32,768 tokens (descriptive touchpoint; the duality itself is part D)"
+   },
+   {
+    "element": "H-DUAL 'zwei Entitäten' / 'aus einer Entität zwei machen'",
+    "counterpart": "Part D. L4's 'two entities persist' is reported to D; for the user's chain it counts against the entity-forming link"
+   },
+   {
+    "element": "H-DUAL 'Selfish Mining', 'Optimum unter 50 %', 'Losing Game'",
+    "counterpart": "No counterpart in L (part D): no withholding, hash share or difficulty adjustment in one model or a dyad"
+   },
+   {
+    "element": "'LLMs und Trainingsdaten als Hyper-Catfishing'",
+    "counterpart": "No counterpart: needs training, which is excluded"
+   },
+   {
+    "element": "Retokenisation, letters/pixels floor, 'König - Mann + Frau'",
+    "counterpart": "No counterpart in L (part D's retokenisation control)"
+   },
+   {
+    "element": "'Form war relevant' (round-2 AT8)",
+    "counterpart": "Descriptive only: modularity Q of the kinetic couplings reported next to ||J|| (L3c)"
+   }
+  ],
+  "falsifiers": [
+   "Against local storage in the H-neurons: L1 returns 'H privileged but one of several representations (redundant)' (reselection drop ratio rho_2 lower bound >= 0.5), 'distributed without a privileged set', 'dense (no sparse store)', or carries 'latent-scalar redundancy' (one uncertainty-like scalar reaches >= 90 % of fragment information).",
+   "Against holographic code storage: L1 flags 'not a strict threshold code (falsified)' with m_0 <= 64 (random fragments of <= 64 neurons carry information above the permutation floor at their own size), or returns 'redundant (I3_c > 0)', or 'localised: the H-cluster is the store'.",
+   "Against holographic (associative) memory: L1 erasure returns 'H causally privileged' (P's mean ablation changes CI wrong answers or FAB non-refusals beyond 8 damage-matched random ablations) without 'graceful degradation', and the L3 attractor line shows no attractor.",
+   "Against RT-like holographic scaling: the L2a equal-partition growth class is 'power law' or 'saturating', not logarithmic (descriptive).",
+   "Against bulk-from-boundary: L2c returns 'boundary does not encode H' or 'boundary encodes H only like any population'.",
+   "Against model-ownership of the chain-lens break-off and its H-pattern: V-OWN 'belong to the lens'. That is, L5a 'break-off owned by the lens' (FOREIGN readouts grow from step 3 to 12 on items the model computes correctly, and model-own values carry less than half the growth after chance-match correction) and L5b 'H-pattern owned by the lens' (lens-only seed variation of FOV_H predicts break-off; model-frame pre-answer H does not, within +-0.12). L5c 'no H signal before own errors' adds that H does not precede the model's own exact errors.",
+   "Against an H-neuron attractor not bound to length: L-ALL returns 'length artefact (information-limited), no H-attractor' (H's length trend vanishes once anchor information and entropy are partialled, within +-0.10 SD per e-fold; pooled carry upper bound < 1; no bistability; no H-specific stickiness or persistence beyond 99 controls and SEL+) or 'no length trend and no H-attractor'. 'H-specific amplifier, not self-sustaining' also denies the attractor (K < 1 is snowballing).",
+   "Against amplifying mechanisms: L3b 'carry like damage-matched controls' (Delta K inside +-0.40) together with 'H dynamics not distinct'; L4 'H gain acts like damage' or 'no effect of H gain on coupling' (DD inside +-0.17).",
+   "Against the EBM reading: L3d 'uncertainty regime at entry (not a well)' (entropy rises at H entry) or 'no energy signature at entry' (Delta e inside +-0.10 nats and Delta TT inside +-0.30 SD).",
+   "Against non-equilibrium at H entry: L3d 'reversible within resolution' (d-hat = D_3 - D_2 inside the detailed-balance surrogate band).",
+   "Against an Ising-modellable H-population: L3c 'pairwise structure not H-specific', 'collective, but no more than a selection-matched set (selection effect)', 'not Ising-modellable (higher-order structure)' or 'independent H-units'. Any H-specific line qualified 'not beyond uncertainty' denies H-specificity beyond an uncertainty-selected population.",
+   "Against loop -> agent -> Ising -> collaboration -> entity: L4 'no detectable inter-agent coupling', 'influence explained by lexical priming (no social coupling)' (live coupling no larger than with the same messages as documents, within +-0.16), or 'two entities persist'. V-CHAIN then names the first broken link. In the toy depth loop (X3): 'not shown'.",
+   "Not evidence either way: every 'not testable', 'not decidable' and 'undecided' outcome; Psi <= 0; and anything the 'positive must be earned' rule excludes (HD > 0 alone, occupancy rising with position alone, positive Psi alone, lag-0 cross-maps, fitted-energy basins)."
+  ],
+  "shared_objects": [
+   "K.HSET: frozen H-set (positive weights at C*, prose label convention) with weights, bootstrap selection frequencies, layers and indices [K-lean HN / K-mechanism SO-H] (consumed)",
+   "K.HSET+: H plus |r| >= 0.7 partners on S1 CETT, cap 200 [H_cluster / H+]. Becomes the push/read set P when |H| < 10 (consumed)",
+   "K.HBOOT: positive-weight sets of K's 20 bootstrap refits; used for the selection-robustness label (consumed; new contract item)",
+   "K.LABELS: TriviaQA consistency classes (CC / CI), keys, 10 sampled answers, S1 selection and S2 evaluation splits (S2 >= 600 + 600), answer-span rule, refusal parser, label sign, >= 300 FAB items [HL / SO-LAB] (consumed)",
+   "K.CETT / K.NH: down_proj pre-hook manager: capture z and CETT, per-position scaling, mean-clamp (consumed)",
+   "K.SELECT: K's frozen L1-logistic FISTA pipeline at C* with exclusion mask (consumed; L never re-tunes C)",
+   "K.RANDSETS: K's matched random-set generator (size, layer histogram, CETT-norm quintile/decile) (consumed; fallback seed 'r1bL-CTRL')",
+   "K.CH-H: K's per-token H channel definition (A_H / zCETT or standardised-z mean a_H) (consumed)",
+   "K.REF: per-neuron reference mean / SD of z on K's neutral corpus (consumed; L fallback 0.3 min)",
+   "K.ITEMS-ARITH: arithmetic chain items with truth sets, strata (known / prone), 11 gating answers, read position t* [ITEMS-ARITH / G_AR] (consumed)",
+   "K.LENS-OUT: per-chain chain-lens records: item, stratum, family, variant, block, seed rank, key, emitted ids per position q = 0..S, B_hal, FOV_H(q) with random band, A_H(q) [GEN-CL / K6 records]. Consumed only as data; L runs no lens",
+   "K.GVRA: K's generate-verify-revise-abstain convention (consumed by X5)",
+   "D.LONGCTX: long-context engine (B = 1 prefill, chunked lm_head, KV reuse with per-layer crop, SDPA assertion, parity gate G-long) (consumed)",
+   "D.LONGCORPUS: >= 24 pinned documents of >= 32,768 tokens (consumed; fallback L.LONGDOC = pinned PG19 slices, offered back to D)",
+   "D.FORK-F1: fictional-entity factual-fork items (entity, attribute, v1 / v2); L needs 32, builds missing ones with D's generator (consumed)",
+   "R.DMGPUSH: damage-normalised push, calibrate + RefKL 'hooks', damage in nats on R's merged references; L adds 64 held-out S2 answers (consumed)",
+   "R.AXES: round-2 style direction u*_14 (consumed, descriptive covariate only)",
+   "Round-2 machinery reused unchanged: rk_loop keyseed / Gumbel, r2_theta.stage_turn2 (B-Q8), r2_theta_verdict.rule_R6, r2_rk.prompt_bootstrap, CbarHook pattern, r2_unlearn_qwen.calibrate / RefKL, r2_linearity.auc_cols",
+   "L.POP: population index file with P, SEL+ (selection-matched, hull-matched, unrelated-label gated), UNC+ (uncertainty-selected, hull-matched), CTRL99 (99 matched random populations), K.HBOOT union, hulls (provided)",
+   "L.R: chain corpus L.R-A (512 chains x <= 1,024 tokens) and L.R-B (768 chains x <= 512 tokens at T 1.0), with per-token a_t of all populations, spins, entropy, surprisal, anchor information iota and repeat flags (provided)",
+   "L.PIP: fragment sweeps (U / M / Rot / XH), permutation floors at every size, reselection, planted-code calibration (provided)",
+   "L.EQMI: equal-partition captured-MI estimator (vCLUB foreign halves) with copy / shuffle checks (provided)",
+   "L.TWIN: twin push-and-return driver with multi-turn carry, R1 / R2 / R3 reads, draw-and-discard key advance (provided)",
+   "L.MARKOVSUR: item-specific position-matched Markov surrogate and its detailed-balance (reversible) version (provided)",
+   "L.KISING: static pseudo-likelihood max-ent (K-pairwise, Gibbs check, iterative scaling, basins, modularity) and kinetic Ising fitter for units and agents (provided)",
+   "L.DUET: two-agent driver (B-Q8 id concatenation, re-prefill, context-free stance readout, J_ex with within-item re-pairing) (provided)",
+   "L.OWN: TRUE / MODEL / FOREIGN classifier for chain records with a foreign-item chance-match null (provided)",
+   "l_verdicts.json: all L verdicts and combined readings (provided)"
+  ],
+  "provenance": [
+   "Base: lean. Both judges rank lean first and recommend it as the base; there was no disagreement to settle. J1: double-weighted score 61 against holographic 60, decided by core validity. Lean is the only design whose stickiness null was size-tested under item heterogeneity, the only one keeping round-2 R6, and the only one with a known-answer calibration suite.",
+   "Kept from lean:\n- L-CAL suite;\n- L1 tree with knock-out reselection, rotated basis, latent scalar Lambda, pre-answer PIP and real-matrix planted calibration L1-C;\n- L.EQMI nested equal-partition estimator;\n- L.R chain families with EOS at-risk sets, anchor information iota and k*_free;\n- L3a Mantel-Haenszel HD over item x bin, item-FE hazard with item-specific surrogates and surrogate-corrected Delta gamma;\n- L.SELCTRL;\n- L3b twins with R6, R1/R2/R3 reads and KV share;\n- kinetic Ising;\n- L4 skeleton (fork items, forced-choice log-odds, shared keys);\n- numerics conventions;\n- the mapping table.",
+   "From holographic:\n- L5a ownership (TRUE / MODEL / FOREIGN on exact-label arithmetic items) and L5b between/within association, replacing lean's R-L2c;\n- L2b information-limited length test (Frisch-Waugh demeaning, H-minus-random contrast, +-0.10 margin), replacing R-L2a and repairing R-L2b;\n- G-MI copy / shuffle controls, G-LCE parity and the own-text deficit R(L);\n- L1(vii) causal erasure with the model as decoder;\n- XH fragments and XH ratio;\n- I3_c bias-corrected by the planted localist code;\n- decisive EBM rule (Delta e, Delta TT) and irreversibility rule (D_3 - D_2, Holm over a_H and s);\n- boundary-encodes-H rank test (L2c);\n- pair-macro Delta Psi with supervenient V;\n- G-duet-manip;\n- V-HOLO per-sense reporting;\n- the 'positive must be earned' rule;\n- word-table rows ('zu ueberwinden', 'halluziniert', 'Durchsatz', 'Folge vs Reihe');\n- PG19 fallback L.LONGDOC.",
+   "From energy_ising:\n- static pairwise max-ent (pseudo-likelihood, G-M check, I2/IN on 10-unit subsets, zero-temperature energy basins, Rostami check, covariate-field shared-driver refit, planted sets G-cal-Ising);\n- CTRL99 (99 controls, min rank p 0.01, Holm attainable);\n- G-L5 unrelated-label gate for the selection control;\n- within-item bistability BI;\n- natural-text position control;\n- Sagawa sigma with the IFT check;\n- the A_k frozen reading (user's vector quantity);\n- the under-power rule (realised SE > 1.5 x planning SE);\n- twin integrity and manipulation gates, cross-reads ('generic H rise under damage');\n- dyad structure (C-half / C-opp, context-free frozen-frame readout, readout gate, catfish carry, H down arm as X2, solo baseline as X6);\n- L.gv (X5) and completion (X4) as extensions;\n- H-DUAL mapping rows.",
+   "J1 fatal flaw, lean L4 (item confound and push-active probes). Fixed by:\n- item fixed effects plus the coupling statistic J_ex = excess over within-(item, configuration) re-pairing, with item-cluster bootstrap;\n- 4 seeds per item-configuration to allow re-pairing;\n- context-free stance readout by the unmodified model, so the push never touches the readout.\nMerge simulations: item FE alone gave a 0.44 false-positive rate at item-field SD 1.0 (sim_duet.py); J_ex is unbiased (sim_duet2.py).",
+   "J1 fatal flaw, lean R-L2c (interface matching no K design). Fixed by:\n- L5 built on K's exact-label arithmetic records;\n- an explicit K.LENS-OUT / K.ITEMS-ARITH contract with K-lean and K-mechanism names, and gate G-CL.",
+   "J1 fatal flaw, lean L1 (permutation floor at 3 sizes only). Fixed by a floor F(m) at every grid size (100 permutations each); m_0, Syn and the falsification flag use F(m) at their own m.",
+   "J2 fatal flaw, lean L3b (K_rand read set unspecified). Fixed by a self-read on each random set's own channel; cross-reads on H are descriptive with the label 'generic H rise under damage'.",
+   "J2 fatal flaw, lean L4 (instructed 'agree' task; J_c - |h| ignored J_s). Fixed by removing any agree / persuade instruction and making the entity criterion the consensus share (lower bound >= 0.5) plus agreement excess over within-item re-pairing.",
+   "Holographic fatal flaws avoided in grafted parts:\n- pooled-surrogate frailty: lean's item-specific surrogates used;\n- mechanical in-window K denominator: R1 turn reads, and X1 retention uses a post-release early window;\n- P_H hull against an unhulled P_SEL: SEL+ and UNC+ hull-matched;\n- EOS masking: chains allow EOS; only raw book continuation masks it, stated;\n- entity OR rule: a single primary entity criterion;\n- across-setting cross-pairing: within-item re-pairing;\n- L1a chance matches: foreign-M_j null, M_i from greedy and T 0.7 only.",
+   "Energy_ising fatal flaws avoided:\n- 'self-sustaining' without K > 1: R6 on a pooled 5-turn carry;\n- pooled HD: Mantel-Haenszel over item x bin;\n- contradictory entity reading: merge = supports the chain link, two entities = against;\n- L11 TriviaQA overlap requirement: L5 on K's arithmetic items;\n- uncalibrated L9(c): L1 planted calibration.",
+   "J2 lean defects fixed:\n- R-L2a replaced;\n- R-L2b given within-chain demeaning;\n- BI added;\n- entropy used as covariate and as the E-channel;\n- Delta K margin set to 0.40 >= MDE 0.34;\n- 'Who' label gated by G-sel;\n- D.LONGCORPUS fallback;\n- L4 re-costed with re-prefill (34.4 min);\n- L1-C re-costed (15 min with 3 seeds and fewer K.SELECT calls);\n- K.CETTMAT copy-in replaced by an in-session recompute (2 min).",
+   "Missing everywhere, uncertainty as common driver (J1, J2). Added:\n- UNC+, selected by K's pipeline for a within-class entropy label;\n- the E-channel;\n- an entropy covariate in the hazard, length and step-error models;\n- the qualifier 'not beyond uncertainty'.",
+   "Missing everywhere, hull-matched selection control (J1): SEL+ and UNC+ receive the same |r| >= 0.7 hull and cap as K.HSET+ whenever P is a hull.",
+   "Missing everywhere, between-set variance of random pushes (J1, J2): 6 damage-matched sets per sign in L3b, 8 in L1 erasure and 4 rotating sets in L4, each with a two-level bootstrap over units and sets; 99-control rank tests for the observational lines.",
+   "Missing everywhere, dose ladder and hysteresis (J1, J2):\n- X1 with matched H-low / H-high starts and alpha ladders, post-release retention, capture and hysteresis verdicts;\n- a frozen reading that reconciles the designs: restoring is local stability and counts for nothing; capture beyond a threshold is attractor evidence.",
+   "Missing everywhere, non-unique H selection (J1): K.HBOOT contract item; the 'selection-robust' label requires >= 16 of 20 bootstrap H-sets.",
+   "Missing everywhere, lens-free exact-label position-resolved error test (J1, J2): L5c within-item conditional hazard of the model's own first arithmetic error on H activity just before each step, beyond step, position and entropy, against 99 controls.",
+   "Missing everywhere, interface contract with K (J1): L.1 contract with field-level requirements and gate G-CL.",
+   "Missing everywhere, carry over several follow-up answers (J1): turns 2-5 for H+ / H- / twin, with a pooled geometric carry under R6; one-step K_H reported for round-2 comparison.",
+   "Missing everywhere, the depth 'Loop Transformer' (J1): X3 weight-tied looped toy on the round-2 shift world, where a toy is allowed because Qwen cannot answer.",
+   "Missing everywhere, non-social control for agent coupling (J2): C-doc, in which the same partner messages reach a lone agent as archive documents. 'Collaboration' requires live coupling beyond it.",
+   "Missing everywhere, L-specific throughput pilot (J2): L0 PILOT before the freeze (engineering only), with G-pilot and the trim order.",
+   "Missing everywhere, power of the conjunctive combined verdicts (J2):\n- simulated in sim_combined*.py and sim_own2.py (table in L.5);\n- the first rule structure gave the correct label only about half the time, so L3 was split into an attractor line and a specificity line, and equivalence margins were set near 2.9 SE;\n- correct labels now come out in 0.64-0.86 of runs in clear scenarios, and 0.32 for a weak K_H = 1.15.",
+   "Decisions where the judges differed:\n- Realised-SD factor: 1.5 (energy_ising) over 1.25 (holographic), because planning SDs are rough; the Delta K margin is fixed directly.\n- R-L2a: replaced (J2) rather than patched (J1); L_sat kept descriptive.\n- Boundary-encodes-H: core, because it is cheap (J1 graft; J2 optional).\n- L.gv and completion: extensions (J1 grafts).\n- Holographic per-pair CCM direction claims and energy_ising depth clusters / long-context communities: not taken (part K / part D)."
+  ]
+ }
+}

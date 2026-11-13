@@ -1,0 +1,621 @@
+{
+ "check": {
+  "must_fix": [
+   {
+    "id": "MF1",
+    "where": "R2.3 PC_PASS_1b; R.1 definitions of u_sea^perp* and u_T^perp*; R2.4 gating of 'unlikely'; R.0 and R.6",
+    "problem": "Under round-1/2 dynamics the redefined positive control is not passable at blocks 14 and 6. A failed control also turns the expected negative there into 'undecided'. Evidence from theta_verdict.json blocks.<b>.B_Q0.mode_set: SEA is a member of M_14 and M_6, so u*_14 and u*_6 contain the round-1 SEA loop's own d_4. The debiased cos(d_4^SEA, d_4^RSI_a) is -1.051 at 14 and -1.142 at 6, against 0.229 at 18. image_cos_d1_u_star.SEA is -0.930 / -0.834 / 0.118. u_sea^perp* is orthogonal to u*_b by construction, so a SEA loop with round-1 dynamics reads A of about 0 plus noise at n = 2-4 at 14 and 6. Even at d_1 at block 14, all of the non-u* residual would give at most sqrt(1-0.93^2)/sqrt(0.868) = 0.39. In addition, u*_6 is not a generic attractor: R4 says 'unaligned' and random_start_debiased_cos.RND_1 is 0.0099. Projecting it out of u_T and u_sea at block 6 therefore removes the persistent direction that the RSI and SEA loops share there, not style. Expected outcome: PC_PASS_1b only at block 18; at 14 and 6, 'undecided (positive control failed)' exactly where the RSI A on u_T^perp* would be tightly near 0; the delta rule again 'not decidable'.",
+    "fix": "(a) Gate negative verdicts on a measurement-sensitivity check instead of PC_PASS_1b. SENS_1b(b): plant A = 0.25 (kappa unit(axis)) into the 1b DN rows 2-4 of RND_1/RND_2 (or into the RSI rows after centring them on the axis). Read through the full pipeline on u_T^perp* and u_sea^perp* (cross-fit, joint bootstrap, K1-s; R0.7's method), 500 replicates. Pass if p_s <= 0.01 and A_lo >= 0.10 at all three rows in >= 80 % of replicates. 'unlikely (RSI does not persist)' and 'unlikely (no first link)' then require SENS_1b, not PC_PASS_1b. Keep PC_PASS_1b required for 'likely' and 'oscillation', and report it as a substantive outcome, with the label 'no topic persists beyond the generic mode at b' when SEA_t and SPO_t both have A upper bounds < 0.25 at n = 3 and 4. (b) Project u*_b out only at blocks where round 2 found an RND-attracted mode (blocks 14 and 18). At block 6 use u_T_perp^1b and u_sea_perp (sea minus span(u_T, sports, tone, u_neg)) together with the P5 RND contrast. (c) State this expectation, with the numbers above, in R2.3 and R.0."
+   },
+   {
+    "id": "MF2",
+    "where": "R1 Rule (reproduction flag) and the R2.6 ladder rung L2",
+    "problem": "'Replay reproduces round 1' cannot be reached in the closed-loop rounds, even with byte-identical code. Round-0 texts diverge at about 3-6 % per text (L4 to A100; G47 match rates 0.969 / 0.938). That re-samples about 8-15 of 128 pairs after their divergence point and turns d_1 by roughly 5-15 %. The pushes along d_1..d_3 then shift logits by orders of magnitude more than float noise, so most texts of evaluations 1-3 diverge. Criterion (i) (>= 0.85 token-identical per evaluation) therefore fails at rounds >= 1. Criterion (ii) (|dc| and |drel| <= 0.05 for every row) fails by chance: SD(c) at 64x2 is 0.029 / 0.050 / 0.044, so across 48 rows a breach is near certain at blocks 18 and 6. The flag would read 'replay differs' for reasons that have nothing to do with reproducibility.",
+    "fix": "Apply (i) only to evaluations whose push is a stored round-1 vector (pilots and round 0). Add an open-loop replay of rounds 1-3: rk.evaluate(L+SUF, n, d=R1.state[b]['dir_<L><SUF>_<n>'], nseed, alpha), with round-1 keys and the same byte-identical function, and apply (i) per evaluation to it. This adds 6,144 texts, about 6.5 A100-min with margin. Replace (ii) by a paired tolerance on the open-loop rows: |dc| and |drel| <= 2.5 x the prompt-bootstrap SD of the replay-minus-round-1 difference. Report the closed-loop token identity per round descriptively, as rung L2. Condition the expected identity on GPU, torch and CUDA versions, not on the GPU name alone."
+   },
+   {
+    "id": "MF3",
+    "where": "R4.2 lambda_max / lambda_S rules; R4.3 lambda_direct",
+    "problem": "(a) lambda_max comes from power iteration, which keeps the largest |Rayleigh quotient| (largest modulus; possibly negative or complex), while lambda_S is defined as 'the largest real eigenvalue' of Q'JQ. The rules compare the two, which is meaningless for a negative or complex top mode, and 'largest real eigenvalue' is undefined when all four eigenvalues are complex. (b) lambda_max is cross-fitted, but lambda_RSI is the in-sample maximum over 4 noisy eigenvalues and so biased upward. This biases lambda_max^cf - lambda_RSI toward 'RSI is the top mode', and 'near critical' / '>= 1' toward passing. (c) The denominators w_A'v_A and w.v are unguarded; for non-normal J they approach 0, and the mean over halvings is then dominated by outliers. (d) There is no null for lambda_max^cf. J is 2048x2048, estimated from 1,920 half-sample texts with strongly anisotropic noise (B-Q7 per-text product SD 4.3 along u* against 0.30 along ('cov',14,4)), so the top pair of J_A can be a noise pair. The MDEs (0.098 / 0.134) assume fixed-direction SDs.",
+    "fix": "Define both quantities as the eigenvalue with the largest real part (report modulus and phase), computed the same way. Use Arnoldi with forward products only (k = 20) on J_A and take the Ritz value with the largest real part; for lambda_S use the 4x4 problem on the A half. Take the held-out value z'J_B y/(z'y) for both, and the median over 20 halvings x 2 instead of the mean. Guard: if |cos(v_A, w_A)| < 0.2, use v_A'J_B v_A and label 'non-normal: Rayleigh read'; same in R4.3. Add a permutation null: 20 runs with S rows permuted across texts within prompt, so E[J] = 0. 'lambda_max resolved' only if lambda_max^cf exceeds the null's 95th percentile; otherwise every R4.2 and R4.3 verdict is 'not decidable (top mode not resolved)'. Re-derive the MDEs by a planted-spike simulation at TXT0 noise."
+   },
+   {
+    "id": "MF4",
+    "where": "R.5 order; R4.2 / R4.3 / R5.5 'Runs in'; RG14 / R7.3",
+    "problem": "R4.3 runs in R-S3 and needs v_max and v_RSI (Inputs: R4.2), but R4.2's eigen-analysis is placed in R-Sana, which comes after wave 3. R5.5 (R-S5, wave 3) also needs R4.2's v_max. RG14 is 'decided in R-S7' but needs V_RSI_1b(14), which exists only after R-Sana pass 1, i.e. after R-S7.",
+    "fix": "Run the full-sample eigen-analysis at the end of each R-S3 block process, before R4.3: Arnoldi or power iteration on the in-session X and S, plus the 4x4 restricted problems; seconds of GPU time. Store v_max, w_max, v_S and w_S per block. Keep the cross-fit, nulls and bootstrap in R-Sana. For R7.3, either define RG14 with in-session data only (the twin's first round from s0: p_s <= 0.01 and A_lo >= 0.10), or move R7.3 into a conditional session after R-Sana pass 1 (about 4.6 work x 1.5 + 4 setup + 1.5 copy-in, about 13 A100-min) and update the 'decided in' column."
+   },
+   {
+    "id": "MF5",
+    "where": "R2.3 and R2.4 MDE paragraphs; R.1 Statistics",
+    "problem": "The MDEs are given per component, not for the rules as used. (a) P1 needs three rows jointly. A normal-model simulation with rows correlated 0.5-0.8 gives a joint MDE80 of about 0.23-0.24 at block 14 (SD_A 0.045) and 0.19-0.20 at 18 and 6 (SD_A 0.033), against the stated 0.21 / 0.18. P2-P5 multiply on top. P4's power is unknown at the freeze: its SD is measured only in R0.6, after the freeze, and it consists of three separate p <= 0.01 tests. (b) SD(A_bar) assumes RSI_a and RSI_b are independent, but they share all 256 prompts (between-prompt share of per-pair noise about 0.46). With a between-loop correlation of 0.5, SD(A_bar) is about 0.038 at block 14 (not 0.028-0.032); power for 'substantial' at the stated MDE A_bar = 0.33 is about 0.68, and the real MDE is about 0.35. (c) 'SD(E) about 0.05' holds only for A >= 0.5 with high round-to-round correlation; at A = 0.25-0.33 at block 14, SD(E) is about 0.06-0.13.",
+    "fix": "Pre-register joint MDEs by simulating the full verdict functions (PC_PASS_1b and every R2.4 string) under a stated noise model: SD_A per block from mde_R, within-loop correlation 0.5-0.8, between-loop correlation 0.5. Calibrate that model in R0 on the R1 replay and round-1 RSI_a/RSI_b with the joint bootstrap. Replace P4's three tests by one pooled sign-flip test over evaluations 1-3 at 0.01, and publish its MDE (words per text pair) from R0.6 before R2's analysis. State SD(E) per block and per A level."
+   },
+   {
+    "id": "MF6",
+    "where": "R.1 'Multiple testing'; R.6 'For it'",
+    "problem": "R.6 counts any of about 15 outcomes as 'for' the hypothesis: 'likely' at 3 blocks; 'reaches 1' along u_T^perp* at 3 blocks; 'lambda_RSI >= 1' or 'near critical' plus 'top mode' at 3 blocks; K 'self-sustaining' at 2 temperatures x K_2 and K_geo; C-Q4b 'survives' or 're-routed'. Each uses roughly a 5 % one-sided level, and the union has no family-wise control, so a 'for' reading is likely under the global null. Across blocks only p_s is Bonferroni-adjusted; the 90 % margin bounds that decide the A tiers are not.",
+    "fix": "Define one confirmatory 'for' family, for example: V_RSI_1b 'likely' at each decidable block; R3.3 'reaches 1' along u_T^perp*; R4.2 'lambda_RSI >= 1'; R6.2 K_2 'self-sustaining' at T 0.7. Apply Holm at family-wise 0.05 to it, with margin bounds at the adjusted level (1 - 0.10/k intervals). Label everything else exploratory. Print the counts of 'for' and 'against' outcomes next to their expected counts under the null."
+   },
+   {
+    "id": "MF7",
+    "where": "R6.3, R6.1, R2.4 (E), R3.3, R4.2, R2.4 precedence",
+    "problem": "Several verdict strings and 'not decidable' conditions are missing. R6.3 has no string for K's lower bound > 1. R6.1's rho = g_soft/g_text has no 'not decidable' case, although along u_T^perp* g_text is about 0.02-0.05 with SD about 0.025, so its interval will contain 0. E has no denominator condition. R3.3's 'best of three cells' is wrong when the DN cell is <= 0.5 alpha_0 (along u*_14 it sits at 0.34-0.36 alpha_0, giving 4 cells). R4.2's 'largest real eigenvalue' is undefined for a complex spectrum. No precedence is given when GO0_1b, RG7/RG8, RG9 and RG5 outcomes coincide; round 1 used an if/elif chain (rk_verdict.py:91-98).",
+    "fix": "Add 'replicated, self-sustaining (K lower bound > 1)' to R6.3. In R6.1, define rho only if g_text's 90 % interval excludes 0; otherwise 'not decidable (text gain not resolved)' (code NaN:denominator_interval_includes_0). Define E only if the interval of A_2^a + A_2^b excludes 0; otherwise 'likely' and 'oscillation' are unreachable and E is reported as the code. Set k = the number of cells with a <= 0.5 alpha_0, the DN cell included. Handle complex spectra as in MF3. Fix the precedence: label 'descriptive (code check failed)' > 'not decidable (RSI axis not resolved)' > 'not decidable (damage calibration failed)' > 'undecided (positive control not testable)' > 'undecided (positive control failed)' (or SENS failed, per MF1) > likely-dominated > likely-substantial > oscillation > unlikely (does not persist) > unlikely (no first link) > undecided."
+   },
+   {
+    "id": "MF8",
+    "where": "R0.5 / R0.6 (PC_PASS_R0 on u_sea^perp*, the block-6 'style-confounded' label, SEA minus RND); R2.6 rungs L0-L2 read on u_T^perp*",
+    "problem": "Readings of round-1 and replay loops on the perp* axes use round 2's u*_b, which was built from those same loops' d_4. The mode sets are M_14 = RSI_a, RSI_b, SEA, SPO, RND_1; M_18 = RSI_a, RND_1, r2RSIb; M_6 = RSI_a, SEA, r2RSIb (r2_theta.py:220-224). The A of SEA on u_sea^perp*, and of RSI_a/RSI_b on u_T^perp*, is then partly suppressed by construction. That makes PC_PASS_R0 on u_sea^perp*, the block-6 'style-confounded' label and the ladder's A_n at L0-L2 partly predetermined.",
+    "fix": "For every reading of round-1 or replay data on a perp* axis, use a leave-loop-out mode: u*_b^(-L) = unit(sum over M_b without L and its twin of sg_L' d_4^L'); for RSI_a also drop RSI_b and r2RSIb. Say so where nothing or only RND_1 remains (block 18). Report the full-u* reading beside it, labelled 'self-overlapping'."
+   },
+   {
+    "id": "MF9",
+    "where": "RG3 and R9.1 (round-1 code freeze)",
+    "problem": "RG3 compares against 'the round-1 values recorded by round 2's G3', but those values do not exist for this set. Round 2's G3 hashed R1_MODULES = rk_loop.py, pc_meta.py, pc_common.py, ufo_common.py, rsi_statements.py (r2_run_session.py:206, 847-880): rk_verdict.py is not among them. round2_summary.json gates.G3 stores only {name, labels}, no hashes. The gate cannot be implemented as written, and its failure action stops the session.",
+    "fix": "Freeze the constants in the plan. They are identical at HEAD c8257c2 and at the round-1 gpu1 commit 740bfc0f: rk_loop.py 1a20f61992637386c97197b7283a8b743214aa89028f504c4af6c2fbedbab2a1; rk_verdict.py 62aced20fcd7435201e1f427e5c294869fdab3adcb54801f092aa8d31ab9049e; ufo_common.py 6f3919e93b638a325f9a8dd5762430c6b5e7693d4e1f5a317d97366caa49f9ab; rsi_statements.py 6ff560c5b9c092858c7b50c4b041b7c886329bb7a451a6738d6eaa3754e3bec2. Also check them with git at every round-1 shard's code_commit, as gate_G3 does."
+   },
+   {
+    "id": "MF10",
+    "where": "R.5 session table and budget argument; R2.2 / R3.3 storage lists",
+    "problem": "The cost arithmetic reproduces (cost_R.py: 597 min; 8.06 h unconditional; 11.58 / 13.62 h at half generation speed), but four items are missing or wrong. (a) R-Sana copy-in assumes 2.5 GB, which matches float32 storage of the 'all' window only. R2.2 and R3.3 store all three read windows, and read_windows returns float64: 5.9 GB in float32 or 11.8 GB in float64, i.e. 59 or 117 min at the spec's own 10 min/GB, not 25. (b) R-Sana passes 1 and 2 are separated by R-S5b and R-S8, so pass 2 is a second session (+3 min setup + copy-in). (c) Drive writes are not costed: about 1.1 GB per R-S2 session and about 1.7 GB from R-S3. (d) R1 counts 384 texts too many at blocks 18 and 6 (the pilot evaluations are the loops' round 0). Net change is about +1.9 h: about 10.0 h unconditional and 11.9 h with both conditional sessions at planned rates. At half generation speed, after the pre-registered reductions, it is about 14 h, not 'near 12 h'.",
+    "fix": "Specify storage: float32; the 'all' window as full vectors; 'div' and 'first20' only as projections onto the <= 12 fixed axes the rules read. That gives about 2.6 GB in total. Cost R-Sana as two sessions. Cost Drive writes per session at the placeholder rate. Add a second pre-registered reduction tier that triggers at >= 2.0 s per generate call: NP arm at block 14 only; R6.1 iterated loops dropped; R5.2 and R5.3 nulls cut from 20 to 10."
+   }
+  ],
+  "should_fix": [
+   "R1 opener: run the replay stages as subprocesses, exactly as run_shard.rk does (run_shard.py:64-72): `python rk_loop.py <root> <work>/r1b_replay/rk <stage>` with env BLOCK, ASCALE, POOLDIRS and PERSONA. Importing with argv 'lib' needs rk.stage to be reassigned before rk.main(), which is not the round-1 code path.",
+   "r2_rk.stats_on_axis (r2_rk.py:563) falls back to rk.NP = 64 whenever a block is open. Every r1b call must pass n_prompts=256 (and use halvings(256)), otherwise rel is computed on the wrong halvings.",
+   "AX-1b reuses round-1 axis texts for the 64 old prompts. Those texts were generated per block on different GPUs (gpu1 on an L4), so the text set differs between blocks, and R7.1's CRN pairs mix L4-generated references with A100-generated ablated texts. Regenerate these 512 texts once in R-S2/14 with their round-1 keys (16 generate calls) and use that one set at every block.",
+   "Fold-axis attenuation (about 0.97) makes the upper-bound rules slightly anti-conservative ('unlikely', 'no first link', SPO_t's bound, R3.3 'below 1'); it does not only make lower-bound rules conservative. Disattenuate by the cross-fold axis cosine, or say so.",
+   "R4.1: with 15 seeds per prompt, centre x within prompt (correct by n_s/(n_s-1)). This removes between-prompt variance, and RSI-topic and scene prompts differ along the RSI axes. For blocks 18 and 6 use their own B-Q7 SDs (u_T_perp 0.166 / 0.153; u* 0.110 / 0.169; sea 0.205 / 0.112), not block 14's.",
+   "R6.2: read D_k on the cross-fitted fold axes, as every other 1b readout does. Add a random-direction carry control (DN RND_1 start pushed at a_DN, turns 2-3) so that RSI carry can be compared with generic carry.",
+   "R5.3: 'specific in use' requires every foreign set's interval to contain 0. Teacher-forced shifts are deterministic per text and any push moves every word set a little, so this is practically unreachable. Compare the foreign sets with the null directions' 5-95 % range, as is done for the neutral sets.",
+   "R5.4: dim_batch 128 replicates a prompt of about 150 tokens 128 times, which needs about 40 GB of bf16 activations. On an A100-40GB use dim_batch <= 64 (total backward FLOPs are unchanged per the jlens docstring), or require the 80-GB card.",
+   "R5.1 at blocks 2, 10, 22, 24 and 26: u_sea_perp^1b needs u_neg at those blocks. Add the 80 NEG sentences to the all-block read.",
+   "R5.5: label-shuffled null axes (pro/anti swapped per prompt) are uncentred sign-flip nulls (E.diff/N), the very construction 1b replaces. Use centred pseudo-axes.",
+   "R2.7: 'generic attractor' tests an RND loop against u*_1b, which includes that same loop when it is in the mode set (the self-overlap int_gates flagged). Use a leave-one-out u*_1b.",
+   "R3.3: specify diagonal WLS weights and bootstrap the whole fit. A GLS on the bootstrap covariance of key-sharing cells would invert a near-singular matrix. Also reword R.1's 'no matrix inversion anywhere': WLS and K_geo solve 2x2 normal equations, which the rule allows as a regression fit, since no inverse is used for reconstruction.",
+   "Give the R3.3 MDE for blocks 18 and 6. The pre-registered reductions drop the 0.35 alpha_0 cell at 18 and 6, so k becomes 2 there; state this conditional k, and note that these reductions are not 'descriptive only'.",
+   "R0.7's nested bootstrap for rule M costs about 6e14 FLOP: run it on the A100, not on the CPU, or use 200 inner replicates.",
+   "List in R.7 that the E rule changed (round 1: point E >= 0.7; 1b: lower bound >= 0.5). State whether R_4^cf >= 0.5, mean rel >= 0.5 and D4 > 0 are point conditions or bound conditions.",
+   "Freeze the neutral word pool (the list and its sha256) in the plan; at present it is only described.",
+   "Waves 1 and 3 each run three concurrent sessions in account A, while round 2 assumed at most 2 per account (int_machinery). Stagger them or move R-S5 to account B.",
+   "R8.2: the 0.6B PC axis keeps the style mode, since no u* exists for 0.6B. Label that PC 'not style-free'.",
+   "R0's README-null rule has no string for rows that move the other way (p <= 0.01 to p_c > 0.01). Report the counts in both directions."
+  ],
+  "budget_check": "Re-derived with the spec's own cost_R.py and slow_R.py (taskset -c 3 python3 -I, no model). The result matches the spec: 597.0 A100-min total = 9.95 h, of which 8.06 h unconditional, at the round-2 planned rates (P2 7.1, lines 1375-1403).\n\nIndependent spot checks also match:\n- R2.2: 4,864 pairs per round, about 32.8 / 34.4 min of work per block.\n- R3.3: 50,688 texts, about 34.9 min.\n- R1 block 14: 4,480 texts.\n- R6.2: 11,264 texts at 2.0 s.\n\nAt half generation speed the totals are 11.58 h unconditional and 13.62 h overall. The pre-registered reductions save about 1.5 h (re-derived):\n- RSI rounds 5-6: 22 min\n- FX arm at 18 and 6: 15 min\n- R3.3 doses at 18 and 6: 15 min\n- R6.1 iterated loops: 23 min\n- R5.4 on 200 texts: about 15 min\n\nOmissions (+ about 1.9 h at the spec's own 10 min/GB placeholder):\n- R-Sana copy-in: 5.9 GB in float32 (11.8 GB in float64) with three read windows, against the 2.5 GB budgeted: +34 min or more.\n- A second R-Sana session for pass 2: +28 min.\n- Drive writes from R-S2 and R-S3 (about 4.6 GB): +about 50 min.\n- DN calibrations in R3.3: +0.5 min.\n- R1 overcount of 384 texts at blocks 18 and 6: -1 min.\n\nCorrected totals: about 10.0 h unconditional and 11.9 h with both conditional sessions at planned rates, within the roughly 12-h envelope. At half generation speed after the reductions it is about 14 h, above the envelope. The 10 min/GB placeholder dominates the overrun, so R-P's Drive throughput measurement decides whether this matters.\n\nAll sessions stay below the 5-h limit; the largest is R-S5b at 95 min.",
+  "summary": "The spec is detailed and mostly consistent with the code. Cited functions and line ranges check out: open_block, the state guard, RefKL, calibrate, ConstPush, CbarHook, read_windows, fixed_fold_axes, prompt_bootstrap and score_grads/lambda_lin. The quoted round-2 numbers match theta_verdict.json: med 189.06 / 514.76 / 59.47, alpha_b, g_par of the RND starts, the B-Q7 SDs and the R1 points. The MDE scripts reproduce. The inverse-free rule is respected; only the claim 'no matrix inversion anywhere' is overstated, since WLS fits solve normal equations. Nothing produces analysable data before the freeze.\n\nSix main problems:\n1. The repaired positive control is very likely unpassable at blocks 14 and 6. SEA is in round 2's mode set there (debiased cos(d_4^SEA, d_4^RSI_a) = -1.05 / -1.14), and u*_6 is not a generic attractor (RND_1 0.0099). A failed control then blocks exactly the negative RSI verdicts that 1b could reach. Fix: gate negatives on a planted-signal sensitivity check, and project u* out only at blocks with an RND-attracted mode.\n2. The replay's reproduction rule fails by construction in the closed-loop rounds. Fix: an open-loop replay that pushes along round 1's stored d_n.\n3. The R4.2 eigen definitions and estimators are inconsistent and biased: largest modulus against largest real part, an in-sample max against a cross-fitted value, unguarded w'v denominators, no noise null.\n4. The session order contradicts itself: R4.3 and R5.5 need eigenvectors that are computed later, and RG14 needs V_RSI_1b before R-Sana has run.\n5. Statistics: MDEs are per component, not for the conjunctive rules; RSI_a and RSI_b are treated as independent although they share prompts; the 'for' family has no multiplicity control; several 'not decidable' strings and the verdict precedence are missing; R0 has self-overlap; RG3's reference hashes do not exist as described.\n6. Copy-in and Drive-write costs are underestimated by about 1.9 h.\n\nCheck scripts: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/chk_R/joint_power.py, /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/chk_R/e_sd.py and /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/chk_R/volume.py."
+ },
+ "revised_meta": {
+  "measurements": [
+   {
+    "id": "R-P",
+    "what": "Declared engineering pilot before the freeze: generate / read / forward-backward / soft-generation / RefKL rates, peak memory, Drive read and write throughput, replay openers on MOCK; throwaway prompts, no analysable data; its rates fix the reduction tier (RG18)",
+    "a100_minutes": 15,
+    "session": "R-P"
+   },
+   {
+    "id": "R0",
+    "what": "Model-free re-analysis of round-1 raw files: reproduction, centred pseudo-axes, cross-fitted disattenuated paired sign-flip test, cross-fitted S_4/R_4, gate re-evaluation on raw u_sea and the verdict sea axis with leave-loop-out modes (post hoc; only block 6 can reopen), topic specificity and the PC expectation, size and power plants (200 inner replicates, A100 runtime), calibration of the joint power model",
+    "a100_minutes": 12,
+    "session": "R-S0"
+   },
+   {
+    "id": "R1 closed loop",
+    "what": "Round-1-identical replay as round 1 ran it: byte-identical rk_loop.py stages as subprocesses (run_shard path) on reduced state copies, same prompts, axes, alpha, cap, starts and Gumbel keys (4,480 / 2,048 / 2,432 texts at 14 / 18 / 6); token identity per round descriptive (rung L2)",
+    "a100_minutes": 17.1,
+    "session": "R-S1"
+   },
+   {
+    "id": "R1 open loop",
+    "what": "Open-loop replay: rk.evaluate along round 1's stored dir_<L><SUF>_n (n = 1-3) with round-1 keys in a separate state copy, 6,144 texts; reproduction flag (version-conditioned token identity, paired tolerance on c and rel, gate list and open-loop PC_PASS)",
+    "a100_minutes": 9.5,
+    "session": "R-S1"
+   },
+   {
+    "id": "R2.1+R2.2 block 14",
+    "what": "P256 prompts and AX-1b axes (one A100-generated axis text set incl. the 64 round-1 prompts regenerated with round-1 keys; verdict axes u_X^v = perp* at 14); loops in DN (primary), FX (attribution) and NP (control) arms, 512/256 pairs, 4 rounds (+2 for RSI)",
+    "a100_minutes": 49.6,
+    "session": "R-S2/14"
+   },
+   {
+    "id": "R2.1+R2.2 block 18",
+    "what": "AX-1b reads (verdict axes = perp* at 18) and the three-arm loops at block 18",
+    "a100_minutes": 51.6,
+    "session": "R-S2/18"
+   },
+   {
+    "id": "R2.1+R2.2 block 6",
+    "what": "AX-1b reads (verdict axes = ^1b at 6, because u*_6 is not a generic mode) and the three-arm loops at block 6",
+    "a100_minutes": 51.6,
+    "session": "R-S2/6"
+   },
+   {
+    "id": "R2.3",
+    "what": "Positive control PC_PASS_1b on the verdict sea axis (P1-P5 incl. one pooled lexical test), gating only the positive RSI verdicts, with the stated expectation (pass expected only at block 18) and the 'no topic persists' label; costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.3b",
+    "what": "Planted-signal sensitivity check SENS_1b (A = 0.25 planted into RSI rows 2-4, full pipeline, 500 outer x 200 inner replicates) gating the negative RSI verdicts; SENS_sea for the PC; costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.4",
+    "what": "RSI verdict per block on u_T^v with an explicit 12-step precedence (likely / oscillation need PC; unlikely needs SENS), E denominator condition, joint MDEs, Holm labels; costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.5",
+    "what": "Repaired delta rule over PC-passing blocks (paired bootstrap of A_bar_abs differences; expected 'not decidable'); costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.6",
+    "what": "Attribution ladder L0-L6 (leave-loop-out perp* readings at L0-L2; open and closed loop at L2); costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.7",
+    "what": "Style mode under the corrected push (u*_1b vs round-2 u*_b with leave-one-out comparisons; RSI-free generic mode; robustness reading at every block); costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R3.1",
+    "what": "PUSH-DN: per-direction, per-round calibration to dmg_sym 0.05 nats on 8 RSI + 8 scene references, both signs and neutral top-1 change logged; costed inside R-S2/R-S3/R-S6/R-S7",
+    "a100_minutes": 0,
+    "session": "R-S2, R-S3, R-S6, R-S7"
+   },
+   {
+    "id": "R3.2",
+    "what": "Norm-preserving control push (PUSH-NP) and its attractor verdict; loops costed in R-S2",
+    "a100_minutes": 0,
+    "session": "R-S2 (loops), R-Sana"
+   },
+   {
+    "id": "R3.3",
+    "what": "Dose series (+,0,-) at 0.25-2 alpha_0 plus the PUSH-DN dose along u*_b, u_T^v, u_sea^v, random (block 14) and u*_b, u_T^v (18, 6); small-push gain verdicts with k = cells <= 0.5 alpha_0 incl. the DN cell, diagonal-weight WLS shape fit, odd/even parts",
+    "a100_minutes": 53,
+    "session": "R-S3"
+   },
+   {
+    "id": "R3.4+R4.1",
+    "what": "No-push text bank TXT0 (4,096 texts): noise floor and covariance, and FDT scores for the loop's local Jacobian (within-prompt centred, n_s/(n_s-1))",
+    "a100_minutes": 20.8,
+    "session": "R-S3"
+   },
+   {
+    "id": "R4.2",
+    "what": "Local read directions of 24 word sets (backward products), in-session full-sample eigen-analysis (v_max^C, w_max^C, v_S, w_S, full-space Ritz pair) for R4.3 and R5.5; cross-fitted rightmost eigenvalues in the 32-dim candidate subspace and the 4-dim RSI subspace, permutation nulls and bootstrap in R-ana",
+    "a100_minutes": 7.7,
+    "session": "R-S3"
+   },
+   {
+    "id": "R4.3",
+    "what": "Direct forward check: pushes along v_max^C and v_RSI at the PUSH-DN dose, 512 pairs per block, with the non-normal guard",
+    "a100_minutes": 7.1,
+    "session": "R-S3"
+   },
+   {
+    "id": "R5.1",
+    "what": "J-lens bridge: teacher-forced dose series at 8 blocks (NEG sentences in the all-block read), lens-predicted vs measured sign-true word-set shifts, layer profile, per-block validity (RG10, RG11 in session)",
+    "a100_minutes": 12.7,
+    "session": "R-S5"
+   },
+   {
+    "id": "R5.2",
+    "what": "Lens replacement of the A3 readout (improve vs describe) at blocks 6-26 with direct finite-difference check",
+    "a100_minutes": 2.6,
+    "session": "R-S5"
+   },
+   {
+    "id": "R5.3",
+    "what": "MicroLens T4 use test at 0.05 nats with equal-damage nulls (foreign and neutral sets against the null 5-95 % range), positive controls, generated text; T3 lens-metric foreign share vs text-contrast nulls",
+    "a100_minutes": 3.6,
+    "session": "R-S5"
+   },
+   {
+    "id": "R5.4 (conditional)",
+    "what": "bf16 refit of the J-lens (dim_batch 64) on in-distribution chat texts, only if R5.1 fails at block 14 or at all of 22/24/26; R5.1 repeated, R5.2/R5.3 lens readouts at newly valid blocks",
+    "a100_minutes": 97.5,
+    "session": "R-S5b"
+   },
+   {
+    "id": "R5.5",
+    "what": "Inverse-free (generate-verify-revise) verified label of the style mode and v_max^C from a frozen bank of 24 instruction pairs, centred pseudo-axis nulls, attempt limit, abstentions, verifier error rate on known targets",
+    "a100_minutes": 3.2,
+    "session": "R-S5"
+   },
+   {
+    "id": "R6.1",
+    "what": "Text loop vs latent (soft-token) loop at matched damage per axis (rho only when g_text is resolved), plus 4-round latent loops",
+    "a100_minutes": 30.1,
+    "session": "R-S6"
+   },
+   {
+    "id": "R6.2",
+    "what": "In-context carry K on the RSI axis over turns 2-6 at T 0.7 and 1.0 on cross-fitted fold axes, denominator intervals, K_2 and K_geo verdicts, random-direction carry control (turns 2-3)",
+    "a100_minutes": 22.8,
+    "session": "R-S6"
+   },
+   {
+    "id": "R6.3",
+    "what": "Replication of round 2's T 1.0 carry cell (u* push at alpha_0) with 4x prompts, the denominator's interval and the added 'replicated, self-sustaining' string",
+    "a100_minutes": 2.2,
+    "session": "R-S6"
+   },
+   {
+    "id": "R7.1",
+    "what": "Low-damage erasure: 10 variants selected by damage alone; C-Q3 rule on 256 prompts with A100-only common-random-number pairs; neutral top-1 change next to KL",
+    "a100_minutes": 10.1,
+    "session": "R-S7"
+   },
+   {
+    "id": "R7.2",
+    "what": "C-Q4a re-search by in-context cue, gated on R7.1 'unlearned' (in session)",
+    "a100_minutes": 0.9,
+    "session": "R-S7"
+   },
+   {
+    "id": "R7.3",
+    "what": "C-Q4b loop under erasure with unablated twin; RG14 decided in session from the twin's first round",
+    "a100_minutes": 4.6,
+    "session": "R-S7"
+   },
+   {
+    "id": "R8.1",
+    "what": "Model-free diagnosis of the empty 0.6B arm from geom_stats_qwen3-0.6b.json gate.* and per_block.pooled keys",
+    "a100_minutes": 1.5,
+    "session": "R-S0"
+   },
+   {
+    "id": "R8.2 (conditional)",
+    "what": "Qwen3-0.6B corrected loop at block 14 as a descriptive size comparison (PC labelled 'not style-free'), only if J1-J3 hold",
+    "a100_minutes": 14.4,
+    "session": "R-S8"
+   },
+   {
+    "id": "R9.1-R9.4",
+    "what": "Provenance block (incl. the four frozen module hashes), NaN/censoring/tier codes, labels, distributions; report check script",
+    "a100_minutes": 1.5,
+    "session": "R-Sana (checks run in every session)"
+   },
+   {
+    "id": "R9.5",
+    "what": "Copy round 2's Drive-only unlearn_verdict.json and r2_manifest.json into the repository",
+    "a100_minutes": 0.8,
+    "session": "R-S0"
+   },
+   {
+    "id": "R-ana (pass 1)",
+    "what": "All part-R statistics and verdicts: joint bootstraps, SENS plants, R4.2 cross-fit, permutation nulls and bootstrap, Holm families, R2.3-R2.7 and R3-R7 rules",
+    "a100_minutes": 27,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R-ana2 (pass 2, conditional)",
+    "what": "R5.4 / R8.2 statistics and the final report check, only if a conditional session ran",
+    "a100_minutes": 6,
+    "session": "R-Sana2"
+   },
+   {
+    "id": "Session overheads",
+    "what": "Setup (4 min per model session, 3 min analysis), Drive copy-in and writes at the 10 min/GB placeholder over all 14 sessions (incl. 16.8 min in the three conditional sessions)",
+    "a100_minutes": 125.3,
+    "session": "all"
+   }
+  ],
+  "total_a100_hours": 11.03,
+  "shared_objects": [
+   "P256: frozen 1b prompt set (64 round-1 + 192 new prompts, 128 RSI-topic + 128 scene, fold, K2 halvings for 256; results/ju_space/plans/runde1b/prompts_1b.json with sha256)",
+   "AX-1b(b): 1b text axes at blocks 14/18/6 (and the 8 lens blocks via one all-block read incl. NEG sentences) from one A100-generated axis text set: u_T, raw sea/sports/tone, u_neg, the ^1b, perp* and verdict axes u_X^v (perp* at 14 and 18, ^1b at 6), fold axes, kappa_X, centred nulls, AUCs",
+   "u*_b and the leave-loop-out modes u*_b^(-L): round 2's style mode (copied with sha256) and its versions without a given loop and its twins, for readings of round-1 and replay loops on perp* axes",
+   "STAT-1b (r1b_stats.py): centred pseudo-axes, cross-fitted and disattenuated K1-s and A with bootstrap-t fallback, joint prompt bootstrap of axis texts and pairs, cross-fitted S_4/R_4, A-margin rules, SENS plants, size and power plants, the joint-MDE simulator, Holm families F+/F-, cross-fitted Ritz pairs with permutation nulls, verdict functions with their precedence",
+   "PUSH-DN: damage-normalised push per direction and round (dmg_sym 0.05 nats on 8 RSI + 8 scene references, both signs and neutral top-1 change logged); part D must recalibrate per context length",
+   "PUSH-NP: norm-preserving control push hook (registered after rk's steer hook via r2_rk.open_block)",
+   "TXT0: 4,096 unsteered texts (256 prompts x 16 seeds, block-independent) with reads at 14/18/6, FDT scores and the text-sampling noise covariance",
+   "DOSE-1b(b): (+,0,-) dose cells 0.25-2 alpha_0 plus the PUSH-DN dose per direction (texts, reads, word counts), reusable as turn-1 texts and measured-shift references",
+   "JLOOP(b): within-prompt-centred FDT local Jacobian of the loop map with full-sample read (left) and use (right) directions v_max^C, w_max^C, v_S, w_S, the 32-dim candidate subspace C_b, cross-fitted rightmost eigenvalues, permutation nulls, lambda table",
+   "LENS-J: Neuronpedia J-lens for Qwen3-1.7B (sha256 6fcc79011bd921ffd87612255e2e99950a124fa519470ee44ebaf161c39be9d6) with R5.1's per-block validity and layer profile; LENS-J1b if the conditional bf16 refit runs (needed by part K's chain lens)",
+   "WORDSETS: W_RSI (build/eval halves), W_sea (lexical PC), W_sports, W_tone without '!', 20 frequency-matched neutral sets drawn from the frozen neutral pool neutral_pool_1b.txt (628 words, sha256 4b3bcaca06f45521a00f12ec2b056a13962bbfdd066ab93867980c9b0be9ebf5)",
+   "SENS-1b: planted-signal sensitivity check per block (pass rates, planted readouts), the precondition of negative loop verdicts",
+   "ERASE-LD: the low-damage erasure operator selected by damage alone in R7.1, with its damage and top-1 profile",
+   "LABEL-u*: inverse-free verified label of the style mode (or abstention) from R5.5",
+   "R0-table: round-1 statistics recomputed with centred nulls, paired tests, cross-fitting and leave-loop-out modes (post hoc), plus the calibrated joint-MDE table",
+   "r1b_core: function-style multi-block push/read/damage/score/soft-generation/lens-prediction core, equivalence-tested against rk_loop (also usable for Qwen3-0.6B)",
+   "cost_R2.py: the parametrised part-R cost model (generation scale, reduction tier, storage and Drive I/O) used by RG18"
+  ],
+  "falsifiers": [
+   "F- (confirmatory, Holm at family-wise 0.05): at a block where SENS_1b passes, V_RSI_1b = 'unlikely (RSI does not persist)': the 90 % upper bound of A_bar_abs on u_T^v is below 0.25 (reachable when the true late A is below about 0.155-0.165 / 0.18-0.185 / 0.18-0.185 at 14 / 18 / 6)",
+   "F-: R3.3 'below 1 at small push' along u_T^v at a block: every cell with a <= 0.5 alpha_0 has a 90 % upper bound < 1 (power 0.8 when the true gain at 0.25 alpha_0 is <= about 0.88-0.93)",
+   "F-: R4.2 'lambda_RSI below 1': the cross-fitted rightmost eigenvalue of the loop Jacobian restricted to the RSI read subspace has an upper bound < 1 (unbiased estimator, SD 0.012-0.03)",
+   "F-: R6.2 'dissipative at T 0.7': in-context carry of an RSI stance K_2 upper bound < 1 (detectable when the true K_2 <= about 0.80)",
+   "Exploratory, against: 'unlikely (no first link)'; 'RSI subdominant' with 'RSI above neutral words' failing; carry dissipative at T 1.0 or not above generic carry; R6.3 'not replicated'; R6.1 'latent loop below 1 on RSI'; R7 'unlearned' with C-Q4b 'un-searched'",
+   "Against the repair itself: R0 'README null claim not confirmed'; RG6 failing; R1 'replay differs' on the open loop; SENS_1b failing at a block (the design cannot see A = 0.25 there; marginal at block 14); PC_PASS_1b failing at all three blocks with GO0_1b met and SENS_sea passing (no topic persists beyond the generic mode anywhere; expected at block 14 from round-2 dynamics); R4.2 'top mode not resolved' at every block"
+  ],
+  "changes_from_round1": [
+   "Centred pseudo-axes replace the uncentred sign-flip nulls (reported only); significance from a cross-fitted paired sign-flip test over prompts (K1-s) with Wilcoxon/t beside it and a size check that can switch to bootstrap-t",
+   "Magnitude by a margin in interpretable units (90 % lower bound of A >= 0.10 / 0.25 / 0.50) instead of the N-independent cosine bar Q_c >= 1; MDEs pre-registered jointly, for the rules as used",
+   "Axis uncertainty propagated by a joint prompt bootstrap of axis texts and loop pairs; readouts on cross-fitted fold axes, disattenuated by the fold-axis cosine",
+   "S_4 and R_4 cross-fitted over halvings",
+   "Positive control redefined: verdict sea axis (generic mode removed only at blocks 14 and 18), pooled lexical test, SEA minus max(RND), SEA start on the verdict axis, sports fallback; the PC now gates only the positive verdicts",
+   "Planted-signal sensitivity check SENS_1b gates the negative verdicts",
+   "RSI read on u_T^v so convergence onto a generic attractor cannot count as RSI; style attraction reported as a label",
+   "Random-start controls start orthogonal to the style mode and the test axes",
+   "Damage-normalised push per direction and round (0.05 nats) replaces the fixed alpha; GO3 becomes 'every push in band'; norm-preserving control push added",
+   "256 prompts (192 new, frozen before the run) instead of 64; RSI, SEA_t and SPO_t loops 512 pairs, others 256; RSI_b at every block",
+   "Round-1-identical replay (byte-identical rk_loop.py, round-1 keys, run as round 1 ran it) anchors an attribution ladder; reproduction judged on an open-loop replay",
+   "E rule: round 1 point E >= 0.7; 1b defines E only if the A_2 sum interval excludes 0 and requires its lower bound >= 0.5; point vs bound conditions named",
+   "Verdict precedence fixed as an ordered 12-step list; two confirmatory families F+/F- with Holm at family-wise 0.05",
+   "New measurements: dose series below 0.5 alpha_0 in both signs; no-push noise covariance; lambda_RSI vs lambda_max with read/use directions, permutation nulls and a candidate subspace; J-lens bridge with layer profile and A3 replacement; latent (soft-token) loop; multi-turn RSI carry with a random-direction control and replication of the K = 1.053 cell; low-damage erasure with C-Q4a/b; 0.6B diagnosis; inverse-free verified label of the style mode",
+   "Report hygiene: provenance (incl. frozen module hashes), NaN/censoring/tier codes, labels carried everywhere, distributions next to means",
+   "checker fixes: MF1 (verified in theta_verdict.json: SEA in M_14 and M_6, debiased cos -1.051 / -1.142 vs 0.229 at 18, image cos -0.930 / 0.118 / -0.834, R4 'unaligned' at block 6 with RND_1 0.0099). Negative RSI verdicts now need the planted-signal check SENS_1b (R2.3b: A = 0.25 planted into RSI rows 2-4 on u_T^v, full pipeline, 500 outer x 200 inner replicates, pass >= 80 %; expected pass rate 0.82-0.85 at 14, 0.99 at 18 and 6). PC_PASS_1b gates only 'likely' / 'oscillation' and is reported as an outcome with the label 'no topic persists beyond the generic mode at b'. u* is projected out only at blocks 14 and 18 (verdict axes u_X^v; block 6 uses the ^1b axes and the P5 RND contrast). The expectation (PC only at 18), with the numbers, is stated in R.0, R0.6 and R2.3",
+   "checker fixes: MF2 (verified: G47 identity 0.969 / 0.938, L4 vs A100 with equal software). Reproduction is judged on pilots, round 0 and a new open-loop replay (rk.evaluate along R1 dir_<L><SUF>_n, n = 1-3, round-1 keys, separate state copy, 6,144 texts, 9.5 A100-min). tau is conditioned on GPU, torch, CUDA and transformers versions (0.95 / 0.85 / 0.80). Criterion (ii) is a paired tolerance: <= max(2.5 SD_diff, 1e-4) in >= 95 % of rows and <= 4 SD_diff in all rows. The gate list and open-loop PC_PASS must match. Closed-loop identity per round is descriptive (rung L2)",
+   "checker fixes: MF3. Both lambdas are rightmost eigenvalues (modulus and phase reported, complex labelled), computed identically and cross-fitted: fit on half A, held-out z'M_B y / z'y, median over 40 fits, |cos(y, z)| < 0.2 Rayleigh guard, 200 within-prompt permutations as the top-mode null, a 'top mode resolved' gate. MDEs re-derived by planted-spike simulations (spike_R.py, spike2_R.py). One deliberate deviation, with evidence: the simulation shows the full-space Arnoldi estimate the checker proposed is noise-limited at TXT0 size (null in-sample rightmost eigenvalue 0.37 / 0.45 / 0.32 = circular-law edge; power at a true 0.3 only 0.30 / 0.25 / 0.85; held-out guard fired in nearly all fits). It is therefore kept as a descriptive full-space estimate, and lambda_max^C over a 32-dim candidate subspace containing V_RSI is primary: null q95 0.07-0.09, power 0.97 / 1.0 / 1.0 at 0.3. The 4x4 lambda_RSI is unbiased with SD 0.012-0.03",
+   "checker fixes: MF4. The full-sample eigen-analysis (v_max^C, w_max^C, v_S, w_S, full-space Ritz pair) runs in R-S3 before R4.3 and feeds R5.5 via R-S3's output. RG14 is decided in R-S7 with in-session data only (R7.1 'unlearned' and the twin's round 1 from s0: p_s <= 0.01, A_lo >= 0.10 on u_T^v). RG11 is decided in R-S5",
+   "checker fixes: MF5. Joint MDEs come from a normal-model simulation of the full verdict functions (joint_R.py; between-loop correlation 0.5 because RSI_a and RSI_b share prompts; within-loop 0.5-0.8): PC 0.23-0.24 / 0.195-0.20 / 0.20-0.205; 'substantial' 0.335-0.345 / 0.315-0.32 / 0.315-0.323; 'dominated' 0.585-0.595 / 0.565-0.57 / 0.565-0.574, plus Holm worst cases. SD(E) is given per block and A level (0.10-0.17 at A 0.25, block 14). P4 is one pooled sign-flip test, with its MDE computed in R0.6 and printed before R2's analysis. R0.7 recalibrates the correlations on round-1 data and R1's open loop",
+   "checker fixes: MF6. Two confirmatory families, F+ and F- (ten members each: 'likely' / 'unlikely' per block, R3.3 along u_T^v per block, lambda_RSI per block, K_2 at T 0.7), each Holm at family-wise 0.05 with IUT member p-values. Everything else is labelled exploratory. Reached and confirmed counts are printed next to their null expectations",
+   "checker fixes: MF7. Added 'replicated, self-sustaining (K lower bound > 1)' to R6.3. R6.1 rho is defined only if g_text's interval excludes 0, else 'not decidable (text gain not resolved)'. E is defined only if the A_2 sum interval excludes 0. R3.3's k counts the DN cell when <= 0.5 alpha_0 (k = 4 along u*_14). Complex spectra are handled via the rightmost-eigenvalue definition. An explicit precedence list for V_RSI_1b: code check > axis > damage > likely-dominated > likely-substantial > oscillation > unlikely > no first link > PC not testable > PC failed > SENS failed > undecided",
+   "checker fixes: MF8. Every reading of round-1 or replay loops on a perp* axis uses the leave-loop-out mode u*_b^(-L), with twins removed. At block 18 the RSI loops' mode is RND_1's d_4 alone and at block 6 SEA's alone; both are stated. The full-u* reading is printed beside it labelled 'self-overlapping' (R0.5, R0.6, R1, R2.6 L0-L2). Block 6's 'style-confounded' label is replaced by an RND contrast",
+   "checker fixes: MF9 (verified with git: identical at HEAD c8257c2 and round-1 commit 740bfc0f; round 2's R1_MODULES omit rk_verdict.py and G3 stores only name and labels). RG3 now carries the four frozen sha256 constants and checks them in the checkout and by git at every round-1 shard's code_commit, using gate_G3's method",
+   "checker fixes: MF10. Storage is fixed: float32; the 'all' window full; 'div' and 'first20' as projections on <= 12 fixed axes. R-Sana copy-in is 2.33 GB. Pass 2 is its own conditional session (R-Sana2). Drive writes are costed per session (2.95 GB). The R1 overcount is removed (the pilots are round 0 at 18 and 6), and R1 now counts 8 stage subprocesses plus 3 open-loop processes. New budget: 8.78 h unconditional + 2.24 h conditional = 11.03 h at planned rates. Reduction tiers 1 and 2 are chosen before the freeze by RG18 (projected total <= 12.5 h); at half generation speed the total is 14.8 / 13.1 / 12.3 h at tiers 0 / 1 / 2. The reductions' effects on verdict ingredients are stated",
+   "checker fixes (should_fix, all adopted): replay stages run as subprocesses (run_shard path); n_prompts = 256 in every stats_on_axis / halvings call; the 64 round-1 prompts' axis texts are regenerated once on the A100 with round-1 keys; A_n is disattenuated by the fold-axis cosine kappa_X; R4.1 uses within-prompt centring with n_s/(n_s-1) and per-block B-Q7 SDs; R6.2 reads on cross-fitted fold axes and adds a random-direction carry control; R5.3 compares foreign sets with the null 5-95 % range; R5.4 uses dim_batch 64 on a 40-GB card; NEG sentences are added to the all-block read; R5.5 uses centred pseudo-axes; R2.7 uses a leave-one-out u*_1b; R3.3 uses diagonal-weight WLS with a bootstrapped fit, gives the MDE at 18 and 6 and states the conditional k; the inverse-free wording is narrowed; R0.7 runs on the A100 with 200 inner replicates; R.7 records the E rule and point vs bound conditions; the neutral pool is frozen (628 words, Appendix R.A); at most 2 concurrent sessions per account, with R-S5 moved to account B; the 0.6B PC is labelled 'not style-free'; the README-null result is counted in both directions"
+  ]
+ },
+ "design_meta": {
+  "measurements": [
+   {
+    "id": "R-P",
+    "what": "Declared engineering pilot before the freeze: generate / read / forward-backward / soft-generation / RefKL rates, peak memory, Drive throughput, replay opener on MOCK; throwaway prompts, no analysable data",
+    "a100_minutes": 15,
+    "session": "R-P"
+   },
+   {
+    "id": "R0",
+    "what": "Model-free re-analysis of round-1 raw files (Drive state.pt, loops.json, pilot*.json, summary_b*.json; round-2 q0.pt): reproduction, centred pseudo-axes, cross-fitted paired sign-flip test, cross-fitted S_4/R_4, old vs new p, gate re-evaluation (post hoc; only block 6 can reopen), topic specificity, size and power checks",
+    "a100_minutes": 12,
+    "session": "R-S0"
+   },
+   {
+    "id": "R1",
+    "what": "Round-1-identical replay: byte-identical rk_loop.py on a reduced state copy, same prompts, axes, alpha, cap, starts and Gumbel keys at blocks 14 (alpha and 1.5 alpha), 18, 6; reproduction metrics; old and new statistics",
+    "a100_minutes": 15.7,
+    "session": "R-S1"
+   },
+   {
+    "id": "R2.1+R2.2 block 14",
+    "what": "P256 prompts and AX-1b axes (incl. style-free perp* axes, new axis texts); loops in DN (primary), FX (attribution) and NP (control) arms, 512/256 pairs, 4 rounds (+2 for RSI)",
+    "a100_minutes": 49.2,
+    "session": "R-S2/14"
+   },
+   {
+    "id": "R2.1+R2.2 block 18",
+    "what": "AX-1b reads and the three-arm loops at block 18",
+    "a100_minutes": 51.6,
+    "session": "R-S2/18"
+   },
+   {
+    "id": "R2.1+R2.2 block 6",
+    "what": "AX-1b reads and the three-arm loops at block 6",
+    "a100_minutes": 51.6,
+    "session": "R-S2/6"
+   },
+   {
+    "id": "R2.3",
+    "what": "Redefined positive control PC_PASS_1b on the style-free sea axis (paired test, A margin >= 0.10, rel, cross-fitted S_4, lexical sea words, SEA minus max RND); costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.4",
+    "what": "RSI verdict per block on u_T^perp* (likely / oscillation / unlikely / undecided) with MANIP, A_bar bounds, E, R_4^cf, D4, SPO_t, RND, damage band and K5 gate; costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.5",
+    "what": "Repaired delta rule over PC-passing blocks (paired bootstrap of A_bar_abs differences); costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.6",
+    "what": "Attribution ladder L0-L6 (statistics, run/device, prompts/axes/starts, push normalisation, norm preservation, PC definition); costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R2.7",
+    "what": "Style mode under the corrected push (u*_1b vs round-2 u*_b; RSI-free generic mode; pre-registered robustness reading); costed in R-ana",
+    "a100_minutes": 0,
+    "session": "R-Sana"
+   },
+   {
+    "id": "R3.1",
+    "what": "PUSH-DN: per-direction, per-round calibration to dmg_sym 0.05 nats on 8 RSI + 8 scene references, both signs and neutral top-1 change logged; costed inside R-S2/R-S3/R-S6/R-S7",
+    "a100_minutes": 0,
+    "session": "R-S2, R-S3, R-S6, R-S7"
+   },
+   {
+    "id": "R3.2",
+    "what": "Norm-preserving control push (PUSH-NP) and its attractor verdict; loops costed in R-S2",
+    "a100_minutes": 0,
+    "session": "R-S2 (loops), R-Sana"
+   },
+   {
+    "id": "R3.3",
+    "what": "Dose series (+,0,-) at 0.25, 0.35, 0.5, 1, 2 alpha_0 plus the PUSH-DN dose along u*_b, u_T^perp*, u_sea^perp*, random (block 14) and u*_b, u_T^perp* (18, 6); small-push gain verdicts, odd/even parts",
+    "a100_minutes": 52.3,
+    "session": "R-S3"
+   },
+   {
+    "id": "R3.4+R4.1",
+    "what": "No-push text bank TXT0 (4,096 texts): noise floor and covariance (is the style mode the strongest noise direction?) and FDT scores for the loop's local Jacobian",
+    "a100_minutes": 20.8,
+    "session": "R-S3"
+   },
+   {
+    "id": "R4.2",
+    "what": "Local read directions of 24 word sets (backward products), restricted vs unrestricted power iteration: lambda_RSI vs lambda_max, read (left) vs use (right) eigenvectors, neutral-word null; eigen-analysis in R-ana",
+    "a100_minutes": 6.9,
+    "session": "R-S3"
+   },
+   {
+    "id": "R4.3",
+    "what": "Direct forward check: pushes along v_max and v_RSI at the PUSH-DN dose, 512 pairs per block",
+    "a100_minutes": 7.1,
+    "session": "R-S3"
+   },
+   {
+    "id": "R5.1",
+    "what": "J-lens bridge: teacher-forced dose series at 8 blocks, lens-predicted vs measured sign-true word-set shifts, layer profile of the deviation, per-block validity",
+    "a100_minutes": 12.7,
+    "session": "R-S5"
+   },
+   {
+    "id": "R5.2",
+    "what": "Lens replacement of the A3 readout (improve vs describe) at blocks 6-26 with direct finite-difference check",
+    "a100_minutes": 2.6,
+    "session": "R-S5"
+   },
+   {
+    "id": "R5.3",
+    "what": "MicroLens T4 use test at 0.05 nats with equal-damage nulls, 20 neutral word sets, positive controls, generated text; T3 lens-metric foreign share vs text-contrast nulls",
+    "a100_minutes": 3.6,
+    "session": "R-S5"
+   },
+   {
+    "id": "R5.4 (conditional)",
+    "what": "bf16 refit of the J-lens on in-distribution chat texts, only if R5.1 fails at block 14 or at all of 22/24/26; R5.1 repeated",
+    "a100_minutes": 90,
+    "session": "R-S5b"
+   },
+   {
+    "id": "R5.5",
+    "what": "Inverse-free (generate-verify-revise) verified label of the style mode from a frozen bank of 24 instruction pairs, with attempt limit, abstentions and verifier error rate on known targets",
+    "a100_minutes": 3.2,
+    "session": "R-S5"
+   },
+   {
+    "id": "R6.1",
+    "what": "Text loop vs latent (soft-token, expected-embedding) loop at matched damage, one pass per axis at 14/18/6, plus 4-round latent loops",
+    "a100_minutes": 30.1,
+    "session": "R-S6"
+   },
+   {
+    "id": "R6.2",
+    "what": "In-context carry K on the RSI axis over 5 follow-up answers (turns 2-6), T 0.7 and 1.0, 512 pairs, denominator intervals, K_2 and K_geo verdicts",
+    "a100_minutes": 19.2,
+    "session": "R-S6"
+   },
+   {
+    "id": "R6.3",
+    "what": "Replication of round 2's T 1.0 carry cell (u* push at alpha_0) with 4x prompts and the denominator's interval",
+    "a100_minutes": 2.2,
+    "session": "R-S6"
+   },
+   {
+    "id": "R7.1",
+    "what": "Low-damage erasure: 10 variants (mean vs zero ablation, fewer blocks, partial beta) selected by damage alone; C-Q3 rule on 256 prompts; neutral top-1 change next to KL",
+    "a100_minutes": 10.1,
+    "session": "R-S7"
+   },
+   {
+    "id": "R7.2",
+    "what": "C-Q4a re-search by in-context cue, gated on R7.1 'unlearned'",
+    "a100_minutes": 0.9,
+    "session": "R-S7"
+   },
+   {
+    "id": "R7.3",
+    "what": "C-Q4b loop under erasure with unablated twin, gated",
+    "a100_minutes": 4.6,
+    "session": "R-S7"
+   },
+   {
+    "id": "R8.1",
+    "what": "Model-free diagnosis of the empty 0.6B arm from dsse_runs/r2_q3/rgi/geom_stats_qwen3-0.6b.json gate.* and per_block.pooled keys (uncomposed cut vs C0 vs NaN)",
+    "a100_minutes": 1.5,
+    "session": "R-S0"
+   },
+   {
+    "id": "R8.2 (conditional)",
+    "what": "Qwen3-0.6B corrected loop at block 14 as a descriptive size comparison, only if J1-J3 hold",
+    "a100_minutes": 14.4,
+    "session": "R-S8"
+   },
+   {
+    "id": "R9.1-R9.4",
+    "what": "Provenance block, NaN/censoring codes, labels carried everywhere, distributions next to means; report check script",
+    "a100_minutes": 1.5,
+    "session": "R-Sana (checks run in every session)"
+   },
+   {
+    "id": "R9.5",
+    "what": "Copy round 2's Drive-only unlearn_verdict.json and r2_manifest.json into the repository",
+    "a100_minutes": 0.8,
+    "session": "R-S0"
+   },
+   {
+    "id": "R-ana",
+    "what": "All part-R statistics and verdicts (joint bootstraps, R2.3-R2.7, R3-R7 rules, eigen-analysis), passes 1 and 2",
+    "a100_minutes": 22.5,
+    "session": "R-Sana"
+   },
+   {
+    "id": "Session overheads",
+    "what": "Setup (4 min per model session, 3 min analysis) and Drive copy-in (placeholder 10 min/GB) over all 13 sessions",
+    "a100_minutes": 95,
+    "session": "all"
+   }
+  ],
+  "total_a100_hours": 9.95,
+  "shared_objects": [
+   "P256: frozen 1b prompt set (64 round-1 + 192 new prompts, 128 RSI-topic + 128 scene, fold, K2 halvings for 256; results/ju_space/plans/runde1b/prompts_1b.json with sha256)",
+   "AX-1b(b): 1b text axes at blocks 14/18/6 (and all 28 blocks via one all-block read): u_T, u_T_perp^1b, style-free u_T^perp*, u_sea^perp*, u_sports^perp*, u_tone^perp*, raw sea/sports/tone axes, u_neg, per-prompt differences, fold axes, centred nulls, AUCs",
+   "u*_b: round 2's style mode (r2_q2/theta/b<b>_q0.pt['u_star']) copied unchanged with sha256, used to define style-free axes",
+   "STAT-1b (r1b_stats.py): centred pseudo-axes (K1-c), cross-fitted paired sign-flip test (K1-s) with bootstrap-t fallback, joint prompt bootstrap of axis texts and pairs, cross-fitted S_4/R_4, A-margin rules, size and power plants",
+   "PUSH-DN: damage-normalised push per direction and round (dmg_sym 0.05 nats on 8 RSI + 8 scene references, both signs and neutral top-1 change logged); part D must recalibrate per context length",
+   "PUSH-NP: norm-preserving control push hook (registered after rk's steer hook via r2_rk.open_block)",
+   "TXT0: 4,096 unsteered texts (256 prompts x 16 seeds, block-independent) with reads at 14/18/6, FDT scores and the text-sampling noise covariance",
+   "DOSE-1b(b): (+,0,-) dose cells 0.25-2 alpha_0 plus the PUSH-DN dose per direction (texts, reads, word counts), reusable as turn-1 texts and measured-shift references",
+   "JLOOP(b): FDT local Jacobian of the loop map with read (left) and use (right) eigen-directions, lambda_RSI / lambda_max table",
+   "LENS-J: Neuronpedia J-lens for Qwen3-1.7B (sha256 6fcc79011bd921ffd87612255e2e99950a124fa519470ee44ebaf161c39be9d6) with R5.1's per-block validity and layer profile of the deviation; LENS-J1b if the conditional bf16 refit runs (needed by part K's chain lens)",
+   "WORDSETS: W_RSI (build/eval halves), W_sea (lexical PC), W_sports, W_tone without '!', 20 frequency-matched neutral sets, with sha256",
+   "ERASE-LD: the low-damage erasure operator selected by damage alone in R7.1, with its damage and top-1 profile",
+   "LABEL-u*: inverse-free verified label of the style mode (or abstention) from R5.5",
+   "R0-table: round-1 statistics recomputed with centred nulls, paired tests and cross-fitting (post hoc)",
+   "r1b_core: function-style multi-block push/read/damage/score/soft-generation/lens-prediction core, equivalence-tested against rk_loop (also usable for Qwen3-0.6B)"
+  ],
+  "falsifiers": [
+   "At a block with PC_PASS_1b, V_RSI_1b = 'unlikely (RSI does not persist)': the 90 % upper bound of A_bar_abs on the style-free RSI axis u_T^perp* is below 0.25 (detectable when the true share is below about 0.17-0.20)",
+   "At a block with PC_PASS_1b, 'unlikely (no first link)': the RSI push writes no RSI into its first read-back (A_1 upper bound < 0.10 for both RSI loops)",
+   "R3.3: 'below 1 at small push' along u_T^perp* (and along u*_b) at every block: every gain's 90 % upper bound < 1 at 0.25-0.5 alpha_0, closing round 2's open window (detectable for true gains <= about 0.91)",
+   "R4.2: 'lambda_RSI below 1' together with 'RSI subdominant' (lambda_max^cf - lambda_RSI interval above 0) and lambda_RSI not above the 20 neutral word subspaces",
+   "R6.2: in-context carry on the RSI axis 'dissipative' (K_2 and K_geo upper bounds < 1) at T 0.7 and T 1.0; R6.3: round 2's K = 1.053 cell 'not replicated'",
+   "R6.1: 'latent loop below 1 on RSI', so removing token sampling does not let RSI carry itself either",
+   "R7: a low-damage erasure 'unlearned' and the loop under erasure 'un-searched' (C-Q4b)",
+   "Against the repair itself: R0 'README null claim not confirmed' (centring changes no round-1 p); RG6 failing (paired test invalid at 64 prompts); PC_PASS_1b failing at all three blocks with GO0_1b met (the loop cannot keep even a concrete topic beyond the style mode, so no RSI loop verdict is possible)"
+  ],
+  "changes_from_round1": [
+   "Centred pseudo-axes replace the uncentred sign-flip nulls (reported only); significance from a cross-fitted paired sign-flip test over prompts (K1-s) with Wilcoxon/t beside it and a size check that can switch to bootstrap-t",
+   "Magnitude by a margin in interpretable units (90 % lower bound of A >= 0.10 / 0.25 / 0.50) instead of the N-independent cosine bar Q_c >= 1 (about 0.22-0.26 in c); MDE pre-registered for the rule actually used",
+   "Axis uncertainty propagated by a joint prompt bootstrap of axis texts and loop pairs; readouts on cross-fitted fold axes (no self-trace)",
+   "S_4 and R_4 cross-fitted over halvings (disattenuated cosines above 1 in round 2)",
+   "Positive control redefined: style-free sea axis u_sea^perp* (u* removed), lexical sea-word criterion, SEA minus max(RND) contrast, SEA start on the style-free axis, sports as pre-registered fallback; round-1 PC reported beside it",
+   "RSI read on u_T^perp* (round-2 style mode removed) so convergence onto the generic attractor cannot count as RSI; style-attraction reported as a label",
+   "Random-start controls start orthogonal to the style mode and the test axes",
+   "Damage-normalised push per direction and round (0.05 nats, both signs logged, 8 RSI + 8 scene references) replaces the fixed alpha; GO3 becomes 'every push in band'; norm-preserving control push added",
+   "256 prompts (192 new, written and frozen before the run) instead of 64; RSI, SEA_t and SPO_t loops 512 pairs, others 256; RSI_b at every block",
+   "A round-1-identical replay (byte-identical rk_loop.py, round-1 keys, reduced state copy) anchors an attribution ladder of single changes",
+   "New measurements: dose series below 0.5 alpha_0 in both signs with unpushed texts; no-push noise covariance; lambda_RSI vs lambda_max with read/use directions; J-lens bridge with layer profile and A3 replacement; latent (soft-token) loop; multi-turn RSI-axis carry and replication of the K = 1.053 cell; low-damage erasure with C-Q4a/b; 0.6B diagnosis; inverse-free verified label of the style mode",
+   "Report hygiene: provenance (code, config, prompt hashes), NaN/censoring codes, labels carried everywhere, distributions next to means"
+  ]
+ }
+}

@@ -1,0 +1,518 @@
+{
+ "designs": [
+  {
+   "key": "lean",
+   "total_a100_hours": 7.1,
+   "falsifiers": [
+    "D1-a reads 'no length-driven minority capture' (upper bound of Delta Phi_l < 0.03 with realized SD <= 0.012), 'majority sharpens with length' (upper bound < 0), or 'length raises minority influence within proportional' (Delta Phi_l > 0 but upper bound of Phi_l at the longest gated length <= 0.25): no total-length effect beyond position and degradation (against H-DUAL part a)",
+    "D1-a reads 'minority over-representation without length dependence': a minority gets more than its share, but length does not drive it (against the length claim only)",
+    "D1-b reads 'stable' or 'rises': the release (selfish-mining) threshold does not fall with total length at fixed positions (against the literal 'alpha* falls with L')",
+    "D1-c reads 'count-driven' (lower bound of kappa > 1.4): in-context evidence accumulates like many-shot evidence, not like a hash-power share (against the share mapping)",
+    "D1-d reads 'no system cost' (upper bound of Lambda < 0.05): competition costs no committed answer mass (against the losing game)",
+    "D1-r reads 'token-identity-bound': the capture pattern changes under character-level encoding beyond +-0.07 (against 'the duality is not inside one token')",
+    "D2-a reads 'competitor dilutes' (upper bound of Delta Pi_1 < 0) or 'no catfish effect' (interval inside +-0.15, powered): an opposed second entity does not keep the first going (against H-DUAL part b)",
+    "D2-c reads 'merging' (lower bound of mu > 0.10) or 'one entity captured': the two entities do not coexist",
+    "D2-b reads 'weakens' or 'no length interaction': hyper-long context does not make two entities more sustaining (against 'insofar as catfishing is active')",
+    "D2-d reads 'the partner adopts' or 'no second stance emerges': no force splits one entity into two",
+    "D2-e reads 'no difference', or two voices degenerate more: two entities do not sustain longer context"
+   ]
+  },
+  {
+   "key": "dynamics",
+   "total_a100_hours": 9.25,
+   "falsifiers": [
+    "D3: no split from the symmetric start at any length (S_8 < 4 of 16 at every L0 with the split detector's positive control passed), or the split shrinks with length (urn-like)",
+    "D3s: a balanced long two-entity history suppresses the split relative to coherent neutral filler (Polya-urn reading, against H-DUAL's M1 reading)",
+    "D2: a single stable fixed point at every length ('stability unchanged with length'), i.e. no pitchfork",
+    "D1: 'no change of carry with length' (tau_int(28K) - tau_int(0) within +/- 0.95 answers) or 'carry falls with length (dilution)'",
+    "D4: only rate-dependent lag or no hysteresis at 28K; alpha*_hold not below 0.5, or not falling from L0 0 to 28K",
+    "D5: two model-written voices merge, one captures the other, or the competitor shortens persistence ('competitor dilutes') at 28K; or 'no effect of the competitor' with no growth from 0 to 28K",
+    "D7: two-voice own-reply runs live no longer than one-voice runs ('no difference in lifetime' or 'two voices degrade faster')",
+    "D6: at 28K the retained assistant identity is absorbed into the role or blended with it (no coexistence)",
+    "D8: 'cost from length alone' or 'no cost' (the losing-game element is not supported; duality could still exist without cost)",
+    "D10 (if run): 'token-bound' - the duality lives in token identities and character-level retokenisation removes it",
+    "Any split, slowing or hysteresis that appears only where the order parameter loses resolution (retention rho < 0.5) or the cell is degeneration-dominated counts as an artefact, not as H-DUAL",
+    "Combined: 'H-DUAL not supported: one entity at every length' when none of the core signatures S1 (length-driven split), S2 (bistability opening with length), S4 (mutual sustainment) survives Holm and D3, D2 and D5 read as stated in D-4 with every gate passed"
+   ]
+  },
+  {
+   "key": "confounds",
+   "total_a100_hours": 8.44,
+   "falsifiers": [
+    "Sigma1 (D3a) 'absent' or 'length-beyond-position minority loss': with A and B records fixed in content, order and distance to the probe, growing the context from ~4k to ~31k with neutral filler does not raise (or lowers) the minority's influence share beyond additive pooling (Lambda_int 90 % interval within +-0.10 or below -0.10).",
+    "Any uncontrolled 'minority gains with L' (Lambda_kappa > 0) is carried by generic differential dilution (Lambda_add) or disappears in the prior-opposed stratum, under shuffled filler, in the turn format, under the official template, in the interleaved arm or in damage-matched items ('not supported (explained by ...)').",
+    "Sigma2 (D3b) 'absent' or 'in-context persona dilutes with length': the RSI-pro persona's effect on the model's own stance does not grow (or shrinks) as neutral length is prepended at fixed persona material; m* constant (count-based) or rising (dilution) with L.",
+    "Sigma3 (D2R) 'absent' or 'share-fixed minority loss': when both chains grow at fixed share, the interaction iota does not rise with chain length; and if alpha*_obs falls with L, alpha*_add from the single-entity cells falls equally (recency/dilution explain the literal prediction).",
+    "D3c 'count-dependent (Bayesian)': the majority gains as counts grow at fixed share, i.e. aggregation follows counts, not the share logic of the selfish-mining analogy.",
+    "Sigma4 (D4) 'interference' or 'absent': a competing chain lowers (or does not change) the other chain's attributed accessibility relative to a non-competing companion at ~31k; at ~31k the two chains blend (cross-talk rises) or the earlier chain is orphaned instead of coexisting.",
+    "Sigma5 (D5): one persona does not split with length ('no split: one entity, drifting / diffusing / stable'), or the split is already present at 1k and does not grow ('split from self-reinforcement (urn), not length'), or it appears only with more turns or more persona evidence, not with neutral length.",
+    "Sigma6 (D6) 'absent' or 'duality shortens coherence': two competing voices do not keep a self-generated transcript coherent longer than two agreeing voices (RMST difference within +-300 tokens or below), or the voices merge.",
+    "D7 'no system cost': competing two-entity contexts cost no more reference NLL / context damage / factual accuracy than non-competing two-entity contexts of the same length (no losing game), or the cost is unrelated to capture.",
+    "D8 'token-bound': any effect supported in canonical text vanishes under character-level encoding while generic recall survives (counts against the aside that the duality is not only within one token).",
+    "Overall: with all positive controls passing (G-D1, G-D2, G-D4, G-D5, G-D6), all six primary signatures are 'absent' or reversed -> 'H-DUAL not supported in Qwen3-1.7B' (not a refutation for larger models); only the already-known recency/prior capture (D1a W_50, D1c gamma_hat) remains."
+   ]
+  }
+ ],
+ "judges": [
+  {
+   "scores": [
+    {
+     "design": "lean",
+     "fidelity": 6,
+     "decisiveness": 8,
+     "confounds": 7,
+     "statistics": 8,
+     "feasibility": 8,
+     "completeness": 7,
+     "notes": "Strongest on decisiveness and statistical hygiene.\n- Two pre-registered primaries with ordered verdict strings, equivalence margins and a realized-MDE rule.\n- Front padding fixes every report's distance to the question.\n- The endpoint-normalised bound Phi_l <= 0.25 (judge re-run: max 0.256 over the 144-configuration null grid) stops position kernels, uniform degradation and saturation from producing support. Degradation can only move Phi_l up to 0.25, which gives verdict 7, not verdict 3.\n- L* is chosen from pure contexts only. D2 uses common random numbers. The engine has parity gates. Budget 7.1 h.\n\nFidelity is thin exactly where the user is most specific:\n- 'A force splits one entity into two' is only D2-d: a neutral partner turning opposed. The plain history still asks for 'a debate between Ada and Ben', which invites the neutral speaker to take a side.\n- 'The two sustain still longer context' is only 3 front-padded turns (D2-e).\n- Absent: catfishing as a fake identity over a retained one, the M2 reading (long context as a withheld chain against the trained default), and self-generated long context.\n\nOpen confounds:\n- Per-item priors under a saturating readout are not cancelled by swap-averaging (judge sim: one-item Phi_l 0.27-0.44 once the prior is about 0.4-1x the degraded evidence). This can produce verdict 3 at long L.\n- Conflict hedging is acknowledged, but verdict 3 is still labelled 'capture'.\n- D1-c kappa falls to 1.28-1.47 under counting with saturated endpoints, so counting is read as 'share-driven'.\n- The losing-game Lambda has no non-competing control.\n- Pi conflates stance with each speaker's production share.\n- The combined string does not require D2-b's length interaction for part (b)."
+    },
+    {
+     "design": "dynamics",
+     "fidelity": 9,
+     "decisiveness": 6,
+     "confounds": 5,
+     "statistics": 6,
+     "feasibility": 5,
+     "completeness": 9,
+     "notes": "Most faithful translation. Every element is mapped, most with a verdict:\n- symmetry breaking from a torn start (D3);\n- pitchfork via the carry map (D2);\n- hysteresis against a model-based linear-lag null, with alpha*_hold as the dynamic 'minority holds below 50 %' (D4);\n- two model-written voices (D5);\n- catfishing as presented vs retained identity (D6);\n- own-reply runs to 16K (D7);\n- losing game with a cost-duality co-occurrence (D8);\n- form vs size with a Polya-urn control (D3s);\n- a provisional Ising description (D9) and a B-T5 bridge (D11).\nExemplary practice: synthetic positive controls for every rule (G-D2pc/G-D3pc/G-D4pc), verified instruction-stripped starts, and Holm over four signatures.\n\nBut the in-context probe keeps the start in context at every answer:\n- D1's 'carry rises with length (critical slowing down)' and D5's tau_int contrasts mix the start's position-dependent direct influence with carry through the model's own replies. The orphaning control (D8) is descriptive only.\n- D2 pools start types into one 1-D map of a non-Markov system.\n- Only D3 is clean, because the start is identical across seeds. Even D3 reads the split at n = 8 alone, which can reflect the last-mentioned value rather than a committed entity.\n\nPower and units:\n- 16 items serve as bootstrap units.\n- Splits are detected reliably only at about 4.5-6 SD separation.\n- D7 has 12 pairs (MDE ratio 1.8).\n\nOther weaknesses:\n- Stop tokens are masked to force 40-token answers, which risks degeneration in every trajectory.\n- Retokenisation runs only as a reserve.\n- The selfish-mining share is mapped only dynamically.\n- The core costs 9.25 A100-h (over the envelope), plus up to 3.2 h of reserves, across 8 sessions with the most new machinery."
+    },
+    {
+     "design": "confounds",
+     "fidelity": 7,
+     "decisiveness": 5,
+     "confounds": 6,
+     "statistics": 6,
+     "feasibility": 7,
+     "completeness": 8,
+     "notes": "Best confound inventory: the C1-C15 matrix, the survival rule, neutralised records at identical positions, copy guard, inventory line, KL_ctx against a length-matched neutral context, a non-competing companion, and source tags.\n\nIt is the only design that:\n- tests both readings (M1 record chains; M2 persona vs trained default, D3b);\n- separates length from turns and evidence for the split (D5 L/T/E arms);\n- gives the losing game a proper conflict-interference control and a capture link (D7);\n- measures coexisting vs agreeing voices' lifetimes (D6);\n- covers asymmetric pairs under retokenisation (D8).\n\nBut its core length statistic fails:\n- iota = 0 holds only under log-linear (additive) pooling. With any saturating readout and no interaction, iota < 0 at full evidence and rises toward 0 as length degrades evidence (judge sim: Lambda_int +0.10 to +0.32). That meets the Sigma1 margin.\n- The artifact survives the prior-stratum, format, interleaved and damage checks. Only shuffled filler might catch it.\n- Sigma3 is driven by growing saturation in the opposite direction.\n- 'C10 via interleaved arm' does not control compression.\n\nOther problems:\n- D3c's kappa slope is 0 under both linear counting and averaging, so it cannot separate them.\n- Sigma4's catfish is static accessibility, not 'keeping active'.\n- Six Bonferroni primaries (one-sided 0.0083) with MDEs near the margins will leave many nulls 'not decidable'.\n\nFeasible: 8.4 h central, with pilot-frozen trims."
+    }
+   ],
+   "ranking": [
+    "lean",
+    "dynamics",
+    "confounds"
+   ],
+   "base_recommendation": "Use lean as the base. Keep its D0 gates (engine parity G-LCE-1..3, readout positive controls, degradation baseline G-deg with L* chosen from pure contexts only), the D1 minority-capture surface with front padding and the endpoint-normalised Phi_l, the D2 two-speaker catfish test (Pi with common random numbers and the NEU/ALI controls), the realized-MDE rule and the two-session layout.\n\nChange these before freezing:\n1. D1-a.\n   - Add version strata: a closed-book F-sym prior per item and attribute at L0 and L*, split into prior-aligned vs prior-opposed minority.\n   - Add a measured null envelope, because the 0.25 bound assumes an odd readout and a per-item prior under saturation breaks it.\n   - Verdict 3 must survive in the prior-opposed stratum and exceed the envelope.\n   - Name hedging in verdict 3 ('beyond proportional: minority capture or conflict hedging') unless a discriminator separates them.\n2. Replace D1-c's kappa ratio with a saturation-robust contrast: blocks with equal B-A count difference but different share, e.g. (1,4,5) vs (2,5,3). These are equal under counting for any monotone readout.\n3. D2.\n   - Make D2-b part of the combined string for part (b): 'enabled by hyper-long context' vs 'length-independent'. Without it, 'insofar as catfishing is active' is not tested.\n   - Add per-speaker production share as a covariate of Pi.\n   - Remove 'debate' from the plain history, or drop D2-d once the D3 split graft replaces it.\n4. Replace D1-d with the confounds D7 cost contrast against a non-competing companion.\n5. Add three grafts: the dynamics D3 split test (with confounds D5's turn and evidence arms), the dynamics D6 catfishing-identity test, and the confounds D6 two-voice lifetime test.\n6. Fund the additions:\n   - Run the main arm at L0 and L* only; 16K runs only if 32K is gated out, and 4K becomes a descriptive subset.\n   - Move D1-r's 32K half and D2-f to reserve.\n   - Keep confounds D3b (M2 reading) as the first reserve item.\n\nProjected total is about 8.6-9 A100-h: base 7.1, minus about 0.9 from the cuts, plus about 2.4 from the grafts at the x1.5 margin. With D3b added it is about 9.3 A100-h.",
+   "grafts": [
+    "From dynamics D3 + G-D3pc: replace lean D2-d as the test of 'a force splits one entity into two'.\n- Start: the instruction-stripped symmetric 'torn' start M, built and verified with dynamics' INJ generate-verify-revise (round-trip |l| <= 1 nat).\n- Run: 16 F-SYM items x 16 seeds, 8 'Continue.' answers, forced-choice probe on a cropped cache, at lean's L0 and L* only.\n- Mixture rule: per item, a 1- vs 2-component equal-variance mixture (dBIC >= 6, minor weight >= 0.2, Ashman D >= 2.5). Apply it to each seed's mean probe over answers 6-8, not to answer 8 alone, so that a split means commitment rather than the last mention.\n- Item-count rule: S >= 4/16 under a per-item false-positive rate of 0.05.\n- Verdict strings: 'two entities (committing)' / 'one entity, diffusing' / 'one entity, drifting' / 'one entity, stable'.\n- Positive control: planted A2+B2 mixtures at n = 1.\n- Length trend: exact McNemar, 'split grows with length' / 'split shrinks with length (urn-like)'.",
+    "From confounds D5 (driver arms), attached to the D3 graft at L* only: a T-arm (neutral turns before the start, token-matched), an E-arm (extra persona-evidence turns) and the official-template arm. A split that grows with L can then be attributed to length per se rather than turn count or evidence.",
+    "From dynamics D6 + G-D6a + PC-D6 (catfishing proper):\n- Presented role vs retained AI identity: 16 invented roles x 8 seeds.\n- Probes: role facts (3 facts x 2 orders) and an out-of-character identity probe (both orders).\n- Anchors: pure assistant and pure role. Positive control: instructed coexistence.\n- Class verdicts at n = 8: 'coexisting presented and retained identity' / 'one blended entity' / 'absorbed into the role' / 'split across seeds', at L0 and L*.",
+    "From confounds D6 + G-D6, replacing lean D2-e for 'the two can sustain still longer context':\n- Arms: self-generated transcripts 2V-comp vs 2V-agree vs 1V, 24 starts.\n- Lifetime: RMST of generated tokens up to the first 256-token window with rep4 > 0.3 (detector validated on known degenerate and healthy texts). Horizon 4,096 tokens, 8,192 if the pilot rate allows.\n- Voices must stay separated: g(last)/g(0) >= 0.5. Margin +-300 tokens.\n- The 2V-agree arm is the speaker-alternation control lean lacks.",
+    "From confounds D7, with D4's non-competing companion, replacing lean D1-d:\n- Cost measures: committed-mass loss Lambda, reference-passage NLL and KL_ctx.\n- Contrast: competing parity contexts minus contexts whose minority block is about a second referent with its own values (same format, length and positions), at L0 and L*.\n- 'Losing game' requires a positive competing-minus-non-competing cost and its growth from L0 to L*. The link to Phi_l is descriptive.",
+    "From confounds D.1.1 and D.1.2 (version strata and survival rule), applied to lean D1-a:\n- Strata: 'prior-aligned' vs 'prior-opposed minority', from a closed-book F-sym prior per item and attribute, measured with the same filler at L0 and L* (a few minutes).\n- Verdict 3 must 'survive' in the prior-opposed stratum: theta_k >= 0.5 theta and 90 % lower bound > 0.",
+    "From the dynamics synthetic pipeline-validation pattern (G-D2pc/G-D3pc/G-D4pc), as a new lean gate 'G-D1-null':\n- Before D1-a is read, simulate Phi_l under saturating readouts shifted by the measured per-item priors, using the measured endpoint ranges at L*.\n- Verdict 3 needs the lower bound of Phi_l(L*) above that envelope's 95th percentile, not merely above 0.25.",
+    "From confounds C14 and dynamics D3s (form vs size): a sentence-shuffled filler arm (same tokens) at L* for D1, items 0-23, interleaved arrangement. It gives the user's 'Form war relevant' a verdict ('form matters' if Phi_l(shuffled) - Phi_l(coherent) excludes 0) and gives D1-a a context-rot check.",
+    "From confounds D3a (representation coexistence index):\n- Fit h(X_AB) - h(X_N) ~ a u_A + b u_B at blocks 14 and 18 by forward regression; CI = a + b.\n- Apply it to lean's parity contexts at L0 and L*, adding one neutralised-report context per item.\n- It discriminates descriptively between conflict hedging (convex mixture, CI about 1) and superposed coexistence (CI about 2).",
+    "From confounds D3b, as a reserve or secondary measurement (the M2 reading):\n- A fixed 8-turn RSI persona block after filler at L0 and L*.\n- Lambda_S = S_pro(L*) - S_pro(L0), with the neutral cell at each length.\n- Turn-count and template checks, plus a count sub-arm m in {2, 24}.\n- It is the only test of holding the context far above its natural measure as a withheld chain against the trained default.",
+    "From confounds D8: the version asymmetry per encoding for prior-symmetric vs prior-asymmetric pairs. Run lean's D1-r character-level arm also on the F-asym items at L0, reporting per-direction capture under canonical vs character-level encoding. This is the only coverage of the user's 'and what happens when I tokenise' an asymmetric pair.",
+    "From dynamics D5: per-voice production (line or token) share, used as a covariate of lean's Pi and in a matched-presence sensitivity analysis. A speaker who talks less in OPP otherwise looks less persistent.",
+    "Process rules from confounds:\n- From confounds D0/D.9: a trim order frozen on pilot engineering numbers only.\n- The rule 'realized MDE > 2 x margin -> not decidable (underpowered)'.\n- From confounds FRK: the inventory line (both values mentioned in every context) and the copy guard (no probe-format text in any report), for lean's report templates.",
+    "Optional, to coordinate with part R: dynamics D1R, RSI-stance carry over 8 answers on u_T_perp and u*_14 at T 0.7 and 1.0. It answers AUSWERTUNG step 5. Run it only if part R does not own an n-turn K chain, and use the context-free read as primary to avoid the start-persistence confound."
+   ],
+   "fatal_flaws": [
+    "confounds, Sigma1 (D3a) and Sigma3 (D2R): the presence-factorial interaction iota is zero only under log-linear (additive) pooling.\n- With any saturating readout and no interaction, iota < 0 at full evidence and rises toward 0 as length degrades evidence.\n- Judge simulation (tanh link, 24 A + 6/12 B records, evidence scaled by 0.3 at level 4): Lambda_int = +0.10 to +0.32. That meets the 0.10 'length-beyond-position minority gain' margin.\n- The artifact survives the prior-opposed stratum, turn-format, interleaved and KL-matched checks, because it is present in all of them.\n- Sigma3's chain-length slope is driven the other way by growing saturation under counting.\n- So the length-component verdicts cannot be read as 'beyond position and degradation' without an absolute, saturation-calibrated criterion. The lean design's endpoint-normalised Phi_l is one such criterion.",
+    "confounds, D3c: the rule on the kappa slope per count doubling cannot separate a Bayesian counter from averaging.\n- With a linear readout kappa = alpha under both, so the slope is 0 and the verdict reads 'share-dependent'.\n- Counting is detected only through saturation.\n- The listed falsifier 'count-dependent (Bayesian)' is therefore not a valid test.",
+    "dynamics, D1 (signature S3) and D5 (part of S4): the in-context probe is read with the instruction-stripped start still in context at every answer.\n- tau_int and the catfish tau_int contrasts therefore mix the start's direct, position-dependent influence with carry through the model's own replies.\n- A length-dependent recency kernel alone can produce 'carry rises with length (critical slowing down)'.\n- The start-deletion control that would separate the two (D8 orphaning) is descriptive only.",
+    "dynamics, D2 (signature S2): (m_n, m_n+1) pairs from different start types (A2, B2, M, AB, BA) are pooled into one 1-D map.\n- The system is not Markov in m: the start stays in context.\n- Start-type plateaus near +-1 can therefore appear as two 'stable fixed points', so 'bistable carry map (two entities)' can be produced without bistable self-dynamics.\n- G-D2pc validates the estimator only on Markov synthetic maps.",
+    "lean, D1-a: the only supportive verdict (3: lower bound of Phi_l(L*) > 0.25 and Delta Phi_l > 0) can arise without any H-DUAL mechanism, in two ways.\n- Per-item prior offsets under a saturating readout. Swap-averaging cancels the prior only for a linear readout. Judge simulation: single-item Phi_l 0.27-0.44 once the prior is about 0.4-1x the degraded evidence. Degradation at L* raises the prior's relative weight, and F-sym balances priors across items, not within them.\n- Conflict hedging that grows with length. The design acknowledges this but still labels the verdict 'minority capture'.\n- Unless version strata, a measured null envelope and an honest verdict string are added, a positive part (a) is ambiguous.",
+    "lean, D1-c: kappa = l(full)/l(half) is pulled toward 1 when endpoints saturate.\n- Judge simulation, counting with a tanh link and pure-context log-odds near the ceiling: kappa 1.28-1.47, against the 1.4 cut.\n- A Bayesian counter can therefore be read as 'share-driven', and the falsifier 'count-driven' is missed.\n- The confident log-odds of a 1.7B model reading 10 consistent reports make this likely."
+   ],
+   "missing_everywhere": [
+    "No discriminator between conflict hedging (log-odds compression when sources disagree) and genuine minority over-weighting in the primary length statistic:\n- lean only acknowledges it;\n- confounds claims C10 is controlled by an interleaved arm that cannot control it;\n- dynamics has no static test.\nA 'supported' length component can therefore rest on generic long-context uncertainty.",
+    "No power statement for the combined H-DUAL verdict. Every design requires a conjunction (a length signature AND a duality signature), but none gives the probability of reaching 'supported' under a plausible alternative. A combined 'not supported' therefore has no stated sensitivity.",
+    "The user's literal analogy aside is not tested anywhere: vector-offset analogies (king - man + woman = queen, symmetric) against deliberately asymmetric relations, and what retokenisation does to each. All three substitute prior-symmetric or prior-asymmetric value pairs or entity families. Only confounds D8 touches asymmetric pairs under re-encoding.",
+    "No competitor-strength (dominance) series in any primary catfish test. Field evidence reverses the effect for dominant competitors (Lackner 2023; Brown 2011), but every primary contrast uses one strength. Dynamics touches it only in reserve R-MIN.",
+    "No verdict on the rate form of 'hash share', i.e. the share of self-generated turns or lines written by the minority voice. Every design maps alpha to a stock of in-context material and leaves the rate descriptive.",
+    "No size trend. Persona duality, many-shot exponents and identity drift grow with model size, and a Qwen3-0.6B comparison is allowed. None runs even a small one, so a 1.7B null cannot be read as evidence against H-DUAL beyond this model.",
+    "Two-entity self-continuation at full hyper-long scale. The user's two entities are supposed to 'catfish longer context' themselves, but self-generated text reaches at most 16K (dynamics D7, 12 pairs), 4,096 generated tokens (confounds D6) or 3 front-padded turns (lean). No design lets two voices sustain their own context toward the 32K window."
+   ]
+  },
+  {
+   "scores": [
+    {
+     "design": "lean",
+     "fidelity": 7,
+     "decisiveness": 8,
+     "confounds": 7,
+     "statistics": 8,
+     "feasibility": 8,
+     "completeness": 8,
+     "notes": "Best base. D1-a's endpoint-normalised Phi_l with the Phi <= 0.25 bound is the most robust length statistic of the three. I re-simulated it (judge_D2/null_checks.py): with tanh saturation and per-item word priors b ~ N(0, <=4 nats), Phi stays <= 0.247. Saturation x degradation raises Phi only inside the bound (e.g. 0.100 -> 0.208 as beta 16 -> 6), and the rule correctly routes that to verdict 7. The bound fails for a strong per-item prior inside saturation (|b| 5-8 nats, c 4-5: Phi 0.26-0.34, rising as beta falls while endpoint retention stays >= 0.6, so G-deg passes; null_checks2.py). The D1-e sentence 'F-sym has no prior asymmetry by construction, so a length-driven effect is not prior fallback' is therefore wrong at the item level. F-sym needs a closed-book prior and |b| strata. The readout takes no-space lowercase value first tokens, but answers to 'Answer with one word' will often be capitalised ('Copper'); there is no case-variant rule, and M is not gated. Positions are fixed by front padding with identical adjacent filler. Orders are position-balanced (order + reverse), versions are swapped, there are half-density distractor blocks for count vs share and an F-asym prior arm, and retokenisation is scored with per-encoding endpoints. These controls are good. D2 (OPP vs NEU, ALI, plain history, CRN, G-D2-PC instructed two-speaker control) is cheap and clean, with three gaps. It has no monologue baseline. The debate genre itself enforces role persistence. Three 80-token turns cannot test 'sustains longer context' (D2-e lacks a reversed string), and the split is only a cross-effect proxy (D2-d). Statistics: item and prompt bootstraps with all cells of a unit resampled together, ratios per replicate, a realized-SD rule for every null, and two unadjusted primaries (the 'partly supported' union carries about 10 % FWER). Filler streams (4) shared by 12 items each are ignored by the bootstrap. Costs re-derive: 1.40 s per 32K context and 86 min for D1 main. The masked chunk path's K/V repeat and the DynamicCache rewrite add about 10-15 % to D1 (session about 4.3 h). Left-padded B=3 decode at 32K likely runs about 30 tok/s, not 60, but the pre-registered < 40 tok/s fallback keeps D2 at about 3.5 h. Total about 8 h, inside 9 h. Verified: mode_set members and signs and the R6 K_u_T_perp cells match theta_verdict.json, and open_block(14) hooks are inert without a push (rk_loop.py:100-116)."
+    },
+    {
+     "design": "dynamics",
+     "fidelity": 9,
+     "decisiveness": 5,
+     "confounds": 5,
+     "statistics": 6,
+     "feasibility": 3,
+     "completeness": 8,
+     "notes": "Most faithful to the user's central claim 'a force splits one into two'. It covers the symmetric-start split (D3), carry-map pitchfork (D2), rate-independent hysteresis with a model-based linear-lag null and dynamic alpha*_hold (D4), catfish with monologue and neutral controls plus PC2 (D5), presented vs retained identity with anchors and PC-D6 (D6), 16K own-reply lifetimes (D7), the B-T5 bridge and explicit inverse-free handling. Its tooling is strong: G-D2pc/G-D3pc/G-D4pc rule validation on planted data, the cross-half estimator, and a letter-format probe with both option orders. s_c is a local slope, so it is invariant to monotone readout transforms. Validity problems: (1) The pooled carry map has no item effects. Single-attractor items with heterogeneous fields (pseudo-word priors) can produce two populated 'stable points' and s_c > 1 by aggregation, and G-D2pc plants no such case. (2) D3's per-item FPR of 0.05 comes from unimodal shapes only. A saturating or last-mention-driven probe makes seed distributions U-shaped, plausibly more so at long L0 under recency dominance, so S1 'split grows with length' can arise with no split. The split value uses n = 8 only, with no persistence requirement. (3) Units are 16 items. Filler documents are shared by 4 items each, so the item binomial and McNemar tests are not independent. D7 has 12 pairs. Answers are 40 tokens with EOS masked. The overall 'not supported' requires about 6 components decided with every gate passed, so it is rarely reachable. Feasibility: the core is 9.25 A100-h by its own count (above the 9-h envelope) and has no core trim order. Its probe chunk at 28K is costed at 60 ms per 3 rows, but HF's masked chunk path repeats K/V and DynamicCache rewrites the cache on each probe update. From first principles it is about 0.2 s, and the core becomes about 12.8 h (judge_D2/dyn_cost_recheck.py). Reuse is mostly new objects (INJ, KCHAIN, PROBE, u_AA, SPLIT-RULE). rk_loop pieces are copied rather than imported, which is correct."
+    },
+    {
+     "design": "confounds",
+     "fidelity": 8,
+     "decisiveness": 5,
+     "confounds": 5,
+     "statistics": 7,
+     "feasibility": 7,
+     "completeness": 8,
+     "notes": "Best confound bookkeeping: a 15 x 6 survival matrix with an explicit survival rule, version strata (prior-aligned vs prior-opposed), copy guard plus copy-bait calibration, a KL_ctx damage metric, shuffled-filler and turn-format checks, L/T/E arms for the split, the M2 reading (persona vs trained default), and pilot-based trims T1-T8. These are excellent practices. But the core device is scale-dependent. iota = I/(l_B - l_A) is zero only under log-additive pooling. Real log-odds saturate (24 consistent records will not reach 24 x per-record nats). I simulated saturating log-odds (c 6-15) with per-record evidence halved from level 1 to 4, matching the design's own planning span of 10 -> 5 nats. With no interaction, Lambda_int came out at +0.04 to +0.17, against the +0.10 margin (judge_D2/null_checks.py). No survival check targets this. Shuffled filler could even mislabel it as 'explained by C14'. D2R's iota slope is likewise driven by 20x record-count growth x saturation. So Sigma1/Sigma3 'supported' is not interpretable as 'length beyond position'. Decisiveness: individual strings are clear, but Sigma6 (MDE 400-800 tokens vs ±300 margin, plus a 'horizon too short' exit) and Sigma2 (0.26-0.66 vs ±0.3) sit at the 2x-margin 'underpowered' cut. The overall 'not supported' needs all six absent or reversed and is practically unreachable. Feasibility: 8.4 h uses a x1.3 margin; the round-2 x1.5 rule gives about 9.6 h before trims. The trims are pre-registered on engineering numbers only. Sessions are <= 3.1 h. The parity gate 'max relative difference over 151,936 logits < 1e-4' voids every cache-reuse cell on failure. It must follow round-1 GO2's max|d|/max|x| convention or be stated in nats. D8 retokenisation covers only <= 7k canonical."
+    }
+   ],
+   "ranking": [
+    "lean",
+    "confounds",
+    "dynamics"
+   ],
+   "base_recommendation": "Use the lean design as the base. It has the most robust primary length statistic, a reachable negative overall verdict, clear ordered verdict strings with a realized-SD rule, verified repo inputs, and about 8 A100-h after re-costing, which leaves roughly 1 h of the 9-h envelope.\n\nFix before the freeze:\n(1) Run a closed-book prior per F-sym item-attribute (cost negligible). Report D1-a in |b| strata and require verdict 3 in the low-|b| half. Delete the D1-e claim that F-sym excludes prior fallback. A strong per-item prior inside saturation breaks Phi <= 0.25 (judge_D2/null_checks2.py).\n(2) Make the readout surface-form robust: use the dynamics letter-format forced choice, or sum the case/space variants of each value. Gate on committed mass M.\n(3) For D2 at 32K, avoid left padding by using fixed-length answers with EOS masked, or B=1 decode, so HF does not take the masked K/V-repeat decode path. Keep the < 40 tok/s fallback.\n(4) Use one filler stream per item, or resample streams in a two-level bootstrap.\n(5) Add a rule for censored bootstrap replicates in D1-b, and the reversed string in D2-e.\n(6) Add a rule-validation gate: D1-a and D2-a must recover planted nulls (including per-item bias x saturation) and planted effects at the measured noise.\n\nTo pay for grafts, drop reserves V3/V4 and D2-f, and the 32K parts of D1-r and D1-c if needed. Freeze the merged budget with a pilot-based trim order. Scripts behind these judgements: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/judge_D2/null_checks.py, null_checks2.py, dyn_cost_recheck.py.",
+   "grafts": [
+    "From confounds D.9: a pre-registered trim order (T1-T8 style) fixed on pilot engineering numbers only (rates, memory, parity; no log-odds). Add the x1.5 margin rule for the merged part D.",
+    "From dynamics D3: a symmetric-start split test as the base's test of 'a force splits one entity into two'. Use the M start, 16 items x 16 seeds, L0 in {0, 28K} only, and the per-item mixture rule (dBIC >= 6, smaller weight >= 0.2, Ashman D >= 2.5) with the G-D3pc planted A2+B2 positive control. Two modifications: take the per-seed value as the mean over n = 6..8 (or require side persistence), and add U-shaped (Beta(0.5,0.5), tanh of a wide normal) and last-mention nulls to the FPR simulation. Raw cost at 2 lengths is about 30-50 A100-min. If budget is tight, use confounds D5's L-arm at 1k/16k instead.",
+    "From confounds D5: the T- and E-arms at 8k (turn count vs persona evidence at matched tokens) next to the length arm. This is the length/turns/evidence separation the persona literature requires. Require the opposite-mode share in each pole separately, with references (mu_def, mu_pole) taken at each L0, not pooled at 1k.",
+    "From confounds D6: the coherence-lifetime arm (RMST to 4,096 generated tokens; 2V-comp vs 2V-agree vs 1V; voice separation g(t); validated rep4 detector G-D6) replacing the base's 3-turn D2-e. Add starts, or widen the ±300-token margin, so 'absent' is reachable.",
+    "From dynamics D5: a C-one length-matched monologue condition in D2, so that a competitor is compared with no second entity as well as with the neutral (NEU) and ally (ALI) partners.",
+    "From confounds D.1.1/D2-D3: version strata (prior-aligned vs prior-opposed minority from the per-item bare prior l_0) with the survival rule ('survives / inconclusive / explained by'), applied to the base's D1-a.",
+    "From confounds D3a: the shuffled-filler check (C14) at L* on a 16-item subset for D1-a, plus the copy-guard assertions (no answer prefix or probe-chunk 3-gram inside any report).",
+    "From confounds D7: the non-competing two-entity control (a companion about another referent) and the KL_ctx / reference-NLL readouts for the base's D1-d. Without them, Lambda (committed-mass loss) is not tested against generic conflict interference.",
+    "From dynamics PROBE (D-2.5): the letter-format forced choice '(a) v1 (b) v2' read as 'a' vs 'b' log-odds with both option orders, for D1 and the D2 stance probes.",
+    "From dynamics G-D2pc/G-D3pc/G-D4pc: rule-validation gates. A verdict is read only if its rule recovers planted null and planted effect data at the measured noise in >= 90 % of 200 synthetic replicates; otherwise 'not decidable (rule not discriminating)'.",
+    "From confounds D3b (optional, about 21 raw A100-min): the M2 arm. A fixed 8-turn RSI persona block is set against a neutral cell, with filler grown from 4K to 31K, Lambda_S on H30, and turn-count and template checks. It covers the user's 'context held above its natural measure' against the trained default.",
+    "From dynamics D6 (optional, about 15 raw A100-min): presented role vs retained assistant identity, using role-fact and out-of-character probes, anchors and the PC-D6 coexistence control, at L0 0 and 28K. This is the 'catfishing' (second fictitious identity) arm the base lacks."
+   ],
+   "fatal_flaws": [
+    "confounds, Sigma1 (D3a) and Sigma3 (D2R): the interaction iota = I/(l_B - l_A) is zero only under log-additive pooling. With saturating log-odds and evidence that weakens with length (the design's own planning assumption: single-entity span 10 -> 5 nats), the no-interaction null gives Lambda_int of about +0.04 to +0.17 (my simulation, c 6-15 nats), which reaches the +0.10 margin. For D2R, growing record counts drive the iota slope through saturation. None of the survival checks (prior stratum, shuffled filler, turn format, interleaved arm, KL-matched items) targets this, so 'length-beyond-position minority gain' can be produced by plain degradation. Fix: require additivity at level 1 (iota(L1) within ±0.05) as a gate, or test on a latent scale fitted forward from single-entity dose-response cells at each level, or use lean's endpoint-normalised Phi with its bound.",
+    "confounds, overall rule: 'not supported' requires all six primaries to read absent or reversed. Sigma6 (planning MDE 400-800 tokens vs ±300 margin, plus a 'horizon too short' exit) and Sigma2 (0.26-0.66 vs ±0.3) sit at or above the 2x-margin 'underpowered' cut. The part can therefore practically not come out negative, against the design rule.",
+    "dynamics, feasibility: the core is 9.25 A100-h by its own count, above the 9-h envelope, with no pre-registered core trim order. Probe chunks at 28K are costed at 60 ms per 3 rows. HF's masked chunk path repeats K/V and DynamicCache rewrites the cache on every probe update, so a first-principles cost is about 0.2 s and the core becomes about 12.8 h with margin. The frozen plan is not executable within part D's budget.",
+    "dynamics, S2/S1 validity: (a) The pooled carry map m_(n+1) = f(m_n) has no item effects. Single-attractor items with heterogeneous fields can show two populated 'stable' zeros and s_c > 1 by aggregation, and G-D2pc plants no such case. (b) D3's per-item FPR (0.05) is calibrated on unimodal shapes only. A saturating probe of a diffusing entity, or a probe driven by the last answer's mention, gives U-shaped seed distributions, plausibly more so at long L0. 'Bistable carry map' and 'split grows with length' can therefore arise without any split.",
+    "lean (conditional; fixable): the D1-a null bound Phi <= 0.25 fails under a strong per-item word prior inside a saturating readout. At |b| >= 5 nats with saturation at 4-5 nats, Phi is 0.26-0.34 and rises as evidence weakens with length while endpoint retention stays >= 0.6, so G-deg passes. In that regime verdict 3 'length-driven minority capture' can arise from degradation plus prior. F-sym has no per-item closed-book check to exclude it.",
+    "confounds and dynamics, parity gates (conditional): 'max relative difference over logits < 1e-4' is ill-posed if computed per element, because near-zero logits make it fail whatever the engine does. Its failure voids every cache-reuse cell (confounds) or whole L0 levels (dynamics). Pin it to round-1 GO2's max|d|/max|x| or to nats on the readout tokens (as lean's G-LCE-1 does)."
+   ],
+   "missing_everywhere": [
+    "No design estimates the per-length readout response function: the single-entity log-odds dose-response over k = 1..n consistent records at each L, fitted forward. Without it, length effects cannot be tested on a latent evidence scale. Each design rests on an untested readout assumption that length-dependent saturation or degradation can break: an odd readout with no per-item prior (lean), log-additive pooling (confounds), or a unimodal readout of a unimodal latent with item-homogeneous maps (dynamics).",
+    "Filler-level clustering: only 3-4 filler documents per length, each shared by 4-12 items, while every bootstrap resamples items only. Filler-induced variance in the length contrasts thus rests on 3-4 draws, so intervals are too narrow, and the dynamics binomial and McNemar tests across items are not independent. Use one filler sample per item (about 5-20 extra A100-min of prefills) or a two-level bootstrap over filler documents and items.",
+    "No engine-failure fallback: in every design a failed cache/chunk parity gate voids the long-context cells. None pre-registers a full-recompute path (B = 1 full prefill per context, fewer items) that keeps the primary length contrast testable.",
+    "No design computes the probability that its overall rule reaches a decisive negative string under a plausible null (all required components adequately powered at once). The design rules require each part to be able to come out negative.",
+    "The rate form of hash share (which entity writes the next turn in self-continuation) never gets a verdict: lean has none, and dynamics and confounds report it descriptively or only in reserves.",
+    "No size or second-model comparison (for example Qwen3-0.6B, once its empty round-2 arm is explained) to calibrate how far a 1.7B null transfers. The persona and many-shot literature reports effects that grow with size. All three designs only state that a null does not refute H-DUAL for larger models."
+   ]
+  }
+ ],
+ "merged_meta": {
+  "measurements": [
+   {
+    "id": "D0a",
+    "what": "Engine checks for D1 (raw minutes): G-LCE-1 crop-path and copy-path vs full-prefill parity at 16,384 and 32,000 (8 contexts x 2 readouts, 16 full prefills per length, plus 2 contexts for Qwen3-0.6B), G-LCE-2 SDPA memory-efficient backend assertion and logging",
+    "a100_minutes": 7,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1",
+    "what": "Primary D1-a minority-capture surface (raw minutes): 48 F-sym items, letter-format forced choice, k = 0..5 minority reports of 10, 2 swaps, interleaved order + reverse (rel arrangement on items 0-23), front padding at L0 about 1,000 and L* = 32,000; neutral-note prior contexts X_N and pure contexts at 4K/16K/32K (degradation curve, G-deg), 4K subset, non-competing (0,5,5) contexts for the fitted null envelope; 16 stream prefills (incl. 8 shuffled); D1-b release threshold",
+    "a100_minutes": 67.3,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-h",
+    "what": "Hedging control for D1-a (raw minutes): third-value minority contexts (k in {2, 4}, items 0-31, L0 and L*); Psi_Delta = Delta Phi_24 - Delta Phi^C_24 as a survival check",
+    "a100_minutes": 7.4,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-c",
+    "what": "Share vs count with saturation-robust contrasts (raw minutes): blocks T1 (1,4,5), T2 (2,5,3), T4 (2,4,4) against T3 (2,8,0) and pure; ratios r_cs and r_sh with responsiveness guards; items 0-23, L0 and L*",
+    "a100_minutes": 8.3,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-d",
+    "what": "Losing game (raw minutes): reference-passage NLL, KL_ctx against the neutral context and factual margins, competing parity vs non-competing two-referent contexts, items 0-23, L0 and L*",
+    "a100_minutes": 4,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-e",
+    "what": "Prior part of gamma (raw minutes): 24 real referents (true vs counterfactual), closed-book retention check, k in {0, 2, 4, 5}, L0 and L*",
+    "a100_minutes": 10.7,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-f",
+    "what": "Form vs size and context-rot survival check (raw minutes): sentence-shuffled filler (last 150 tokens unshuffled) at L*, items 0-23, k in {0, 2, 4}",
+    "a100_minutes": 5.8,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-r",
+    "what": "Retokenisation aside at L0 (raw minutes): value strings as random segmentation and character-level ids, F-sym items 0-23 (k = 0..5) and F-asym items 0-23 character-level; own-endpoint normalisation",
+    "a100_minutes": 9.2,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-v",
+    "what": "Analogy aside (raw minutes): 3CosAdd vector-offset accuracy forward and reverse for a symmetric family (gender pairs) and two directional families (country-capital, part-whole), canonical vs segmented vs character-level, blocks 14 and 18",
+    "a100_minutes": 1,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D1-s",
+    "what": "Size comparison (raw minutes): Qwen3-0.6B repeat of the D1-a core (items 0-23, k in {0, 2, 4} + X_N, L0 and 32,000), with its own parity and committed-mass gates",
+    "a100_minutes": 10.8,
+    "session": "r1b_D_A"
+   },
+   {
+    "id": "D0b",
+    "what": "Engine check for D2 (raw minutes): G-LCE-3 batched B = 3 vs B = 1 full-recompute decode parity and determinism at 32K, 4 rows",
+    "a100_minutes": 1.3,
+    "session": "r1b_D_B"
+   },
+   {
+    "id": "D2",
+    "what": "Two speakers on AI self-improvement (raw minutes): 160 prompts x OPP/NEU + prompts 0-63 x ALI/MON/DOM, 3 turns of 64 tokens, plain history, at about 300 and 32K tokens; per-speaker yes/no stance probes, B-Q8 block-14 reads, NLL, production share; primary D2-a (Pi OPP - NEU at 32K), D2-b length interaction, D2-c coexistence vs merging, D2-g dominance, D2-f descriptive R6 link",
+    "a100_minutes": 76.8,
+    "session": "r1b_D_B"
+   },
+   {
+    "id": "D3",
+    "what": "A force splits one entity into two (raw minutes): 16 items, instruction-stripped torn start M (plus A2/B2 controls), 16 seeds x 8 answers at L0 and 28,672; two-readout split rule (probe + in-context state, persistence, gap, agreement) and McNemar length trend; G-D0c, G-D3pc; includes INJ starts share",
+    "a100_minutes": 47.7,
+    "session": "r1b_D_C"
+   },
+   {
+    "id": "D4",
+    "what": "Catfishing as presented role vs retained assistant identity (raw minutes): 16 roles x 8 seeds x 8 answers at L0 and 16,384; role-fact and out-of-character probes, anchors, PC-D6, u_AA; includes INJ starts share",
+    "a100_minutes": 15.9,
+    "session": "r1b_D_C"
+   },
+   {
+    "id": "D5",
+    "what": "Two-voice coherence lifetime (raw minutes): 32 starts x 5 arms (1V, 2V-agree, 2V-comp, 2V-comp-min, 2V-agree-min) to 4,096 generated tokens; primary D5-a (RMST comp - agree), D5-r rate form of hash share, D5-g dominance; RSP pool",
+    "a100_minutes": 32.8,
+    "session": "r1b_D_C"
+   },
+   {
+    "id": "D5-x",
+    "what": "Full-scale extension (raw minutes, cap): starts 0-2, 2V-comp vs 1V continued from 4,096 toward 28,672 generated tokens or degeneration; descriptive",
+    "a100_minutes": 20,
+    "session": "r1b_D_C"
+   },
+   {
+    "id": "D-ana",
+    "what": "Analysis (raw minutes; CPU on the VM): two-level bootstraps, G-D1-null readout fits, envelope simulation and planted-data validation, G-D2-null, D3 mixtures, D2-f projections on u_T_perp and u*_14, realized MDEs, combined Holm verdict",
+    "a100_minutes": 15,
+    "session": "r1b_D_ana"
+   },
+   {
+    "id": "pilot share",
+    "what": "Engineering pilot share (counted without margin; shared object): prefill/chunk/decode rates at 4K-32K, B 1-4, DynamicCache vs non-rewriting cache, crop vs copy path, memory, backend, Drive throughput; no log-odds stored",
+    "a100_minutes": 10,
+    "session": "global round-1b pilot (account B)"
+   },
+   {
+    "id": "R1 (reserve)",
+    "what": "M2 reading (raw minutes, not in total): fixed 8-turn RSI persona block after filler at L0 and 28,672 vs neutral cell, turn-count and template checks, count sub-arm",
+    "a100_minutes": 21,
+    "session": "reserve"
+   },
+   {
+    "id": "R2 (reserve, conditional)",
+    "what": "D3 driver arms at 8,192 (raw minutes, not in total): L-, T-, E- and official-template arms; triggered only if D3 reads split grows with length",
+    "a100_minutes": 36,
+    "session": "reserve"
+   },
+   {
+    "id": "R3 (reserve)",
+    "what": "D1-r at L* (raw minutes, not in total): does the length effect survive character-level retokenisation",
+    "a100_minutes": 19,
+    "session": "reserve"
+   }
+  ],
+  "total_a100_hours": 9.03,
+  "metaphor_mapping": [
+   {
+    "element": "Entity",
+    "counterpart": "D1: one version of a referent's six attribute values; D2: a named speaker with a stance; D3: a bundle of three invented attributes; D4: a presented role or the retained assistant; D5: a voice in a transcript; all read by forced-choice log-odds of the unmodified model, D3 also by the in-context state"
+   },
+   {
+    "element": "Hyper-long context, held far above its natural measure",
+    "counterpart": "Total length by front padding with neutral text at fixed entity positions; natural = 4,096 (Qwen3 pretraining stages), hyper-long = 16K-32K (native 32,768): D1 about 1,000 vs 32,000; D2 about 300 vs 32K; D3 0 vs 28,672; D4 0 vs 16,384"
+   },
+   {
+    "element": "Holding the context beyond the native window (32,768 to 40,960)",
+    "counterpart": "No counterpart tested: untrained window, effects confounded with RoPE extrapolation; YaRN not validated for 1.7B"
+   },
+   {
+    "element": "A force arises / it is forced that the whole splits into two",
+    "counterpart": "Forced: the instructed opposed-speaker condition (D2 OPP); arises: seeds of one instruction-stripped torn start committing to two states, more often at 28,672 than at 0 tokens, in both probe and state readouts (D3 'split grows with length')"
+   },
+   {
+    "element": "Making two entities out of one is sensible insofar as catfishing is active",
+    "counterpart": "D2-a with D2-b: persistence of a stance with an opposed vs a neutral model-written partner at 32K, and its increase over short context"
+   },
+   {
+    "element": "Catfishing (one agent presenting a second, fictitious identity)",
+    "counterpart": "D4: presented role and retained AI-assistant identity read at once (role-fact and out-of-character probes, u_AA): coexisting, blended, absorbed, split across seeds"
+   },
+   {
+    "element": "Catfish effect (a competitor keeps the others active)",
+    "counterpart": "D2-a: Delta Pi_1 = Pi_1(OPP) - Pi_1(NEU) with ALI and MON controls; D5-a: coherence lifetime of two competing vs two agreeing voices"
+   },
+   {
+    "element": "Effort, motivation, being seen (catfish story; Mas and Moretti)",
+    "counterpart": "No counterpart: a model has no effort; only persistence and coherence are measured"
+   },
+   {
+    "element": "Competitor strength (dominant superstar lowers rivals' effort; Lackner 2023, Brown 2011)",
+    "counterpart": "D2-g: dominant opposed speaker (DOM) vs parity opponent; D5-g: 6:2 majority-voice opponent vs 4:4 parity"
+   },
+   {
+    "element": "The two entities then sustain still longer context",
+    "counterpart": "D2-b length x condition interaction; D5-a lifetime to degeneration in a 4,096-token self-generated transcript; D5-x two voices continuing their own text toward 28,672 tokens (descriptive)"
+   },
+   {
+    "element": "Selfish mining: withheld private chain released to override",
+    "counterpart": "D1-b release arrangement: minority reports placed last as one run vs position-balanced interleaving; release threshold alpha*_rel"
+   },
+   {
+    "element": "Withholding inside one forward pass",
+    "counterpart": "No counterpart: causal attention sees every earlier token; only the experimenter's release timing exists"
+   },
+   {
+    "element": "Hash-power share alpha (a production rate)",
+    "counterpart": "Stock: share alpha_B = k/10 of in-context reports (D1); rate: share of generated tokens written by a minority voice beyond the turn-taking norm (D5-r)"
+   },
+   {
+    "element": "Share-based threshold (selfish mining) vs evidence count (Bayesian, many-shot)",
+    "counterpart": "D1-c: equal-share blocks with different count differences (r_sh) and equal-count-difference blocks with different shares (r_cs), with responsiveness guards"
+   },
+   {
+    "element": "Optimum for all below 50 % (minority capture)",
+    "counterpart": "D1-a: Phi > max(0.25, fitted envelope) in a position-balanced arrangement, surviving prior-opposed stratum, third-value hedging and shuffled-filler checks; D1-b alpha*_rel < 0.5"
+   },
+   {
+    "element": "alpha* falls with chain/context length (the user's prediction; Eyal-Sirer threshold is stationary)",
+    "counterpart": "Delta alpha*_rel between L* and L0 at fixed positions (literal; acts through position weighting) and Delta Phi (beyond position)"
+   },
+   {
+    "element": "gamma (tie-race share)",
+    "counterpart": "Recency part gamma_rec = sigma(l_rel at parity, B released last); prior part gamma_prior in prior-asymmetric items (D1-e) and per-item prior b from neutral-note contexts (D1-a strata)"
+   },
+   {
+    "element": "Longest-chain rule",
+    "counterpart": "No counterpart as a rule: continuations are soft probabilities; its soft trace is the share-response curve"
+   },
+   {
+    "element": "Orphaned honest blocks / slower main-chain growth: losing game",
+    "counterpart": "D1-d: reference-passage NLL, KL_ctx and factual margin of competing parity contexts minus non-competing two-referent contexts of the same format, length and positions, and its growth with length"
+   },
+   {
+    "element": "Attacker's absolute loss before the difficulty adjustment; the adjustment itself",
+    "counterpart": "No counterpart: an in-context entity has no revenue; softmax renormalises instantly; retraining on own output is excluded"
+   },
+   {
+    "element": "Pools growing towards a majority (Eyal-Sirer Observation 2)",
+    "counterpart": "No counterpart: no strategic agents inside one context"
+   },
+   {
+    "element": "But it enables the duality",
+    "counterpart": "Descriptive joint reading: D1-d losing game together with D2-c coexistence or a D3 split at the long length"
+   },
+   {
+    "element": "Form was relevant (round-2 toy AT8: shape, not size)",
+    "counterpart": "D1-f: coherent vs sentence-shuffled filler at fixed size; D1 descriptive F(k): release vs interleaved arrangement against share steps"
+   },
+   {
+    "element": "LLMs and their training data as hyper-catfishing",
+    "counterpart": "No counterpart in a frozen model (needs training); proxy only: the trained prior as hidden participant (gamma_prior) and reserve R1 (in-context persona vs trained default)"
+   },
+   {
+    "element": "Duality not inside one token; retokenisation would remove a token-level duality",
+    "counterpart": "D1-r: capture pattern under random segmentation and character-level encoding of the value strings, own-endpoint normalised; equivalence +-0.07"
+   },
+   {
+    "element": "Tokenisation floor: single letters, single pixels",
+    "counterpart": "Letters: character-level token ids of the byte-level BPE (D1-r, D1-v); pixels: no counterpart (text-only model)"
+   },
+   {
+    "element": "Floor reached at different speeds, depending on how the connections lie",
+    "counterpart": "Retention under segmentation and character encoding per attribute class (D1-r) and per relation family (D1-v)"
+   },
+   {
+    "element": "Symmetric analogy (king - man + woman = queen) vs deliberately asymmetric; what happens under retokenisation",
+    "counterpart": "D1-v: 3CosAdd forward and reverse accuracy for gender pairs vs country-capital and part-whole, canonical vs segmented vs character-level, in Qwen's own block-14/18 states"
+   },
+   {
+    "element": "Model size (persona, many-shot and identity-drift effects grow with size)",
+    "counterpart": "D1-s: Qwen3-0.6B repeat of the D1-a core; two-point size comparison, never extrapolated upward"
+   },
+   {
+    "element": "Two readings: M1 two in-context entities; M2 long context as withheld chain against the trained default",
+    "counterpart": "M1: D1-D5; M2: reserve R1 (fixed persona block vs neutral cell, filler-grown)"
+   },
+   {
+    "element": "Energy / Ising reading (two anti-aligned communities; catfish = net cyclic flux; notes UNVERIFIED)",
+    "counterpart": "Provisional descriptive flux of (sign D_1, sign D_2) macrostates over D2 turns and D5 checkpoints against a shuffle floor; no verdict uses it"
+   }
+  ],
+  "falsifiers": [
+   "D1-a reads 'no length-driven minority capture' (upper bound of Delta Phi < 0.03 with realized SD <= 0.012), 'majority sharpens with length', or 'length raises minority influence within proportional': no total-length effect beyond position and degradation (against part a)",
+   "D1-a reads 'not minority capture: explained by prior x saturation' (the effect lives only in the prior-aligned stratum), 'explained by conflict hedging' (a third-value minority produces the same length growth) or 'explained by filler form' (the effect needs coherent filler): the apparent capture is a known artifact (against part a)",
+   "D1-a reads 'minority over-representation without length dependence': a minority gets more than its share but length does not drive it (against the length claim only)",
+   "D1-b reads 'stable' or 'rises': the release threshold does not fall with total length at fixed positions (against the literal 'alpha* falls with L')",
+   "D1-c reads 'count-driven': in-context evidence accumulates like many-shot evidence, not like a hash-power share (against the share mapping)",
+   "D1-d reads 'no system cost': competition costs no coherence beyond a non-competing second entity (against the losing game)",
+   "D1-r reads 'token-identity-bound': the capture pattern changes under character-level encoding beyond +-0.07 (against 'the duality is not inside one token')",
+   "D3 reads 'no split at any length', 'split shrinks with length (urn-like)' or 'split at both lengths, no length trend': no force arising from hyper-long context splits one entity into two (against part b1)",
+   "D2-a reads 'competitor dilutes' or 'no catfish effect'; or D2-b 'weakens' or 'no length interaction'; or D2-c 'merging' or 'one entity captured': an opposed second entity does not keep the first going in a length-dependent way (against part b2, D2 member)",
+   "D5-a reads 'no lifetime effect of competition' or 'competition shortens coherence'; D5-x 'no full-scale advantage': two competing voices do not sustain their own text longer than two agreeing voices (against part b2, D5 member)",
+   "D4 reads 'absorbed into the role' or 'one blended entity' at 16K: no coexisting presented and retained identity (against catfishing as two entities from one)",
+   "D5-r reads 'no rate-form capture' or 'competing minority suppressed': a competing minority voice does not write more than its share beyond the turn-taking norm (against minority capture in rate form)",
+   "Combined: 'H-DUAL not supported in Qwen3-1.7B' when parts (a), (b1) and (b2) all read negative with gates passed (reached with probability 0.32-0.57 under a realistic null per simulation); never a refutation for larger models",
+   "Any capture, split or sustainment that appears only where a gate fails (rho < 0.5, committed mass below threshold, detector positive control failed, degeneration-dominated) counts as an artifact, not as H-DUAL"
+  ],
+  "shared_objects": [
+   "LCE long-context engine (new; shared with part K): B = 1 shared-prefix prefill per length and stream; chunked extension with logits_to_keep; crop path (unstopped chunk, all layers cropped) and copy path (no crop); cache-copy branching (B <= 3 at 28-32K, <= 7 at 16K, fp32 on 40 GB); equal-length rows at long context; keyed Gumbel (keyseed and Gumbel copied from rk_loop with sha256 check, rk_loop not imported); fixed answer lengths; generation-time state capture; SDPA memory-efficient backend asserted; parity gates G-LCE-1..4 and fallbacks FB-1 (copy path) and FB-2 (16K full recompute)",
+   "Pilot (shared with the global round-1b pilot): engineering numbers only (rates at 4K-32K, B 1-4, DynamicCache vs non-rewriting cache, crop vs copy, memory, backend, Drive throughput); freezes the cost table and the trim order T1-T8",
+   "Generic filler corpus: WikiText-103 raw (pinned revision and sha256, CC BY-SA 3.0), filtered for value words, names and AI keywords; 16 streams of >= 32,000 tokens; sentence-shuffled versions of streams 0-7 with the last 150 tokens unshuffled; shared with part K's lens corpus if K pins one",
+   "Round-2 turn machinery reused unchanged: r2_stimuli TURN2_SUFFIX / turn2_ids / check_turn2 / round_trip_stable (OD-B13), B-Q8 read convention, R6 rule logic of r2_theta_verdict (for D2-f)",
+   "Axes (read-only, analysis session, account A): u_T_perp(14) from R1.state[14]; u*_14 rebuilt from R1.state[14] dir_<L>@1.5_4 with TV blocks.14.B_Q0.mode_set members and signs; shared with part R",
+   "PROBE letter-format forced choice (from dynamics): '(a) x (b) y' question, teacher-forced 'Answer: (', l = log p(B letter) - log p(A letter), committed mass gate; used by D1, D3, D4",
+   "Yes/no stance probe (round-2 O5 D convention) with for/against claims, two frames and a mass gate; used by D2 and D5",
+   "INJ instruction-stripped starts with generate-verify-revise (from dynamics); reusable by any part that induces a stance without a push",
+   "SPLIT-RULE: per-item two-readout mixture rule (probe + in-context state, persistence, gap, agreement) with a calibrated false-positive table and planted positive control; reusable for any 'one or two' question",
+   "u_AA assistant-axis analogue (from dynamics), used by D4",
+   "Statistics: two-level bootstrap (streams, then units), realized-MDE rule, survival rule (from confounds), rule-validation gates on planted data (from dynamics), combined Holm verdict; offered for harmonisation",
+   "Damage-normalised push and norm-preserving control (part R): not used (part D steers nothing; round-1 PC_PASS, GO1-GO3 and damage gates do not apply)",
+   "Lenses (J-lens, J++, MicroLens++, chain lens; part K): not used; part D is lens-free",
+   "n-turn K driver (part R): not used; part R owns the RSI-stance carry chain; D2-f gives the descriptive link",
+   "H-neuron set (part K): enters no verdict; optional descriptive CETT occupancy at the D1 answer position at L* if part K's gate passes before r1b_D_A",
+   "Session runner (r2_run_session pattern: time guard, resumable parts per arm x length x stream, Drive sync): r1b_D_A, r1b_D_B, r1b_D_C in account B (input-free), r1b_D_ana in account A"
+  ],
+  "provenance": [
+   "Base = lean design, ranked first by both judges: D0 engine/readout/degradation gates, front-padded minority-capture surface with the endpoint-normalised Phi and its 0.25 bound, L* chosen from pure contexts only, D1-b release threshold, D1-e F-asym prior arm, D1-r value-string retokenisation, D2 two-speaker catfish test (OPP vs NEU, ALI, CRN, plain history, Pi with G26 definedness, G-D2-PC, D2-b, D2-c, D2-f), realized-MDE rule, input-free sessions.",
+   "From dynamics: D3 symmetric-start split test (M/A2/B2 starts, INJ generate-verify-revise, mixture rule, one-entity strings, G-D0c, G-D3pc, McNemar trend, unexpected-mode naming loop); D4 catfishing identity (roles, role-fact and out-of-character probes, anchors, PC-D6, u_AA, G-D6a, G-D9); PROBE letter format; rule-validation gates on planted data (pattern -> G-D1-null, G-D2-null); C-one monologue (-> D2 MON); per-voice production share (-> D2 covariate); fixed-length answers for equal-length batches.",
+   "From confounds: version strata and the survival rule (-> D1-a checks); D7 losing game with a non-competing companion, KL_ctx, reference NLL and factual probes (-> D1-d); C14 shuffled filler (-> D1-f); D3a coexistence index (-> descriptive CI); D6 coherence lifetime with 2V-agree and the validated rep4 detector (-> D5-a); D8 asymmetric pairs under character encoding (-> D1-r F-asym arm); D3b M2 reading (-> reserve R1); D5 driver arms (-> conditional reserve R2); copy guard; WikiText-103 corpus and filters; pilot-frozen trim order; 'realized MDE > 2 x margin -> not decidable (underpowered)'.",
+   "Fatal flaw lean D1-a (both judges: per-item prior inside a saturating readout breaks Phi <= 0.25): neutral-note prior X_N per item-attribute at every length; prior-opposed stratum as a survival check (sim_strata_hedge.py: opposed stratum max 0.255 over 192 null grid points, aligned stratum up to 0.80); fitted forward null envelope env(L) from X_N, (0,5,5) and pure contexts (the per-length readout response function judge 2 found missing); G-D1-null validation on planted nulls; the false 'F-sym excludes prior fallback' claim removed; |b| strata reported.",
+   "Fatal flaw lean D1-c (judge 1: kappa pulled to 1.28-1.47 under saturated counting): replaced by equal-share (T1 vs T3) and equal-count-difference (T1 vs T2, judge 1's suggestion) contrasts with responsiveness guards T4 and pure (sim_countshare.py: counting r_sh -0.8 to -3.4, averaging -0.16 to +0.02; counting r_cs <= 0.40, averaging 0.56-0.71).",
+   "Fatal flaws of confounds (iota under saturation for Sigma1/Sigma3; D3c kappa slope; practically unreachable overall negative) and of dynamics (start in context for D1/D5; pooled carry map D2; cost and under-costed probe chunks): those measurements are not adopted. Only dynamics D3 and D6 and confounds D6/D7/C14/D3a/D3b/D8 are grafted, re-costed with judge 2's 0.2-s probe chunks at 28K; probe points limited to n = 0, 1, 6, 7, 8.",
+   "Dynamics D3 false positives under U-shaped, saturated and last-mention nulls (judge 2): per-seed mean over n = 6-8, persistence and gap criteria, and a conjunction with the in-context state readout. sim_split_v.py / sim_split_conj.py: probe-only rule fires on 0.63-0.87 of items under a saturated wide-latent null, the conjunction on 0.004; Beta(0.5,0.5) 0.15-0.25 and sticky last mention 0.20 remain, so the length trend decides; bar S >= 4 of 16.",
+   "Parity-gate formulation (judge 2: 'max relative difference < 1e-4' ill-posed): all parity gates in nats on the readout tokens (max 0.02, median 0.002) or by token identity.",
+   "Missing everywhere, hedging discriminator (judge 1): third-value minority contexts; Psi_Delta = Delta Phi_24 - Delta Phi^C_24 as survival check (sim: hedging -0.03 to -0.09, degradation -0.03 to +0.01, capture +0.07 to +0.16); the verdict string names hedging when it explains the effect; coexistence index descriptive.",
+   "Missing everywhere, power of the combined verdict and probability of a decisive negative (judges 1 and 2): Holm over three parts with Bonferroni x2 inside (b2); sim_combined_power.py gives per-part power ((a) 0.27, (b1) 0.41, (b2) 0.92 under the stated alternative), P(not supported | null) 0.32-0.57, artifact rejection (0 and 0.004).",
+   "Missing everywhere, analogy aside (judge 1): D1-v vector-offset accuracy forward and reverse for symmetric vs directional families under canonical, segmented and character encodings.",
+   "Missing everywhere, competitor strength (judge 1): D2 DOM condition with D2-g, and D5 2:6 arms with D5-g.",
+   "Missing everywhere, rate form of hash share (judges 1 and 2): D5-r with 2V-agree-min as the turn-taking control.",
+   "Missing everywhere, size (judges 1 and 2): D1-s Qwen3-0.6B repeat of the D1-a core with its own gates; stated not to extrapolate upward.",
+   "Missing everywhere, self-continuation toward the 32K window (judge 1): D5-x extension to 28,672 generated tokens, descriptive, with a cost cap.",
+   "Missing everywhere, filler clustering (judge 2): 16 streams, each shared by 3 D1 items or 10 D2 prompts; D3/D4 one stream per item; two-level bootstrap.",
+   "Missing everywhere, engine-failure fallback (judge 2): FB-1 copy path (no crop) and FB-2 16K full recompute (32 items, one attribute per context), both pre-registered and funded by the trim order.",
+   "Judge 2 readout surface form: letter format with teacher-forced 'Answer: (' and committed-mass gate G-M for D1, D3, D4. D2 and D5 keep the round-2 yes/no D convention (comparability with O5/H30; acquiescence cancels by construction) with gate G-M2. Decision noted because judge 2 also proposed letters for D2.",
+   "Judge 2 D2 padding: fixed 64-token answers, 24-token length-matched settings, equal-length B = 3 batches at 32K, two suffix chunks per row; the < 40 tok/s fallback kept; lean's D2 prefill cost (B = 3 chunk counted as one row) and G-LCE-1 prefill count corrected.",
+   "Judge 2: censoring rule for D1-b bootstrap replicates; reversed strings everywhere (D5-a 'competition shortens coherence', D2-g, D5-r 'suppressed'); equivalence margins set so that 'no effect' is reachable at the planning SDs.",
+   "Judge 1 D2 items: D2-b enters part (b2) of the combined string ('enabled by hyper-long context'); production share as covariate with matched-presence Pi; 'debate' replaced by 'conversation' in all D2 messages; D2-d dropped (replaced by D3), D2-e dropped (replaced by D5).",
+   "Judge disagreement on driver-arm placement (judge 1: at L*; judge 2: at 8K): decided as conditional reserve R2 at 8,192 with its own L-arm cell, triggered only by 'split grows with length', because the same arms at 28K would cost about 105 raw min.",
+   "Judges' funding suggestions: main arm at L0 and L* only (16K only if 32K is gated out; 4K as a 16-item descriptive subset) adopted; D1-r's 32K half moved to reserve R3; V3/V4 dropped; D2-f kept because its GPU cost is about 3 raw min of block reads (projections in r1b_D_ana); D1-c's 32K half kept but second in the trim order.",
+   "Budget: 341 raw A100-min, 9.03 A100-h central with x1.5 margin, 4 setups and a 10-min pilot share (cost_final.py), within about 9 h; 9.47 h if attention runs at 8 TFLOP/s, handled by trims T1-T8 frozen on pilot numbers; reports shortened to about 64 tokens (680-token block) to fund the letter-format question chunks."
+  ]
+ }
+}

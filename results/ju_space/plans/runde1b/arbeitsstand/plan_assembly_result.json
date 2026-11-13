@@ -1,0 +1,753 @@
+{
+ "arch": {
+  "main_written": true,
+  "main_summary": "Main plan written to /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan.md (about 118 KB, English). It follows the round-2 plan's model and has sections 0-9.\n\nWhat it contains:\n- How to read it and how it relates to the four part files. Measurement rules stay only in the parts; this file owns the shared objects, sessions, accounts, tiers, keys, global gates, round-level families and budget.\n- A request-to-part table with 23 rows and five lines of round-1/2 context.\n- The model and its inputs, with exact files, keys and Drive locations.\n- 19 shared objects, each defined once with its owner and users. The main ones are SO-AX, SO-DMG, SO-JLENS, SO-CL, SO-LENSOUT, SO-HN (with H_op), SO-CHH, SO-LAB (with the new split S_L), SO-LCE, SO-D1STIM, SO-WT103, SO-LONGDOC, SO-TURN and SO-GVRA. The others are infrastructure: SO-PVAL, SO-KEYS (a key-namespace registry with a collision argument), SO-PILOT and SO-XFER.\n- Each part's statistics conventions, and seven round-level confirmatory families:\n  - CF-R+ and CF-R- (from part R);\n  - CF-D (from part D);\n  - CF-K-attr and CF-K-link (from part K);\n  - CF-L (from part L);\n  - CF-HERR, which pairs K8c with L5c.\n  Everything else is exploratory.\n- The inverse-free table: every reconstruction goes through the generate-verify-revise-abstain loop (SO-GVRA), allowed forward maps are named, and inverses are banned.\n- 32 cross-part conflicts with their resolutions.\n- A gate index: global gates SG1-SG10 plus every gate of R, D, K and L, and the cross-part dependencies.\n- Budget and sessions:\n  - one engineering pilot, r1b_P0, before the freeze;\n  - 26 tier-1 and tier-2 sessions named r1b_<part>_<label>, each with its account, wave and start conditions;\n  - per-part and per-account totals and a drop order.\n- Where each verdict is computed. The round-level analysis r1b_ana runs on a CPU runtime and includes L-ANA.\n- Scripts: the code freeze with sha256 values checked against the repository, modules per part, tests and an inverse-free lint.\n- Open decisions (OD-M1 to OD-M30), dropped items, and the freeze: files, freeze record, what may happen before the freeze, amendments, roles.\n\nKey decisions:\n- u*_b is the round-2 file; K's and D's rebuild becomes a check.\n- K's RSI and sea channels use R's new 1b axes (AX-1b).\n- Each part calibrates damage on its own reference, and all calibrated damage is also reported on one shared reference (REF-U32).\n- L gets a proper TriviaQA split S_L, screened by K.\n- K4's wrong-item cell rises from 128 to 150.\n- L5's generation moves to r1b_L_B.\n- D_B, D_C and R's S5 move to account A, which balances the accounts at 15.5 h in A and 15.1 h in B.\n\nBudget:\n- Tier 1 is 30.6 A100-h. No rule was changed to reach it: pilots, R's conditional sessions, L's extensions and D5-x became pilot or tier 2.\n- Tier 2 is 7.5 h and the pilot 1.1 h.\n- At half the planned rates, tier 1 would actually use about 39.8 h.",
+  "edits": [
+   {
+    "part": "R",
+    "where": "whole file (R.0, R.1, R.4 'Decided in' column, R.5, R.8, every measurement's 'Runs in' line)",
+    "edit": "Rename sessions, longest token first: 'R-Sana2' -> 'r1b_R_ana2'; 'R-Sana' -> 'r1b_R_ana'; 'R-S5b' -> 'r1b_R_S5L'; 'R-S2/14' -> 'r1b_R_S2_14'; 'R-S2/18' -> 'r1b_R_S2_18'; 'R-S2/6' -> 'r1b_R_S2_06'; bare 'R-S2' (all three) -> 'r1b_R_S2_*'; 'R-S0' -> 'r1b_R_S0'; 'R-S1' -> 'r1b_R_S1'; 'R-S3' -> 'r1b_R_S3'; 'R-S5' -> 'r1b_R_S5'; 'R-S6' -> 'r1b_R_S6'; 'R-S7' -> 'r1b_R_S7'; 'R-S8' -> 'r1b_R_S8'; 'R-P' -> 'r1b_P0 (P0-R items)'.",
+    "reason": "Main §4.2 session names. 'R-S5b' would collide with the runner's continuation name of R-S5 (main C1)."
+   },
+   {
+    "part": "R",
+    "where": "R.0 Budget bullet; R3.2 Rule; R.4 RG18; R.5 'Budget argument' (Tier 1 / Tier 2 bullets); R.8 OD-R17; R9.1; R9.2",
+    "edit": "Rename the reduction 'tier 0 / 1 / 2' to 'reduction level RL0 / RL1 / RL2': 'Tier 1 (if tier 0 projects above 12.5 h)' -> 'RL1 (if RL0 projects above 12.5 h)'; 'Tier 2 (if tier 1 still projects ...)' -> 'RL2 (if RL1 still projects ...)'; 'not run (tier 2)' -> 'not run (RL2)'; 'only at block 14 under reduction tier 2' -> 'only at block 14 under RL2'; R9.2 'NA:not_run:tier_<t>' -> 'NA:not_run:RL<k>'; R9.1 'the reduction tier' -> 'the reduction level and the round-level tier'. Do NOT rename 'tier' where it means V_RSI's strength tiers ('likely' (either tier); OD-R6 'RSI tiers 0.25 / 0.50').",
+    "reason": "Main §0.3 uses tier 1 / tier 2 for core / extension (C2)."
+   },
+   {
+    "part": "R",
+    "where": "R.4 row RG18; R.5 Order item 1; R.1 paragraph 'No model output before the freeze'; R.0 Budget bullet's last sentence",
+    "edit": "RG18: Reads 'R-P's measured rates in cost_R2.py' -> 'r1b_P0's measured rates (P0-R items) in cost_R2.py'; If-it-fails cell -> 'the level is written into runde1b_freeze.json (part of main SG7)'. R.5 Order item 1 -> '1. r1b_P0 (account B, before the freeze; main §4.2); then the freeze, which records the reduction level (RG18, SG7).' R.1: 'The only pre-freeze GPU work is the declared engineering pilot R-P (R.5): throwaway prompts outside P256, texts discarded' -> 'The only pre-freeze GPU work is the round's engineering pilot r1b_P0 (main §4.2), whose P0-R items are R-P's list, on SO-PILOT material (main §2.3, disjoint from P256), texts discarded'. R.0: 'the engineering pilot R-P measures' -> 'the round's pilot r1b_P0 measures'.",
+    "reason": "One pilot for the round (C1, OD-M2)."
+   },
+   {
+    "part": "R",
+    "where": "R.4 rows RG1, RG2, RG3, RG16, RG17",
+    "edit": "Append to the Gate cell: RG1 '(= main SG1)'; RG2 '(= SG2)'; RG3 '(= SG3; R's constants)'; RG16 '(= SG5)'; RG17 '(= SG6, applied to every part)'. In RG16's Condition replace '<= 5 h per session; steps <= 5 min and resumable' with 'the runner stops after the step that ends at >= 4.5 h since the notebook's first cell (SG5); steps <= 5 min and resumable'.",
+    "reason": "Global gates are defined once (main §3.1, C18, C27)."
+   },
+   {
+    "part": "R",
+    "where": "R.5 sessions table 'Account' column and row R-S5; R.5 Order item 4; R.5 paragraph after the table ('Expected wall clock'); R.0 Order bullet",
+    "edit": "Set the Account of r1b_R_S5, r1b_R_S5L and r1b_R_S8 to A. In row R-S5 delete '(on an input package of < 50 MB from A: token ids, axis vectors, a_DN, v_max^C, word counts)'. Order item 4: replace '; R-S5 in account B (it needs R-S3's v_max^C and a_DN). The input package is written to a folder shared with B, and the outputs come back as dsse_runs_B, as in round 2.' with '; r1b_R_S5 also in account A, after r1b_R_S3 and r1b_K_S1's k4j.json (main §4.2).' Replace 'Expected wall clock: about 7-8 h.' with 'Wall clock: main §4.4.' Replace R.0's Order bullet with 'Order. Sessions, accounts (every part-R session in account A) and waves as in main §4.2 and §4.4.' Keep 'Account A holds every session that reads round-1 or round-2 Drive files.'",
+    "reason": "Account balance and no A-to-B package transfer (C23, OD-M29)."
+   },
+   {
+    "part": "R",
+    "where": "R.0 Budget bullet; after the R.5 sessions table",
+    "edit": "R.0: '8.78 A100-h unconditional + 2.24 A100-h conditional = 11.03 A100-h' -> '8.53 A100-h in tier 1 (main §4.3; the pilot moved to r1b_P0) + 2.25 A100-h in tier 2 (the three conditional sessions)'. After the R.5 table add: 'Round-level accounting (main §4.3): tier 1 = the unconditional sessions without the pilot, 507.8 A100-min (8.46 h), plus 4.0 min for reporting the damage of R's calibrated pushes on REF-K16 (SO-DMG) = 8.53 h; tier 2 = r1b_R_S5L, r1b_R_S8 and r1b_R_ana2, 134.7 min (2.25 h); R-P's 19.2 min are part of r1b_P0's budget. RG18's 12.5-h cap is unchanged.'",
+    "reason": "Budget numbers agree with main §4.3."
+   },
+   {
+    "part": "R",
+    "where": "R.2 heading and table rows 'AX-1b(b)', 'u*_b, u*_b^(-L)', 'PUSH-DN, PUSH-NP', 'LENS-J'",
+    "edit": "Heading 'R.2 Shared objects (reusable by parts D and K)' -> 'R.2 Objects of part R (objects shared across parts are defined in main §2.3)'. Names: 'AX-1b(b)' -> 'AX-1b(b) (main SO-AX)'; 'u*_b, u*_b^(-L)' -> 'u*_b, u*_b^(-L) (main SO-AX, U*)'; 'PUSH-DN, PUSH-NP' -> 'PUSH-DN, PUSH-NP (main SO-DMG)'; 'LENS-J' -> 'LENS-J (main SO-JLENS)'. In the LENS-J row, 'LENS-J1b if the conditional refit runs' -> 'LENS-J1b if the conditional refit runs (tier 2; used by part R only)'.",
+    "reason": "Each shared object is defined once in main §2.3 (C3, C20)."
+   },
+   {
+    "part": "R",
+    "where": "R.1 'Relation to the user's two hypotheses', items (i) and (ii); R3.1 'Shows - cannot show'",
+    "edit": "(ii): replace 'The chain lens starts with J-lens transport, so chain-lens readouts from blocks where R5.1 finds the lens unfaithful are not interpretable (part K).' with 'R5.1's per-block validity (RG10) is attached as the label 'J-lens not valid at b (R5.1)' to part K's lens-side statements at that block (main §3.3, §5). It gates no K verdict, because K's chain lens uses the J-lens only for seeds.' (i) and R3.1: after 'part D must recalibrate per (context) length' add '(moot: part D runs no push; main C30)'.",
+    "reason": "Part K drops refits and owns the index convention; part D steers nothing (C20, C30)."
+   },
+   {
+    "part": "R",
+    "where": "R0 'Runs in' line; R.5 table row r1b_R_S0 'Content'",
+    "edit": "Add to r1b_R_S0's content: 'SO-AX package (main §2.3): AX1 at 14, 18, 6 from R1.state[b]['axes']; U* = r2_q2/theta/b<b>_q0.pt['u_star'] copied with sha256 (canonical); the leave-loop-out modes; SG10's check (u*_b rebuilt from dir_<L><SUF>_4 and the r2RSIb entries with TV's mode_set: cos >= 1 - 1e-4 with the file, TV image_cos_d1_u_star reproduced within 1e-4). Exports to dsse_runs/r1b_xfer (main §2.2): dmg_ref_R16.json (token ids of REF-R16 = R1.state[14]['ref'] continuations of round-1 prompts 0-7 and 32-39, checked against the copies at 18 and 6) and so_ax_ustar.pt (u*_b at 14, 18, 6). Inside the 22.2 min.'",
+    "reason": "SO-AX is owned by R and read by K, D and L. K and L in account B need REF-R16 and u*_14 (C3, C5, OD-M4)."
+   },
+   {
+    "part": "R",
+    "where": "R3.1 How",
+    "edit": "After 'dmg_sym is computed on 16 references: ...' add '(main SO-DMG's REF-R16)'. Add a bullet: 'Every calibrated push's damage is also evaluated once on REF-K16 (part K's DMG_K token ids, frozen in K1) and reported on REF-U32 = REF-R16 union REF-K16 (main SO-DMG; descriptive; 4.0 A100-min in all, main §4.2). The calibration itself stays on R's 16 references.'",
+    "reason": "Damage becomes comparable across parts without changing R's calibration (C5, OD-M7)."
+   },
+   {
+    "part": "R",
+    "where": "R5.1 How (and R5.2, R5.3 where J[l] is applied)",
+    "edit": "Add: 'The J-lens index convention (J[l] applied to the output or to the input of block l) is the one that K4j (G-K-J) records in r1b_K_S1 (k4j.json, copied via dsse_runs_B; a start condition of r1b_R_S5, main §4.2). R5.1-R5.3 use it and record it.'",
+    "reason": "One J-lens convention for the round (SO-JLENS, C20, OD-M18)."
+   },
+   {
+    "part": "R",
+    "where": "R.1 Statistics, 'Multiple testing' bullet",
+    "edit": "Append: 'F+ and F- are the round-level confirmatory families CF-R+ and CF-R- (main §2.4). R.1's component p-value rules are the round-wide convention for every round-level family.'",
+    "reason": "Round-level confirmatory families (main §2.4)."
+   },
+   {
+    "part": "R",
+    "where": "R.1 Keys",
+    "edit": "Prepend: 'Registered namespaces (main §2.3 SO-KEYS): every part-R tag starts with 'r1b_' or 'r1b06_'. R's loop names never form a tag equal to another R tag (asserted in code). The reuse of round-1 keys in R1, R2.1 and R7 is the stated exception.'",
+    "reason": "Key registry (C19, OD-M19)."
+   },
+   {
+    "part": "R",
+    "where": "R9.1, R9.2 and the R9 'Runs in' line",
+    "edit": "R9.1: add 'tier (1 or 2)' to the provenance list. R9.2: add codes 'NA:not_run:tier2_unfunded' and 'NA:not_run:session_failed_twice'. Add: 'R9.1-R9.4 are applied round-wide by main SG6.'",
+    "reason": "Report hygiene becomes a global gate (SG6)."
+   },
+   {
+    "part": "R",
+    "where": "R.4 rows RG11 and RG15; R.8 OD-R11, OD-R12, OD-R17",
+    "edit": "RG11 If-it-fails cell: 'R5.4 runs (R-S5b)' -> 'R5.4 runs in r1b_R_S5L if tier 2 is funded (main §4.5, drop item 14); otherwise 'not run (tier 2 not funded)''. RG15: append 'R8.2 is tier 2 (main §4.5, drop item 6)'. OD-R11: 'a refit only under RG11' -> 'a refit only under RG11 and only if tier 2 is funded'. OD-R12: '0.6B loop only under RG15' -> '0.6B loop only under RG15 and only if tier 2 is funded'. OD-R17 -> 'Reduction level chosen by RG18 from r1b_P0's rates before the freeze (main SG7).'",
+    "reason": "Conditional sessions are tier 2 (main §0.3, §4.5)."
+   },
+   {
+    "part": "D",
+    "where": "D.0 Budget bullet; D.2 'Pilot' bullet; D.18 row G-PIL; D.19 table row 'pilot share'",
+    "edit": "D.2: replace the Pilot bullet's first line with 'Pilot: D's items are the P0-D items of the round's single engineering pilot r1b_P0 (main §4.2), on SO-PILOT material; engineering numbers only.' Delete the D.19 row 'pilot share'. D.18 G-PIL: Gate 'G-PIL' -> 'G-PIL (= main SG7, D's part)'; Decided in 'pilot' -> 'r1b_P0 / freeze record'.",
+    "reason": "One pilot (C1, OD-M2)."
+   },
+   {
+    "part": "D",
+    "where": "D.0 Budget bullet; D.19 'Total' bullet and Trim order intro",
+    "edit": "Replace '341 raw A100-min; ... 9.03 A100-h' with 'tier 1 (main §4.3): 321 raw A100-min (D5-x moved to tier 2), 8.44 A100-h incl. a 5-min I/O allowance in r1b_D_ana; tier 2: D5-x 0.50 h and the reserves R1-R3 1.98 h in r1b_D_R; the pilot is in r1b_P0'. Label the scenario figures '(incl. the former pilot share and D5-x)'. Trim-order intro: keep '<= 9.0 A100-h', now counted without the pilot and with D5-x only if funded; T1 applies to the funded D5-x and the tier-1 trims are T2-T8.",
+    "reason": "Budget numbers agree with main §4.3; D's own trim rule is unchanged."
+   },
+   {
+    "part": "D",
+    "where": "D.16 D5-x 'Runs in'; D.19 r1b_D_C row",
+    "edit": "Mark D5-x 'tier 2 (main §4.5, drop item 10): runs at the end of r1b_D_C only if funded at the freeze; otherwise 'not run (tier 2 not funded)''. r1b_D_C row: 'D5-x (<= 20)' -> 'D5-x (<= 20; tier 2)', and its tier-1 raw minutes 116.4 -> 96.4.",
+    "reason": "D labels D5-x a descriptive full-scale extension (main §0.3)."
+   },
+   {
+    "part": "D",
+    "where": "D.19 sessions table 'Account' column; 'Runs in' lines of D.13 (D2) and D.14-D.16 (D3, D4, D5); D.19 'Reserves' paragraph",
+    "edit": "r1b_D_B -> account A (input-free); r1b_D_C -> account A (input-free); r1b_D_A stays in B; r1b_D_ana stays in A and reads r1b_D_A via dsse_runs_B (main §2.2). In the 'Runs in' lines of D2 and D3-D5, '(account B, input-free)' / '(account B)' -> '(account A, input-free)'; D1's stays B. Reserves: replace 'each runs only while the measured part-D total stays <= 9.5 A100-h or when the architect releases budget' with 'each runs only if tier 2 is funded (main §4.5, drop items 7-9; priority R1 > R2 > R3), in session r1b_D_R (account A, after r1b_D_ana, which decides R2's trigger)'.",
+    "reason": "Account balance (C23, OD-M29); reserves are tier 2."
+   },
+   {
+    "part": "D",
+    "where": "D.2 'Axes' bullet; D.13 D2-f definition and the D2 Inputs line; D.19 r1b_D_ana row",
+    "edit": "D.2 Axes -> 'Axes: from main SO-AX (owner R; read-only in r1b_D_ana, account A): AX1's u_T_perp(14); U*'s u*_14 (the round-2 file r2_q2/theta/b14_q0.pt['u_star'], delivered by r1b_R_S0); AX-1b's u_T^v(14) (from r1b_R_S2_14).' D2-f: 'on u in {u_T_perp(14), u*_14}' -> 'on u in {u_T_perp(14), u*_14, u_T^v(14)} (u_T^v(14) is the 1b comparison with R6.2)'. D2 Inputs: 'D2-f only (r1b_D_ana): R1.state[14] 'axes'.u_T_perp and 'dir_<L>@1.5_4'; TV blocks.14.B_Q0.mode_set and blocks.14.R6.cells' -> 'D2-f only (r1b_D_ana): SO-AX (u_T_perp(14), u*_14, u_T^v(14)); TV blocks.14.R6.cells'. r1b_D_ana starts after r1b_R_S0 and r1b_R_S2_14 (main §4.2).",
+    "reason": "One canonical u*_b, and the same RSI axis as R6.2 (C3, C4, OD-M4, OD-M6)."
+   },
+   {
+    "part": "D",
+    "where": "D.2 'Generic filler corpus' bullet",
+    "edit": "'(shared with part K's lens corpus if K pins one)' -> '(main SO-WT103: one pinned WikiText-103 revision; part D uses the train split, first in file order; part K uses the validation split, part L the test split)'. Append ', train split' to 'Source: WikiText-103 raw, dataset revision and sha256 pinned in the freeze commit'.",
+    "reason": "Disjoint text use by split (C15, OD-M15)."
+   },
+   {
+    "part": "D",
+    "where": "D.2 filler bullet (keyseed('r1bshuf', s)); D.3 Keys (keyseed('r1bINJ', ...))",
+    "edit": "'r1bshuf' -> 'r1bD_shuf'; 'r1bINJ' -> 'r1bD_INJ'. Add to D.3 Keys: 'Registered prefix 'r1bD' (main §2.3 SO-KEYS).'",
+    "reason": "One prefix per part in the key registry (C19)."
+   },
+   {
+    "part": "D",
+    "where": "D.18 table; D.14 (D3) labels and Gates line; D.15 (D4) and D.16 (D5) Gates lines",
+    "edit": "Rename 'G-DEG' to 'G-DGN' everywhere, leaving 'G-deg(L)' and 'G-deg' unchanged. D.18 row G-H: Gate -> 'SG8 (main §3.1)'; Condition -> 'K's G-K2 preview from r1b_K_S1 exists and passed when r1b_D_A starts (never waited for)'. Add a note under D.18: 'G-LCE-2 is main SG9 and applies to every part.'",
+    "reason": "Gate-name collisions removed (C18, C28, OD-M20, OD-M25)."
+   },
+   {
+    "part": "D",
+    "where": "D.2 'LCE' bullet",
+    "edit": "Heading -> 'LCE = main SO-LCE (owner D; used by part K up to 4,096 tokens and by part L's L2a up to 32,768)'. Add: 'SO-LCE also provides per-layer crop of layers <= b after a stopped read (K's and R's rule); part D itself uses no stopped reads. Each use gates parity with its own frozen tolerance (D: G-LCE-1..4; K: G-K20; L: G-L2a-LCE). r1b_D_A writes its G-LCE-1 / G-LCE-2 records first; they are a start condition of r1b_L_B (main SG9).'",
+    "reason": "One engine; tolerances stay per use (C13, OD-M14)."
+   },
+   {
+    "part": "D",
+    "where": "D.2 'Optional' bullet",
+    "edit": "'if part K's gate G-H passes before r1b_D_A starts' -> 'if main SG8's preview (K's G-K2 from r1b_K_S1) has passed and SO-HN's files exist when r1b_D_A starts (never waited for); the H set is SO-HN's H_op and the channel is SO-CHH'.",
+    "reason": "K decides G-K2 only in r1b_K_ana; D's sessions stay input-free (C28)."
+   },
+   {
+    "part": "D",
+    "where": "D.17 'Qualifiers attached'",
+    "edit": "Append: 'part L's L4 catfish string ('competitor sustains the stance (catfish)' / 'competitor captures or dilutes the stance' / 'no catfish effect') and L4's 'two entities persist' (two separate agents; main C22). They never change the combined string.'",
+    "reason": "Catfish is tested in two designs; D's combined Holm family stays frozen (C22, OD-M24)."
+   },
+   {
+    "part": "D",
+    "where": "D.3 Multiplicity",
+    "edit": "Append: 'The D.17 Holm family is the round-level confirmatory family CF-D (main §2.4); every other D rule is exploratory at the round level. One-sided bootstrap p = (1 + #replicates on the null side) / 2,001 (main SO-PVAL).'",
+    "reason": "Round-level families and the shared p-value formula (C26)."
+   },
+   {
+    "part": "D",
+    "where": "D.2, new bullet after 'PROBE'; D.5 Stimuli",
+    "edit": "Add: 'SO-D1STIM (main §2.3): d1_stimuli.json's F-sym items 0-31 are part L's L4 items (referent i, attribute slot j = i mod 6, v1 / v2 = the slot's versions 1 / 2). The file is frozen before the freeze.'",
+    "reason": "L's 'D.FORK-F1' did not exist as a D object (C17, OD-M16)."
+   },
+   {
+    "part": "D",
+    "where": "D.19 bullet 'Every session is resumable ... runs with a time guard well inside 5 h'",
+    "edit": "'with a time guard well inside 5 h' -> 'with the round's time guard (main SG5: stop after the step that ends at >= 4.5 h)'.",
+    "reason": "One time guard (C27)."
+   },
+   {
+    "part": "K",
+    "where": "whole file (K.0, K.5 'Runs in' lines, K.6 'Decided in', K.8, RK-1, RK-2)",
+    "edit": "Rename sessions: 'K-S0' -> 'r1b_P0 (P0-K items)'; 'K-S1' -> 'r1b_K_S1'; 'K-S2a' -> 'r1b_K_S2a'; 'K-S2b' -> 'r1b_K_S2b'; 'K-S3' -> 'r1b_K_S3'; 'K-S4' -> 'r1b_K_S4'; 'K-S5' -> 'r1b_K_S5'; 'K-S6' -> 'r1b_K_S6'; 'K-S7' -> 'r1b_K_S7'; 'K-ana' -> 'r1b_K_ana'.",
+    "reason": "Main §4.2 session names; one pilot (C1)."
+   },
+   {
+    "part": "K",
+    "where": "K.0 Notation; K.3 SO-HN (RS20 line) and SO-DMG; K3f; K6e (PUSH, descriptive arms, TOK+KV, RS20, bistability, offset invariance, 'beyond D2'); K10a Doses and Horizons; K.8 drop order item 6; K2 Diagnostics; K2 Stability switch; K.6 G-K22",
+    "edit": "Where 'D1' / 'D2' denote the damage levels 0.05 / 0.15 nats, replace them with 'delta1' / 'delta2'. K.0: 'D1 = 0.05 nats and D2 = 0.15 nats' -> 'delta1 = 0.05 nats and delta2 = 0.15 nats (main SO-DMG)'. Other instances: 'at the D1 strength', 're-calibrated to D2', 'to D2 = 0.15 nats', 'H at D2', 'expert-only NSCALE_DN to D2', '(TOK, D2)', 'beyond D2', 'for D1 and D2', '(Q14, at D1)', 'K10a's D2 dose'. In K2's Diagnostics replace 'D1:', 'D2:', 'D3:', 'D5:' with 'Dg1:', 'Dg2:', 'Dg3:', 'Dg5:'. Replace 'median D2 Jaccard' (K2 stability switch, K.6 G-K22) with 'median Dg2 Jaccard'.",
+    "reason": "'D1' to 'D5' are part D's measurement IDs (C6, OD-M22)."
+   },
+   {
+    "part": "K",
+    "where": "K.11 and every keyseed in K (11 occurrences of 'k1bK_')",
+    "edit": "Replace 'k1bK_' with 'r1bK_' everywhere. K.11: 'keyseed('k1bK_<tag>', ...)' -> 'keyseed('r1bK_<tag>', ...) (main SO-KEYS; registered prefix 'r1bK_')'.",
+    "reason": "Key registry (C19, OD-M19)."
+   },
+   {
+    "part": "K",
+    "where": "K.3 'SO-AX' block; K.3 SO-CH named subspaces; K7b channels; K9 Channels; K10a Sources at block 14 and Targets; K.5 KS-axes (in K-S5); K.6 G-K11; K.8 r1b_K_S5 'Starts after'",
+    "edit": "K.3 SO-AX -> 'SO-AX (main §2.3; owner R). Read from r1b_R_S0's package (AX1, U*, SG10's check) and from AX-1b of r1b_R_S2_14 / _18. K no longer rebuilds u*_b; KS-axes becomes a package read and check inside r1b_K_S5 (minutes unchanged).' K9 Channels: 'u_T_perp(14), u_sea(14)' -> 'u_T^v(14), u_sea^v(14) (AX-1b, perp*)'. K10a Sources: 'unit(u_T_perp(14)), unit(u_sea(14))' -> 'unit(u_T^v(14)), unit(u_sea^v(14))'; Targets: 'unit(u_T_perp(18))' -> 'unit(u_T^v(18))'. K7b and SO-CH: 'u_T_perp, u_sea' -> 'u_T^v, u_sea^v (AX-1b at 6, 14, 18)'. G-K11: Gate -> 'SO-AX available'; Reads -> 'r1b_R_S0's SO-AX package (SG10), AX-1b(14), AX-1b(18)'; Condition -> 'package present and SG10 passed; AX-1b(14) and AX-1b(18) present'; If it fails -> 'an AX-1b block missing because its R session was declared 'not run' after two attempts: AX1 (u_T_perp, u_sea) with label 'round-1 axes (AX-1b unavailable)'; without the package: SO-AX channels dropped ('axes unavailable'); K3f and K10a's named sources not run'. K.8 r1b_K_S5 'Starts after': add 'r1b_R_S0, r1b_R_S2_14, r1b_R_S2_18 (account A)'.",
+    "reason": "One canonical u*_b and one RSI axis per round, orthogonal to the style mode (C3, C4, OD-M4, OD-M5)."
+   },
+   {
+    "part": "K",
+    "where": "K.3 'SO-DMG' block; K1 How",
+    "edit": "Heading -> 'SO-DMG (main §2.3; owner R; K owns REF-K16 and NSCALE_DN)'. 'DMG_K' -> 'REF-K16 (= DMG_K)'. Replace the 'Merge note' with 'Every calibrated damage of K's interventions is also reported on REF-U32 = REF-R16 union REF-K16 (REF-R16 from r1b_xfer_A/dmg_ref_R16.json). The reporting for r1b_K_S1's calibrations runs in r1b_K_S2a (3.0 A100-min, main §4.2).' K1 How: add 'REF-K16 (= DMG_K: 8 WikiText-103 validation passages with 64 scored tokens, 8 TriviaQA S2 question / answer pairs), frozen as token ids before the freeze (main SO-DMG).'",
+    "reason": "Comparable damage across parts; K's calibration unchanged (C5, OD-M7)."
+   },
+   {
+    "part": "K",
+    "where": "K.3 'SO-LCE' block",
+    "edit": "-> 'SO-LCE (main §2.3; owner D; K uses <= 4,096 tokens). Per-layer crop after stopped reads is part of SO-LCE. K's parity gate G-K20 keeps its tolerance (< 1e-4; Gumbel flips <= 1 %).'",
+    "reason": "One engine; tolerances stay per use (C13)."
+   },
+   {
+    "part": "K",
+    "where": "K2 'Classes and screening' and 'Runs in'; K1 TriviaQA bullet; K.3 SO-LAB",
+    "edit": "K2: 'Screening runs in blocks of 1,000 questions until CC ≥ 1,712 and CI ≥ 1,200, or 10,000 questions.' -> '... until CC ≥ 2,312 and CI ≥ 1,800, or 15,000 questions.' Append to the Allocation line '; S_L 600 CC + 600 CI (part L's evaluation split, main OD-M8; never used for selection or for choosing C)'. 'At the cap S_sess shrinks first (the TQA arm scales down, labelled), then S_lens.' -> 'At the cap S_L shrinks first (part L's MDEs scale), then S_sess (the TQA arm scales down, labelled), then S_lens.' K2 Runs in: 'Screening ≤ 10,000 × 10: 12.8 min work' -> 'Screening ≤ 15,000 × 10: 19.2 min work (6.4 of it for S_L, charged to part L)'; K2's 57.6 -> 67.2 A100-min. K1: 'the S1 screening pool (≤ 10,000), allocated in K2 to S_fit, S_lens and S_sess' -> '(≤ 15,000), allocated in K2 to S_fit, S_lens, S_sess and S_L'. K.3 SO-LAB: 'S1, comprising S_fit, S_lens and S_sess' -> 'S1, comprising S_fit, S_lens, S_sess and S_L (part L)'.",
+    "reason": "L needs 600 CC + 600 CI items that are neither selected nor used for C*. K's S2 chooses C* and has no classes (C7)."
+   },
+   {
+    "part": "K",
+    "where": "K4 'Read cells' (Gating bullet and the 256 / 128 bullet); K4 'Runs in'; K6d MDE",
+    "edit": "'256 correct items, and 128 wrong items matched ...' -> '256 correct items, and 150 wrong items matched ...'. 'If fewer than 128 wrong items exist' -> 'If fewer than 150 wrong items exist'. Add to Gating: 'Every gated A-lens pool item's 5 answers and its correct / wrong status are exported to SO-LAB (part L, main OD-M9).' K4 Runs in: 42.0 -> 43.0 A100-min (+1.0 for 22 wrong items, charged to part L). K6d MDE '(128 wrong items)' -> '(150 wrong items)'. V8 and the decoding grid stay at 128 correct items.",
+    "reason": "L's G-CL needs ≥ 150 prone items with lens records (C8)."
+   },
+   {
+    "part": "K",
+    "where": "K.3 'SO-HN' Files bullet",
+    "edit": "Append: 'hn_set.json also holds the 20 question-bootstrap refit sets of Dg2 (positive weights at C*), H+ ordered by selection frequency then |r|, and H_op (main §2.3: H_tq, or H+ after G-K22, or H_ar after G-K1). The hook manager, the FISTA selector select(X, y, C*, exclude_mask) and the random-set generator are importable functions of r1b_hn.py (part L).'",
+    "reason": "L's contract items K.HBOOT, K.SELECT and K.RANDSETS, and the operative set H_op (C10, OD-M10)."
+   },
+   {
+    "part": "K",
+    "where": "K.3 heading 'SO-GEN, generation corpora and SO-FD, front dump'; K.3 'SO-GVRA'",
+    "edit": "Heading -> 'SO-GEN and SO-FD (part K; part L consumes only SO-LENSOUT, main §2.3: K4's per-chain records with item id, correct / wrong status, number of operations, variant, block, position type, seed rank, key, emitted ids at steps 0-16, k*_conf, share_H(s) with the RS39 band, a_H(s), plus the gating export)'. SO-GVRA -> 'SO-GVRA (main §2.3; owner K; also used by R5.5, D3, D's INJ, L's X5)'.",
+    "reason": "L's lens-record fields mapped to K's merged names (C9, OD-M13)."
+   },
+   {
+    "part": "K",
+    "where": "K.6 rows 'G1, G2' and 'G-K24'; K.8 'Session hygiene'",
+    "edit": "'G1, G2' -> 'SG1, SG2 (main §3.1)'. 'G-K24' -> 'SG5 (main §3.1): stop after the step that ends at >= 4.5 h'. K.8: 'a 5-h time guard' -> 'the round's 4.5-h time guard (SG5)'.",
+    "reason": "Global gates (C18, C27)."
+   },
+   {
+    "part": "K",
+    "where": "K.4 after the Families table; K.7 'Always appended'",
+    "edit": "K.4: add 'Round-level confirmatory families (main §2.4): CF-K-attr = Q9. CF-K-link = the seven A+ members (K6b(i), K6b(ii), K6c(i), K6c(ii), K6e-c push, K6e-c clamp, K6h), Holm over the seven at 0.05 with p = p_IUT. K8c is a member of CF-HERR together with part L's L5c. All other K strings are exploratory at the round level.' K.7 'Always appended': add '; round level: A+ confirmatory | exploratory; B+ confirmatory | exploratory (main §2.4)' and 'R5.1's per-block J-lens validity as the label 'J-lens not valid at b (R5.1)' on lens-side statements at block b (it changes no K string)'.",
+    "reason": "A+ is an any-of over four Holm families. Exact round-level confirmatory list (C25, C21, C20)."
+   },
+   {
+    "part": "K",
+    "where": "K4j Rule",
+    "edit": "Append: 'The chosen convention is SO-JLENS's convention for the round. Part R's R5.1-R5.3 read it from k4j.json (a start condition of r1b_R_S5).'",
+    "reason": "One J-lens convention (C20, OD-M18)."
+   },
+   {
+    "part": "K",
+    "where": "K.8 table and 'Budget argument'; RK-1 and RK-2 'Condition' and 'Runs in'",
+    "edit": "Replace the K-S0 row with 'K0 -> P0-K items of r1b_P0 (main §4.2; 19.0 min moved to the pilot budget)'. Replace 'Planned total ... 527 min = 8.78 A100-h' with 'Tier 1 (main §4.3): 508.0 min + I/O allowance 10 (r1b_K_ana) = 518.0 min of K's own (8.63 A100-h). Work run for others in K's sessions: S_L screening 9.6 and 22 extra wrong items 1.0 (part L), REF-U32 reporting 3.0 (round), giving 531.6 min (8.86 h) in K's sessions. Tier 2: RK-1 0.97 h, RK-2 0.88 h.' 'RK-1 and RK-2 run only if measured costs leave room within 9 h' -> 'RK-1 and RK-2 are tier 2 (main §4.5, drop items 13 and 1); they run only if funded, and RK-1 only if G-K5 is not 'calibrated''. RK-1 'Runs in. K-S6 (account B)' -> 'r1b_K_S6 (account A, after r1b_K_ana, which decides G-K5; main C32)'. G-K16's compensation rule stays.",
+    "reason": "Budget agrees with main §4.3; RK-1's trigger is decided in account A (C32)."
+   },
+   {
+    "part": "K",
+    "where": "K.8 table, r1b_K_S2a 'Starts after'",
+    "edit": "Append '; r1b_xfer_A/dmg_ref_R16.json present (from r1b_R_S0)'.",
+    "reason": "REF-U32 reporting needs REF-R16 (OD-M7)."
+   },
+   {
+    "part": "L",
+    "where": "whole file (budget table, L0, L.8, L.9, measurement 'Runs in' lines)",
+    "edit": "Rename sessions: 'L-P' -> 'r1b_P0 (P0-L items)'; 'L-A' -> 'r1b_L_A'; 'L-B' -> 'r1b_L_B'; 'L-ANA' -> 'L-ANA (a step of r1b_ana, CPU runtime, account A)' at first mention, plain 'L-ANA' afterwards. In L.8's sessions table, L-A's Account 'the account holding K's outputs' -> 'B'.",
+    "reason": "Main §4.2 session names (C1, C29, OD-M26)."
+   },
+   {
+    "part": "L",
+    "where": "L.1 'From part K' (K.HSET, K.HSET+, P, K.HBOOT, K.LABELS, K.CETT / K.NH, K.SELECT, K.RANDSETS, K.CH-H, K.REF, K.ITEMS-ARITH, K.LENS-OUT, K.GVRA) and L.1's opening paragraph",
+    "edit": "K.HSET -> 'SO-HN.H_op (H_tq, or H+ after K's G-K22 switch; main OD-M10)'. K.HSET+ -> 'SO-HN.H+ (L caps it at 200 by selection frequency, then |r|, whenever P is an H+ set)'. P -> 'P = H_op if H_op is H_tq with |H_tq| >= 10, else H+ (capped at 200). If H_op = H_ar, SG8 fails for L ('no validated H-set (H_ar primary)') and L1 uses K's selector on S_fit.' 'Statements about H report K.HSET too whenever P = K.HSET+' -> '... report H_tq too whenever P is an H+ set'. K.HBOOT -> 'SO-HN boot sets (K2 Dg2's 20 question-bootstrap refits)'. K.LABELS -> 'SO-LAB'. K.CETT / K.NH -> 'SO-HN hook manager'. K.SELECT -> 'SO-HN selector'. K.RANDSETS -> 'SO-HN random-set generator with K2's rule (same count per layer, mean answer-CETT within +-20 %) and L's candidate seeds keyseed('r1bL-CTRL', k)'. K.CH-H -> 'SO-CHH: a_X(t) = mean zCETT over X (K's merged definition) is primary; L's standardised-z mean is the sensitivity variant; both are stored'. K.REF -> 'SO-HN REF-W'. K.ITEMS-ARITH -> 'SO-LAB's gated A-lens pool items (K4): known = K4 'correct', prone = K4 'wrong'; read position t* = K4's t0'. K.LENS-OUT -> 'SO-LENSOUT: B_hal -> k*_conf; FOV_H(q) with K's random-set band -> share_H(s) with the RS39 band (q95 of share_R); A_H(q) -> a_H(s); steps s = 0..16'. K.GVRA -> 'SO-GVRA'. Delete every bracket of pre-merge K design names ('[HN / SO-H]', '[H_cluster / H+]', '[K-lean's 20 bootstrap fits / K-mechanism D2]', '[HL / SO-LAB]', '[A_H or mean zCETT / ...]', '[ITEMS-ARITH / G_AR]', '[GEN-CL ... / K6 records]') and the opening sentence 'Where K's merge has not fixed a name, the known names of the K designs are given in brackets (K-lean / K-mechanism).' In L.6 replace remaining 'K.HSET' with 'H_op'.",
+    "reason": "L's contract was written against pre-merge K designs (C9-C12, OD-M10-OD-M13)."
+   },
+   {
+    "part": "L",
+    "where": "L.1 'From part D' and 'From part R'; L2a How 'Documents'; L2 inputs",
+    "edit": "D.LONGCTX -> 'SO-LCE (main §2.3; owner D)'. Replace its bullet list with 'B = 1 prefill, chunked lm_head at the needed positions, explicit positions, the memory-efficient kernel asserted (SG9). Parity for L2a is gated by L's own G-L2a-LCE (< 1e-4 relative; main OD-M14).' Delete the D.LONGCORPUS bullet; 'Fallback L.LONGDOC: ...' -> 'L.LONGDOC (main SO-LONGDOC; owner L; primary): ...'. 'D.LONGCORPUS (else L.LONGDOC)' / 'D.LONGCORPUS / L.LONGDOC' -> 'L.LONGDOC'. D.FORK-F1 -> 'SO-D1STIM F-sym items 0-31 (invented referent i, attribute slot j = i mod 6, v1 / v2 = the slot's versions 1 / 2)'; delete 'L needs 32; if D freezes fewer, L builds the rest with D's generator and template and labels them 'L-built'.' R.DMGPUSH -> 'SO-DMG: calibrate rule (f <- f sqrt(target / damage), +-10 %, <= 6 evaluations); damage on REF-U32 = REF-R16 union REF-K16 (REF-R16 from r1b_xfer_A/dmg_ref_R16.json) plus 64 held-out S_L answers'. R.AXES -> 'SO-AX's u*_14 (U*, from r1b_xfer_A/so_ax_ustar.pt)'.",
+    "reason": "Shared objects are defined once in main §2.3 (C5, C13, C14, C17)."
+   },
+   {
+    "part": "L",
+    "where": "L.1 (K.LABELS split text and fallback), L.2 Damage and SEL+ / UNC+ rows, L1 (Data, (ii), Rot, (iv), (vi), (vii) Items, Null / controls, Inputs), L.R-A families, L2 inputs, L3b Prompts",
+    "edit": "Where 'S2' denotes K's TriviaQA split, replace it with 'S_L' everywhere ('S2 with at least 600 CC + 600 CI items' -> 'S_L with at least 600 CC + 600 CI items (main OD-M8)'; 'Fallback if S2 is smaller' -> 'Fallback if S_L is smaller'; '64 held-out S2 answers' -> '64 held-out S_L answers'; 'S2 CC' / 'S2 CI' -> 'S_L CC' / 'S_L CI'; 'the first PC of S2 CETT' -> 'the first PC of S_L CETT'). Where 'S1' denotes the selection split, replace it with 'S_fit' ('S1 for selection', 'K.SELECT on S1', 'the S1 rows', 'S1 u S2 CETT matrix' -> 'S_fit u S_L CETT matrix', 'S1/S2 split' -> 'S_fit / S_L split'). 'FAB' (K's fabricated-entity items) -> 'NE (FAB)' at first mention per section; 'at least 300 fabricated-entity (FAB) questions' -> 'K's 300 NE items (FAB)'.",
+    "reason": "K's S2 chooses C* and has no consistency classes; S_L is screened for L (C7, OD-M8)."
+   },
+   {
+    "part": "L",
+    "where": "L0 How, Rule and Runs in",
+    "edit": "'Account B, A100-40GB, ... 32 frozen neutral prompts (rk_loop scene prompts); every text is discarded' -> 'P0-L items of the round's single pilot r1b_P0 (account B): SO-PILOT's 32 pilot prompts and PG19 books 25-28 (disjoint from every analysis set); every text is discarded'. '(iii) ... unless D's G-long already measured them with hooks' -> '(iii) ... (measured once in r1b_P0 for parts D and L, with and without down_proj hooks)'. Add '(vii) the relative log-prob difference of L2a's chunked path against a full pass at 16,384 and 32,768 tokens (main OD-M14)'. 'G-pilot' -> 'SG7 (L's part)'. 'Runs in. L-P, 10 A100-min.' -> 'Runs in. r1b_P0 (10 A100-min of its work).'",
+    "reason": "Pilot material must not include analysis prompts; rk_loop's scene prompts are in P256 and F-neu (C16, OD-M2)."
+   },
+   {
+    "part": "L",
+    "where": "L2a How ('G-LCE:' bullet) and Gates line; L.9 row 'G-long / G-LCE (D)'",
+    "edit": "L2a: 'G-LCE: chunked and cached log-probs ...' -> 'G-L2a-LCE: chunked and cached log-probs ...'. Add: 'If r1b_P0 shows that this tolerance fails at 32,768 but holds at 16,384, L2a's length grid is [2^7, 2^14] and the growth-class fits use that range (main OD-M14; decided before the freeze and written into the freeze record). If it fails at both lengths, L2a runs as frozen and this gate decides.' Gates line 'G-long / G-LCE (D); G-MI; G-cal-L2 (f)' -> 'SG9; G-L2a-LCE; G-MI; G-cal-L2 (f)'. L.9: split the row into 'SG9 (main §3.1): memory-efficient kernel asserted; r1b_D_A's G-LCE-1 / -2 records present -> r1b_L_B waits' and 'G-L2a-LCE: cached = recomputed (< 1e-4 relative) at 16k and 32k; memory within 40 GB -> L2a halted (subject to OD-M14)'.",
+    "reason": "Gate-name collision with D's G-LCE-1..4; makes it known before the freeze whether the tolerance is attainable (C13, C18)."
+   },
+   {
+    "part": "L",
+    "where": "L3c How, Rule and Gates line; L.9 row 'G-ESS, G-M'",
+    "edit": "Rename 'G-M' to 'G-ISM' everywhere in part L (5 occurrences: 'used if (ii) fails G-M', 'G-M model check', 'static: G-M passes', ''not Ising-modellable ...': G-M fails', the L3c Gates line, L.9).",
+    "reason": "Collides with part D's G-M (C18, OD-M20)."
+   },
+   {
+    "part": "L",
+    "where": "L.9 row 'G-H (K)'; every measurement 'Gates' line containing 'G-H'; L.9 row 'G-pilot'",
+    "edit": "'G-H (K) | K's H-set passes K's detection gate' -> 'SG8 (main §3.1) | K's G-K2 on H_op (r1b_K_S1's preview for what runs; r1b_K_ana's value for labels), with H_op in {H_tq, H+}'; replace 'G-H' with 'SG8' in the Gates lines. 'G-pilot' -> 'SG7 (L's part)' with its condition unchanged.",
+    "reason": "Global gates; D and L used the same name for K's gate (C18, C28)."
+   },
+   {
+    "part": "L",
+    "where": "L.R 'Natural position control' bullet",
+    "edit": "'200 frozen WikiText-103 validation passages (pinned; disjoint from K.REF's passages)' -> '200 frozen WikiText-103 test-split passages (main SO-WT103; disjoint from every part-K text by split)'.",
+    "reason": "200 x 1,024 tokens would nearly exhaust the validation split, which part K uses (C15, OD-M15)."
+   },
+   {
+    "part": "L",
+    "where": "L5 'runs in' paragraph; L.8 sessions table rows L-A and L-B; L.8 Order",
+    "edit": "'L5 runs in: L-A, 3.1 A100-min for generation' -> 'L5 runs in: r1b_L_B, 3.1 A100-min of generation plus 0.33 min of work for the 6 extra gating samples (OD-M9)'. L.8 table: drop 'L5 generation' from L-A (work 113.0 -> 109.9; planned 168.9) and add it to L-B (work 72 -> 75.4; planned 117.2). Order: 'L-A after K's identification session has written K.HSET, K.HSET+, K.HBOOT, K.LABELS, K.SELECT and K.REF, and after D has frozen D.FORK-F1.' -> 'r1b_L_A after r1b_K_S1 (SO-HN, SO-LAB incl. S_L) and r1b_R_S0's exports in r1b_xfer_A (REF-R16, u*_14); SO-D1STIM is frozen in the repository.' 'L-B after L-A's step 1 (about 5 min in) and after D's G-long.' -> 'r1b_L_B after r1b_L_A (L.POP, and L3b's twin-0 rows, which L3a reads), SG9 (r1b_D_A's G-LCE-1 / -2 records) and r1b_K_S2a's gating export.' 'L-ANA after L-A, L-B and K's lens session (K.LENS-OUT).' -> 'L-ANA (in r1b_ana) after r1b_L_A, r1b_L_B, r1b_K_S2a and r1b_K_ana (K's G-K2, G-K4, G-K4b, G-K5, G-K14 labels).'",
+    "reason": "K4's gating exists only after r1b_K_S2a; L3a needs L3b's rows (C8, main §3.3)."
+   },
+   {
+    "part": "L",
+    "where": "L5a Corpus and M_i (i); L5b MDE; L5c How and 'Overlap' bullet",
+    "edit": "L5a: 'K.LENS-OUT on K.ITEMS-ARITH (all blocks, variants and seed ranks K ran). Chain positions q = 0..12; if K ran 24 steps, 13-24 are descriptive.' -> 'SO-LENSOUT on the 406 items with lens records (256 correct = known, 150 wrong = prone). Chain positions q = s = 0..12 primary; K's steps 13-16 descriptive.' M_i (i): 'K's 11 gating answers' -> 'K's 5 gating answers plus 6 samples at T 0.7 generated in r1b_L_B with keys ('r1bL5', 'GATE', i, s), s = 1..6 (11 in all)'. L5b MDE: 'rho_b about 0.10 (600 items; SE 0.04; margin 0.12, about 2.9 SE)' -> 'rho_b about 0.12 (406 items with lens records; SE about 0.049; margin 0.12, about 2.4 SE; stated, not changed)'. L5c: 'The own-CoT texts of L5a (600 items x 5)' -> 'own-CoT texts on 600 items (the 406 lens items plus the next 194 gated A-lens pool items in pool order, A-cal excluded) x 5'. Delete the 'Overlap' bullet and add: 'Relation to K8c: K8c (part K; ACH-long; RS39) is confirmatory in K. L5c and K8c form the round-level family CF-HERR (main §2.4); both run and are reported side by side.'",
+    "reason": "K delivers 5 gating answers and 256 + 150 lens items. K8c is not descriptive in the merged K (C8, C21, OD-M9, OD-M24)."
+   },
+   {
+    "part": "L",
+    "where": "L.2 'Comparison populations' row CTRL99",
+    "edit": "'99 random sets matched to P in size, layer histogram and CETT-norm quintiles (K.RANDSETS)' -> '99 random sets drawn by SO-HN's random-set generator with K2's matching rule (same count per layer, mean answer-CETT within +-20 %) from candidates keyseed('r1bL-CTRL', k)'.",
+    "reason": "L defers to K's generator, whose rule differs from 'quintiles'; the seeds keep L's sets independent of K's (C12, OD-M12)."
+   },
+   {
+    "part": "L",
+    "where": "L.2 'Sampling and keys'",
+    "edit": "Add 'r1bL-SHUF' (used in L2a) to the seed list. Add the key ('r1bL5', 'GATE', i, s) for the 6 extra gating samples. Add: 'Registered prefix 'r1bL' (main §2.3 SO-KEYS).'",
+    "reason": "Complete key registry (C19)."
+   },
+   {
+    "part": "L",
+    "where": "L preamble 'Budget' table and text; L.8 Total row and L-P row",
+    "edit": "Replace 'Core 195 min / 5.08 h; Extensions 37 / 0.92; Total 232 / 6.0' with 'Tier 1 (core, main §4.3): r1b_L_A 168.9 + r1b_L_B 117.2 = 286.1 A100-min (4.77 h), plus 10.6 min run in part K's sessions for L (S_L screening, 22 extra wrong items) = 4.95 h charged. Tier 2 (X1-X6): 55.4 min (0.92 h). The pilot L0 is in r1b_P0. L-ANA runs on a CPU runtime (0 A100).' Delete the L-P row of L.8.",
+    "reason": "Budget agrees with main §4.3."
+   },
+   {
+    "part": "L",
+    "where": "L.0 'Core and extensions'; L.4 heading; L.8 'Trim order' intro",
+    "edit": "'Extensions' -> 'Extensions (round tier 2, main §0.3; main §4.5's drop items 2-5, 11 and 12 keep L's order X5, X4, X3, X6, X1, X2)'. L.8 trim-order intro: add 'trims 2-5 apply to tier 1 only under main §4.5's proportional rule'.",
+    "reason": "Tier labels (main §0.3, §4.5)."
+   },
+   {
+    "part": "L",
+    "where": "L.5, before 'Power of the combined verdicts'",
+    "edit": "Add: 'Round-level confirmatory family CF-L (main §2.4): the L3 attractor line 'H-attractor (self-sustaining or bistable, H-specific, seen in natural dynamics)' and L2b 'H rises beyond information loss', Holm over the two at 0.05 with the member p-values of main §2.4. L5c is in CF-HERR with K8c. All other L verdicts and combined readings are exploratory at the round level.'",
+    "reason": "Exact round-level confirmatory list (C25)."
+   },
+   {
+    "part": "L",
+    "where": "L4 'Items'; L4 'Catfish carry' bullet; L4 Entity-forming rule; L.6 rows on catfish and 'zwei Entitäten'",
+    "edit": "Items: '32 D.FORK-F1 items (fictional entity, contested attribute, values v1 and v2; no prior).' -> '32 SO-D1STIM F-sym items 0-31 (invented referent i, attribute slot j = i mod 6, v1 / v2 = the slot's version-1 / version-2 values).' '(energy_ising L8; reported to part D)' -> '(energy_ising L8; attached to D.17 as a qualifier, main C22)'. ''Two entities persist' counts against it, and is reported to part D as the H-DUAL-type outcome.' -> '... counts against it and is attached to D.17 as a qualifier (main C22).' Make the same wording change in the L.6 rows.",
+    "reason": "D's object name, and how L's catfish result reaches D (C17, C22)."
+   },
+   {
+    "part": "L",
+    "where": "L.10 'From other parts by name' and 'New'; L.2 'Damage'; L3b 'Descriptive' (u*_14); L.8 Order (time guard sentence)",
+    "edit": "L.10: 'K.CETT / K.NH, K.SELECT, K.RANDSETS, D.LONGCTX, R.DMGPUSH' -> 'SO-HN (hook manager, selector, random-set generator), SO-LCE, SO-DMG (r1b_core's function-style damage and calibrate)'; add 'r1b_L_cal.py (L-CAL generators)' under New. L.2 Damage: 'Teacher-forced KL in nats on R.DMGPUSH's references plus 64 held-out S2 answers.' -> 'SO-DMG: teacher-forced KL in nats on REF-U32 (REF-R16 union REF-K16) plus 64 held-out S_L answers.' L3b: 'on R.AXES u*_14' -> 'on SO-AX's u*_14 (from r1b_xfer_A)'. L.8: 'with a time guard' -> 'with the round's time guard (SG5: stop after the step that ends at >= 4.5 h)'.",
+    "reason": "Main names and the global time guard (C5, C27)."
+   }
+  ],
+  "budget": {
+   "tier1_a100_hours": 30.6,
+   "tier2_a100_hours": 7.5,
+   "pilot_a100_hours": 1.14,
+   "half_rate_tier1_hours": 39.8,
+   "drop_order": [
+    "1 K RK-2, r1b_K_S7 (0.88 h): descriptive, never enters the composite",
+    "2 L X5 L.gv (0.08 h)",
+    "3 L X4 COMPLETE (0.06 h)",
+    "4 L X3 TOY-LOOP (0.13 h)",
+    "5 L X6 L4-SOLO (0.07 h)",
+    "6 R R8.2, r1b_R_S8 (0.33 h; plus r1b_R_ana2 0.17 h if r1b_R_S5L does not run)",
+    "7 D reserve R3, D1-r at L* (0.48 h)",
+    "8 D reserve R2, D3 driver arms (0.90 h; conditional on D3 'split grows with length')",
+    "9 D reserve R1, M2 reading (0.53 h, with r1b_D_R's 5-min setup)",
+    "10 D D5-x (0.50 h; D's T1 halves it first)",
+    "11 L X1 L3-DOSE (0.21 h; adds attractor route A3)",
+    "12 L X2 L4-DOWN (0.38 h; adds the H-down coupling line)",
+    "13 K RK-1, r1b_K_S6 (0.97 h; conditional on G-K5 not 'calibrated')",
+    "14 R R5.4, r1b_R_S5L plus r1b_R_ana2 (1.92 h; conditional on RG11)",
+    "then tier 1, only if r1b_P0's projection exceeds the funded tier-1 budget: each part applies its own frozen order until its projection is at most (funded tier 1) x (its planned tier-1 hours / 30.6). R: RL1, then RL2 (RG18). D: trims T2-T8. K: drop-order items 1-6 (K.8). L: trims 2-5 (L.8). 'Never dropped' items stay."
+   ]
+  },
+  "conflicts_resolved": [
+   "C1 Four separate pilots, four naming styles, and R-S5b colliding with the runner's continuation name of R-S5. Resolved: one pilot r1b_P0 before the freeze on SO-PILOT material; session names r1b_<part>_<label>; R-S5b becomes r1b_R_S5L.",
+   "C2 R's reduction 'tier 0/1/2' clashed with the round's tier 1/2. Resolved: R's levels are renamed RL0/RL1/RL2.",
+   "C3 u*_b was copied by R but rebuilt by K and D. Resolved: the round-2 file r2_q2/theta/b<b>_q0.pt['u_star'] is canonical (SO-AX); the rebuild becomes SG10's check in r1b_R_S0.",
+   "C4 There were two RSI axes (R's AX-1b u_T^v against round-1 u_T_perp in K and D). Resolved: K's named RSI and sea channels and K10a's sources and targets use AX-1b's u_T^v(14), u_sea^v(14) and u_T^v(18), with an AX1 fallback and label; D2-f adds u_T^v(14).",
+   "C5 There were three damage references, and L's merged reference was undefined. Resolved: SO-DMG has one functional and one calibrate rule; each part calibrates on its own frozen reference (REF-R16, REF-K16, REF-U32 + 64 S_L answers); every calibrated intervention also reports damage on REF-U32.",
+   "C6 K's damage levels D1/D2 and its diagnostics D1-D5 collided with part D's measurement IDs. Resolved: delta1/delta2 and Dg1-Dg5.",
+   "C7 L needed a TriviaQA split S2 with >= 600 CC + 600 CI, neither selected nor used for C; K's S2 chooses C* and has no classes. Resolved: a new split S_L from K2's screening (cap 15,000; targets CC >= 2,312, CI >= 1,800; S_L shrinks first at the cap).",
+   "C8 L needed >= 150 known + 150 prone arithmetic items with 11 gating answers; K4 had 256 + 128 items with 5 answers. Resolved: K4's wrong cell rises to 150; L adds 6 samples per item; known = correct, prone = wrong; L5's generation moves to r1b_L_B.",
+   "C9 L's lens-record fields (B_hal, FOV_H, A_H) came from pre-merge K designs. Resolved: SO-LENSOUT maps them to k*_conf, share_H(s) with the RS39 band, and a_H(s); steps 0-12 primary.",
+   "C10 L's K.HSET ignored K's H+ switch and the H_ar fallback. Resolved: one operative set H_op, and L's P rule is applied to H_op.",
+   "C11 L's primary H channel differed from K's merged a_X. Resolved: mean zCETT is primary; L's standardised-z mean is a sensitivity variant.",
+   "C12 L's CTRL99 'CETT-norm quintile' matching differed from K's generator rule. Resolved: K's rule with L's own candidate seeds.",
+   "C13 The long-context engine had different features, different parity tolerances, and a gate-name clash. Resolved: SO-LCE implements the union of features; tolerances stay per use; L's gate is renamed G-L2a-LCE; the pilot measures both metrics; OD-M14 caps L2a at 2^14 if L's tolerance fails at 32,768 but holds at 16,384.",
+   "C14 L expected D.LONGCORPUS, but D's filler is concatenated WikiText passages. Resolved: PG19 (L.LONGDOC) is L's primary corpus; the contract item is dropped.",
+   "C15 WikiText-103 use overlapped across D, K and L. Resolved: one pinned revision with split allocation (train for D, K's 1M-token reference and the pilot; validation for K; test for L).",
+   "C16 L's pilot used analysis prompts (rk_loop's scene prompts). Resolved: SO-PILOT material disjoint from every analysis set.",
+   "C17 L's D.FORK-F1 was not a D object. Resolved: D's F-sym items 0-31, slot j = i mod 6, values v1/v2.",
+   "C18 Gate names collided (G-M, G-H, G-LCE, G-DEG/G-deg) and the global gates had four naming styles. Resolved: G-ISM, G-DGN and G-L2a-LCE, plus global gates SG1-SG10.",
+   "C19 Keys sat outside part prefixes (r1bINJ, r1bshuf, k1bK_). Resolved: the SO-KEYS registry with renames r1bD_INJ, r1bD_shuf and r1bK_; uniqueness is asserted in code.",
+   "C20 R claimed K's chain lens needs R5.1 and LENS-J1b, while K fixes the J-lens convention itself. Resolved: the convention comes from K4j and R5.1-R5.3 use it; R5.1's validity is only a label on K's statements; LENS-J1b is used by R only.",
+   "C21 K8c and L5c, and K6e/K8b and L3, test nearly the same claims. Resolved: both of each pair run; K8c and L5c form CF-HERR; the attractor verdicts are reported side by side; L5c's overlap clause is deleted.",
+   "C22 Catfish is tested in D2/D5 and in L4. Resolved: L4's catfish string and 'two entities persist' are qualifiers of D.17 and never change D's string.",
+   "C23 Account load was unbalanced (B about 20 h, A about 10 h). Resolved: D_B, D_C, R_S5 and R's tier-2 sessions run in A; tier 1 is 15.5 h in A and 15.1 h in B.",
+   "C24 Drive I/O rates were inconsistent across parts. Resolved: 10 min/GB everywhere (supported by round 2's r2_ana record) until P0 measures it; I/O allowances added for r1b_K_ana and r1b_D_ana.",
+   "C25 K's composite A+ is an any-of over four Holm families, and L had no round-level family. Resolved: round-level CF-K-link (Holm over the seven A+ members) and CF-L, as labels only.",
+   "C26 The one-sided bootstrap p formula differed between L and R/K. Resolved: (1 + #) / 2,001 round-wide.",
+   "C27 Time-guard values differed (5 h, under 5 h, 20 min). Resolved: SG5 stops after the step that ends at >= 4.5 h; steps <= 5 min.",
+   "C28 D's optional H covariate would wait for K's G-K2, which is decided only in r1b_K_ana. Resolved: it uses r1b_K_S1's preview and is never waited for.",
+   "C29 L-ANA's CPU runtime location was undefined. Resolved: it is a step of r1b_ana on a CPU runtime in account A.",
+   "C30 R's instruction that part D recalibrate pushes per length is moot, because D runs no push.",
+   "C31 Four different carry estimators were all named K. Resolved: each is cited with its part's estimator and they are never pooled.",
+   "C32 RK-1's trigger (G-K5) is decided in account A while RK-1 was placed in B. Resolved: r1b_K_S6 runs in account A."
+  ],
+  "questions_for_user": [
+   "Compute budget. Which do you fund: (a) tier 1 only, about 30.6 A100-h plus the 1.1-h pilot (about 15.5 h in account A, 15.1 h plus the pilot in account B, about 9-10 h wall clock); (b) tier 1 and tier 2, about 39.2 A100-h in all, where conditional tier-2 items spend only if triggered; or (c) a cap in between, given up in the frozen drop order? And if the pilot measures slower rates than planned: may tier 1 grow until each part's own trim trigger fires (roughly 33-37 A100-h; at half the planned rates tier 1 would use about 39.8 h), or should every part trim to the funded figure?",
+   "Please confirm the readings of your speech-to-text words that parts K and L build on: 'Haarneuronen' = H-neurons (the hallucination-associated MLP neurons of Gao et al. 2025, < 0.1 % of neurons); 'zu überwinden' = 'zu überprüfen'; 'Gradient Through Routing' = sensitivities flowing across token positions through attention routing at inference (not the training-time 'gradient routing' of Cloud et al.)."
+  ]
+ },
+ "harm": [
+  {
+   "part": "R",
+   "file_written": true,
+   "applied": [
+    "Copied /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/part_R.md to /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan_teil_R.md with cp (sha256 matched the source). The source is unchanged; the edited file has sha256 d9d90ee5d9d0eb228ae50a16e2ca8ddb00323fc5d805145406a4417d7c4a07f7. All changes were made with the Edit tool.",
+    "Edit 1 (session renames, longest token first, whole file): R-Sana2 -> r1b_R_ana2 (5); R-Sana -> r1b_R_ana (24); R-S5b -> r1b_R_S5L (7); R-S2/14 -> r1b_R_S2_14 (8); R-S2/18 -> r1b_R_S2_18 (5); R-S2/6 -> r1b_R_S2_06 (5); bare R-S2 -> r1b_R_S2_* (5); R-S0 (10), R-S1 (4), R-S3 (15), R-S5 (11), R-S6 (7), R-S7 (11), R-S8 (6) -> r1b_R_*. The eight R-P occurrences were handled one by one: the 'r1b_P0 (P0-R items)' form in the Rates and Budget-argument Drive bullets; the specific edit-3 wording in R.0, R.1, RG18 and R.5 Order item 1. No old session token is left, except the deliberate historical references 'R-P's list' (R.1), 'was R-P' (R.5 table) and 'R-P's 19.2 min' (new accounting paragraph).",
+    "Edit 2 (tier -> RL): R.0 'The reduction tier' -> 'The reduction level' and 'tier 2 keeps the total' -> 'RL2 keeps the total'. R3.2 'only at block 14 under reduction tier 2' -> 'only at block 14 under RL2'; R3.2 Rule ''not run (tier 2)' at 18 and 6 under tier 2' -> ''not run (RL2)' at 18 and 6 under RL2'. RG18 'Reduction tier' / 'smallest tier' -> 'Reduction level' / 'smallest reduction level'. R.5 Budget argument 'Tier 1 (if tier 0 projects above 12.5 h)' -> 'RL1 (if RL0 projects above 12.5 h)', 'Tier 2 (if tier 1 still projects ...)' -> 'RL2 (if RL1 still projects ...)', 'not run (tier 2)' -> 'not run (RL2)'. R9.2 'NA:not_run:tier_<t>' -> 'NA:not_run:RL<k>'. OD-R17 renamed (see edit 15). R9.1 merged with edit 14 (see that entry). V_RSI strength tiers were left alone: R.1 F+ and R.6 ''likely' (either tier)', R2.3b 'positive tiers', OD-R6 'RSI tiers 0.25 / 0.50'.",
+    "Edit 3 (one pilot): RG18 Reads -> 'r1b_P0's measured rates (P0-R items) in cost_R2.py'; If-it-fails -> 'the level is written into runde1b_freeze.json (part of main SG7)'. R.5 Order item 1 -> '1. r1b_P0 (account B, before the freeze; main §4.2); then the freeze, which records the reduction level (RG18, SG7).' R.1 'No model output before the freeze' replaced with the given sentence (r1b_P0, P0-R items = R-P's list, SO-PILOT material). R.0 'the engineering pilot R-P measures' -> 'the round's pilot r1b_P0 measures'.",
+    "Edit 4 (global gates): Gate cells now read 'Plan freeze (= main SG1)', 'GPU (= SG2)', 'Round-1 code freeze (= SG3; R's constants)', 'Time and concurrency guard (= SG5)', 'Report check (= SG6, applied to every part)'. RG16 Condition: '<= 5 h per session; steps <= 5 min and resumable' replaced by 'the runner stops after the step that ends at >= 4.5 h since the notebook's first cell (SG5); steps <= 5 min and resumable'.",
+    "Edit 5 (accounts): r1b_R_S5, r1b_R_S5L and r1b_R_S8 set to account A in the R.5 table. The input-package parenthetical was deleted from the r1b_R_S5 row. Order item 4's account-B and package text was replaced by '; r1b_R_S5 also in account A, after r1b_R_S3 and r1b_K_S1's k4j.json (main §4.2).' 'Expected wall clock: about 7-8 h.' -> 'Wall clock: main §4.4.' The R.0 Order bullet was replaced by '**Order.** Sessions, accounts (every part-R session in account A) and waves as in main §4.2 and §4.4.' 'Account A holds every session that reads round-1 or round-2 Drive files.' was kept.",
+    "Edit 6 (budget): R.0 Budget now reads '8.53 A100-h in tier 1 (main §4.3; the pilot moved to r1b_P0) + 2.25 A100-h in tier 2 (the three conditional sessions)'. The 'Round-level accounting (main §4.3): ...' paragraph was inserted verbatim right after the R.5 sessions table, before **Order.** I checked its arithmetic against the table: 507.8 + 4.0 = 511.8 min = 8.53 h; 105.0 + 19.5 + 10.2 = 134.7 min. The table's Total row and the first Budget-argument bullet keep R's own figures (11.03 h = 8.78 + 2.24, which includes R-P), matching main §4.3's 'Parts' own figures' column.",
+    "Edit 7 (R.2): heading -> 'R.2 Objects of part R (objects shared across parts are defined in main §2.3)'. Name cells -> 'AX-1b(b) (main SO-AX)', 'u*_b, u*_b^(-L) (main SO-AX, U*)', 'PUSH-DN, PUSH-NP (main SO-DMG)', 'LENS-J (main SO-JLENS)'. The LENS-J row now reads 'LENS-J1b if the conditional refit runs (tier 2; used by part R only)'.",
+    "Edit 8: R.1 item (ii) sentence replaced by the given text about R5.1's per-block validity (RG10) as the label 'J-lens not valid at b (R5.1)'; the label string is kept on one source line. '(moot: part D runs no push; main C30)' appended in R.1 item (i) and in R3.1 'Shows - cannot show'.",
+    "Edit 9 (r1b_R_S0 content): the full SO-AX package and r1b_xfer export text (AX1, canonical U*, leave-loop-out modes, SG10's check, dmg_ref_R16.json, so_ax_ustar.pt, 'Inside the 22.2 min.') was added in both named places: the R0 'Runs in' line (introduced as 'The same session writes the SO-AX package (main §2.3): ...') and the Content cell of the r1b_R_S0 row in the R.5 table.",
+    "Edit 10 (R3.1 How): '(main SO-DMG's REF-R16)' added after the description of the 16 references. The REF-K16 / REF-U32 bullet was added verbatim directly after the dmg_sym bullet.",
+    "Edit 11 (J-lens convention): a new R5.1 How bullet '**Index convention.**' with the given text, placed right after the **Lens.** bullet. Where J is applied: R5.2 '(R5.1's formula)' -> '(R5.1's formula and J-lens index convention)'; R5.3 'diag(g) J_14' -> 'diag(g) J_14 (K4j's index convention, R5.1)'.",
+    "Edit 12: the sentence 'F+ and F- are the round-level confirmatory families CF-R+ and CF-R- (main §2.4). R.1's component p-value rules are the round-wide convention for every round-level family.' was appended as the last sub-bullet of R.1's 'Multiple testing' bullet.",
+    "Edit 13: the 'Registered namespaces (main §2.3 SO-KEYS): ...' text was inserted as the first bullet under the R.1 **Keys** heading. I also checked every R key tag against main's SO-KEYS registry; all match.",
+    "Edit 14 (R9): R9.1's provenance item now reads 'the reduction level and the round-level tier (1 or 2)'. This merges edit 2 ('the reduction level and the round-level tier') with edit 14 ('tier (1 or 2)') so the list does not name the tier twice; it matches main SG6's list ('reduction level, tier, session, attempt'). R9.2 now lists 'NA:not_run:RL<k>', 'NA:not_run:tier2_unfunded' and 'NA:not_run:session_failed_twice'. 'R9.1-R9.4 are applied round-wide by main SG6.' was added to the R9 'Runs in' line.",
+    "Edit 15: RG11 If-it-fails -> 'R5.4 runs in r1b_R_S5L if tier 2 is funded (main §4.5, drop item 14); otherwise 'not run (tier 2 not funded)''. RG15 If-it-fails gets '; R8.2 is tier 2 (main §4.5, drop item 6)' appended. OD-R11 -> 'a refit only under RG11 and only if tier 2 is funded'. OD-R12 -> '0.6B loop only under RG15 and only if tier 2 is funded'. OD-R17 -> 'Reduction level chosen by RG18 from r1b_P0's rates before the freeze (main SG7).'",
+    "Verification: comparing all quoted strings before and after shows that the only verdict, label or code strings that changed are the requested ones ('not run (tier 2)' -> 'not run (RL2)', 'NA:not_run:tier_<t>' -> 'NA:not_run:RL<k>', plus the added 'not run (tier 2 not funded)', 'NA:not_run:tier2_unfunded' and 'NA:not_run:session_failed_twice'). All rules and thresholds are otherwise unchanged."
+   ],
+   "not_applied": [
+    {
+     "edit": "None of the 15 listed edits failed; all were applied. The entries below are remaining differences from the main plan that the edit list did not cover. I left them unchanged and report them for the coordinator.",
+     "why": "Not requested, and not a rename or move, so changing them would go beyond the edits and the allowed consistency fixes."
+    },
+    {
+     "edit": "Observation: RG4's row in R.4 has no '(= SG4 for R's files)', which main §3.2 shows for it.",
+     "why": "Edit 4 annotated only RG1, RG2, RG3, RG16 and RG17."
+    },
+    {
+     "edit": "Observation: RG10's If-it-fails cell lists only R's own consequence. Main §3.2 also lists 'label on K's lens-side statements at b'.",
+     "why": "R.1 (ii) now states this label. RG10 was not in the edit list."
+    },
+    {
+     "edit": "Observation: part R's own labels 'confirmatory (Holm)' / 'exploratory (Holm not met)' (R.1, R2.4, R9.3) differ from main §0.4's round-level 'confirmatory (<CF family>)'.",
+     "why": "Main §2.4 has r1b_ana add the round-level label, so both labels can coexist. Renaming R's labels was not requested."
+    },
+    {
+     "edit": "Observation: the new R3.1 bullet says 'Every calibrated push's damage is also evaluated once on REF-K16', but main §4.2 costs REF-U32 reporting (4.0 min) only inside r1b_R_S2_*, _S3, _S6 and _S7. R5.3's calibrated pushes (r1b_R_S5) and R8.2's 0.6B pushes (r1b_R_S8) are not in that list.",
+     "why": "I inserted the bullet verbatim as instructed. The coordinator may want to narrow the bullet's wording or extend main §4.2."
+    },
+    {
+     "edit": "Observation: R.1's member p-value rule says '(gate failed, not decidable) has p = 1', whereas main §2.4 says '(gate failed, not decidable, not run)'.",
+     "why": "'Not run' is covered by 'not reached' in R.1. No edit was requested."
+    }
+   ],
+   "other_fixes": [
+    "'R-ana' (2 occurrences, in the 'Runs in' lines of R2.3 and R2.3b) -> 'r1b_R_ana'. It is the same session as R-Sana but was not on the rename list.",
+    "Reduction-tier mentions outside the listed locations were renamed, following main OD-M21 ('everywhere in part R'): R3.3 'under tier 1, 2 or 3' -> 'under RL1, 2 or 3'; R5.2 and R5.3 '(10 under tier 2)' -> '(10 under RL2)'; R5.4 '200 texts under tier >= 1' -> '200 texts under RL1 or RL2'; R6.1 'under tier 1; dropped under tier 2' -> 'under RL1; dropped under RL2'. In the R.5 Budget argument: '14.8 h at tier 0, 13.1 h at tier 1 and 12.3 h at tier 2' -> 'RL0 / RL1 / RL2', and 'RG18 picks the tier from R-P's measured rates' -> 'RG18 picks the reduction level from r1b_P0's measured rates (P0-R items)'. RG18's Gate and Condition cells: 'Reduction tier' / 'smallest tier' -> 'Reduction level' / 'smallest reduction level'.",
+    "cost_R2.py really reads an environment variable named TIER (its line 5), so the name was kept. The Arithmetic sentence now reads '(GEN_SCALE and TIER as environment variables; TIER k selects RLk)'.",
+    "R.0 Budget: 'is fixed in the frozen plan' -> 'is fixed in runde1b_freeze.json (main SG7)', to match the edited RG18 cell (the level now lives in the freeze record, not the plan text).",
+    "R.5 table pilot row: 'R-P (declared engineering pilot, before the freeze)' -> 'r1b_P0 (P0-R items; was R-P; declared engineering pilot, before the freeze)'. This keeps R.1's new phrase 'R-P's list' resolvable. In the same row, 'throwaway prompts' -> 'SO-PILOT material (main §2.3)', because main §2.3 lists R's 'throwaway prompts outside P256' as a local name replaced by SO-PILOT. The row stays in account B, as main §4.2 requires for r1b_P0.",
+    "R.5 Order wave labels aligned with main §4.2: item 3 'Then r1b_R_S3' -> 'Then r1b_R_S3 (wave 3)'; item 4 'Wave 3:' -> 'Wave 4:'. In main §4.2, r1b_R_S3 is wave 3 and r1b_R_S5, _S6, _S7 are wave 4, and R.0 now defers waves to main.",
+    "Headings that pointed to R.2's old 'Shared objects' category: R2.1 '(shared objects)' -> '(R.2 objects; AX-1b is part of main SO-AX)', since main §2.3 keeps P256 in part R; R3.1 '(shared object; calibration table)' -> '(part of main SO-DMG; calibration table)'.",
+    "Inputs lines updated for the new cross-part reads: R3.1 adds 'REF-K16 token ids (part K's K1, frozen before the freeze; for the REF-U32 report only)'; R5.1 adds 'k4j.json (K4j's index convention, r1b_K_S1)'.",
+    "Cosmetic: re-joined a line I had split in the R.5 'Arithmetic' sentence. Inserted label strings such as 'J-lens not valid at b (R5.1)' are kept on one source line so they can be found verbatim."
+   ]
+  },
+  {
+   "part": "D",
+   "file_written": true,
+   "applied": [
+    "C1 pilot: D.2 Pilot bullet's first line replaced by \"Pilot: D's items are the P0-D items of the round's single engineering pilot r1b_P0 (main §4.2), on SO-PILOT material; engineering numbers only.\" D.19 'pilot share' row deleted. D.18 G-PIL: # column -> 'G-PIL (= main SG7, D's part)', Decided in -> 'r1b_P0 / freeze record'. D.0 Budget bullet now says the pilot is in r1b_P0.",
+    "Budget numbers (main §4.3): in D.0 Budget and D.19 Total, '341 raw A100-min; ... 9.03 A100-h' replaced by 'tier 1 (main §4.3): 321 raw A100-min (D5-x moved to tier 2), 8.44 A100-h incl. a 5-min I/O allowance in r1b_D_ana; tier 2: D5-x 0.50 h and the reserves R1-R3 1.98 h in r1b_D_R; the pilot is in r1b_P0'. In D.0 the word 'central' stays next to 8.44. In D.19 'with margin and setups' is kept and 'pilot share' dropped. Scenario figures in D.0 and D.19 labelled '(incl. the former pilot share and D5-x)'. In D.19 '(cost_final.py)' moved onto the Scenarios line, since that script produced those figures. Trim-order intro keeps '<= 9.0 A100-h' and adds 'now counted without the pilot and with D5-x only if funded. T1 applies to the funded D5-x and the tier-1 trims are T2-T8 (main §4.5)'.",
+    "D5-x tier 2: D.16 Runs in now reads 'D5-x: <= 20 raw min (cap); tier 2 (main §4.5, drop item 10): runs at the end of r1b_D_C only if funded at the freeze; otherwise 'not run (tier 2 not funded)''. D.19 r1b_D_C row: 'D5-x (<= 20; tier 2)', raw minutes 116.4 -> 96.4 (tier 1).",
+    "Accounts (C23, OD-M29): in the D.19 table, r1b_D_B -> A (input-free) and r1b_D_C -> A (input-free). r1b_D_A stays B. r1b_D_ana stays A and now reads 'SO-AX and TV, and r1b_D_A via dsse_runs_B, main §2.2'. Runs-in lines: D2 'account B, input-free' -> 'account A, input-free'; D3 'account B' -> 'account A, input-free'; D4 and D5, which named no account, now say '(account A, input-free)'. D1 stays account B. Reserves rule replaced: 'each runs only if tier 2 is funded (main §4.5, drop items 7-9; priority R1 > R2 > R3), in session r1b_D_R (account A, after r1b_D_ana, which decides R2's trigger)'.",
+    "Axes (C3, C4, OD-M4, OD-M6): D.2 Axes bullet replaced by the SO-AX text (AX1's u_T_perp(14); U*'s u*_14 = r2_q2/theta/b14_q0.pt['u_star'] delivered by r1b_R_S0; AX-1b's u_T^v(14) from r1b_R_S2_14). D2-f now runs on u in {u_T_perp(14), u*_14, u_T^v(14)}, with u_T^v(14) as the 1b comparison with R6.2. D2 Inputs line now reads 'SO-AX (u_T_perp(14), u*_14, u_T^v(14)); TV blocks.14.R6.cells'. The D.19 r1b_D_ana row says it also starts after r1b_R_S0 and r1b_R_S2_14 (main §4.2).",
+    "Filler corpus (C15): '(shared with part K's lens corpus if K pins one)' -> '(main SO-WT103: one pinned WikiText-103 revision; part D uses the train split, first in file order; part K uses the validation split, part L the test split)'. The Source line now ends '..., train split (CC BY-SA 3.0)'.",
+    "Keys (C19): 'r1bshuf' -> 'r1bD_shuf' (D.2) and 'r1bINJ' -> 'r1bD_INJ' (D.3). D.3 Keys gains a first sub-bullet: \"Registered prefix 'r1bD' (main §2.3 SO-KEYS).\" All D tags now match the main SO-KEYS registry row.",
+    "Gate names (C18, C28): G-DEG -> G-DGN at all 6 places (D.14 label and Gates line, D.15 controls and Gates line, D.16 Gates line, D.18 row). G-deg(L) and G-deg are unchanged (10 occurrences). D.18 G-H row: # column -> 'SG8 (main §3.1)', Condition -> \"K's G-K2 preview from r1b_K_S1 exists and passed when r1b_D_A starts (never waited for)\". Note added under D.18: 'G-LCE-2 is main SG9 and applies to every part.'",
+    "LCE (C13): heading -> 'LCE = main SO-LCE (owner D; used by part K up to 4,096 tokens and by part L's L2a up to 32,768)', followed by the gloss 'the long-context engine'. New sub-bullet after 'Parity gates ...': per-layer crop after a stopped read (K's and R's rule; D uses none), per-use tolerances (D: G-LCE-1..4; K: G-K20; L: G-L2a-LCE), and r1b_D_A's G-LCE-1 / G-LCE-2 records as a start condition of r1b_L_B (main SG9).",
+    "Optional H covariate (C28): the condition now reads \"if main SG8's preview (K's G-K2 from r1b_K_S1) has passed and SO-HN's files exist when r1b_D_A starts (never waited for)\". Added: 'the H set is SO-HN's H_op and the channel is SO-CHH', moved to the end of the sentence for grammar.",
+    "D.17 qualifiers (C22): appended part L's L4 catfish string ('competitor sustains the stance (catfish)' / 'competitor captures or dilutes the stance' / 'no catfish effect') and L4's 'two entities persist' (two separate agents; main C22), plus 'They never change the combined string.' I checked the strings against part_L.md L4.",
+    "D.3 Multiplicity (C26): appended 'The D.17 Holm family is the round-level confirmatory family CF-D (main §2.4); every other D rule is exploratory at the round level. One-sided bootstrap p = (1 + #replicates on the null side) / 2,001 (main SO-PVAL).'",
+    "SO-D1STIM (C17): new D.2 bullet after PROBE with the given text. D.5 Stimuli now notes that d1_stimuli.json is main SO-D1STIM (D.2), whose F-sym items 0-31 are also part L's L4 items.",
+    "Time guard (C27): 'with a time guard well inside 5 h' -> \"with the round's time guard (main SG5: stop after the step that ends at >= 4.5 h; ...)\". The existing note 'largest r1b_D_A, about 3.4 h with margin' moved into the same parentheses."
+   ],
+   "not_applied": [],
+   "other_fixes": [
+    "D.19 table derived hours made consistent with the edited raw minutes and main §4.2/§4.3: r1b_D_C 2.99 h -> 2.49 h (tier 1); r1b_D_ana 0.46 h -> 0.54 h (incl. a 5-min I/O allowance). The table now sums to 321 raw min / 8.44 A100-h.",
+    "Stale reference: D.19 'R1 axes enter only in r1b_D_ana' -> 'the SO-AX axes enter only in r1b_D_ana' (D no longer reads R1.state).",
+    "Shared-object names (main §2.3's 'local names replaced' column): 'the H-neuron set (part K)' -> 'the H-neuron set (main SO-HN; part K)'. 'Round-2 turn machinery' tagged '(= main SO-TURN; ...)'. INJ tagged 'main SO-GVRA, §2.5'. Keyed Gumbel decode tagged 'main SO-KEYS'. D.2's two-level bootstrap tagged 'main SO-PVAL'.",
+    "Tier labels (main §0.3, §2.5, §4.2): D5-x marked 'tier 2' in the D.0 list, the D.16 How definition and the D.17 qualifiers. The D3 unexpected-mode naming marked '(reserve-funded: tier 2, main §2.5)'.",
+    "Session names: D.18 G-M / G-M2 'Decided in' changed from 'A / B' to 'r1b_D_A / r1b_D_B', because 'A / B' now reads like account names. The D.17 L4 qualifier says it is attached in r1b_ana, not r1b_D_ana (main §3.3).",
+    "Line-wrap only: two lines I lengthened were rewrapped to the file's 128-column width. No quoted string was split across lines.",
+    "Automated check: every quoted string and numeric token in part_D.md is still present, except those the edits remove on purpose: the old 341 / 9.03 / 116.4 / 2.99 / 0.46 figures, the 9.5-h reserve rule, the R1.state 'dir_<L>@1.5_4' / 'u_T_perp' keys, the mode_set signs (+1, +1, -1, -1, -1) and 'r1bshuf'. The source part_D.md is unchanged.",
+    "FLAG for the coordinator, no change made: SO-WT103's train-split allocation (main §2.3) names only D's 16 filler streams. D1-d's two 128-token reference passages ('never used as filler') and G-D6's 16 validation passages come from that corpus but are not allocated explicitly. They stay disjoint from K's 1M-token reference only if D's frozen script takes them inside D's first block."
+   ]
+  },
+  {
+   "part": "K",
+   "file_written": true,
+   "applied": [
+    "Copied part_K.md to /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan_teil_K.md and edited it with the Edit tool only.",
+    "Sessions renamed. 'K-S0' became 'r1b_P0 (P0-K items)' in K0's 'Runs in' line and in the K.8 row. K-S1, K-S2a, K-S2b, K-S3, K-S4, K-S5, K-S6, K-S7 and K-ana became r1b_K_S1 ... r1b_K_ana everywhere: K.5 'Runs in' lines, K.6 'Decided in', K.8, RK-1, RK-2 and the r1b_K_ana heading. No old name is left.",
+    "D1/D2 replaced by delta1/delta2. K.0 now reads 'delta1 = 0.05 nats and delta2 = 0.15 nats (main SO-DMG)'. Also changed: the RS20 line, K3f, K6e (PUSH, descriptive arms, TOK+KV, RS20, bistability, offset invariance, 'beyond delta2'), K10a doses and horizons, and K.8 drop item 6. K2's diagnostics are now Dg1, Dg2, Dg3, Dg5. The K2 stability switch says 'median Dg2 Jaccard'. K.6 G-K22 said only 'median Jaccard ≥ 0.5' and now says 'median Dg2 Jaccard ≥ 0.5', as in main §3.2.",
+    "'k1bK_' replaced by 'r1bK_' in all 11 places. K.11 now reads keyseed('r1bK_<tag>', ...) (main SO-KEYS; registered prefix 'r1bK_').",
+    "SO-AX block replaced by 'SO-AX (main §2.3; owner R)' plus the given read and KS-axes text. Axis names changed: K9 channels to u_T^v(14), u_sea^v(14) (AX-1b, perp*); K10a sources to unit(u_T^v(14)), unit(u_sea^v(14)) and target to unit(u_T^v(18)); K7b and SO-CH to u_T^v, u_sea^v (AX-1b at 6, 14, 18). G-K11 row rewritten as given (gate, reads, condition, fallbacks). r1b_K_S5 'Starts after' now adds r1b_R_S0, r1b_R_S2_14, r1b_R_S2_18 (account A).",
+    "SO-DMG heading changed to 'SO-DMG (main §2.3; owner R; K owns REF-K16 and NSCALE_DN)'. 'DMG_K' became 'REF-K16 (= DMG_K)'. The merge note was replaced by the REF-U32 reporting text (3.0 A100-min in r1b_K_S2a). K1 How gained the REF-K16 bullet (frozen as token ids before the freeze, main SO-DMG).",
+    "SO-LCE block replaced by 'SO-LCE (main §2.3; owner D; K uses ≤ 4,096 tokens)'. It states that the per-layer crop is part of SO-LCE and that G-K20 keeps its tolerance (< 1e-4; Gumbel flips ≤ 1 %).",
+    "K2: screening now runs until CC ≥ 2,312 and CI ≥ 1,800, or 15,000 questions. Allocation adds S_L 600 CC + 600 CI (main OD-M8; never used for selection or for choosing C). Cap order is now S_L, then S_sess, then S_lens. 'Runs in': screening ≤ 15,000 × 10 is 19.2 min work (6.4 of it for S_L, charged to part L); K2 is now 67.2 A100-min. K1's TriviaQA pool is ≤ 15,000 and is allocated to S_fit, S_lens, S_sess and S_L. SO-LAB's S1 now lists S_L (part L).",
+    "K4 now has 150 wrong items, both in the matching sentence and in the fallback. The gating export to SO-LAB (part L, main OD-M9) was added. K4 'Runs in' is 43.0 A100-min (+1.0 for 22 wrong items, charged to part L). K6d MDE says '(150 wrong items)'. V8 and the decoding grid stay at 128 correct items.",
+    "SO-HN 'Files' bullet now ends with the Dg2 boot sets, H+ order, H_op definition and the r1b_hn.py importable functions.",
+    "SO-GEN/SO-FD heading replaced with the SO-LENSOUT field mapping text. SO-GVRA heading now reads '(main §2.3; owner K; also used by R5.5, D3, D's INJ, L's X5)'.",
+    "K.6: 'G1, G2' became 'SG1, SG2 (main §3.1)'. 'G-K24' became 'SG5 (main §3.1): stop after the step that ends at ≥ 4.5 h'; its condition now reads 'elapsed < 4.5 h since the notebook's first cell at the end of a step'. K.8 session hygiene now says 'the round's 4.5-h time guard (SG5)'.",
+    "K.4: paragraph on round-level confirmatory families added after the Families table (CF-K-attr = Q9; CF-K-link = the seven A+ members, Holm with p_IUT; K8c in CF-HERR; the rest exploratory). K.7 'Always appended' gained the round-level confirmatory | exploratory item (main §2.4) and the R5.1 label 'J-lens not valid at b (R5.1)'.",
+    "K4j rule now ends with: the chosen convention is SO-JLENS's convention for the round; R5.1-R5.3 read it from k4j.json, a start condition of r1b_R_S5.",
+    "K.8 table: the K-S0 row is now 'r1b_P0 (P0-K items) | ... | K0 → P0-K items of r1b_P0 (main §4.2; 19.0 min moved to the pilot budget)'. The 'Planned total ... 527 min = 8.78 A100-h' row became a 'Tier 1 (main §4.3)' row with the given text (508.0 + 10 = 518.0 of K's own, 8.63 h; 531.6 min, 8.86 h in K's sessions; tier 2 RK-1 0.97 h, RK-2 0.88 h). The budget argument now says RK-1 and RK-2 are tier 2 (main §4.5, drop items 13 and 1), run only if funded, and RK-1 only if G-K5 is not 'calibrated'. RK-1 and RK-2 'Condition' lines now say tier 2 and funded; the 9-h budget clauses were removed. RK-1 'Runs in' is r1b_K_S6 (account A, after r1b_K_ana, which decides G-K5; main C32). The G-K16 compensation rule is unchanged.",
+    "r1b_K_S2a 'Starts after' now ends with '; r1b_xfer_A/dmg_ref_R16.json present (from r1b_R_S0)'."
+   ],
+   "not_applied": [
+    {
+     "edit": "SO-AX edit, location 'K.5 KS-axes (in K-S5)'",
+     "why": "K.5 has no KS-axes block; KS-axes appears only in K.8's per-measurement table. The change was made in K.3 SO-AX, in the K.8 r1b_K_S5 row ('SO-AX package read and check (KS-axes)') and in the per-measurement row. Minutes stay at 1.9."
+    },
+    {
+     "edit": "D1/D2 -> delta1/delta2 in 'K.3 SO-DMG'",
+     "why": "Part K's SO-DMG block contains no D1 or D2, so there was nothing to replace."
+    },
+    {
+     "edit": "Flag outside K's edit list: SG8 preview",
+     "why": "Main §3.1 SG8, §4.2 (r1b_K_S1 '; SG8 preview'), §5, C28 and OD-M25 expect r1b_K_S1 to publish an in-session preview of G-K2 for parts D and L. Part K never defines this preview (G-K2 is decided in r1b_K_ana). I did not add it because that would be new content; it is left for the coordinator."
+    },
+    {
+     "edit": "Flag outside K's edit list: axes for K7a in account B",
+     "why": "K7a runs in r1b_K_S4 (account B) and uses SO-CH's named subspaces: u*_b, u_T^v, u_sea^v at blocks {6, 10, 14, 18, 22}. No AX-1b axis reaches account B (SO-XFER carries only REF-R16 and u*_b). r1b_K_S4 does not wait for r1b_R_S0. u_T^v and u_sea^v exist only at 6, 14, 18 (and at R5.1's lens blocks). The problem predates this edit (the round-1 axes were also account-A only); not changed."
+    },
+    {
+     "edit": "Flag: RK-1 trigger wording",
+     "why": "RK-1's Condition keeps K's exact rule: G-K5 'self-rollout differs from the native chain lens' or 'calibration undecided'. The budget sentence from the edit, like main §4.2, says 'G-K5 not calibrated', which also covers 'not decidable'. The two are not contradictory, because 'only if' is a necessary condition, but they are not reconciled."
+    },
+    {
+     "edit": "Flag: G-K11 failure branches",
+     "why": "The new condition requires 'SG10 passed', but the given 'If it fails' text has no branch for the case where the package is present and SG10 failed. Main SG10 says that case gets the label 'SO-AX reproduction failed' and the round-2 file stays canonical. I applied the edit text verbatim."
+    },
+    {
+     "edit": "Note: K6d MDE value",
+     "why": "As instructed, only the item count changed to 150. The value d_z ≥ 0.22 was computed for 128 items and stays as it is (conservative)."
+    }
+   ],
+   "other_fixes": [
+    "DMG_K became REF-K16 at its remaining uses: the K.0 damage definition ('on REF-K16 (main SO-DMG)'), K2 random-set matching, the K4 V8 calibration, the K6e push calibration and K6e Inputs. Main §2.3 lists 'DMG_K' among K's local names that are replaced.",
+    "K.3 heading now says part L reuses SO-HN, SO-LAB, SO-CHH (from SO-CH) and SO-LENSOUT (from SO-GEN and SO-FD), main §2.3. This matches the new SO-GEN heading; the old list (SO-CH, SO-GEN, SO-FD) contradicted it.",
+    "K.3 'SO-LENS' heading renamed 'SO-CL and SO-JLENS', with the ownership split from main §2.3 (main lists K's 'SO-LENS' as a local name). The bullets are unchanged.",
+    "'SO-STAT and SO-KEYS' now notes that SO-KEYS is main §2.3's registry. The K.4 'Report hygiene' heading now points to SG6 (main §3.1), which replaces K's hygiene rules.",
+    "K0: 'Gates G2' became 'SG2 (main §3.1)'. Inputs now say 'SO-PILOT material only': K0 moved into r1b_P0, and main SO-PILOT gives K0's 8 code-check texts as WikiText-103 train passages, not validation. K2 gates 'G1, G2' became 'SG1, SG2'; K5a gate 'G2' became 'SG2'.",
+    "K6f 'all 384 items' became '384 items (the 256 correct and the first 128 wrong items)'. K4's set now has 406 items; K6f's design, MDE and minutes are unchanged.",
+    "K6e 'Unit doubling, if triggered: +21 min (reserve)' became '(tier 1, in session; compensated as in K.8)', so it is not read as tier 2.",
+    "K.8 session rows now match main §4.2: r1b_K_S1 81.6 work / 126.4 planned (S_L screening noted); r1b_K_S2a 58.8 / 92.2 (gating export, 150 wrong items, REF-U32 reporting listed); r1b_K_ana 43.0 including the 10-min I/O allowance. The r1b_K_S5 content now says 'SO-AX package read and check (KS-axes)'. The Conditional row has tier labels (G-K16 tier 1; RK-1 r1b_K_S6 and RK-2 r1b_K_S7 tier 2). The rows sum to 531.6 planned (325.7 work), which matches the Tier 1 text.",
+    "K.8 per-measurement table: K0 marked 'P0-K items of r1b_P0; pilot budget'; K2 67.2 (9.6 of it for S_L); K4 43.0 (1.0 of it for part L); KS-axes annotated; Setups annotated (4 min of it for K0 in r1b_P0).",
+    "K.8 budget argument: 'Planned: 8.78 h' became the tier-1 figures (8.63 h of K's own, 8.86 h in K's sessions, main §4.3). The drop-order trigger now names the pilot as r1b_P0 (SG7, main §3.1)."
+   ]
+  },
+  {
+   "part": "L",
+   "file_written": true,
+   "applied": [
+    "1 Session renames. L-A -> r1b_L_A and L-B -> r1b_L_B in L.POP, the corpus line, every 'Runs in' line (L1, L2a, L2b, L2c, L2 total, L3a-L3d, L4, L5, X1-X6), the L.8 table and Order. L-P -> 'r1b_P0 (P0-L items)' in L.8 Order; L0's 'Runs in' line follows its own edit. The L-P row is deleted. L.8's r1b_L_A Account is now 'B'. The budget preamble now holds the first mention of L-ANA, so the expanded form 'L-ANA (a step of r1b_ana, CPU runtime, account A)' sits there; later mentions are plain 'L-ANA'.",
+    "2 L.1 'From part K'. All 12 K.* names replaced with the given main IDs: SO-HN.H_op, SO-HN.H+, the new P rule (incl. the H_ar / SG8 sentence and 'report H_tq too whenever P is an H+ set'), SO-HN boot sets, SO-LAB, hook manager, selector, random-set generator, SO-CHH, SO-HN REF-W, SO-LAB's gated A-lens pool items, SO-LENSOUT (with the field mapping) and SO-GVRA. All bracketed pre-merge K names and the 'K-lean / K-mechanism' opening sentence are deleted. L.6 'K.HSET as P' -> 'H_op as P'.",
+    "3 L.1 'From part D' / 'From part R'. D.LONGCTX -> 'SO-LCE (main §2.3; owner D)' with the given single-sentence text, ending 'Parity for L2a is gated by L's own G-L2a-LCE ...'. The D.LONGCORPUS bullet is deleted and its fallback is now 'L.LONGDOC (main SO-LONGDOC; owner L; primary)', kept in place under 'From part D'. D.FORK-F1 -> SO-D1STIM F-sym items 0-31; the 'L-built' sentence is deleted. R.DMGPUSH -> the given SO-DMG label. R.AXES -> 'SO-AX's u*_14 (U*, from r1b_xfer_A/so_ax_ustar.pt)'. L2a Documents and L2 inputs now read 'L.LONGDOC' and 'SO-LCE'.",
+    "4 S2 -> S_L and S1 -> S_fit wherever they mean K's splits: L.1 split text and fallback, SEL+ / UNC+ rows, L1 Data, Rot, (ii), (iv), (vi), (vii) Items, Null / controls, Inputs, L.R-A families, L2 inputs, and '64 held-out S_L answers'. FAB -> 'NE (FAB)' at the first mention per section (L.1 'K's 300 NE items (FAB)', L1 Data, L.R-A F-fab, L3b Prompts); later mentions stay 'FAB'.",
+    "5 L0. 'How' is replaced by the P0-L / SO-PILOT text. The quoted span covered by the edit's '...' ('A100-40GB, fp32, TF32 off, memory-efficient SDPA asserted') is dropped with it; numerics are still set by L.2 and the GPU by SG2. (iii) now reads '... at 16k and 32k (measured once in r1b_P0 for parts D and L, with and without down_proj hooks)'; I dropped the leading 'with down_proj hooks' so it does not contradict 'with and without'. (vii) is added. 'G-pilot' -> 'SG7 (L's part)' in Rule and Gates. 'Runs in' -> 'r1b_P0 (10 A100-min of its work)'.",
+    "6 L2a. 'G-LCE:' -> 'G-L2a-LCE:', with the OD-M14 sentences added verbatim. Gates line -> 'SG9; G-L2a-LCE; G-MI; G-cal-L2 (f)'. The L.9 row is split into the SG9 (main §3.1) row and the G-L2a-LCE row ('L2a halted (subject to OD-M14)').",
+    "7 G-M -> G-ISM at every occurrence: L3c (iii), the 'G-ISM model check' heading, 'static: G-ISM passes', 'not Ising-modellable ...: G-ISM fails', the L3c Gates line and L.9. G-MI is untouched.",
+    "8 L.9 'G-H (K)' row -> 'SG8 (main §3.1)' with the given definition; effect unchanged. G-H -> SG8 in every Gates line (L1, L2b, L2c, L3a, L3b, L3c, L3d, L5 gates, X1). L.9 'G-pilot' -> 'SG7 (L's part)', condition unchanged.",
+    "9 L.R natural-position control -> '200 frozen WikiText-103 test-split passages (main SO-WT103; disjoint from every part-K text by split)'.",
+    "10 'L5 runs in' -> 'r1b_L_B, 3.1 A100-min of generation plus 0.33 min of work for the 6 extra gating samples (OD-M9)'. L.8 table: r1b_L_A work 109.9, planned 168.9; r1b_L_B work 75.4, planned 117.2, and its content now includes L5 generation. Order bullets replaced with the given r1b_L_A, r1b_L_B and L-ANA (in r1b_ana) start conditions.",
+    "11 L5a corpus (406 items; q = s = 0..12 primary, 13-16 descriptive) and M_i (i) (5 + 6 gating answers with keys ('r1bL5', 'GATE', i, s)) replaced. L5b MDE replaced ('stated, not changed'). L5c How now uses 600 items (406 + 194 gated pool items, A-cal excluded). The Overlap bullet is replaced by 'Relation to K8c ... CF-HERR ... side by side'.",
+    "12 CTRL99 row: 99 random sets from SO-HN's random-set generator with K2's matching rule and candidates keyseed('r1bL-CTRL', k).",
+    "13 L.2 Sampling and keys. Added 'Registered prefix 'r1bL' (main §2.3 SO-KEYS)', the key ('r1bL5', 'GATE', i, s), s = 1..6, and 'r1bL-SHUF' (L2a) in the seed list.",
+    "14 Budget. The preamble table is replaced, as bullets, by tier 1 (r1b_L_A 168.9 + r1b_L_B 117.2 = 286.1 A100-min, 4.77 h; plus 10.6 min in K's sessions = 4.95 h charged), tier 2 55.4 min (0.92 h), and 'The pilot L0 is in r1b_P0'. The L-ANA sentence was merged with its first-mention form: 'L-ANA (a step of r1b_ana, CPU runtime, account A) needs 0 A100-min'. The L.8 L-P row is deleted and the Total row restated in tier figures.",
+    "15 Tier labels. L.0 'Extensions' and the L.4 heading now carry '(round tier 2, main §0.3; main §4.5's drop items 2-5, 11 and 12 keep L's order X5, X4, X3, X6, X1, X2)'. The L.8 trim-order intro gains 'trims 2-5 apply to tier 1 only under main §4.5's proportional rule'.",
+    "16 L.5: the CF-L paragraph is inserted, as given, before 'Power of the combined verdicts'.",
+    "17 L4. Items -> SO-D1STIM F-sym items 0-31 (slot j = i mod 6, version-1 / version-2 values). Catfish carry and the entity-forming rule now say 'attached to D.17 as a qualifier (main C22)'. The same wording change is made in the L.6 catfish and 'zwei Entitäten' rows.",
+    "18 L.10 'From other parts by name' -> 'SO-HN (hook manager, selector, random-set generator), SO-LCE, SO-DMG (r1b_core's function-style damage and calibrate)', and r1b_L_cal.py (L-CAL generators) is added under New. L.2 Damage, the L3b descriptive u*_14 line and the L.8 time guard (SG5, 4.5 h) are replaced as given."
+   ],
+   "not_applied": [
+    {
+     "edit": "None of the 18 edits failed. Items below are outside the edit list and were left unchanged for the coordinator: L5a MDE still says 'G_F(known) about 0.03 (..., 300 items)'.",
+     "why": "L5a's corpus is now 406 items (256 known, 150 prone). The edits restated only L5b's MDE ('stated, not changed'), so L5a's MDE line stays as frozen."
+    },
+    {
+     "edit": "(outside the edit list) L.8 L-ANA row still says '0 A100 (about 30 CPU-min; about 0.3 h if run on an A100 VM)'.",
+     "why": "Main §8.2 drops 'L-ANA on an A100'. The clause reads as a cost note, not a plan, so I only changed the Account column (C29)."
+    },
+    {
+     "edit": "(outside the edit list) L.1 'Round-2 machinery reused unchanged' and L.10 still list r2_unlearn_qwen.calibrate and RefKL.",
+     "why": "Main SO-DMG puts the function-style version (equivalence-tested to 1e-6) in r1b_core. L.10's 'From other parts' line now names it; the reused-code lists were left as written."
+    },
+    {
+     "edit": "(outside the edit list) The L0 heading still reads '(core; engineering only, before the freeze)'.",
+     "why": "In main §4.2 r1b_P0's tier is 'pilot', not tier 1. L's own 'core' label (which also covers the CPU items L-CAL and L-ANA) was not in the edits."
+    }
+   ],
+   "other_fixes": [
+    "L1(vii) ablation list: 'P, and K.HSET / K.HSET+ if they differ from P' -> 'P, and H_tq / H+ if they differ from P'. This follows OD-M10's 'report H_tq too whenever P is an H+ set'; mapping K.HSET to H_op would drop H_tq after K's G-K22 switch.",
+    "Other K.* names outside L.1 renamed to their main IDs: L.0 (SO-GVRA), L.POP row, L.2 per-token channel (SO-CHH), the SEL+ / UNC+ rows ('the SO-HN selector on S_fit'; 'When P is an H+ set ... ordered as H+'), the boot-set row and the 'selection-robust' label, L0 Inputs, L1 Data / (ii) / (vi) / flags / Inputs / Gates ('the SO-HN selector's set on S_fit'), L2 and L5 inputs, L3c and X4 ('K.HSET+' -> 'H+'), L.9 G-CL (SO-LENSOUT) and the round-1/2 row (SO-AX's u*_14).",
+    "R.DMGPUSH -> SO-DMG also in L1(vii) and L3b (calibration); L4 Inputs -> 'SO-D1STIM (F-sym items 0-31); P and L.POP; SO-DMG; keys'.",
+    "G-H -> SG8 also outside the Gates lines: L1 flag, L2b rule, L5b rule. The L2a 'Runs in' breakdown item 'G-LCE 1' -> 'G-L2a-LCE 1'.",
+    "L.1 SO-HN.H+ definition: removed the duplicated 'capped at 200, ordered by selection frequency then |r|', since the new label says L applies the cap; the definition is now 'H plus every neuron with |r| >= 0.7 to a member on S_fit CETT'.",
+    "L.1 random-set generator: removed the contradictory 'matched ... in size, layer histogram and CETT-norm quintile or decile' and the now-redundant fallback, because L's seeds are primary (C12 / OD-M12). The text now says K's generator is called with L's own candidate seeds, independent of K's RS sets.",
+    "L.1 SO-CHH: removed the superseded sentence 'If K's merge leaves both ... standardised-z mean is primary and summed CETT is the sensitivity variant' (C11 / OD-M11). The formula of L's sensitivity variant, mean over X of (z_j - mu_j) / sigma_j, is kept outside the deleted bracket.",
+    "L.1 SO-HN REF-W: removed the pre-merge '(G_NEU / REF-W)'. The fallback passages moved from WikiText-103 validation to the test split (main SO-WT103), because validation is part K's only.",
+    "L.1 arithmetic items: '11 parsed gating answers' -> 'K4's 5 parsed gating answers per item (greedy and 4 samples at T 0.7; L adds 6, 11 in all, L5a)' (C8 / OD-M9).",
+    "SO-LENSOUT fields renamed in the L.1 sub-bullets and their uses: 'q = 0..S' -> 'steps s = 0..16 (L's chain position q = s)'; B_hal -> k*_conf (incl. L5a's descriptive line); FOV_H(q) -> share_H(s) (L5b lens-frame H, rho_w, the permutation null); 'K's random-set FOV band' -> 'K's RS39 band of share_H'. Main §8.2 drops B_hal, FOV_H and A_H.",
+    "L.2 tests: 'bootstrap share on the null side' now reads 'computed as (1 + #) / 2,001 by main §2.4's SO-PVAL' (C26).",
+    "L3b Prompts made explicit: '128 F-known from S_L CC + 128 F-fab from NE (FAB)', matching main §2.3's 'L's sets' row.",
+    "L.6: 'K's lens' -> 'K's lens (SO-CL; ...)'. 'Hierarchy is part K's (K5)' -> '(K9)'; in merged K, K5 is the native-MTP lens (K5a) and the hierarchy measurement is K9 (main §1).",
+    "L.1 and L.10: rk_loop keyseed / Gumbel now marked as SO-KEYS's verified copy in r1b_common (main §2.3, §6.1).",
+    "L.8 work table: L0 marked '(run in r1b_P0)'; L5 OWNER 3.1 -> 3.4 (adds 0.33 min for the gating samples); Sum 195 -> 195.3. Sessions table 'with ext' figures recomputed (r1b_L_A 195.7, 3.3 h; r1b_L_B 145.7, 2.4 h). L-ANA account 'CPU runtime inside the round-1b analysis session' -> 'A (CPU runtime; a step of r1b_ana)' (C29). Total row -> 'core 185.3 + ext 36.9 | tier 1 286.1 min (4.77 h; 4.95 h charged with the 10.6 min run in part K's sessions for L); tier 2 55.4 min (0.92 h)'.",
+    "Budget preamble: 'The total is about 0.6 h above the judges' estimate' -> 'The merged core as first planned (5.08 h, its own pilot included) was about 0.6 h above ...', because the old table that sentence referred to is gone.",
+    "Edited file: /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan_teil_L.md (1,415 lines; sha256 f058c3f65a36587cbe0e24ce0addb2321155ec0215b040234161cb7dcd4d0888 before the final StructuredOutput). The source part_L.md is unchanged."
+   ]
+  }
+ ],
+ "cons": {
+  "fixed": [
+   "Main §4.2 and K.8: added r1b_K_S4 as a start condition of r1b_K_S5. K9, which runs in r1b_K_S5, takes 'K8a instances, K8b and K8c texts' as inputs (K9 Inputs), and those come from r1b_K_S4. Main §4.4's account-B slot 1 is reordered to r1b_K_S1 -> r1b_K_S4 -> r1b_L_A -> r1b_L_B, so the 9-10 h wall-clock estimate still holds (r1b_K_S5 already waits for r1b_K_S2a at about 5.4 h).",
+   "K4 'Runs in' (K line 620): '43.0 A100-min (+1.0 for 22 wrong items)' now reads '43.0 A100-min (1.0 of it for the 22 extra wrong items...)'. This matches K.8's per-measurement table (K4 43.0, 1.0 of it for L) and the r1b_K_S2a total of 92.2.",
+   "K.6 G-K2 'Decided in' now also names the in-session preview by K3a's rule in r1b_K_S1, written with SO-HN's files. Main SG8, main §4.2 (r1b_K_S1 'SG8 preview'), D.2/D.18 and L.9 all rely on this preview, but part K never produced it.",
+   "Main CF-D (a): 'D1-a verdict 4 surviving its three checks' now reads 'D1-a verdict 4 without 'explained by' (D.17's support condition)'. The old text was stricter than D.17 and D.5, which also count the '(inconclusive on ...)' variants.",
+   "Main §2.3 SO-AX users, OD-M5 and C4: added u_sea^v(18), which K7b uses in its block-18 cells.",
+   "K7b channels: '(AX-1b at 6, 14, 18)' now reads '(AX-1b at 14 and 18, the blocks of the cells)'. K7b's cells are blocks {14, 18}, and G-K11 and r1b_K_S5 provide only AX-1b(14) and AX-1b(18).",
+   "Main §2.5: 'main §6.5's lint' now reads 'main §6.3's lint'. §6.5 does not exist; the inverse-free lint is in §6.3.",
+   "Main §2.2: 'Parts D, K and L read no round-1 or round-2 file directly' now names the exception that main's own table and §5 already list: r1b_D_ana reads TV's R6 cells for D2-f.",
+   "Main §2.2 A -> B transfer: removed the stale 'and, in tier 2, trigger files'. Since C32 moved r1b_K_S6 to account A, no tier-2 trigger crosses from A to B.",
+   "Main §2.2 round-1 input table, R1.state 'ref' row: added R5.1/R5.3 (cap_b, med_b, dmg_sym) and R6.1 (PUSH-DN), and the sessions r1b_R_S5 and r1b_R_S6. Both sessions read 'ref' (R5.1 How, R3.1 'Runs in').",
+   "Main §2.3 prompt and item sets, P256 row: declared the further reuse of round-1 prompts by D4's u_AA texts, D5's 32 starts and RSP pool, and 32 of K10a's texts.",
+   "Main §2.3 SO-PILOT and SO-LONGDOC: 'PG19 test books 25-28 in file order' now reads 'books 25-28 of SO-LONGDOC's ordered list of qualifying books'. The old wording could overlap the 24 analysis books whenever early books fail the 36,000-token criterion.",
+   "Main §2.3 'Objects that stay in one part': added K's SO-STAT. K.3 names it, but main did not list it.",
+   "Main §9.1 package files: 'the RSP pool' now reads 'the RSP pool's prompt list, instruction and keys (its texts are generated in session, D.16)'. The pool texts are Qwen output and cannot be frozen before the freeze.",
+   "Main §3.2, part L's G-twin row: noted that X1 names its part of this gate G-twin-X1, so every gate name used in the parts now appears in main §3.",
+   "Main §5, list of K in-session gates: added G-K-J, G-K7 and G-K11, which K.6 decides in r1b_K_S1, r1b_K_S2a and r1b_K_S5.",
+   "Main §2.5 table: corrected the R5.5 verifier (a read round trip of the candidate's own 64-prompt axis; there is no push) and the D3 mode-naming generator and reviser to match D.14.",
+   "Main §0.2: extended the list of strings that mean different things in different parts: R's round-1 indicators K1-s, K1-c, 'K2 halvings' and 'k5'; K's length mechanisms L1-L3 and 'L1 / L2 logistic'; L's reads R1-R3; D's reserves R1-R3.",
+   "Tier wording: 'likely (either tier)' now reads 'likely (either strength: RSI-dominated or substantial RSI component)' in main CF-R+, R.1 F+ and R.6. 'Positive tiers' in R2.3b and 'RSI tiers' in OD-R6 became 'likely strings' and 'margin levels', so 'tier' keeps only its round-level meaning (main C2).",
+   "K.12 provenance: 'GK7' now reads 'G-K7'.",
+   "Checked and consistent, no edit needed: every session named in the parts exists in main §4.2 with the same account and minutes. Tier 1 is 30.60 h (A 15.49, B 15.12); per part R 8.53, D 8.44, K 8.86, L 4.77. Tier 2 is 7.50 h (A 5.70, B 1.81); per part R 2.25, D 2.48, K 1.85, L 0.92. Each part's session arithmetic (1.5 x work + setup) reproduces its table. The keyseed namespaces cannot collide: the fourth character differs ('r1b_', 'r1b0', 'r1bD', 'r1bK', 'r1bL', 'r1bP'), and every tag the parts use is in main's registry. All OD-M and SG IDs cited in the parts exist in main."
+  ],
+  "open_issues": [
+   {
+    "files": "runde1b_plan_teil_L.md (X1, X2, L3 combined lines, L.4 header); runde1b_plan.md §0.3, §2.4 CF-L, §4.5 items 11-12",
+    "issue": "Two tier-2 extensions change tier-1 rules. X1 adds attractor route A3 to the L3 attractor line ('Holm over {A1, A2, A3}'). X2 adds the H-down arm to L4's H line ('Holm over up and down'). This contradicts main §0.3 ('where a part attaches a tier-2 result to a tier-1 verdict, it is a label only') and L.4's header ('none changes a core rule'). Main's CF-L member p for the attractor line covers only A1 and A2, and L's 'L3 combined lines' omit A3.",
+    "suggested_fix": "Either (a) make X1's capture and X2's down arm labels on the tier-1 lines, with no change to the core rule or its Holm family, and reword main §4.5 items 11-12; or (b) state both exceptions explicitly in main §0.3, and when X1 runs extend CF-L's member p to max(3 min(p_A1, p_A2, p_A3), 2 min(p_stick, p_pers)) and L's attractor-line rule to (A1 or A2 or A3).",
+    "severity": "medium"
+   },
+   {
+    "files": "runde1b_plan.md §4.2, §5, §4.4; runde1b_plan_teil_K.md RK-1, RK-2, K.8; runde1b_plan_teil_D.md D.19",
+    "issue": "Funded tier-2 results have no path into the round summary. r1b_K_S6 (RK-1) starts after r1b_K_ana. r1b_K_S7 (RK-2) is not a start condition of r1b_K_ana. r1b_D_R (D's reserves R1-R3) starts after r1b_D_ana. r1b_ana (wave 6) waits for none of them, and main §5 names no session that analyses or reports RK-1, RK-2 or R1-R3. Only R has r1b_R_ana2.",
+    "suggested_fix": "Add a final CPU step, for example a continuation r1b_ana2 in account A at wave 8, after every funded tier-2 session (r1b_R_ana2, r1b_K_S6, r1b_K_S7, r1b_D_R). It reads their outputs, computes the RK-1, RK-2 and R1-R3 strings (or reads in-session strings) and updates runde1b_summary.json. List it in main §4.2 and §5. Alternatively make r1b_K_S7 a conditional start condition of r1b_K_ana.",
+    "severity": "medium"
+   },
+   {
+    "files": "runde1b_plan_teil_K.md K.3 (SO-CH), K7a; runde1b_plan.md §2.3 SO-AX, §3.3, §4.2 r1b_K_S4",
+    "issue": "K7a runs in r1b_K_S4 (account B) on SO-CH's 'named subspaces at blocks {6, 10, 14, 18, 22}'. By K.3 these include u*_b, u_T^v and u_sea^v, with K.3 placing AX-1b at block 6 as well. r1b_K_S4 has no SO-AX input: no start condition, AX-1b is not exported to B, and G-K11 is checked only in r1b_K_S5. No K session's start conditions include r1b_R_S2_06, so AX-1b(6) is never available to K.",
+    "suggested_fix": "Limit K7a's named channels in r1b_K_S4 to the SO-AX-free ones (H-subspace, J-workspace, top-16 PCs), optionally plus u*_b read from r1b_xfer_A/so_ax_ustar.pt if that file becomes an r1b_K_S4 input. Change K.3 SO-CH '(AX-1b at 6, 14, 18)' to '(AX-1b at 14 and 18; SO-AX channels only in r1b_K_S5)', in line with main OD-M5 and G-K11, and add K7a's choice to main §3.3's SO-AX row.",
+    "severity": "medium"
+   },
+   {
+    "files": "runde1b_plan.md §2.3 SO-DMG; runde1b_plan_teil_L.md L.1, L3b, L1(vii), L4, X1",
+    "issue": "The damage-calibration rule for neuron gains differs. Main SO-DMG allows 'at most 6 evaluations for pushes and 8 for neuron scaling (K's NSCALE_DN: (alpha - 1) <- (alpha - 1) sqrt(target/damage))'. L.1 calibrates L's neuron gains (random-set alpha_(r,+-), L1(vii)'s lambda, C-Rup gains, X1 sets) with 'f <- f sqrt(target/damage), <= 6 evaluations' and does not say what f is. With f = alpha, the H- arm at alpha 0 cannot be matched.",
+    "suggested_fix": "State L's operator form in main SO-DMG and L.1, for example f = |alpha - 1| for gains and f = 1 - lambda for partial ablation, with <= 6 evaluations. Or have L adopt NSCALE_DN's form and its 8-evaluation limit.",
+    "severity": "medium"
+   },
+   {
+    "files": "runde1b_plan.md §2.5, §4.2, §4.5; runde1b_plan_teil_D.md D.14, D.19",
+    "issue": "D3's unexpected-mode naming (a SO-GVRA reconstruction, tier 2, 'reserve-funded, only if triggered', <= 5 raw min) has no session, no planned minutes and no drop-order position in main §4.2/§4.3/§4.5 or D.19. Main §0.3 says the tier of every item is in §4.2.",
+    "suggested_fix": "List it as a conditional tier-2 item in r1b_D_C or r1b_D_R (<= 7.5 A100-min with margin), add it to §4.3 D tier 2 and to §4.5's drop order (for example next to D's reserves), and give D.19 the same entry.",
+    "severity": "low"
+   },
+   {
+    "files": "runde1b_plan.md §4.1, §4.2 (r1b_K_S2b); runde1b_plan_teil_K.md K.3 SO-DMG, K4 V8, K6e, K3f, K10a",
+    "issue": "SO-DMG requires every calibrated intervention to report its damage on REF-U32. Only r1b_K_S1's calibrations have a located and costed report (3.0 min in r1b_K_S2a). K4's V8 beta (S2a), K6e's NSCALE_DN push to delta2 (S2b), and K3f and K10a (S5) have no stated report. r1b_K_S2b also lacks r1b_xfer_A/dmg_ref_R16.json as an input.",
+    "suggested_fix": "Cost these reports (a few A100-min) and add dmg_ref_R16.json to r1b_K_S2b's inputs. Or narrow SO-DMG's reporting rule to named interventions.",
+    "severity": "low"
+   },
+   {
+    "files": "runde1b_plan.md §2.3 SO-WT103; runde1b_plan_teil_K.md K3c; runde1b_plan_teil_L.md L.1 (REF-W fallback)",
+    "issue": "SO-WT103's split allocation misses two uses. K3c counts unigrams over 'the first 10M WikiText-103 train tokens', which overlap D's streams, K's 1M reference and the pilot passages. L's REF-W fallback reads '200 test-split passages x 512 tokens', but the test split is allocated only to L.R's 200 x 1,024 natural passages, which already use about 205K of roughly 0.28M test tokens.",
+    "suggested_fix": "Add both uses to SO-WT103: corpus-statistics overlap is allowed for K3c, and L's fallback reuses the first 512 tokens of L.R's 200 natural passages.",
+    "severity": "low"
+   },
+   {
+    "files": "runde1b_plan.md §4.4, OD-M25; runde1b_plan_teil_D.md D.2",
+    "issue": "Under main §4.4's packing, r1b_D_A starts at about 0.5 h (after r1b_K_S3), before r1b_K_S1 can deliver SO-HN and the SG8 preview (about 2.1 h). D's optional H covariate (OD-M25) will therefore never be computed.",
+    "suggested_fix": "Either state that it reads 'not run (H-set not available at start)' under the planned packing, or start r1b_D_A after r1b_K_S1 in B slot 2. Both B slots would still end within about 9 h.",
+    "severity": "low"
+   },
+   {
+    "files": "runde1b_plan.md §4.4",
+    "issue": "The suggested A-slot packing puts r1b_D_C (input-free, 2.5 h) after r1b_K_S5, which waits for r1b_K_S2a from B until about 5.4 h. Account A then ends at about 9.6 h (r1b_D_ana), and the stated critical path ('R's chain in A, about 5.6 h') is not the real one.",
+    "suggested_fix": "In A slot 1, run r1b_D_C before r1b_K_S5 and order slot 2's analyses as r1b_R_ana -> r1b_D_ana -> r1b_K_ana. Account A then ends at about 9.1 h. Restate the critical path accordingly.",
+    "severity": "low"
+   },
+   {
+    "files": "runde1b_plan.md §4.2, §4.3 (r1b_P0); runde1b_plan_teil_D.md D.2/D.19",
+    "issue": "r1b_P0's 68.2 A100-min cannot be traced to the parts: R 19.2, K 19.0, L 19.0, and D gives no minutes for its P0-D items (main's 0.17 h). That sums to 67.4, while merging the pilots should save setup time.",
+    "suggested_fix": "Give r1b_P0's composition (setups, the parts' items, shared items) in main §4.2, and give D's P0-D minutes in D.19.",
+    "severity": "low"
+   },
+   {
+    "files": "runde1b_plan_teil_R.md R.0, R.5 'Budget argument', RG18",
+    "issue": "R says its 11.03 h is 'within the 12-h envelope', while RG18 and main §4.3 use a 12.5-h cap. Two different ceilings are stated for part R.",
+    "suggested_fix": "State whether 12 h is the user's envelope and 12.5 h RG18's projection cap, or align both to 12.5 h.",
+    "severity": "low"
+   }
+  ],
+  "sizes": "After edits (bytes / lines): /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan.md 118,837 / 937 (was 117,632 / 932); /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan_teil_R.md 149,650 / 1,795 (was 149,460 / 1,794); /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan_teil_D.md 109,303 / 1,315 (unchanged); /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan_teil_K.md 121,780 / 1,500 (was 121,572 / 1,500); /tmp/claude-0/-home-user-DSSE/85db304a-b0fa-5d03-b685-f9acf8fac842/scratchpad/r1b/plan/runde1b_plan_teil_L.md 120,916 / 1,415 (unchanged). Total 620,486 bytes / 6,962 lines."
+ }
+}

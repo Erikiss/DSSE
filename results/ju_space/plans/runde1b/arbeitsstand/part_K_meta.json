@@ -1,0 +1,566 @@
+{
+ "designs": [
+  {
+   "key": "lean",
+   "total_a100_hours": 4.8,
+   "falsifiers": [
+    "K1: Gao's procedure finds fewer than 2 H-neurons in Qwen3-1.7B, or the set's held-out detection AUROC is not above 50 layer-matched random sets (interval of AUROC_H - mean_R not above 0.03): the '~0.1 % H-neurons' premise fails for this model.",
+    "K1e: 'question-level signal' (answer tokens add no AUROC beyond the last prompt token) or 'uncertainty proxy' (adds nothing beyond answer entropy): H is not a generation-time process that could sustain itself along a chain.",
+    "K3d: 'H adds nothing beyond length' (beta_H within +-0.10 per SD) or 'H predicts fewer breaks', or the lead/lag string 'H rise follows the break only': the chain lens's field of view does not correlate with H beyond length and uncertainty, or H is a consequence rather than a precursor of the break.",
+    "K6 row 3 'length artifact': no content effect (within +-0.05), no H lead, and H perturbations decay (all K_H upper bounds < 1, no within-item bistability): the user's own length-artifact alternative wins.",
+    "K6 row 4 'in-context conditioning, not an attractor': break-off depends on the chain's content (snowballing inside the lens) but H perturbations decay.",
+    "K4a/K4b 'generic persistence (not H-specific)': a perturbation persists, but damage-matched random neuron sets persist as much; no H-specific attractor.",
+    "K4c/K4d 'no causal effect on confabulation' / 'no clamp effect': pushing or clamping H at matched damage does not change later lens confabulation beyond random sets; H does not drive the break-off.",
+    "K2b 'length trend without trunk dynamics': the native-MTP chain lens on Qwen3.5-2B, whose chain steps never pass the trunk MLPs, breaks off with chain length like the calibrated CL-self, so the published length trend needs no trunk H-neuron dynamics.",
+    "K4e 'carry depends on context length': whatever persists is bound to length statistics, contrary to 'not bound to the statistics of length'."
+   ]
+  },
+  {
+   "key": "mechanism",
+   "total_a100_hours": 8.77,
+   "falsifiers": [
+    "GK1 'no H-set beyond random': no sparse neuron set in Qwen3-1.7B detects hallucination beyond 200 layer- and CETT-decile-matched random sets, so the H-neuron premise fails at 1.7B",
+    "K1 'pre-generation signal': H's answer-token features add < 0.02 AUROC beyond the last pre-answer token, i.e. H reads question familiarity or uncertainty, not a generation-time process the chain could drive",
+    "K7 T_L1 'length artifact (association)' or 'no association': H activity during rollouts does not predict the next confabulated number beyond chain step, entropy and evidence (or not beyond random sets)",
+    "K7 T_L2 'no H amplification' or 'H clamp effect not specific': mean-clamping H during rollouts does not reduce lens confabulation more than all 19 damage-matched random clamps",
+    "K6 k*_FOV 'FOV never H-dominated': the H share of the lens's logit evidence never exceeds the random-set 95th percentile at any chain step",
+    "Attractor criteria fail: kappa_H 'dissipative inside chains', K8b K_H 'dissipative H' (90 % upper bound < 1) and 'no within-item bistability', so 'no H-neuron attractor (dissipative)'",
+    "K8a 'length raises H at matched content' without any content effect at matched length: the H-length link is a length effect",
+    "K2 'sequential: token route dominates at lag 2' with no named source having a KV-route horizon beyond k = 1: the 'parallel channels' picture has no counterpart beyond the token sequence",
+    "K5 'depth order only' or 'not reordered' by prompt type, temperature and context length: the channel hierarchy is the trivial depth order and external conditions do not reorder it",
+    "K4 Q1 'arrows explained by depth and dimension' with every whitened same-channel D_c inside the stationary-surrogate band: the user's per-channel vector adds nothing beyond depth and the symmetry argument",
+    "K6 GK2 'lens reads no intermediates' or k*_info = 1 at all blocks: at 1.7B the chain lens carries nothing beyond its seed, so 'throughput' along the chain is degenerate",
+    "GK3 'self-rollout has its own length bias': the substitute lens's confabulation-vs-length slope differs from the native MTP lens on identical Qwen3.5-2B states, so any CL_17 length trend is partly a lens artifact"
+   ]
+  },
+  {
+   "key": "confounds",
+   "total_a100_hours": 7.9,
+   "falsifiers": [
+    "K6a: 'cumulative only (no per-step rise)' or 'generic rollout drift' at every block. The post's growth of confabulation with chain length is then cumulative chance or a property of the rollout, not of the read state.",
+    "K6b: 'length artifact (lens side)'. H-activity or the state H-share co-varies with lens confabulation only through chain step, entropy and difficulty.",
+    "K6c: '(i) no specific causal role of H in the rollout' and '(ii) no specific causal role of H writes in the read state' (clamp and ablation inside the RS39 band), together with K5b 'no specific role of H writes in native-lens confabulation' on Qwen3.5-2B.",
+    "K8c: 'length artifact (model side)'. H-activity does not predict the next exact error once step index, position, difficulty and entropy are conditioned on, or does not beat RS39.",
+    "K8a: 'pure length effect' or 'no length or content effect' on the teacher-forced H score. Filler, coherent and shuffled text of equal length shift H-activity equally.",
+    "K8b: 'no H-neuron attractor: dissipative carry K_H = x [lo, hi]' (upper bound < 1) with no within-item bistability; or persistence carried only by the text route (snowballing-like) and inside the RS39 band.",
+    "K3 premise failures: 'H-neurons not replicated (detection at random-set level)'; 'pre-generation signal (question familiarity or uncertainty)'; 'H is explained by uncertainty, rarity and length'; 'H-neurons encode over-compliance' or 'no specific causal role at this scale'. The H-neurons are then not a hallucination mechanism in Qwen3-1.7B.",
+    "K7a: 'no channel's arrow vector changes before errors', with same-channel forward/backward asymmetries vanishing after position detrending. The 'vector quantity' then carries no H-CHAIN signal.",
+    "K9: 'hierarchy not resolved' or 'hierarchy stable across conditions'. No external condition reorders the channels beyond depth order.",
+    "G-K4: 'chain lens does not read intermediates'. The lens premise fails at 1.7B, and lens-side break-off claims cannot be tested.",
+    "G-K5: 'lens substitute changes the length question'. Any lens-side length claim from the self-rollout is then not supported by the native chain lens."
+   ]
+  }
+ ],
+ "judges": [
+  {
+   "scores": [
+    {
+     "design": "lean",
+     "fidelity": 5,
+     "decisiveness": 8.5,
+     "confounds": 6,
+     "statistics": 8,
+     "feasibility": 7.5,
+     "completeness": 5,
+     "notes": "Strengths: the most pre-registrable part K. Every rule has fixed verdict strings. Every 'no effect' verdict is an equivalence bound: K3a 'memoryless' within +-0.10, K3b and K3c within +-0.05, K3d 'H adds nothing' within +-0.10 per SD, K4c both upper bounds < 0.04. MDEs are simulated (scratch_K_lean/mde_sim.py and bist_sim2.py; SD(K_H) 0.13-0.16 at d1 0.5). The attractor claim has an explicit family level (Holm at 0.04 over four carry cells plus 0.01 for bistability), and the random-set rank criteria sit outside Holm. Section 8 states what never counts against the hypothesis (undecided, underpowered d1 < 0.25, 'lens not validated'). In the K6 first-match table only persistence (K4a/K4b) can issue 'attractor', and 'in-context conditioning' and 'generic persistence' get their own rows. The lens-frame length analysis is the richest of the three: chain-step hazard; real digit-free filler offsets at 16/528/2,064 (no position gaps); content-matched forcing; lagged H against 50 random sets with ENT/CDM/TOP1/DIG covariates; a lead/lag string. K2b calibrates CL-self against a re-implemented native MTP lens by equivalence on the cumulative break-off curve and picks the variant by IAD. G-K-J checks the J-lens index convention. Facts verified with the pinned tokenizer: P16 is 16 tokens with exactly the listed ids; ' 12' -> 'Ġ','1','2'; ' and so on' is 3 tokens; the empty think block is 4 tokens. Weaknesses: fidelity is the lowest of the three. 'Channels' are scalar summaries (ENT, CDM, TOP1 and DIG are output statistics, not conduits 'wo die Token durchfließen'). The user's vector is reread as (lead, lag) relative to the break-off front, not front-to-front prediction. The hierarchy and its reordering by external conditions are descriptive only, so those parts of H-CHAIN cannot come out against anything. 'Gradient Through Routing' is declared to have no counterpart, although frozen-model cross-position Jacobians and VJPs exist (lit_chain verifier). There is no model-frame attractor and no length test of 'Halluzinationen im Allgemeinen' (H_model). Re-injection is ON in every primary, i.e. a push repeated at every chain step: a built-in length confound. The K4 push hits both contrastive streams; its shared part cancels in the CD score, so segment-1 token divergence (needed for the TOK-route E_1, the R6 primary) may be too rare to resolve. No null-state hazard profile separates rollout drift from the state's horizon. recall_any counts the final result, which is the next-token prediction at t*. B_hal is prefix-based, so it misses completed short confabulations that are prefixes of true values. There is no engineering pilot, and G-K-rope stops K-S1. Budget 4.8 A100-h with a stated half-rate sensitivity."
+    },
+    {
+     "design": "mechanism",
+     "fidelity": 9,
+     "decisiveness": 5.5,
+     "confounds": 7,
+     "statistics": 5.5,
+     "feasibility": 5,
+     "completeness": 9,
+     "notes": "Strengths: the highest fidelity. Every element of the user's text gets a measurement:\n- 'Gradient Through Routing / Durchrouten': the cross-position Jacobian, split into frozen-QK (OV, content along fixed routes) and re-routing (QK) parts, plus a head routing map from VJP edge attribution (K3).\n- 'der dritte Token ist nicht die Folge vom ersten': KV-only vs token-only carriage, with s_KV at lag 2 (K2).\n- 'Folge, nicht Reihe': a ruled comparison of chained vs direct (L-par, L-jac) readouts on the answer digits (K6f).\n- Channels: heads, residual directions and subspaces, neuron populations.\n- Hierarchy: reordering by prompt type, temperature and context length (K5).\n- The user's vector: token anticipation vs memory, plus interventional outflow vs inflow. The same-channel D_c is used only as a non-stationarity diagnostic.\n- 'Blickbereich': read literally as FOV_att (the attention share on the patched state), plus FOV_H.\n- The king-man-woman aside: a partial counterpart (the antisymmetric coupling W - W^T).\nRe-injection is OFF in every primary, with a stated reason (a cumulative push is a length confound). The cov-matched random-state null is good. The J-lens bridge perturbs all source positions at once, which fixes the lag-coverage problem the lit verifier raised. The attractor is tested both in the lens (kappa_H) and in model sessions (K_H, routes, within-item bistability), under one Holm family. S0_neu is 19 tokens (checked).\nWeaknesses: decisiveness and statistics.\n- Rank p against too few random sets is combined with Holm:\n  - K1 causal: 19 sets (minimum p 0.05), Holm over 8 tests at 0.10 (first step 0.0125).\n  - K7 T_L2: 19 sets, Holm over 2 (first step 0.025).\n  - K4 Q1: 200 random channels (minimum two-sided about 0.01), Holm over about 20+ channel x block tests.\n  If the rank p is the Holm p, these verdicts can never pass, and falsifier 10 ('arrows explained by depth and dimension') follows by construction. Separately, '90 % CI excludes 0' is inconsistent with Holm-adjusted levels.\n- The K2 lag-2 verdict is fixed by the dose: by the design's own Pinsker bound, at most 16 % of pairs diverge at 0.05 nats.\n- The K2 horizon null band at each block is built from 2 random directions.\n- Many falsifiers are absence-of-evidence defaults: T_L1 'length artifact' when the adjusted CI merely includes 0; T_L2 'no H amplification'; K5 'depth order only'; GK2 'reads no intermediates'.\n- The lens frame has no position-offset test and no content forcing.\n- The kappa_H log-linear fit breaks when E(s) <= 0.\nFeasibility: 8.77 A100-h is about the whole 9-h envelope, with no drop order. It also has the largest new-code surface: FD Jacobian engine, frozen-QK attention, VJP edge attribution, GVRA module, 12-turn session engine and MTP loader."
+    },
+    {
+     "design": "confounds",
+     "fidelity": 7,
+     "decisiveness": 7,
+     "confounds": 9,
+     "statistics": 7.5,
+     "feasibility": 6.5,
+     "completeness": 8,
+     "notes": "Strengths: the best confound control and statistical hygiene.\n- Register C1-C16 ties each confound to a named control.\n- Three length mechanisms are kept apart: L1 cumulative chance vs per-step hazard; L2 generic rollout drift vs the foreign-state null; L3 the association vanishing after conditioning. 'Length artifact' is issued only if the conditional upper bound is below half the marginal estimate.\n- RS39 is chosen so that rank tests can meet Holm 0.025. It is the only design that reconciles rank resolution with Holm.\n- The lens positive control must beat both a foreign-state null and a label-shuffle null.\n- Oracle chains (true digits teacher-forced) separate the state's information horizon from lens compounding.\n- The prior is a leave-one-item-out mu_task.\n- K3d tests Gao's over-compliance reading causally, against a hallucination composite.\n- K8a uses 7 context types x 3 lengths at matched absolute position.\n- K8c runs long-form arithmetic with difficulty counterbalanced over step index and a preamble shift.\n- The TOKEN route serves as the snowballing baseline for K8b.\n- There is a drop order for slow rates.\n- Facts verified locally: transformers 5.22.2 ships qwen3_5 and drops ^mtp.*; P0 is 16 tokens and ' ...' is a single token.\nWeaknesses:\n- There is no persistence test in the lens frame. The user's 'H-Neuronen-Attraktor' of the chain lens is tested only across 8-turn model sessions.\n- Composite row 2 can declare 'H-CHAIN supported' with the lens premise P-L failed (K8b and K8c are both model-side).\n- K5a counts the substitute as calibrated when 'both slope intervals include 0', so an underpowered 150-item calibration passes by default.\n- Several falsifiers are absence-of-evidence defaults: K6c 'no specific causal role' (MDE d_z 0.29), K6a 'cumulative only' when the slope CI includes 0, K3d '(neither)', K9 'hierarchy not resolved'.\n- Re-injection is ON in the primaries.\n- 'Gradient Through Routing' maps only to forward transfer, with no QK/OV routing split.\n- 'Reihe' as teacher-forced oracle chains is a stretch.\n- K5b adds a second full Gao pipeline on Qwen3.5-2B at unmeasured fp32 hybrid-attention rates.\nBudget: 6.9 A100-h (7.9 with reserve)."
+    }
+   ],
+   "ranking": [
+    "confounds",
+    "mechanism",
+    "lean"
+   ],
+   "base_recommendation": "Use the confounds design as the base. These parts of it form the soundest skeleton for deciding 'length artifact' against 'H-neuron attractor':\n- shared objects (SO-HN with RS39, SO-LAB, SO-CH, SO-GEN);\n- the confound register and the L1/L2/L3 length decomposition (K6a, K6b, K8c);\n- the rank-vs-Holm statistics;\n- oracle chains;\n- the K3 construct-validity battery (K3b timing, K3c uncertainty and rarity, K3d HALL vs COMP causal composites);\n- the model-side K8a/K8b/K8c;\n- the decision table.\n\nApply four repairs before the freeze:\n1. Composite row 2 requires P-L (G-K4 passed) plus a lens-side clause for any 'H-CHAIN supported' verdict. Model-side-only support is renamed 'model-side H attractor (lens not tested)'.\n2. Every 'no effect' verdict that counts against the hypothesis becomes an equivalence bound (lean style). 'Undecided', underpowered and 'lens not validated' results are declared never to count against.\n3. K5a(b) is replaced by lean's equivalence calibration.\n4. The primary lens runs with re-injection OFF (mechanism), keeping re-injection ON as the variant.\n\nThen graft lean's lens-frame persistence test (K4) and mechanism's fidelity modules (routing split, route split, outflow/inflow, FOV_att, Folge-vs-Reihe rule).\n\nTo stay inside about 9 A100-h:\n- move K5b (the H-set on Qwen3.5-2B) to the conditional reserve, saving about 0.6 h;\n- cap K8a at 4,096 tokens (part D owns longer contexts);\n- run lean's K4 at reduced scope: doses D2 and CLAMP; 20 damage-matched random sets in the TOK route only; TOK+KV for H only. That is about 1.2 h.\n- run mechanism's K3 at blocks {6, 14, 18} and Delta in {1, 4}, about 0.3 h;\n- run K2 at two doses, about 0.5 h.\nThe result is about 8.5-8.8 h. If the pilot is slow, trim K7b and K9's long-context condition first (they are already in confounds' drop order).",
+   "grafts": [
+    "From lean: K4 lens-frame persistence, as a new K6e in the base. During chain positions 0-7 of 24-step sampled CD chains (T 0.7, keys shared with the unpushed twin), push H by NSCALE_DN at D1 0.05 / D2 0.15 nats or CLAMP it, then release. Measure in the TOK route (R6: unpushed re-read) and the TOK+KV route. Carry K_X = E_2/E_1, defined only if E_1's 90 % interval excludes 0. 'Self-sustaining': Holm over the carry cells at family 0.04, and K_H must exceed every defined random-set K_R (>= 10 of 20 damage-matched sets). Add within-item bistability K4b at family 0.01: relaxed component fixed to the twin-vs-twin different-key null; Delta >= 3; >= 30 % of items with a locked chain also have a relaxed one. Add K4c/K4d (causal effect on B_new) and K4e (carry at context 16 vs 2,064). Plan power with lean's simulation scripts (scratch_K_lean/mde_sim.py, bist_sim2.py), report d1, and label d1 < 0.25 'underpowered'.",
+    "From lean: K3b real-filler position offsets for lens chains. F512 and F2048 are digit-free WikiText-103 validation sentences placed before an identical 16-token frame; d_off on C_12, paired by item x seed, with 'no context-length effect' if the 90 % interval lies within +-0.05. Also K3c content-matched forcing, 3 tokens right after the seed: correct v1, a wrong 2-digit w with a different first digit, or neutral ' and so on'. Outcome: B_new in the free steps, with 'repeat' counted separately; 'no content effect' if the 90 % interval lies within +-0.05. Together these give the base a lens-frame content-vs-length contrast it currently lacks.",
+    "From lean: equivalence-bound null verdicts and the section-8 clause 'What never counts against it: undecided, underpowered, results under lens not validated'. They replace the base's absence-of-evidence falsifiers:\n- K6a 'cumulative only' becomes lean's 'memoryless (flat hazard)': slope interval within +-0.10 logit per step.\n- K6c 'no specific causal role' requires the 90 % interval of Delta CONFAB per chain within a frozen margin (lean K4d uses +-0.04).\n- K3d '(neither)' requires both composite intervals within a frozen margin.\n- K9 'hierarchy not resolved' is reported, not counted against.\n- K6b/K8c 'length artifact' keep the base's 'upper bound < 0.5 x marginal' rule, plus lean's absolute bound: conditional beta_H within +-0.10 per SD.",
+    "From lean: the K2b calibration rule replaces the base's K5a(b). Choose the self-rollout variant on Qwen3.5-2B by IAD = mean over k of |C_k(self) - C_k(native)| on known items. Variants: E = block-l patch (Patchscopes style); L = transported state placed at the block before the last. 'Self-rollout calibrated' only if the 90 % intervals of C_12(self) - C_12(native) and of recall(self) - recall(native) both lie within +-0.10. 'Differs' if an interval excludes 0 with the point estimate outside +-0.10. Keep lean's descriptive statement 'length trend without trunk dynamics': the native MTP steps never pass the trunk MLPs.",
+    "From lean: G-K-J J-lens index-convention check. On 64 WikiText windows, compare the mean top-1 agreement of unembed(J[l] x) with the model's own next token, for x = output vs input of block l, l = 8..26. Use the better pairing; a sha256 mismatch stops the run. Add it to the base's K0 and G-K7.",
+    "From lean: in the base's K6b(i) hazard model, add the K3d covariates CDM (CD margin of the chosen token), TOP1 and DIG at the preceding step. Add lean's lag_H: the H rise one step after the break vs other-seed chains of the same item, against 50 random sets. Together these give the fixed string 'H rise leads / follows / leads and follows / no H change around the break'. Also add the model's own 11 parsed answers to the truth set for prone items (lean's V_i^+), so that a lens reading the model's own wrong value counts as faithful, not confabulating.",
+    "From lean: the K6 first-match decision ordering. Only a persistence result (lens K6e or model K8b, carry lower bound > 1 or within-item bistability, H-specific) can yield 'attractor'. Add explicit rows 'in-context conditioning, not an attractor' (a content effect with a dissipative carry) and 'generic persistence (not H-specific)'.",
+    "From mechanism: re-injection OFF in every primary lens analysis (base K4, K6, K7b), with mechanism's stated reason: a push repeated at every chain step grows with chain length, a built-in length confound for exactly this question. Re-injection ON (beta calibrated to 0.05 nats) becomes a variant on a subset, which the base already runs as an ablation.",
+    "From mechanism: K3(b)-(d) at reduced scope as the counterpart of 'Gradient Through Routing / Durchrouten'. Central finite differences of h_l(t) with attention probabilities frozen give tau^OV; with them free, tau. Report rho_QK(l, Delta) = ||tau^QK|| / (||tau^OV|| + ||tau^QK||) at Delta in {1, 4} for l in {6, 14, 18}, with the verdict strings 'mostly re-routing (QK)' / 'mostly along routes (OV)' / 'mixed'. Build the head routing map by VJP edge attribution e_{m,h}(r <- s) for the targets a_H and the J-workspace direction. Add two code gates: the block-27 cross-position structural zero, and FD vs autograd JVP agreement within 1e-3.",
+    "From mechanism: K2 route split (KV-only, token-only, total) for single-front pushes from D_style(14), D_RSI(14), the S_J top direction, N_H and random sources. Report lag profiles, horizons and s_KV at lag 2, the direct counterpart of 'der dritte Token ist nicht die Folge vom ersten'. Run it at two doses (0.05 and 0.15 nats), or condition the token-route effect on divergence, so the 'parallel/sequential' verdict is not fixed by the push size. Build the random-source null band from at least 20 directions per block, not 2.",
+    "From mechanism: K4(b) interventional outflow/inflow alpha_c^int = log(O_c/O_rand) - log(I_c/I_rand), the antisymmetric part of the coupling. It is computed from the base's K9 transfer gains (no new runs) and added to the K7a arrow vector as the front-to-front component of 'Prädiktor für vorhergegangene oder folgende Fronten'.",
+    "From mechanism: record FOV_att(s) at every chain step in the base's K4/K6b: the attention share of chain position q_s on the patched position, averaged over heads at layers > l. This is the literal 'Blickbereich der Chain-Linse'. Also add the cov-matched random-state null r = mu + ||h - mu|| unit(Sigma^{1/2} g) next to V2 for the evidence horizon k*_ev.",
+    "From mechanism: the K6(f) Folge-vs-Reihe rule on the answer digits d_1..d_3 at t_ans: chained CL readout vs direct readouts (L-par ridge from the K7a probes, L-jac finite differences). Verdicts: 'chained readout beats direct readouts at digit k' or 'direct readouts match or beat the chain', with Holm over blocks x k in {2, 3}.",
+    "From mechanism: four smaller items.\n- GK7: pre-registered MTP wiring order for Qwen3.5-2B ([emb; hidden] post-norm, then [hidden; emb] post-norm, then [emb; hidden] pre-norm) with top-1 agreement >= 0.4. It goes into the base's K0(7).\n- SO-FD: per-token front dump with deterministic teacher-forced replay, for part L.\n- K1(l): a style->H behavioural push along u*_14 at 0.05 nats against 20 random directions, reading s_H (2 min). It ties round 2's generic attractor to H.\n- The G_AR rule that no intermediate or answer digit string may be a substring of another number in the item."
+   ],
+   "fatal_flaws": [
+    "lean, session failure risk: G-K-rope's failure action is 'stop: position handling broken' at a 1e-4 relative logit tolerance under a +4,096 global position shift. At positions above 4,096, fp32 rounding of p x inv_freq gives angle errors of about 1e-4 rad in the highest RoPE frequencies, about 30 times the error at short positions. The check can therefore fail without any code defect and stop K-S1 (K0, K1, K1e). Fix: require identical top-1 and max |Delta log p| < 1e-3 (as the confounds design does), and make a failure a label, not a stop.",
+    "lean, central verdict at risk of being non-informative: in K4 the H push is applied to both contrastive streams, so its shared part cancels in the CD score. Sampled tokens then change only through the stream difference, and the TOK-route E_1 (the R6 primary, read by the unpushed model) needs segment-1 token divergence. If E_1 is unresolved, K4a gives 'K not defined' or 'underpowered'. K6 rows 2-4 then cannot match, and the decision table returns 'undecided'. Fix: add an expert-stream-only push arm, and pre-register a dose step-up (within 0.15 nats) when E_1 is unresolved in the pilot.",
+    "lean, built-in length confound in every primary: re-injection is ON in K2a, K3 and K4. It is a push of fixed damage repeated at every chain position, so the K3a hazard slope, the K3d step effects and the K4 carry are partly properties of the re-injection schedule. Only a descriptive re-injection-off arm exists. Fix: primary OFF (mechanism).",
+    "mechanism, verdicts predetermined by the rank-p and Holm combination:\n- K1 causal: rank p from 19 random sets (minimum 0.05) under Holm over 8 tests at 0.10 (first step 0.0125).\n- K7 T_L2: 19 sets, Holm over 2 (first step 0.025).\n- K4 Q1: two-sided rank among 200 random channels (minimum about 0.01) under Holm over about 20+ channel x block tests (first step about 0.002).\nIf the rank p is the Holm p, as written, 'over-compliance as in Gao', 'H amplifies lens confabulation' and 'channel-specific arrows' can never be issued. Falsifier 10 ('arrows explained by depth and dimension') is then reached by construction. Separately, '90 % CI excludes 0' contradicts Holm-adjusted levels. Fix: >= 39 sets (or >= 2,000 random channels), or an explicit intersection-union statement with adjusted CI levels.",
+    "mechanism, K2 verdict fixed by the design parameter: at 0.05 nats per position, at most about 16 % of pairs diverge on the token route (the design's own Pinsker bound). The KV route, by contrast, acts deterministically on every pair, so 'parallel: KV route dominates at lag 2' follows from the dose, not from the model. Fix: a two-dose series, or token-route effects conditioned on divergence.",
+    "mechanism, budget and session risk: 8.77 A100-h fills about the whole 9-h envelope (0.23 h left). There is no drop order and no half-rate sensitivity, on the largest new-code surface of the three (FD Jacobian engine, frozen-QK attention, VJP edge attribution, GVRA, 12-turn session engine, Qwen3.5-2B MTP loader). A 10-15 % rate miss overflows part K.",
+    "confounds, headline can be mislabelled: composite row 2 'H-CHAIN supported: H-neuron attractor beyond length' needs only P-H, K8b, and K8c or K6c. With the lens premise P-L failed, the lens clauses are 'not testable', but model-side K8b and K8c still satisfy row 2. A hypothesis about the chain lens would then be 'supported' with no lens evidence. Fix: require P-L and a lens-side clause, or rename the row.",
+    "confounds, calibration passes by default: K5a(b) counts the self-rollout as 'calibrated' when the V1 - V2 slope contrasts of both lenses have intervals that include 0. With 150 items that is the likely outcome, so the label 'lens substitute changes the length question' is rarely issued even when the substitute is unvalidated. Fix: lean's equivalence rule (+-0.10 on C_12 and recall)."
+   ],
+   "missing_everywhere": [
+    "No design has a lens-free positive control that the arithmetic intermediates are actually present in the read state. Candidates: a cross-fitted ridge probe for each intermediate digit or value at t*, or mechanism's K9-A2 prompt-rewrite round trip applied to the true intermediates rather than to lens candidates. Without it, 'lens reads no intermediates' cannot be told apart from 'nothing to read' in Qwen3-1.7B. Confounds' oracle chains and mechanism's k*_info still go through the rollout scaffold.",
+    "No design has an expert-stream-only H push or boost arm inside the contrastive lens. All three perturb or clamp both streams (lean K4, mechanism T_L2 and possibly T_L3, confounds K6c). For clamps this is principled, because it removes the state-specific H share. For pushes, the shared part cancels in the CD score, which removes most of the effect on token choice and therefore on persistence via tokens.",
+    "No programmatic lens-hallucination label in the domain where the H-set is defined (entity QA). H is identified and validated on TriviaQA, but every lens break-off label is arithmetic, so the lens-H link is tested only where H may not transfer. The labels could be: chain-lens reads at t_pre of consistent-correct and consistent-incorrect TriviaQA items, scored as gold alias / the model's own answer / another entity. Confounds' H_ar fallback and mechanism's descriptive QA cells only partly cover this.",
+    "No pre-registered fallback when the perturbation's first-segment or turn excess (E_1, ē(2), E(3)) is unresolved. All three stop at 'K not defined' or 'underpowered'. Pre-register a dose step-up within the 0.15-nat limit or a unit increase, decided in the pilot on held-out items.",
+    "No handling of repetition loops inside lens chains. Greedy or contrastive chains can cycle on a true number and then never 'break', which flattens the hazard and inflates the cumulative-correct share. Confounds flags repeated 4-grams only in model text; lean counts 'repeat' only in forced chains.",
+    "No sensitivity arm for the contrastive-decoding hyperparameters (weight lambda = 1, plausibility 0.1). These choices plausibly shape whether confabulation grows with chain step, so the length trend could be a decoding artifact. Only confounds has a greedy ablation, on 64 items.",
+    "No calibration of H activity inside the self-rollout scaffold against natural text. The H probe and zCETT references come from chat QA or WikiText, while chain positions follow a patched, possibly off-distribution state. None checks whether A_H or s_H values in chains fall within the range where H was identified before reading H covariates or carries there."
+   ]
+  },
+  {
+   "scores": [
+    {
+     "design": "lean",
+     "fidelity": 5.5,
+     "decisiveness": 7,
+     "confounds": 6,
+     "statistics": 7.5,
+     "feasibility": 8,
+     "completeness": 8,
+     "notes": "Strengths: the best-specified rules. Every rule has fixed strings and an MDE, with numpy simulations for the hardest two. The carry SD claim checks out: SD(K) ≈ 0.043·sqrt(1+K²)/d1, which is 0.12-0.16 at d1 = 0.5. The decision table is crisp. Cost is 4.8 h with a half-rate sensitivity row. The P16 token ids match the pinned tokenizer exactly. The in-lens length design is good: chain-step hazard, real digit-free filler offsets, content-matched forcing at equal token counts, and beta_H against 50 random sets with entropy, margin, top-1 and digit covariates. It is the only design with a lens-frame attractor test (TOK and TOK+KV routes, CRN twins, damage-matched own-activity carries, simulated bistability rule), and it adds a native length-trend falsifier.\nFidelity is weak. Channels are 7 scalar readouts. The 'vector' is only lead/lag around the break. Hierarchy and Folge/Reihe are descriptive. 'Gradient through routing' has no counterpart. Model-frame hallucination dynamics are absent. Elements were dropped on budget grounds while about 4 h of the 9-h envelope stays unused.\nValidity gaps:\n- H_tq (TriviaQA) is used on arithmetic chains with only a label.\n- G-K-CL counts the final result.\n- K1e(i) uses the answer-fitted S_H at the last prompt token without refitting.\n- B_hal is a first failure per chain, not a per-claim rate, and on prone items it scores model-consistent wrong intermediates as confabulation.\n- K3b uses one filler instance.\n- mu_l comes from WikiText, not from matched template positions.\n- In TOK+KV, E1 is measured while the push acts.\n- 'Length artifact' never requires a marginal H-break association.\nCost: prefill is uncounted (K1 screening up to +15 min, K1e turn 2 +6 min), so about 5.3-5.5 h in reality. There is no engineering pilot before the freeze."
+    },
+    {
+     "design": "mechanism",
+     "fidelity": 9,
+     "decisiveness": 5,
+     "confounds": 6.5,
+     "statistics": 4.5,
+     "feasibility": 4.5,
+     "completeness": 7.5,
+     "notes": "Fidelity is the highest: every element has a measurement.\n- KV-only vs token-only routes with a lag-2 KV share.\n- Lag-resolved finite-difference Jacobians with a frozen-attention QK/OV split and a head routing map, as the inference-time 'gradient through routing'.\n- Anticipation vs memory probes plus interventional outflow/inflow as the vector.\n- Hierarchy and its reordering by prompt type, temperature and context.\n- Five break-off criteria, both lens and model frames, and GVRA applications.\nGood nulls and controls: a selection-matched cov-matched random state, H~ standardised against 200 random sets, a per-claim confabulation rate, mean-clamps, a pre-registered switch to H+ when Jaccard < 0.5, and a J-lens bridge that sums over all lags.\nThe statistics are broken in several rules. Rank tests against 19 or 200 random sets sit inside Holm families whose first level is below the smallest attainable rank p (K1(i), K4 Q1, T_L2). K8b bistability uses a pooled dip test that confounds between-session heterogeneity. The carry is a log-linear fit, undefined when an excess is ≤ 0. The detection rule uses point estimates. The KV share at a single dose is dose-dependent.\nThere is no arithmetic H-set: the TriviaQA H-set is used on arithmetic lens chains. Several verdicts are underpowered (K2 about 0.12 SD; K4 Q2 0.6 SD; K5 with 32 texts) and still listed as falsifiers.\nFeasibility: 8.77 h is 97 % of the envelope, with about 8 new engines, 0.23 h slack and no drop order. My re-derivation of K6 (about 3.6M row-steps, about 28 min of decode work) matches theirs. The risk is engineering and rate misses, not arithmetic."
+    },
+    {
+     "design": "confounds",
+     "fidelity": 8,
+     "decisiveness": 7.5,
+     "confounds": 8.5,
+     "statistics": 7.5,
+     "feasibility": 6.5,
+     "completeness": 8.5,
+     "notes": "Validity is the best of the three:\n- A confound register (C1-C16), each entry tied to a named control.\n- Exact programmatic labels, including alternative partials I+ and answer-consistent wrong intermediates W from forward enumeration.\n- ACH-long with difficulty permuted over steps plus a 400-token preamble shift, so step index, difficulty and absolute position are separated.\n- H_tq plus an arithmetic H_ar, with a gate that switches to H_ar.\n- A mu_task prior at the matched position type, which removes template and massive-dimension signatures.\n- V2 foreign-state and V6 label-shuffle nulls, plus oracle chains.\n- Cumulative vs per-step confabulation (the WorkspaceBench metric is 'at least one wrong claim').\n- A 'length artifact' rule that needs a marginal association first and then its loss after conditioning.\n- K5b: native-lens state ablation on Qwen3.5-2B, the most literal 'field of view correlates with H' test.\n- CRN sessions with TOKEN and KV routes.\nStatistics: Holm families Q1-Q10 with RS39, so p_rank 0.025 is attainable, and BH-FDR for exploratory grids. Weak spots:\n- G-K5(b) passes when both slope intervals include 0.\n- K8a intervals must carry the 8 context instances.\n- The K9 reorder test is biased toward 'reordered'.\n- K6c counts CONFAB numerals per chain.\n- The falsifier list includes unresolved and exploratory outcomes.\n- Carry specificity is tested by late excess, not by K.\nFidelity gaps: no lens-frame persistence test, and no TriviaQA session arm.\nFeasibility: 6.9 h planned plus 1 h conditional reserve, an engineering-only pilot before the freeze, and a drop order. K5b (the Gao pipeline on 147,456 neurons) is likely 30-35 min of work, not 25. The K8a cost model assumes 320-row batches even at 8,192 tokens; fp32 KV allows at most about 16 rows there. Checked: transformers 5.22.2 ships qwen3_5 with torch Gated-DeltaNet fallbacks, and P0 is exactly 16 tokens with ' ...' as one token."
+    }
+   ],
+   "ranking": [
+    "confounds",
+    "lean",
+    "mechanism"
+   ],
+   "base_recommendation": "Use the confounds design as the base. It handles the confounds best: H_tq plus an arithmetic H_ar, exact labels, step index separated from difficulty and position, a mu_task prior, a split of cumulative vs per-step confabulation, marginal-then-conditional 'length artifact' rules, and native-lens state ablation. Its statistics are mostly correct (Holm with RS39 rank tests), it is feasible with a pilot and a drop order, and it is close to the user's hypothesis.\n\nKeep: K0-K3, K4 (CL17 with V1-V6 and oracle chains), K5a/K5b, K6a-d, K7a/b, K8a-c, K9 and the composite table.\n\nFix in the base:\n1. Replace G-K5(b) with lean's equivalence calibration (±0.10).\n2. Replace K8b's 2-vs-1 Gaussian LR with lean's bistability rule (including the mixed-item criterion).\n3. Test carry specificity on K, not only on the late excess L.\n4. Normalise K6c per claim and use mean-clamps.\n5. Take 'not resolved' and exploratory outcomes out of the falsifier list.\n6. Include the context instance in the K8a intervals and fix batch sizes per context length.\n\nAdd:\n- Lean's lens-frame persistence test K4, reduced to D2 + CLAMP, TOK route primary, 20 damage-matched random sets with own-activity carries, and K4c/K4d.\n- Lean's K3c in-lens content forcing and K3b filler offsets (with ≥ 8 filler instances).\n- Mechanism's H~ predictor, cov-matched null, J-lens bridge and TriviaQA session arm.\n- A small KV/token single-front arm and a QK/OV Jacobian split as descriptive counterparts of 'Folge' and 'gradient through routing'.\n\nBudget: about 6.9 h + 1.0 h (lens persistence) + 0.4 h (TriviaQA sessions) + 0.3 h (small grafts), minus K9's long-context condition and K7b under the base's own drop order, gives about 8.3-8.5 h. RK-1 runs only if G-K5 fails and the measured total stays ≤ 9 h.",
+   "grafts": [
+    "lean K4 (reduced): lens-frame perturbation persistence.\n- Push H by NSCALE_DN at 0.15 nats (D2), and CLAMP, on chain positions 0-7 of 24-step sampled contrastive-decoding chains. Keys keyseed('K4', i, seed, key, q) are shared with the twin.\n- TOK route primary: the unpushed model re-prefills segment 1, writes on and re-reads all 24 tokens. Run TOK+KV for H only.\n- Carry K = E2/E1 with R6 definedness.\n- Specificity: own-activity carries of 20 damage-matched random sets, at least 10 defined.\n- K4c/K4d causal break-off d_br.\n- Re-run mde_sim.py for the merged counts.\n- Holm-combine with the session carry and bistability in one attractor family.",
+    "lean K4b bistability rule.\n- Relaxed component N(0,1), scaled by the SD of twin-vs-twin differences between different keys.\n- Thresholds: Delta ≥ 3, s1 ≤ 1.5, 0.1 ≤ pi ≤ 0.9.\n- At least 30 % of items with a locked unit (z > 3) must also have a relaxed unit (|z| < 1).\n- LR p ≤ 0.01 by parametric bootstrap with between- and within-item variance, and LR_H above every random set.\n- Validated in bist_sim2.py: 0/25 false positives under skew and heterogeneity.\n- Use it in confounds K8b (replacing the template-centred 2-vs-1 Gaussian LR) and in the lens arm.",
+    "lean K3c: content-matched forcing inside the chain. Force correct v1, a wrong w with a different first digit, or neutral ' and so on' (3 tokens each) right after the seed. Outcome: B_new in the 9 free steps, excluding repeats of the forced number. This is the lens-side snowballing control the base lacks.",
+    "lean K3b: a lens context-offset arm with digit-free WikiText filler (L_P 16 / 528 / 2,064, identical last 16 tokens, LCE prefix reuse). Use at least 8 filler instances and put the instance level into the bootstrap; lean used a single filler.",
+    "lean K2b calibration, replacing G-K5(b).\n- 'CL-self calibrated' if the 90 % intervals of C_12(self) − C_12(native) and of the recall difference both lie within ±0.10.\n- 'differs' if an interval excludes 0 and its point estimate lies outside ±0.10.\n- Choose variant E or L by IAD.\n- Add the native hazard-slope test and its falsifier 'length trend without trunk dynamics'.",
+    "lean K0 code gates:\n- G-K-J: decide whether J[l] maps the block-l output or input, by top-1 agreement with the model's own next token on REF-W.\n- G-K-CRN: a twin re-run in a different batch is ≥ 97 % token-identical.\n- G-K-rope.\n- Asserted frame token ids.",
+    "lean section 8 falsifier hygiene ('what never counts against it'), extended to 'H-set not validated', 'H not transferred to the domain' and every exploratory or unresolved verdict. It replaces confounds' falsifiers 8-9 and the 'hierarchy not resolved' clause.",
+    "mechanism T_L1 predictor H~ = (a_H − mean_R a_R)/sd_R a_R, taken at the same position over the random sets, with β_H > q95(β_R). Use it in confounds K6b(i) and K8c.",
+    "mechanism T_L2 for confounds K6c: mean-clamp (z_j ← mu_j from neutral text) instead of the zero-clamp, and the per-claim outcome O/(O+I+A) instead of CONFAB numerals per chain. Keep the 'at the cost of hits' label.",
+    "mechanism K6(c): a covariance-matched random-state null, r = mu + ||h − mu|| unit(Σ^{1/2} g), run through the identical contrastive argmax. Use it next to V2 for k*_ev.",
+    "mechanism K3(e) J-lens bridge as a gate on the seed lens and its convention, about 3 min.\n- Add ε v at all source positions 16-126 of 100 WikiText passages.\n- Compare Σ_t' δh_27 / 111 with J_l v.\n- Pass: median cosine ≥ 0.9 over blocks {6, 14, 18, 22} × 8 vectors.",
+    "mechanism K2 (reduced, descriptive): single-front pushes at one position with KV-only, token-only and total routes, for 4-6 named sources at blocks ≤ 18 plus N_H. Read at lags 1, 2, 4, 8, at two doses so the KV share is not a dose artefact. This is the measured counterpart of 'token 3 is not the consequence of token 1'.",
+    "mechanism K3(b), descriptive: a frozen-attention QK/OV split of the lag-resolved finite-difference Jacobian at Δ = 1 and 4, at 2-3 blocks. It is the counterpart of 'gradient through routing'; the base has only interventional transfer.",
+    "mechanism K1: a pre-registered switch to H+ (the |r| ≥ 0.7 hull) as the intervention set when the median bootstrap Jaccard is < 0.5. Also the GK7 MTP wiring gate with its fixed fallback order: [emb; hidden] post-norm, then [hidden; emb] post-norm, then [emb; hidden] pre-norm.",
+    "mechanism K8a/K8b: a TriviaQA session arm (S_sess consistent-correct and consistent-incorrect items, forced 'The answer is', H_tq in its native domain). It runs beside confounds' ACH sessions, with confounds' estimator Σ_{n≥3} ē / Σ_{n≥2} ē and lean's bistability rule.",
+    "mechanism K6(f), descriptive: Folge vs Reihe on the answer digits, comparing the chained CL17 readout with direct ridge and finite-difference readouts.",
+    "mechanism: re-injection treated as a length confound. Every K6a length-slope verdict must hold with re-injection off as well as on; report both."
+   ],
+   "fatal_flaws": [
+    "lean: G-K-CL counts the final result (the model's next output, readable by any single-token lens) as reading the computation. The gate can pass with zero intermediate hits, and K3/K4 then interpret break-off of a lens validated only as a next-output reader.",
+    "lean: K1e(i) scores the last prompt token with w_H. That probe was fit with prompt-token vectors as negatives and is never refit on pre-generation features, so 'generation-time signal' is close to guaranteed.",
+    "lean: under G-K-H3 'H silent in arithmetic' (a TriviaQA H-set applied to arithmetic chains), the K3d and K4 negative verdicts still count against H-CHAIN. Section 8 exempts only undecided verdicts, an underpowered K4a and 'lens not validated'. This is falsification with an instrument that is not valid in the domain.",
+    "lean: K6 row 3 'length artifact' requires K3c 'no content effect' (within ±0.05). In-lens snowballing after a forced wrong number will almost surely break that, and the row never requires a marginal H-break association. The user's own alternative is effectively unreachable and, if reached, unanchored.",
+    "mechanism: K1(i) runs Holm over 8 tests at family 0.10 (first level 0.0125), but its rank tests use 19 random sets (minimum p 0.05). T_L2 says 'Holm over 2' without a family level. As written, 'H scaling moves <outcome>' and 'H amplifies lens confabulation' cannot pass, so the pre-registered 'H-neuron attractor' reading, which needs T_L2, is unreachable.",
+    "mechanism: K4 Q1 runs Holm over about 25-30 named channel × block tests on two-sided rank p from 200 random channels. The smallest p (≈ 0.01) is above the first Holm level (≈ 0.002), so 'channel-specific arrows' is unreachable and falsifier 10 holds by construction. Without Holm, the 2.5/97.5 % thresholds give about 5 % false 'biased' channels each.",
+    "mechanism: K8b bistability is a dip test on scores pooled over sessions after B0 standardisation. Sessions that respond and sessions that do not form two modes without any session being bistable, so 'within-item bistability', and with it the attractor verdict, can come from between-item heterogeneity.",
+    "mechanism: kappa_H (T_L3) and K_H (K8b) are fitted as log E(s) linear in s. The fit is undefined whenever a step's mean excess is ≤ 0, which small late excesses will produce.",
+    "confounds: G-K5(b) grants 'self-rollout calibrated' when both lenses' slope intervals include 0. With 150 items, the label that licenses every CL17 length statement can be earned by low power alone.",
+    "confounds: falsifiers 8-9 count 'hierarchy not resolved' (16 texts per condition) and exploratory BH-FDR K7a outcomes against H-CHAIN. Separately, K9's 'conditions reorder' compares a between-condition τ (two independent estimates) with within-condition bootstrap τ, which is biased toward 'reordered'. Neither direction of the K9 statement can be interpreted."
+   ],
+   "missing_everywhere": [
+    "A non-decay verdict. All three use R6 (self-sustaining only if the carry's lower bound > 1) plus bistability. An H state that locks uniformly and stays (K ≈ 1, no second mode) is therefore 'undecided'. None pre-registers an equivalence band around 1 (for example a 90 % interval within [0.9, 1.1] meaning 'persistent, non-decaying') or a half-life with its MDE.",
+    "Contrastive-decoding cancellation. Every lens-frame H intervention (push, boost, clamp, state ablation) acts on both the real and the prior stream, so the common-mode part of H's logit effect cancels in log p_real − log p_prior. No design measures how much of the intervention survives the contrast or adds a real-stream-only arm, so lens-frame causal nulls can be null by construction.",
+    "A lens-confabulation label in H's own factual domain. All lens–H tests run on arithmetic chains: confounds substitutes H_ar, mechanism's QA cells are descriptive, lean has none. 'The chain lens hallucinates where H-neurons fire' is therefore never tested on factual content, which is what the post's hallucination family measures.",
+    "A check that the H score means the same in the lens frame. H is fit on mean CETT over chat-template answer spans but read per token in a plain-text frame with a patched placeholder, where template-token signatures, massive dimensions and CETT's division by the FFN-output norm differ. No design validates the detector or the zCETT scale in that frame before using it as the predictor.",
+    "Sampling temperature as an external condition for the lens break-off and the H carry, although round 2 found temperature-dependent gains at block 6. Lens chains are greedy (mechanism, confounds) or run at one temperature (lean K4).",
+    "An in-plan rule that uses the H effect size measured earlier in the run (K1/K3 causal profile) to set the persistence dose. Without it, whether E1 or ē(2) will be resolved, and K_H defined at all, is known only after the persistence sessions."
+   ]
+  }
+ ],
+ "merged_meta": {
+  "measurements": [
+   {
+    "id": "K0",
+    "what": "Engineering pilot before the freeze (no analysed data). Measures decode, prefill and hook rates, FISTA timing, and the J-lens file. Checks that the Qwen3.5-2B MTP loads and its rates. Code checks: patch identity, front parity, global-offset label, frozen-QK reproduction.",
+    "a100_minutes": 15,
+    "session": "K-S0 (account B)"
+   },
+   {
+    "id": "K1",
+    "what": "Label bank, built on CPU before the freeze:\n- exact programmatic items: ACH-short with the substring rule, ACH-long with difficulty counterbalanced over steps, FP, MC, SY, NE, TriviaQA splits;\n- frames, fillers and forced segments, with tokenizer-checked lengths;\n- scorers: numerals, aliases, W enumerator, OWN, CONFAB-QA with audit, loop onset.",
+    "a100_minutes": 0,
+    "session": "CPU before freeze"
+   },
+   {
+    "id": "K2",
+    "what": "H-neuron sets of Qwen3-1.7B.\n- H_tq by Gao's protocol: prose label convention, positive weights, C chosen by suppression runs.\n- H_ar on arithmetic.\n- Cavus diagnostics, H+ cluster, permutation null.\n- RS39 and RS39mc random sets, matched on damage.\n- REF-W references.\n- Pre-registered switch to H+ if the set is unstable.",
+    "a100_minutes": 57.6,
+    "session": "K-S1 (account B)"
+   },
+   {
+    "id": "K3a",
+    "what": "Does the H-set detect hallucination beyond 39 matched random sets, in domain (TriviaQA)? Transfer to arithmetic and to fabricated entities is also tested.",
+    "a100_minutes": 1.9,
+    "session": "K-S1"
+   },
+   {
+    "id": "K3b-c",
+    "what": "Does the H signal arise during generation, or before it? The before-generation detector is refit on pre-generation features. Incremental AUROC beyond uncertainty, rarity and length; overlap with entropy and frequency neurons.",
+    "a100_minutes": 0,
+    "session": "K-S1 (stored features)"
+   },
+   {
+    "id": "K3d",
+    "what": "Causal scaling of the H-set (alpha 0-3): a hallucination composite against an over-compliance composite, each against damage-matched RS39. Holm over 2. Equivalence verdict for 'no specific causal role'.",
+    "a100_minutes": 40.5,
+    "session": "K-S1"
+   },
+   {
+    "id": "K3e",
+    "what": "Inverse-free neuron-lens readouts of H write vectors (generate-verify-revise-abstain). Verifier error is measured on known cases; the lexicon profile is compared with random neurons.",
+    "a100_minutes": 7.6,
+    "session": "K-S1"
+   },
+   {
+    "id": "K3f",
+    "what": "Round-2 tie-in: does a 0.05-nat push along the style direction u*_14 move H activity and accuracy more than 20 random directions do? (descriptive)",
+    "a100_minutes": 2.3,
+    "session": "K-S5 (account A)"
+   },
+   {
+    "id": "K3g",
+    "what": "Gate G-K14: is the H detector and its zCETT scale valid in the plain-text lens frame? Checks the range of chain-position activity and the transfer of the detector to a plain-text frame against RS39.",
+    "a100_minutes": 0.5,
+    "session": "K-S1 (+ K-ana)"
+   },
+   {
+    "id": "K4j",
+    "what": "Gate G-K-J: J-lens sha256, finite-difference bridge, and index convention (block output vs block input) on WikiText.",
+    "a100_minutes": 4.7,
+    "session": "K-S1"
+   },
+   {
+    "id": "K5a",
+    "what": "Calibration on Qwen3.5-2B.\n- Lenses: a re-implemented native-MTP chain lens (frozen wiring order, post-final-norm state, re-injection off as primary) and the self-rollout variants E and L, on identical states.\n- Variant choice by IAD.\n- Plus or minus 0.10 equivalence on C_16 and on recall.\n- Native length-trend test.",
+    "a100_minutes": 20.9,
+    "session": "K-S3 (account B)"
+   },
+   {
+    "id": "K4",
+    "what": "Chain lens CL17: self-rollout through Qwen3-1.7B from J-lens seeds.\n- Contrastive decoding against a leave-one-out mean-state prior; chain-only context; re-injection off in primaries.\n- Exact labels with OWN and loop censoring.\n- Controls: V2 foreign, V6 label-shuffle, V7 covariance-matched nulls; seed controls; V8 re-injection on.\n- Decoding grid, temperature arm, oracle chains.\n- Records FOV_att and DLA shares.\n- Verifier with measured error; positive control G-K4 on true intermediates.",
+    "a100_minutes": 42,
+    "session": "K-S2a (account B)"
+   },
+   {
+    "id": "K4p",
+    "what": "Lens-free positive control G-K4b: are the true intermediates present in the read state? Cross-fitted ridge decoding of the last digit of v1, against an operand-only baseline and permutations.",
+    "a100_minutes": 1.2,
+    "session": "K-S2a"
+   },
+   {
+    "id": "K6a",
+    "what": "Per-step confabulation share and hazard against the cumulative share, with V2/V7 nulls. Verdicts include flat-hazard equivalence. Labels for re-injection and decoding sensitivity; temperature profile.",
+    "a100_minutes": 0,
+    "session": "K-ana (data from K4)"
+   },
+   {
+    "id": "K6b",
+    "what": "Observational H-link.\n- Per-claim model: H activity (standardised against random sets) predicts the next confabulated number beyond step, entropy, margin and evidence, against RS39.\n- Read-state H-share.\n- Lead/lag strings around the break.",
+    "a100_minutes": 0,
+    "session": "K-ana (data from K4)"
+   },
+   {
+    "id": "K6c",
+    "what": "Causal H-link on per-claim confabulation, against RS39mc: H mean-clamp in the rollout, and mean-ablation of H writes in the read state. Includes the contrast-surviving share and equivalence verdicts.",
+    "a100_minutes": 24.9,
+    "session": "K-S2a"
+   },
+   {
+    "id": "K6d",
+    "what": "Does the lens read the model's own wrong intermediates? Wrong and correct items, matched on difficulty and entropy.",
+    "a100_minutes": 0,
+    "session": "K-ana (data from K4)"
+   },
+   {
+    "id": "K6e",
+    "what": "Attractor test inside the chain lens.\n- Perturbation in segment 1: an expert-stream-only H push at 0.15 nats, and an H mean-clamp.\n- Release, then carry K (R6) in the TOK and TOK+KV routes.\n- Within-item bistability.\n- Causal effect on later confabulation, against RS20 (PI test).\n- Offset invariance at 2,064 tokens; plateau verdict; in-session unit rule.",
+    "a100_minutes": 47.1,
+    "session": "K-S2b (account B)"
+   },
+   {
+    "id": "K6f",
+    "what": "Lens context-offset control: break-off at 528 and 2,064 tokens of digit-free filler (8 instances), with identical near context, against 16 tokens.",
+    "a100_minutes": 9.2,
+    "session": "K-S2a"
+   },
+   {
+    "id": "K6g",
+    "what": "Content-matched forcing in the lens: correct, wrong and neutral 3-4-token segments after the seed, at matched positions; confabulation in the free steps (in-lens snowballing).",
+    "a100_minutes": 1.1,
+    "session": "K-S2a"
+   },
+   {
+    "id": "K6h",
+    "what": "QA lens arm in H's own domain.\n- Chain-lens reads before the answer on consistently correct and consistently incorrect TriviaQA items.\n- Scored as gold / own wrong answer / CONFAB-QA.\n- QA positive control.\n- H-link, compared against RS39.",
+    "a100_minutes": 3.7,
+    "session": "K-S2a"
+   },
+   {
+    "id": "K7a",
+    "what": "Arrow-vector atlas (exploratory, BH-FDR).\n- Per channel: anticipation vs memory with token targets; outflow/inflow alpha^int from K9; horizons; lead-lag.\n- Same-channel asymmetry used only as a non-stationarity diagnostic.\n- Event-locked to exact first errors.",
+    "a100_minutes": 5.8,
+    "session": "K-S4 (account B)"
+   },
+   {
+    "id": "K7b",
+    "what": "Channel-resolved lens throughput (exploratory): patch one channel's part of the state deviation; forward vs backward hits against random subspaces of matched dimension.",
+    "a100_minutes": 10.4,
+    "session": "K-S5 (account A)"
+   },
+   {
+    "id": "K8a",
+    "what": "Position vs content vs length at matched absolute positions.\n- 7 context types at 512, 2,048 and 4,096 tokens, 8 instances each, through a shared-prefix cache.\n- Outcomes: accuracy and the teacher-forced H score.\n- Holm over 7 contrasts; equivalence verdicts; offset and gap checks.",
+    "a100_minutes": 17.1,
+    "session": "K-S4"
+   },
+   {
+    "id": "K8b",
+    "what": "Attractor test in the model's own text.\n- ACH and TriviaQA sessions with CRN twins.\n- H perturbation during answer 1; carry K_H (R6) with specificity on K against RS19 (PI test).\n- TOKEN and KV routes.\n- Within-item bistability (24 templates x 16 seeds); plateau verdict; in-session unit rule.",
+    "a100_minutes": 84.6,
+    "session": "K-S4"
+   },
+   {
+    "id": "K8c",
+    "what": "Long-form step-by-step arithmetic with exact first errors, difficulty counterbalanced, preamble shift. Hazard: does H activity at step i-1 predict the next error beyond step, position, difficulty and entropy, against RS39? Lens reach is read at pre-error steps.",
+    "a100_minutes": 8.4,
+    "session": "K-S4"
+   },
+   {
+    "id": "KS-axes",
+    "what": "SO-AX: u_T_perp, u_sea, and u*_b recomputed from R1 dir_*_4 with the TV mode_set; reproduction check.",
+    "a100_minutes": 1.9,
+    "session": "K-S5"
+   },
+   {
+    "id": "K9",
+    "what": "Depth-residualised interventional transfer hierarchy among 10 named channels. Reordering across 5 text conditions by a split-half within-vs-between Kendall-tau test (Holm over 6 pairs).",
+    "a100_minutes": 26.1,
+    "session": "K-S5"
+   },
+   {
+    "id": "K10a",
+    "what": "Route split for single-front pushes (KV-only vs token-only vs total) at 0.05 and 0.15 nats. KV share at lag 2, with a 'dose-dependent' verdict. Horizons against 20 random directions.",
+    "a100_minutes": 17.7,
+    "session": "K-S5"
+   },
+   {
+    "id": "K10b",
+    "what": "Cross-position finite-difference Jacobian split into re-routing (QK) and along-route (OV) parts at blocks 6/14/18, lags 1/4. Head routing map by VJP edge attribution. Structural and JVP code checks.",
+    "a100_minutes": 5.6,
+    "session": "K-S5"
+   },
+   {
+    "id": "K10c",
+    "what": "Folge vs Reihe on answer digits: chained CL17 readout against direct L-par (ridge) and L-jac (finite-difference) readouts. Holm over blocks x digits.",
+    "a100_minutes": 2.2,
+    "session": "K-S2a"
+   },
+   {
+    "id": "K-ana",
+    "what": "Analysis. Bootstraps; hazard and per-claim models with 39 random-set refits; mixture tests with 2,000 draws; PI and rank specificity; Holm families. Also the K6a/K6b/K6d verdicts, the composite table, and the report.",
+    "a100_minutes": 30,
+    "session": "K-ana (account A)"
+   },
+   {
+    "id": "SETUP",
+    "what": "Session setups: K-S0, K-S1, K-S2a, K-S2b and K-S4 take 4 min each; K-S3 8 min (Qwen3.5-2B download); K-S5 6 min (R1 copy-in); K-ana 3 min.",
+    "a100_minutes": 37,
+    "session": "all planned sessions"
+   },
+   {
+    "id": "RK-1",
+    "what": "Conditional reserve, about 58 min if run: a post-hoc DeepSeek-style MTP head trained in bf16 on frozen Qwen3-1.7B as a secondary lens arm. Descriptive only. Runs only if G-K5 is not 'calibrated' and the budget remains.",
+    "a100_minutes": 0,
+    "session": "K-S6 (conditional)"
+   },
+   {
+    "id": "RK-2",
+    "what": "Conditional reserve, about 53 min if run: the base design's K5b. An H-set on Qwen3.5-2B and native-lens read-state ablation against RS39. Reported next to the composite. Runs only if the budget remains.",
+    "a100_minutes": 0,
+    "session": "K-S7 (conditional)"
+   }
+  ],
+  "total_a100_hours": 8.78,
+  "metaphor_mapping": [
+   {
+    "element": "'Multitoken Prediction'",
+    "counterpart": "Qwen3-1.7B has no MTP head: none of its 311 tensors belongs to one, and the Qwen3 report does not mention MTP. Counterparts: the self-rollout chain lens CL17 (K4); Qwen3.5-2B's native MTP head, for calibration only (K5a); a post-hoc trained head as the conditional reserve RK-1."
+   },
+   {
+    "element": "'lebt von einem Gradient ... Gradient Through Routing ... dieses Durchrouten'",
+    "counterpart": "No gradients flow at inference.\n- Counterpart: the cross-position Jacobian dh_27(t+Delta)/dh_l(t), split into a re-routing (QK) part and an along-route (OV) part, with a head routing map from VJP edge attribution (K10b).\n- Its VJPs are the frozen model's off-diagonal gradient terms.\n- Interventional cross-position transfer: K9, K10a.\n- Cloud et al.'s gradient routing (training-time masking) has no counterpart."
+   },
+   {
+    "element": "'im Sinne einer Folge, nicht einer Reihe'",
+    "counterpart": "Folge = the chained readout (CL17) and the token route. Reihe = direct k-step readouts (L-par ridge, L-jac finite differences) and the KV route. Compared on answer digits (K10c) and as carrier shares (K10a)."
+   },
+   {
+    "element": "'der Token ist die Folge des vorherigen Tokens; nicht: der dritte Token ist die Folge von [dem ersten]; parallel betrachten'",
+    "counterpart": "KV share s_KV at lag 2 of a front's effect on later fronts, at two doses, with a 'dose-dependent' verdict (K10a). Structural fact, kept as a code check: a front at block b reaches its own block at later positions only through tokens."
+   },
+   {
+    "element": "'vorderste Front ... in der Zeit auftragen ... Reihen von Tokenfronten'",
+    "counterpart": "Front F(t) = the column of the 28 block outputs at the newest position. Decode fronts equal teacher-forced fronts (code check). Chain fronts are stored per step (SO-CH, SO-FD)."
+   },
+   {
+    "element": "'verschiedene Kanäle, wo die Token durchfließen'",
+    "counterpart": "Channel catalogue SO-CH:\n- 448 attention heads;\n- named residual directions and subspaces: style u*_b, RSI u_T_perp, sea, H write subspace, J-workspace, PCs;\n- neuron groups;\n- per-step lens channels: FOV_att, share_H, ENT, CDM, TOP1.\nCaveat: every non-head channel is an analyst's basis choice within one residual stream."
+   },
+   {
+    "element": "'hierarchisch ordnen; einzelne Kanäle beeinflussen wiederum andere'",
+    "counterpart": "Depth-residualised interventional transfer graph and ranking among named channels (K9). Per-channel outflow minus inflow alpha^int, the antisymmetric part of the coupling (K7a)."
+   },
+   {
+    "element": "'verschiedene äußere Gegebenheiten, welche die Hierarchie der Kanäle beeinflussen'",
+    "counterpart": "Reordering across task text, neutral text, factual QA, and coherent vs filler 2k contexts, by a split-half within-vs-between Kendall-tau test (K9). Temperature as an external condition of lens break-off (K6a temperature arm) and of the H carry (K6e at T 1.0)."
+   },
+   {
+    "element": "'Durchsatz ... wenn eine Kanalfront wieder die Prädiktion der nächsten und der nächsten ist'",
+    "counterpart": "Throughput horizons: anticipation profiles a_c(k) per channel (K7a); route horizons k*_route against random directions (K10a); channel-resolved lens hit horizons (K7b)."
+   },
+   {
+    "element": "'Verhältnis, inwieweit eine Kanalfront Prädiktor für vorhergegangene oder folgende Fronten ist -> vektorielle Größe'",
+    "counterpart": "Arrow vector per channel:\n- anticipation vs memory with asymmetric token targets (K7a);\n- interventional outflow vs inflow (K9 -> K7a);\n- the lens vector of forward vs backward hits (K7b);\n- lead/lag around the break-off front (K6b(iii)).\nSame-channel forward/backward predictability is symmetric under stationarity (MI, whitened single-lag linear fits), so it is only a non-stationarity diagnostic (D_c)."
+   },
+   {
+    "element": "'Chain Lens / Kettenlinse'",
+    "counterpart": "vgel & Douglas, 'The Chain Lens [interim]' (LessWrong, 11 Nov 2026). The self-rollout CL17 on Qwen3-1.7B (K4) is calibrated by equivalence against a re-implementation of the native MTP chain lens on Qwen3.5-2B (K5a); no code was released."
+   },
+   {
+    "element": "'konkretes Abbruchkriterium'",
+    "counterpart": "The post defines none, so K defines five break-off steps per chain and block:\n- k*_ev: evidence enters the band of the foreign-state null;\n- k*_info: the band of the covariance-matched null;\n- k*_conf: first exact-label confabulation;\n- k*_ver: first verifier rejection;\n- k*_FOV.\nModel-side break-off: i* (K8c)."
+   },
+   {
+    "element": "'wo sie ... halluziniert'",
+    "counterpart": "H_lens: the per-claim confabulation share and hazard against exactly known values (K4, K6a), and CONFAB-QA in factual QA (K6h). H_model: the model's own exact errors (K3, K8). Linked by K6d and K6h, which ask whether the lens reads the model's own wrong values."
+   },
+   {
+    "element": "'wo der Blickbereich dieser Chain-Linse vor allem mit den H-Neuronen korreliert'",
+    "counterpart": "Field of view measured three ways, each against random sets: FOV_att (the attention share of chain step s on the patched state); share_H (the H share of the direct-logit attribution of the chosen token); rho_H (the H write share of the read state). Also k*_FOV. The decisive tests are observational (K6b), causal (K6c), persistence (K6e) and the QA domain (K6h)."
+   },
+   {
+    "element": "'Haarneuronen' (speech-to-text slip for H-Neuronen)",
+    "counterpart": "H-neurons (Gao et al., arXiv 2512.01797), identified in Qwen3-1.7B with the prose label convention fixed. C is chosen by suppression runs; H+ is switched in if the set is unstable (K2)."
+   },
+   {
+    "element": "'die selbst nur 0,1 % im Netz ausmachen'",
+    "counterpart": "abs(H)/172,032 is reported. The literature gives 0.01-0.35 per mille, i.e. 1.7-60 neurons here; the count depends on the L1 strength and the set is not unique."
+   },
+   {
+    "element": "'ist das jetzt einfach nur ein Artefakt der Länge'",
+    "counterpart": "Three length mechanisms, each with a control:\n- L1 cumulative chance (K6a, K8c);\n- L2 generic degradation: V2/V7 rollout nulls, lens context offsets K6f, filler/length dose K8a, preamble shift K8c;\n- L3 an association that vanishes after conditioning: 'length artifact' verdicts in K6b, K6h and K8c, with a marginal association required and an absolute bound."
+   },
+   {
+    "element": "'Halluzinationen im Allgemeinen'",
+    "counterpart": "H_model in the model's own text (K8); lens confabulation in arithmetic (K4, K6) and in H's own factual domain (K6h)."
+   },
+   {
+    "element": "'andere Mechanismen im Netz, welche ... diesen Effekt nochmal verstärken'",
+    "counterpart": "Content at matched position in the lens (K6g) and in the model's own text (K8a C2-C6); snowballing (TOKEN routes); H-specific causal effects (K3d, K6c, K6e-c); latent cache carry (KV and TOK+KV routes)."
+   },
+   {
+    "element": "'ein Haarneuronenattraktor, der nicht unmittelbar an die Statistik der Länge gebunden ist'",
+    "counterpart": "Attractor family Q9 (Holm over 6): a carry whose lower bound is > 1 (round-2 R6), or within-item bistability, each specific to H against damage-matched random sets (PI test on K itself). Tested in the chain lens (K6e) and in the model's own text (K8b). 'Not bound to length': the carry is measured after release at matched positions; offset invariance (K6e-d); a plateau verdict for non-decaying persistence."
+   },
+   {
+    "element": "'zu überwinden' (probably 'zu überprüfen')",
+    "counterpart": "Every K rule has a verdict that counts against H-CHAIN (the K.7 falsifier list). A separate list says which results never count against it."
+   },
+   {
+    "element": "Aside 'das ist wahrscheinlich jetzt schon ein Schritt weiter'",
+    "counterpart": "No counterpart: a remark on the order of the argument, not a claim about the model."
+   },
+   {
+    "element": "Asides 'König - Mann + Frau = Königin, symmetrisch vs asymmetrisch' and 'retokenisieren ... Grenze bei Buchstaben oder Pixeln'",
+    "counterpart": "Assigned to part D. K's partial counterparts: the antisymmetric part of the channel coupling (alpha^int), and Qwen3's digit tokenisation. The tokenisation makes every multi-digit intermediate a multi-token concept no single-token lens can read, which is why K uses arithmetic tasks."
+   },
+   {
+    "element": "'Catfishing / Hyperlong-Kontext / Selfish Mining / zwei Entitäten / Optimum unter 50 %, Losing Game / Form war relevant'",
+    "counterpart": "No counterpart in K (H-DUAL, part D). K uses context length only as an external condition, up to 4,096 tokens, through the shared long-context engine."
+   }
+  ],
+  "falsifiers": [
+   "Premise failures (K3), any of: 'H-neurons not replicated (detection at random-set level)'; 'pre-generation signal (question familiarity or uncertainty)'; 'H is explained by uncertainty, rarity and length'; 'no specific causal role at this scale' (both composite 90 % intervals within +-0.05). The H-neurons are then not a hallucination mechanism in Qwen3-1.7B.",
+   "Lens premise: G-K4 'chain lens does not read intermediates' (both upper bounds < 0.05) while the lens-free probe shows the intermediates present in the state, i.e. 'lens fails to read present intermediates'. If the probe also fails ('nothing to read'), this does not count.",
+   "K6a 'flat per-step confabulation (cumulative only)' (slope within +-0.03 per step) or 'generic rollout drift' at every block. The post's growth of confabulation with chain length is then cumulative chance or a property of the rollout, not of the read state.",
+   "K6b(i), any of: 'length artifact (lens side)' (a marginal association whose conditional beta lies within +-0.10 per SD and below half the marginal); 'no association (lens side)'; the lead/lag string 'H rise follows the break only'.",
+   "K6c: both '(i) no specific causal role of H in the rollout' and '(ii) no specific causal role of H writes in the read state' (Delta within +-0.03, contrast-surviving share >= 0.2).",
+   "K6e, any of:\n- 'dissipative in the chain lens' in both the TOK and TOK+KV routes, together with 'no within-item bistability (lens)';\n- 'generic persistence in the chain lens (not H-specific)';\n- 'no causal effect of the H push on later confabulation';\n- 'carry depends on context length'.",
+   "K8b: 'dissipative H' in both the ACH and TQA arms together with 'no within-item bistability (sessions)'; or 'generic persistence (not H-specific)'.",
+   "K8c 'length artifact (model side)' or 'no association (model side)'. H activity then does not lead the next exact error beyond step, position, difficulty and entropy.",
+   "K8a 'pure length effect' on the teacher-forced H score: length changes it while every content contrast is equivalent to zero.",
+   "Composite rows 5 ('length artifact: ... H perturbations decay') and 7 ('no H association with lens break-off'). Row 4 counts against the attractor part.",
+   "K5a 'length trend without trunk dynamics' (native slope rises and the substitute is calibrated). This is weak evidence: it counts against H-neuron dynamics as a necessary driver of the published length trend.",
+   "Channel picture, any of: K10a 'sequential: token route dominates at lag 2' at both doses; K9 'hierarchy stable across <pair>' for every pre-registered pair, given 'hierarchy resolved'; K10c 'direct readouts match or beat the chain' at every block and digit.",
+   "Never counted against H-CHAIN:\n- verdicts that are undecided or underpowered (d1 < 0.25, K not defined, specificity not testable);\n- results that rest on an instrument flagged 'nothing to read', 'lens not validated', 'H-set not validated', 'H not valid in arithmetic', 'H scale not validated in the lens frame', 'intervention largely cancelled by the contrast', 'verifier unreliable' or 'QA confabulation label noisy';\n- 'dose-dependent route share' and 'hierarchy not resolved';\n- exploratory results (K7a, K7b, routing map);\n- K3d 'over-compliance only'."
+  ],
+  "shared_objects": [
+   "SO-HN (H-neuron sets; produced by K2; used by K3-K10 and part L).\n- Sets: H_tq (Gao protocol, prose convention, positive weights at C* chosen by suppression runs); H_ar (arithmetic); H+ (|r| >= 0.7 hull; pre-registered switch if the median Jaccard < 0.5); F (negative weights).\n- Fit outputs: theta, C*, refit L2 detectors.\n- References: REF-W per-neuron mean/SD of z and CETT; 99.8th WikiText percentiles.\n- Random sets: RS39 (layer, mean-CETT and scaling-damage matched); RS39mc (mean-clamp damage); RS19, RS20, RS10 subsets.\n- Files: hn_set.json, hn_detectors.pt, rs_sets.json, hn_meta.json.",
+   "SO-LAB (independent labels; K1).\n- Items: ACH-short (I, I+, P, A; substring rule) and ACH-long (difficulty counterbalanced); FP, MC, SY, NE; TriviaQA splits S1 (S_fit, S_lens, S_sess), S2, S3, S4a-c.\n- Arithmetic splits: A-scr, A-csel, A-det, A-lens pool, A-cal, A-bat, A-sy, A-bnd.\n- Scorers: numeral parser, alias matcher, refusal and compliance parsers, W enumerator, OWN sets, CONFAB-QA parser with audit, loop-onset detector.",
+   "SO-CH (channels).\n- 448 heads with 16-dim PCA bases.\n- Named subspaces at blocks {6, 10, 14, 18, 22}: u*_b, u_T_perp, u_sea, H-subspace, J-workspace, PCs.\n- Neuron groups.\n- Per-step lens channels: a_X (zCETT), s_H, H~ (standardised against RS39), FOV_att, DLA share_X, rho_X, ENT, CDM, TOP1, e(s).\n- Natural SDs on N-text.",
+   "SO-GEN and SO-FD (generation corpora for part L).\n- Corpora: K8c long-form texts; K8b session transcripts per configuration; K8a context instances; N-text; lens chains with per-step channels; K6e pushed and twin chains; K10a texts.\n- Front dump per token: id, key, position, labels, log-prob, entropy, top-10, a_H, s_H, z of H, H+ and a 512-neuron panel.\n- Everything else comes from a deterministic teacher-forced replay function (about 0.5 KB per token).",
+   "SO-LENS.\n- J-lenses: Qwen3-1.7B (sha256 6fcc7901...e9d6; index convention from G-K-J) and Qwen3.5-2B (sha256 recorded at the freeze).\n- Priors: mu_task (leave-one-item-out), mu_gen, Sigma_l^{1/2}.\n- Lens specs: CL17 (variant E or L from K5a), CL35 native, verifier.\n- Frames and fillers: P0 (16 tokens), F512/F2048 with 8 instances.\n- Readouts L-par and L-jac; per-cell chain outputs.",
+   "SO-DMG (damage-normalised push; part R's object).\n- K's reference DMG_K: 8 WikiText + 8 TriviaQA Q/A, teacher-forced KL with logits_to_keep.\n- calibrate rule for pushes; NSCALE_DN for neuron scaling (alpha <= 20, 'dose capped' label).\n- D1 = 0.05, D2 = 0.15 nats.\n- Damage is also reported on part R's references so the architect can merge to one reference.",
+   "SO-LCE (long-context engine; part D's object; K uses <= 4,096 tokens): B = 1 prefill with cache copies, explicit positions, logits_to_keep, SDPA assertion, per-layer crop, parity < 1e-4.",
+   "SO-AX (round-1/2 axes; account A): u_T_perp(b) and u_sea(b) from R1 states; u*_b from the TV mode_set members and signs with R1 dir_*_4; check against TV image_cos_d1_u_star.",
+   "SO-TE (transfer engine): central-difference Jacobians, frozen-QK attention from stored probabilities, VJP edge attribution, FD-vs-JVP check.",
+   "SO-GVRA (inverse-free generate-verify-revise-abstain): forward generators; decoupled round-trip verifiers with three outcomes; reviser; attempt limit 3; counted abstentions; verifier error rates measured on planted known cases.",
+   "SO-CAL (calibration units excluded from every analysis): A-cal (64 lens-pool items for beta and unit rules), 32 calibration session templates, planted verifier states.",
+   "SO-STAT (statistics conventions):\n- intervals: 90 % unit bootstrap, 2,000 replicates; two-level where instances exist;\n- specificity: the rank form with RS39 in families of <= 2 members, the prediction-interval form with RS19/RS20 elsewhere; p_IUT = max(p_effect, p_spec), Holm within families Q1-Q18;\n- equivalence verdicts by TOST;\n- BH-FDR for exploratory grids.",
+   "SO-KEYS: keyseed namespace 'k1bK_<tag>' with rk_loop Gumbel; a top-k/top-p truncation processor for the Gao sampling protocol; seeds listed in K.11."
+  ],
+  "provenance": [
+   "Base: the confounds design. Both judges recommended it as the base and ranked it first.\nKept from it:\n- the confound register C1-C16;\n- the L1/L2/L3 length decomposition;\n- SO-HN with RS39 rank tests in <= 2-member families;\n- exact programmatic labels (ACH-short/long, FP, MC, SY, NE, W enumerator);\n- the mu_task prior;\n- V1-V6, oracle chains and the verifier;\n- the K3 construct battery (K3b refit on pre-generation features, K3c, K3d HALL vs COMP);\n- K8a/K8b/K8c, K7a/K7b, K9;\n- the premise structure of the decision table, the engineering pilot, the drop order and the cost rates.",
+   "Grafted from lean, part 1:\n- K6e lens-frame persistence, at reduced scope as both judges proposed: D2 + CLAMP; RS20 in the TOK route only; TOK+KV for H only; CRN twins; R6K definedness; d1 'underpowered' label; NSCALE_DN; CRN gate G-K21;\n- the bistability rule (relaxed component fixed to the twin-vs-twin null, Delta >= 3, s1 <= 1.5, mixed-item criterion);\n- K6e-c causal push/clamp and K6e-d offset invariance;\n- K6f real digit-free filler offsets (>= 8 instances, per judge 2);\n- K6g content-matched forcing.",
+   "Grafted from lean, part 2:\n- equivalence-bound null verdicts and the 'what never counts against' clause;\n- the K5a calibration rule (IAD variant choice E/L, +-0.10 equivalence on C and recall, native length trend, 'length trend without trunk dynamics');\n- the J-lens index-convention check, merged into G-K-J;\n- CDM/TOP1 covariates and lag_H lead/lag strings;\n- the OWN category (V_i^+);\n- first-match decision ordering, with separate rows for in-context conditioning and generic persistence.",
+   "Grafted from mechanism:\n- re-injection OFF in every primary, ON as variant V8, with a 'reinjection-sensitive' label;\n- K10b QK/OV split and head routing map, with block-27 and FD-vs-JVP code gates;\n- the J-lens bridge over all source positions, merged into G-K-J;\n- K10a route split, rebuilt with two doses and 20 random directions;\n- alpha^int outflow/inflow from the K9 gains;\n- FOV_att; the covariance-matched null V7 (k*_info);\n- the K10c Folge vs Reihe rule;\n- the H~ predictor;\n- mean-clamp and per-claim outcome in K6c;\n- the H+ switch;\n- the GK7 wiring order (G-K17);\n- SO-FD;\n- K3f style->H;\n- the TriviaQA session arm idea (per judge 2);\n- the G_AR substring rule.",
+   "Added because all three designs lacked them (judges' 'missing everywhere' lists):\n- K4p lens-free probe (G-K4b), separating 'nothing to read' from lens failure;\n- the expert-stream-only push plus the contrast-surviving share G-K15;\n- the K6h QA lens arm with CONFAB-QA labels and audit;\n- G-K16 in-session unit rule, the only lever since the dose cannot exceed 0.15 nats;\n- loop-onset censoring in lens chains;\n- the decoding-hyperparameter grid and temperature arm (labels);\n- G-K14 H scale/detector check in the lens frame;\n- the plateau ('non-decaying') verdict with log K within +-log 1.25.",
+   "Lean's fatal flaws, fixed:\n- G-K-rope stop -> global offset is a label, with top-1 identical and |Delta log p| < 1e-3 (G-K10);\n- CD cancellation of pushes -> expert-only push primary, both-stream push descriptive, G-K15;\n- re-injection ON in primaries -> OFF;\n- G-K-CL counting the final result -> G-K4 counts TRUE-INT only;\n- w_H at the last prompt token -> K3b refits on pre-generation features;\n- negatives under 'H silent in arithmetic' -> H_ar fallback (G-K3), 'H not valid in arithmetic' never counts, QA arm in H's domain;\n- unreachable 'length artifact' -> marginal association required, then conditional within +-0.10 and < 0.5 x marginal; no 'no content effect' requirement; content is a suffix.",
+   "Mechanism's fatal flaws, fixed:\n- rank p inside Holm with 19/200 sets -> specificity is rank with RS39 only in <= 2-member families, the prediction-interval form elsewhere; p_IUT = max(p_effect, p_spec) is Holm-adjusted; effect tests use bootstrap p at Holm levels, not '90 % CI excludes 0';\n- K2 lag-2 verdict fixed by the dose -> two doses and a 'dose-dependent' verdict;\n- pooled dip test -> within-item mixture rule with an item-structured parametric bootstrap;\n- log-linear carry -> segment ratios and ratio of sums with R6K definedness;\n- budget filling the envelope -> merged plan 8.78 h with drop order and conditional reserves.",
+   "Confounds' fatal flaws, fixed:\n- row 2 could say 'supported' with the lens failed -> row 2 needs P-L plus a lens-side H clause; model-only support is 'model-side H attractor (lens not tested)';\n- calibration passing by default -> lean's +-0.10 equivalence;\n- falsifiers 8-9 counting unresolved or exploratory results -> removed, listed under 'never counts';\n- biased K9 reorder test -> split-half within-vs-between tau difference D.\nOther base fixes from judge 2:\n- carry specificity tested on K itself (PI);\n- K6c normalised per claim with mean-clamps;\n- K8a bootstrap includes context instances, with per-length batch sizes (96/48/24);\n- K8a capped at 4,096 (judge 1);\n- K8b 2-vs-1 Gaussian LR replaced by lean's bistability rule.",
+   "Where the judges disagreed, decisions:\n- Base K5b (H-set on Qwen3.5-2B): judge 1 moved it to reserve, judge 2 kept it. Reserve RK-2: it costs a second Gao pipeline at unmeasured fp32 hybrid-attention rates, and K6c(ii) keeps the literal read-state ablation test on the primary model.\n- Folge vs Reihe: judge 1 wanted a rule, judge 2 descriptive. Ruled (Q16), with an equivalence-type 'match or beat' bound, but outside the composite.\n- Attractor family: judge 1's lens levels (0.04 + 0.01) vs judge 2's single family. One Holm family of 6 members across both frames, because both frames answer the same attractor question.",
+   "Statistical choices introduced in the merge:\n- The attractor and lens-causal families use RS19/RS20 with a prediction-interval specificity test, because 6- and 2-member Holm families cannot be met by rank resolution with 20 sets. Normality of the random-set statistic is checked and labelled.\n- The 'no within-item bistability' bound uses the share of units with z > 2. Simulation showed a z > 3 bound wrongly passed 0.81 of cases with a 0.15 locked share at 3 SDs; at z > 2 the error is <= 0.04.",
+   "Evidence behind the numbers:\n- MDEs re-simulated for the merged counts: carry 192 x 8 chain-pairs and 256 sessions at Holm step 0.05/6; bistability at 192 x 8 and 24 x 16; bound at z > 2. Scripts: scratch_K_merge/mde_carry.py, mde_carry2.py, bist_merge.py, bound2.py.\n- Costs re-derived from the round-2 planned rates, plus KV traffic for long caches and a x2 risk factor for Qwen3.5-2B (scratch_K_merge/cost_merge3.py): planned 527 min = 8.78 A100-h, about 9.1 h if the unit-doubling fallback triggers (offset by the drop order).\n- Tokenizer facts checked with the pinned tokenizer.json: P0 16 tokens, ' ...' 1, ' and so on' 3, ' and so on,' 4, digits split, neutral seeds single tokens."
+  ]
+ }
+}
