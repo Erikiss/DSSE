@@ -70,7 +70,8 @@ summaries, dn_delta, blocks_chosen, the PC summaries (G-PC).
 - A3: u_T_perp spillover at the blocks of B3 from the stored gradients and the round-1 null axes (the formula of
   `r2_rgi_stats.spillover`; the self-test checks equality), with the five outcomes of critique 22f.
 - A7 per block (blocks of P), over blocks (V1 to V6), RSI-into-RGI line, causal line and combined statement, from r2_rgi_stats.py's
-  numbers in the order of 2.6.
+  numbers in the order of 2.6. The causal line uses the simultaneous interval r2_rgi_stats.py stores (`D_sim_ci`); r2_ana recomputes
+  it from `rgi/geom_draws` as a cross-check (`simultaneous_crosscheck`) and uses its own only if `D_sim_ci` is missing.
 - AT8: validity per world, G38, G39; per line and arm the per-world fits (`r2_sim.reg2_fit_world`) and the two-step verdict
   (`r2_sim.reg2_verdict`); ABSENT and 'perturbation-driven'; the answer mapping (late arm primary, early arm secondary);
   recursion; family (AT4).
@@ -160,10 +161,10 @@ Part A
     computable, V1's r_DiD condition counts as not met (V2). V5 has a third case that its two sub-labels do not cover: GI and (IS
     or BA) hold at some block, but nowhere robustly. The verdict is then 'V5: no RGI geometry' with that statement.
 16. A7 RSI-into-RGI: the series are the frames-pooled rho_S and sigma_self.
-17. A7 causal line: 'with simultaneous intervals' = sup-t 95 % intervals over the two statistics D(FG_causal) and D(rho_causal),
-    from the per-draw series in `rgi/geom_draws` and the thirds r2_rgi_stats.py used (the construction of
-    `r2_rgi_stats.supt_band`). The verdict with the pointwise interval is reported next to it. If the draws file is missing, the
-    pointwise reading is used and the output says so.
+17. A7 causal line: 'with simultaneous intervals' = sup-t 95 % intervals over the two statistics D(FG_causal) and D(rho_causal).
+    r2_rgi_stats.py now stores them (`D_sim_ci`, `D_sim_crit`); they are used. r2_ana's own computation from `rgi/geom_draws` (the
+    same construction) is a cross-check and the fallback. The verdict with the pointwise interval is reported next to it. If
+    neither simultaneous interval exists, the pointwise reading is used and the output says so.
 18. A3: w = the mean of the two IMP-DES half gradients per model object (`r2_rgi_stats.spill_inputs`).
 19. AT8: ABSENT, 'present' and the recursion rule use per-world means of the level-1 models over the valid worlds. Recursion is
     read at the natural condition (pooling: the natural-condition entry; the all-conditions pooling is reported). A line that is
@@ -181,32 +182,41 @@ Amendments: readings 23 and 24 in section 6.
 
 ## 5 Interface mismatches and how they are handled
 
-- `r2_rgi_toy.py` writes `r1_job_name` with the condition arm ('nat_W..'), not the training arm. G46 does not use it; the
-  round-1 job name is derived from the net name `<arm>_W<W>_w<ws>_i<init>`.
+- `r2_rgi_toy.py` first wrote `r1_job_name` with the condition arm ('nat_W..'). Its rows now also carry `param_arm` (the job-name
+  arm), and `r1_job_name` uses it. G46 still derives the round-1 job name from the net name `<arm>_W<W>_w<ws>_i<init>` and lists
+  any row whose `param_arm` disagrees (`param_arm_mismatch`; empty on the chain).
 - `analysis/ju_space/gpu/data/rk_dirs.pt` is not in the repository, so `r2_rk.o3_bank` fails in r2_ana if POOLDIRS does not point
   to the Pool file. The analysis does not use the RND start directions; `r2_report.load_bank` then builds the bank with zero RND
   starts and records `bank_flag`.
-- `r2_unlearn_qwen.py`'s first version tested 'gone' before the other loop outcomes and had no g_0 > 0 check in its in-session
-  linear rung. Implementer 2 is aligning the loop order with the plan (coordinator, Amendment 3 message). r2_ana applies the
-  plan's order either way; a remaining difference appears under `od_g8`.
-- The toy producers compute only the amended OD-C2 control (section 6).
+- `r2_unlearn_qwen.py`'s first version tested 'gone' before the other loop outcomes. Its current `rule_loop` follows the plan's
+  order (un-searched, survives, re-routed, undecided), the same as mine; any remaining difference appears under `od_g8`.
+- The toy producers run the amended OD-C2 control and store the plan-text control as `full_at_dstar` (section 6).
 - `armA.json` written before Amendment 3 has no unshifted interval. r2_unlearn_verdict.py then uses `ci90` as stored and gives no
-  plan-text reading (`under_plan_text` null; `G16.interval` says why).
+  plan-text reading (`under_plan_text` null; `G16.interval` says why). The current r2_unlearn_qwen.py writes `ci90_percentile`,
+  `boot_median` and `continues_with_percentile_interval`; all three are read.
+- Other extra fields, read defensively or passed through: `boot95` / `values` in the toy t summaries (the rules compare only
+  verdict fields), `rng_seeds` and `B_T4.peak` in the theta-toy outputs, `cos_boot_median` / `cos_disatt_boot_median` in q5.
 
 ## 6 Amendments
 
 - Amendment 1 (U-statistic bootstrap; not post hoc) concerns implementer 4's script only. The report lists it.
 - Amendment 2 (OD-C2: partial removal at the found dimension d*, one shared lambda) is declared post hoc, so section 14 asks for
-  both readings. The producers ran only the amended control. r2_unlearn_verdict.py therefore does the following.
+  both readings. The producers ran the amended control and store the plan-text control's forward measures. r2_unlearn_verdict.py
+  therefore does the following.
   - It reads each control record defensively (`dm_info`: `r` / `d_star`, `lam` / `lambda`, `matched` / `dm_matched`, `r0`,
     `target`, `drop`, `ladder`, `note`). It marks a control `amended` where the new step applied: note 'partial removal at d*
     (Amendment 2)', or d* > r0 with lambda < 1.
-  - It gives the verdict with the control as run and, next to it, `under_plan_text`. Under the frozen text that control is the
-    full removal at d*, which misses the target by more than 0.02. So specificity is 'not testable' (G45). 'Unlearns' / 'causal'
-    is False under both readings where its accuracy half fails (upper bound > 0.11; this needs no control), and 'not computable'
-    where it holds (that control was not run). The C-T4 ladder is evaluated with these three values. In C-T7 the relaxation
-    contrast of an amended layer is 'not computable'. For the other items, a claim stands if m x p <= 0.05, is excluded if
-    p > 0.05 or |mean| < 0.10, and is otherwise 'not determined' (the Holm rank is unknown).
+  - It gives the verdict with the control as run and, next to it, `under_plan_text`. Under the frozen text the control is the
+    full removal at d*. Implementer 7 stores it as `full_at_dstar` in every Amendment-2 control (the same five draws at lambda 1;
+    forward or relaxation measures, no searches). It misses the target by more than 0.02, so specificity is 'not testable'
+    (G45). 'Unlearns' (C-T4 z1 operations), 'causal' (T4b in C-T3 / C-T4) and 'forget unlearns' (W4) are evaluated against its
+    accuracy (t lower bound >= 0.9 x base), and the C-T4 ladder follows from them. C-T7's Holm family is re-run under the plan
+    text with the stored relaxation contrasts (`full_at_dstar.contrast`); the other 12 items do not depend on the control. C-T5's
+    dmr arm: the searches under that control were not run (only its side effects are stored), so the z1 verdict stays 'not
+    testable' under the plan text, with the side effects reported.
+  - Only for an output without `full_at_dstar` (written before the field existed) does the earlier fallback apply: the control
+    half is 'not computable', so is the ladder rung, and C-T7's other items are bounded (claim if m x p <= 0.05, excluded if
+    p > 0.05 or |mean| < 0.10, else 'not determined').
   - It lists every affected result in `amendment_2` (C-T3 T4b layers, C-T4 operations, ladders and W4, C-T5's z1 verdict, C-T7
     widths and family). The report copies the list and marks the amendment as post hoc.
   Where the amended step did not apply (d* = r0, or the ladder matched without partial removal), both readings coincide and
@@ -237,8 +247,8 @@ Self-tests (synthetic inputs in the producers' formats; one case per verdict bra
 |---|---|---|
 | r2_report.py | 33 / 33 | finder; round-1 gates (G7 to G14, would-have-read LIKELY, attractor); PC gates with the G35 fallback and every G-PC status; G46 / G34; G41; amendments parser (incl. multi-part Amendment 3); undefined theta replicates; packing; manifest; end-to-end report with and without inputs |
 | r2_linearity.py | 20 / 20 | LEACE (zero cross-covariance), ridge probe, AUC, INLP r*, degree-2 probe on planted XOR and 1-dim signals, permutation null, calibration and G42 pass / fail, both rungs and every statement; end to end with every input (planted RSI / RGI / sea), with G41 failed and the labels, and with missing inputs |
-| r2_unlearn_verdict.py | 46 / 46 | every condition of C-Q2 / C-Q3, G43, C-Q4a, every loop-rule outcome, G44 and G16 recomputation, R1-6 reference, Amendment 3 (a) both readings, C-Q5 (superposition, symmetry, SVD), C-Q6, C-T0 to C-T7 with every label, the ladder rungs, Holm against a direct computation, Amendment 2 views (ops, ladder, C-T7 family), 'not run' paths |
-| r2_rgi_verdict.py | 60 / 60 | self-loop and GEN rules, the three-block rule, spillover (equal to `r2_rgi_stats.spillover`), A7 per block and V1 to V6, RSI-into-RGI, causal line with simultaneous intervals, combined statement, AT8 validity, G38, G39, every line status and answer, recursion, family, AT7, AT5, A6 / A3 on a synthetic round-1 tree with planted loops, gates and missing parts |
+| r2_unlearn_verdict.py | 49 / 49 | every condition of C-Q2 / C-Q3, G43, C-Q4a, every loop-rule outcome, G44 and G16 recomputation, R1-6 reference, Amendment 3 (a) both readings, C-Q5 (superposition, symmetry, SVD), C-Q6, C-T0 to C-T7 with every label, the ladder rungs, Holm against a direct computation, Amendment 2 plan-text readings from `full_at_dstar` (C-T4 ops and ladder, T4b, W4, C-T5 side effects, the C-T7 family re-run) and the fallback without it, 'not run' paths |
+| r2_rgi_verdict.py | 61 / 61 | self-loop and GEN rules, the three-block rule, spillover (equal to `r2_rgi_stats.spillover`), A7 per block and V1 to V6, RSI-into-RGI, causal line with simultaneous intervals (stored and recomputed), combined statement, AT8 validity, G38, G39, every line status and answer, recursion, family, AT7, AT5, A6 / A3 on a synthetic round-1 tree with planted loops, gates and missing parts |
 
 Chain test: `build_chain.sh` in the test directory builds MOCK / QUICK outputs of every producer in the runner's r2_ana layout,
 with the final producer versions (including the Amendment 2 toy library). The round-1 mock tree comes from `r2_rk.mock_r1` and
@@ -258,11 +268,7 @@ Timings, one CPU thread, synthetic data at real size:
 - The MOCK model has random axes: GA fails at every block, P is empty, G-meta fails, and QUICK has only 2 toy worlds. The chain
   test therefore exercises the file formats and the 'not run' / 'not testable' paths. The verdict branches are covered by the
   synthetic self-tests only.
-- No plan-text numbers exist for the controls changed by Amendment 2 (the producers ran the amended control only). Some
-  plan-text readings are therefore 'not computable' or 'not determined'. Numbers would need r2_unlearn_toy.py and r2_pc_toy.py to
-  store the accuracy of the full removal at d*.
-- Amendment 3 (a): `armA.json` from the current r2_unlearn_qwen.py has no unshifted interval yet (implementer 2 is adding it).
-  My reader is tested on synthetic records with `ci90_percentile` and `boot_median`. The name of the stored unshifted G16 value is
-  read defensively (any boolean field with 'unshifted' / 'percentile' in its name); the unshifted G16 is also recomputed from
-  `ci90_percentile[0]`.
+- Amendment 2: C-T5's z1 verdict under the plan text stays 'not testable', because the dmr searches under the full removal at
+  d* were not run. In MOCK / QUICK no control takes Amendment 2's step (every target is below 0.02), so the `full_at_dstar` path
+  is covered by the synthetic self-test only (in the producers' layout).
 - Real-input run time of r2_ana was not measured on the A100.

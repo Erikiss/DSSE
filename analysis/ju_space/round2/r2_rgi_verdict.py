@@ -445,7 +445,7 @@ def a7_over(gs, per, gs06, sim=None):
         return (cv.replace("with delta or depth", "with delta beyond depth") if (cd and all(cd.values())) else cv), cd
     two = lambda v: list(v) if (isinstance(v, (list, tuple)) and len(v) == 2 and all(fin(num(x)) for x in v)) else None
     st_f, st_r = two(oc.get("D_sim_ci")), two(orc.get("D_sim_ci"))                 # stored by r2_rgi_stats.py (the same sup-t construction)
-    sim_f = st_f or (sim["FG_causal|IMP-DES"] if sim_ok else None); sim_r = st_f and st_r or (sim.get("rho_causal|IMP-DES") if sim_ok else None)
+    sim_f = st_f or (sim["FG_causal|IMP-DES"] if sim_ok else None); sim_r = st_r if st_f else (sim.get("rho_causal|IMP-DES") if sim_ok else None)
     src = ("r2_rgi_stats.py (D_sim_ci, D_sim_crit)" if st_f else "r2_ana from rgi/geom_draws (D_sim_ci not stored)" if sim_ok else None)
     xc = None
     if st_f and sim_ok:
