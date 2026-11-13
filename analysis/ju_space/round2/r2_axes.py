@@ -201,11 +201,17 @@ def block_stats(b, X, ST_b, stmt, neg, W, dev):
              fixed_axes=dict(RSI=dict(a_A=RS2["a_A"], a_B=RS2["a_B"], g0=RS2["gap_perp_cross"], basis="sports, tone, sea, u_neg (R1 axes of the block)"),
                              RGI=dict(a_A=RGI["a_A"], a_B=RGI["a_B"], g0=RGI["gap_perp_cross"], basis="sports, tone, sea, u_neg, u_TOPIC")))
     ax_stats = lambda A: dict(auc=A["auc"], paired_win=A["paired_win"], gap_cross=A["gap_cross"], kept=A["kept"])
+    # review axes-3 ('cross-fitted centred AUC and gap of every axis'): the projected RGI axes on the RGI texts, cross-fitted on their
+    # fold axes (u_RGI_perp: O1's RGI axes a_A, a_B, gap = Delta_RGI; u_RGI_perpT: the same with unit(u_T_perp) removed)
+    tA, tB = R.unit(RGI["a_A"] - (RGI["a_A"] @ tT) * tT), R.unit(RGI["a_B"] - (RGI["a_B"] @ tT) * tT)
+    cf_perp = R.cross_fit_on_axes(X["RGI_PRO"], X["RGI_ANTI"], fold, RGI["a_A"], RGI["a_B"]); cf_perpT = R.cross_fit_on_axes(X["RGI_PRO"], X["RGI_ANTI"], fold, tA, tB)
     J = dict(status="ok", GA=GA, auc_RGI=RGI["auc"], labels=[] if GA else ["RGI axis not resolved"],
              fixed_axes=dict(RSI=dict(g0=RS2["gap_perp_cross"], kept=RS2["kept"]), RGI=dict(g0=RGI["gap_perp_cross"], kept=RGI["kept"]),
                              note="O1: a_A, a_B (float64) in r2_axes.pt blocks[b]['fixed_axes']; g(texts) = r2_rk.gap_on_fixed_axes"),
              axes=dict(RSI_session=dict(ax_stats(RS2), gap_perp_cross=RS2["gap_perp_cross"]), RGI=dict(ax_stats(RGI), gap_perp_cross=RGI["gap_perp_cross"], gap_perp=RGI["gap_perp"]),
-                       TOPIC=ax_stats(TOP), GI_TOP=ax_stats(GIT), dir=ax_stats(DIR)),
+                       TOPIC=ax_stats(TOP), GI_TOP=ax_stats(GIT), dir=ax_stats(DIR),
+                       RGI_perp=dict(cf_perp, axes="fold axes of u_RGI_perp (O1's RGI a_A, a_B); gap_cross = Delta_RGI"),
+                       RGI_perpT=dict(cf_perpT, axes="fold axes of u_RGI_perp with unit(u_T_perp) removed")),
              Delta_T=float(ax["gap_perp_cross"]), g0_RSI=RS2["gap_perp_cross"], Delta_RGI=RGI["gap_perp_cross"], rel=rel,
              cos_T_RGI=cTR, cos_T_RGI_disatt=dis, cos_T_RGI_disatt_ci90=[lo, hi], boot=dict(B=N_BOOT, seed=BOOT_SEED, valid=int(np.isfinite(bs).sum())),
              common=common, difference=difference, n_prompts_common=int(kb.sum()), cos_u_RGI_tone=_cos(RGI["u"], ax["tone"]),

@@ -2196,31 +2196,58 @@ def fourier_cols(cv, k):
     return _orth(Phi - Phi.mean(0))
 
 
+def _share_by_k_tot(Tc, cv, tot):
+    return np.array([((fourier_cols(cv, k).T @ Tc) ** 2).sum() / tot for k in range(1, 9)])
+
+
 def share_by_k(Tc, cv):
     """Ref c1_structure.share_by_k: share of the centred task code's energy on frequency k = 1..8."""
-    tot = (Tc ** 2).sum()
-    return np.array([((fourier_cols(cv, k).T @ Tc) ** 2).sum() / tot for k in range(1, 9)])
+    return _share_by_k_tot(Tc, cv, (Tc ** 2).sum())
 
 
 def ring_test(C, cv, g, nperm=1000):
     """Ref c1_structure.ring_test: max single-frequency share of the centred code C [n_tasks, D] against the max over nperm permutations
-    of the shift labels (generator g)."""
-    Tc = C - C.mean(0); s = share_by_k(Tc, cv); null = np.array([share_by_k(Tc, g.permutation(cv)).max() for _ in range(nperm)])
+    of the shift labels (generator g). The permutation-invariant total energy is computed once (same value, review toy_num-3)."""
+    Tc = C - C.mean(0); tot = (Tc ** 2).sum(); s = _share_by_k_tot(Tc, cv, tot)
+    null = np.array([_share_by_k_tot(Tc, g.permutation(cv), tot).max() for _ in range(nperm)])
     return dict(share=s.round(3).tolist(), kmax=int(s.argmax() + 1), max=float(s.max()), null_max_mean=float(null.mean()),
                 null_max_p99=float(np.quantile(null, 0.99)), p=float((1 + (null >= s.max()).sum()) / (1 + nperm)))
 
 
+_RING_FEATS = {}
+
+
+def _ring_feats(c, K):
+    """c1_structure.loo_ring's feature row [cos, sin](2 pi k c / 17), k = 1..K, evaluated once per (value, K) by the same scalar
+    expression (bit-identical to re-evaluating it)."""
+    key = (float(c), int(K))
+    f = _RING_FEATS.get(key)
+    if f is None:
+        f = _RING_FEATS[key] = np.concatenate([[np.cos(2 * np.pi * k * c / P), np.sin(2 * np.pi * k * c / P)] for k in range(1, K + 1)])
+    return f
+
+
+def _loo_prep(C):
+    """Loop invariants of loo_ring for a code C [n_tasks, D]: the centred code, the leave-one-out training rows and the R2 denominator's
+    terms (they do not depend on the shift labels)."""
+    Tc = C - C.mean(0); n = len(Tc); trs = [np.arange(n) != i for i in range(n)]
+    return Tc, [Tc[tr] for tr in trs], [((Tc[i] - Tc[tr].mean(0)) ** 2).sum() for i, tr in enumerate(trs)]
+
+
+def _loo_ring_prep(prep, cv, K, lam=1e-2):
+    """loo_ring with its invariants precomputed: the same floating-point operations in the same order as c1_structure.loo_ring."""
+    Tc, Ys, tots = prep; n = len(cv); rows = [_ring_feats(c, K) for c in cv]; Lm = lam * np.eye(2 * K + 1); err, tot = 0.0, 0.0
+    for i in range(n):
+        A = np.stack([rows[j] for j in range(n) if j != i]); A = np.c_[A, np.ones(len(A))]
+        w = np.linalg.solve(A.T @ A + Lm, A.T @ Ys[i]); pred = np.r_[rows[i], 1.0] @ w
+        err += ((pred - Tc[i]) ** 2).sum(); tot += tots[i]
+    return 1 - err / tot
+
+
 def loo_ring(C, cv, K, lam=1e-2):
     """Ref c1_structure.loo_ring: leave-one-shift-out ridge prediction of the held-out task column from [cos, sin](2 pi k c / 17),
-    k = 1..K, plus intercept; returns R2."""
-    Tc = C - C.mean(0); err, tot = 0.0, 0.0
-    feats = lambda c: np.concatenate([[np.cos(2 * np.pi * k * c / P), np.sin(2 * np.pi * k * c / P)] for k in range(1, K + 1)])
-    for i in range(len(cv)):
-        tr = np.arange(len(cv)) != i
-        A = np.stack([feats(c) for c in cv[tr]]); A = np.c_[A, np.ones(len(A))]; Y = Tc[tr]
-        w = np.linalg.solve(A.T @ A + lam * np.eye(A.shape[1]), A.T @ Y); pred = np.r_[feats(cv[i]), 1.0] @ w
-        err += ((pred - Tc[i]) ** 2).sum(); tot += ((Tc[i] - Tc[tr].mean(0)) ** 2).sum()
-    return 1 - err / tot
+    k = 1..K, plus intercept; returns R2. Invariants computed once (bit-identical to the ref, review toy_num-3)."""
+    return _loo_ring_prep(_loo_prep(C), cv, K, lam)
 
 
 def spec_rows(Mat, g, nperm=500):
@@ -2257,7 +2284,8 @@ def structure_tests(nets, i, ws, nperm=1000, nperm_loo=1000, nperm_spec=500, ks=
     lab_task = np.repeat(np.arange(NPRE), P * P); lab_ans = np.concatenate([(PAIRS.sum(1) + c) % P for c in pre])
     C1 = np.stack([H1[lab_task == k].mean(0) for k in range(NPRE)]); C2 = np.stack([H2[lab_task == k].mean(0) for k in range(NPRE)])
     R = dict(a_taskcols=ring_test(T, cv, g, nperm), b_h1=ring_test(C1, cv, g, nperm), b_h2=ring_test(C2, cv, g, nperm))
-    R["c_loo_ring_R2"] = {f"K{K}": dict(real=float(loo_ring(T, cv, K)), null_p95=float(np.quantile([loo_ring(T, g.permutation(cv), K) for _ in range(nperm_loo)], 0.95))) for K in ks}
+    prep = _loo_prep(T)                                                     # invariants once per code (same numbers, review toy_num-3)
+    R["c_loo_ring_R2"] = {f"K{K}": dict(real=float(_loo_ring_prep(prep, cv, K)), null_p95=float(np.quantile([_loo_ring_prep(prep, g.permutation(cv), K) for _ in range(nperm_loo)], 0.95))) for K in ks}
     Ma = np.stack([H2[lab_ans == v].mean(0) for v in range(P)]); W3 = nets.p["W3"][i].double().cpu().numpy()
     R["d_h2_answer"] = spec_rows(Ma, g, nperm_spec); R["d_W3"] = spec_rows(W3, g, nperm_spec)
     R["overlap"] = {f"k{k}": subspace_overlap(T, cv, k) for k in overlap_ks}
