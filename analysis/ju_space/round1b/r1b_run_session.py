@@ -245,7 +245,7 @@ def funded(freeze, item):
     return bool(f.get("tier2")) and (not f.get("items") or item in f["items"])
 
 
-def check_start(session, P, freeze):
+def check_start(session, P, freeze, copy=True):
     """SG4 and the tier-2 rules. Returns dict(ok, waiting, not_run, copies [(src, dst_rel, sha256 or None, source)], declared)."""
     m = C.SESSIONS[session]
     res = dict(ok=True, waiting=[], not_run=None, copies=[], declared=[], checked=iso())
@@ -264,7 +264,7 @@ def check_start(session, P, freeze):
     for c in m["after"] + tuple(dict(c, optional=True) for c in m["optional"]):
         k, opt = c["kind"], c.get("optional", False)
         if k in ("done", "trig"):
-            st, info = resolve(P, c["session"])
+            st, info = resolve(P, c["session"], copy)
             if st == "done":
                 if k == "done":
                     add_done(c["session"], info, c["files"])
@@ -288,7 +288,7 @@ def check_start(session, P, freeze):
                 if os.path.isfile(src + ".prov.json"):
                     res["copies"].append((src + ".prov.json", os.path.join(f["session"], f["rel"] + ".prov.json"), None, f["session"]))
             else:
-                st, info = resolve(P, f["session"])
+                st, info = resolve(P, f["session"], copy)
                 if st in ("declared", "not_run"):
                     res["declared"].append(f["session"])
                 elif not opt:
@@ -301,7 +301,7 @@ def check_start(session, P, freeze):
             elif not opt:
                 res["waiting"].append(f"A -> B export {c['name']} not in {P.xfer_src} (with its sha256 in {C.XFER_MANIFEST})")
         elif k == "any":
-            sts = {s: resolve(P, s) for s in c["sessions"]}
+            sts = {s: resolve(P, s, copy) for s in c["sessions"]}
             if any(v[0] == "done" for v in sts.values()):
                 for s, (st, info) in sts.items():
                     if st == "done":
@@ -409,6 +409,19 @@ def gate_SG3(pilot, commits=()):
     return rec
 
 
+def gates_in_session(work):
+    """SG8 (K's G-K2 preview), SG9 (D's G-LCE-1 / -2 records) and SG10 (SO-AX check) are decided in sessions (main §3.1); the runner
+    records what the copied inputs say, for ctx.gate(name). Their consequences are the parts' rules (labels, omitted covariates)."""
+    out = {}
+    for name, rel, keys in (("SG8", "r1b_K_S1/sg8_preview.json", ("G-K2", "H_op_name")),
+                            ("SG9", "r1b_D_A/lce/g_lce_1_2.json", ("G-LCE-1.pass", "G-LCE-2.pass")),
+                            ("SG10", "r1b_R_S0/so_ax/so_ax_check.json", ("ok", "label"))):
+        d = load_json(os.path.join(work, "in", rel))
+        out[name] = dict(source=rel, present=d is not None, ok=True, enforced=False,
+                         values={k: _get(d, k) for k in keys} if isinstance(d, dict) else None)
+    return out
+
+
 def gate_SG7(fz, pilot):
     miss = [k for k in ("pilot", "trims", "projection_h", "funded") if k not in fz]
     return dict(ok=pilot or not miss, missing=miss, enforced=not pilot and not MOCK, trims=fz.get("trims"), funded=fz.get("funded"),
@@ -443,6 +456,7 @@ def resolve_fn(fn):
 def exec_step(ctx, st):
     os.makedirs(os.path.join(ctx.work, "logs"), exist_ok=True)
     ctx.step, ctx.step_started, ctx.keys_used, ctx.models_used, ctx.jlens_sha256 = st.name, iso(), set(), {}, None
+    ctx.step_part = st.part
     t, status, note = time.time(), "ok", None
     say(f"[run] {st.name}" + (f" ({st.minutes:g} min planned)" if st.minutes else ""))
     try:
@@ -454,7 +468,7 @@ def exec_step(ctx, st):
             stf = os.path.join(ctx.work, "steps", st.name + ".status")
             env = dict(os.environ, R1B_SESSION=ctx.session, R1B_WORK=ctx.work, R1B_IN=ctx.inp, R1B_ROOT=ctx.root, R1B_ATTEMPT=ctx.attempt,
                        R1B_ACCOUNT=ctx.account or "", R1B_FREEZE=freeze_path(), R1B_MANIFEST=os.path.join(ctx.work, "manifest.json"),
-                       R1B_DECLARED=",".join(ctx.declared), R1B_T0=repr(ctx.t0), R1B_GUARD_S=repr(ctx.guard_s), R1B_STEP=st.name,
+                       R1B_DECLARED=",".join(ctx.declared), R1B_T0=repr(ctx.t0), R1B_GUARD_S=repr(ctx.guard_s), R1B_STEP=st.name, R1B_STEP_PART=st.part or "",
                        R1B_STEP_STATUS=stf, DEVICE=ctx.device, PYTHONUNBUFFERED="1", **st.env)
             with open(os.path.join(ctx.work, "logs", st.name + ".log"), "a") as lg:
                 lg.write(f"=== {iso()} attempt {ctx.attempt}\n"); lg.flush()
@@ -716,7 +730,7 @@ def run_session(session, root, work, runs, dry=False, check_only=False):
     device = os.environ.get("RUN_DEVICE", "cuda")
     fz_path = freeze_path(); fz = load_json(fz_path, {}) or {}
     if check_only or dry:
-        chk = check_start(base, P, fz)
+        chk = check_start(base, P, fz, copy=False)
         say(f"{base}: " + ("ready" if chk["ok"] else (f"not run ({chk['not_run']})" if chk["not_run"] else "waiting: " + "; ".join(chk["waiting"]))))
         if dry:
             for st in registry().get(base, []):
@@ -759,7 +773,7 @@ def run_session(session, root, work, runs, dry=False, check_only=False):
         if c["path"].startswith("r1" + os.sep) and c["path"].endswith("code_commits.txt"):
             commits += open(os.path.join(work, "in", c["path"])).read().split()
     g3 = gate_SG3(pilot, commits)
-    gates = dict(SG1=g1, SG2=g2, SG3=g3, SG7=g7)
+    gates = dict(SG1=g1, SG2=g2, SG3=g3, SG7=g7, **gates_in_session(work))
     fails = [k for k, g in (("SG1", g1), ("SG2", g2), ("SG3", g3), ("SG7", g7)) if not g["ok"] and g.get("enforced", True)]
     attempts = load_json(os.path.join(work, "session_attempts.json"), []) or []
     k = sum(a.get("result") == "time guard" for a in attempts)
@@ -852,7 +866,7 @@ def mock_tree(d, root, with_r1=False):
     fz = os.path.join(d, "runde1b_freeze.json")
     if not os.path.exists(fz):
         dump_json(dict(mock=True, freeze_commit=None, plan_files={}, package_files={}, pilot={}, trims={}, projection_h=30.6,
-                       funded=dict(tier2=True, items=[]), datasets={}, models={}), fz)
+                       funded=dict(tier2=os.environ.get("R1B_MOCK_UNFUNDED") != "1", items=[]), datasets={}, models={}), fz)
     for p in ("R", "D", "K", "L"):
         mod = importlib.import_module(f"r1b_sessions_{p}")
         if hasattr(mod, "mock_inputs"):
@@ -905,6 +919,10 @@ def selftest(d, root):
     env = dict(os.environ, MOCK="1", RUN_DEVICE="cpu", NT=os.environ.get("NT", "1"))
     r = subprocess.run([PY, "-u", os.path.join(HERE, "r1b_run_slot.py"), "--mock-dry-run", os.path.join(d, "dry"), root], env=env)
     (errs.append("mock dry run of all slots") if r.returncode else None)
+    r = subprocess.run([PY, "-u", os.path.join(HERE, "r1b_run_slot.py"), "B_T2", root, os.path.join(d, "unfunded"), "--selftest"],
+                       env=dict(env, R1B_MOCK_UNFUNDED="1"))
+    nr = load_json(os.path.join(d, "unfunded", "B", "MyDrive", "dsse_runs", "r1b_K_S7", "session_not_run.json"), {}) or {}
+    (errs.append(f"tier 2 unfunded: exit {r.returncode}, marker {nr}") if r.returncode or nr.get("code") != K.NA_TIER2 else None)
     t = mock_tree(os.path.join(d, "rt"), root); tm = os.path.join(d, "rt", "testmods"); os.makedirs(tm, exist_ok=True)
     open(os.path.join(tm, "r1b_sessions_test.py"), "w").write(TEST_MOD)
     open(os.path.join(tm, "r1b_test_script.py"), "w").write(TEST_SCRIPT)

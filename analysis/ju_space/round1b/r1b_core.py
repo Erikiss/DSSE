@@ -930,14 +930,17 @@ class Ctx:
         self.t0, self.guard_s, self.step = t0 or time.time(), guard_s, step
         self.r1, self.r2 = os.path.join(self.inp, "r1"), os.path.join(self.inp, "r2")
         self.models_used, self.keys_used, self.jlens_sha256, self.step_started = {}, set(), None, iso()
+        self.step_part = None                    # the part that registered the running step (r1b_P0 / r1b_ana take steps of all parts)
 
     @classmethod
     def from_env(cls):
         e = os.environ
-        return cls(e["R1B_SESSION"], e["R1B_WORK"], inp=e.get("R1B_IN"), root=e.get("R1B_ROOT"), device=e.get("DEVICE"),
-                   attempt=e.get("R1B_ATTEMPT"), account=e.get("R1B_ACCOUNT"), freeze=load_json(e.get("R1B_FREEZE", ""), {}),
-                   manifest=load_json(e.get("R1B_MANIFEST", ""), {}), declared=[x for x in e.get("R1B_DECLARED", "").split(",") if x],
-                   t0=float(e.get("R1B_T0") or time.time()), guard_s=float(e.get("R1B_GUARD_S", 4.5 * 3600)), step=e.get("R1B_STEP"))
+        c = cls(e["R1B_SESSION"], e["R1B_WORK"], inp=e.get("R1B_IN"), root=e.get("R1B_ROOT"), device=e.get("DEVICE"),
+                attempt=e.get("R1B_ATTEMPT"), account=e.get("R1B_ACCOUNT"), freeze=load_json(e.get("R1B_FREEZE", ""), {}),
+                manifest=load_json(e.get("R1B_MANIFEST", ""), {}), declared=[x for x in e.get("R1B_DECLARED", "").split(",") if x],
+                t0=float(e.get("R1B_T0") or time.time()), guard_s=float(e.get("R1B_GUARD_S", 4.5 * 3600)), step=e.get("R1B_STEP"))
+        c.step_part = e.get("R1B_STEP_PART") or None
+        return c
 
     # ---- paths and inputs
     def path(self, rel):
@@ -964,6 +967,10 @@ class Ctx:
     def missing(self, session):
         return session in self.declared
 
+    def gate(self, name):
+        """The runner's record of a global gate (SG1-SG10; SG8 / SG9 / SG10 as read from the copied inputs), or None."""
+        return (self.manifest.get("gates") or {}).get(name)
+
     # ---- models, keys, funding, trims, time
     def model(self, name=C.M17):
         tok, m = load_model(name, root=self.root, device=self.device, mock=self.mock, freeze=self.freeze)
@@ -979,7 +986,7 @@ class Ctx:
     def key(self, tag, *rest):
         """keyseed(tag, *rest) for a registered tag of this session's part (P0: 'r1bP0_' tags); no key is shared across parts."""
         o = key_owner(tag)
-        want = "main" if self.session == "r1b_P0" else self.part
+        want = "main" if self.session == "r1b_P0" else (self.step_part or self.part)
         if o is None or o != want:
             raise ValueError(f"key tag {tag!r} is not registered for part {want} (owner {o}); see r1b_core.KEYS")
         self.keys_used.add(tag)
@@ -1019,7 +1026,8 @@ class Ctx:
                     modules=module_hashes(), config=jsonable(config), config_sha256=sha256_text(canon(config)),
                     package=fz.get("package_files"), models=self.models_used, jlens_sha256=self.jlens_sha256,
                     inputs=man.get("inputs", []), versions=versions(),
-                    keys=dict(namespace=KEYS.get("main" if self.pilot else self.part, {}).get("prefixes"), used=sorted(self.keys_used),
+                    keys=dict(namespace=KEYS.get("main" if self.pilot else (self.step_part or self.part), {}).get("prefixes"),
+                              used=sorted(self.keys_used),
                               seeds=seeds),
                     labels=list(labels or []), started=self.step_started, written=iso())
 
@@ -1262,6 +1270,10 @@ if __name__ == "__main__":
     if a and a[0] == "fetch-models":
         fz = load_json(os.path.join(REPO, C.PLAN_DIR, "runde1b_freeze.json"), {})
         for nm in a[2:]:
+            pins = model_pins(nm, fz)
+            if not pins.get("revision") or not pins.get("sha256"):      # e.g. Qwen3.5-2B before the freeze (r1b_P0): K's step pins it
+                print(f"{nm}: not pinned yet (runde1b_freeze.json 'models'); the step that needs it pins it (register_loader)")
+                continue
             print(nm, ensure_model(nm, a[1], fz))
         raise SystemExit(0)
     if a and a[0] == "keys":
