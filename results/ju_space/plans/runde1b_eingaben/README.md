@@ -43,3 +43,20 @@ Nur Analogien zur Schleife; für die Durchführung:
 - Zu jedem Mittelwert die Verteilung (Schaden über Texte, Häufigkeit eines Effekts).
 - Vorab festhalten, welchen kleinsten Effekt jede Prüfung erkennen kann.
 - Schleife auch am 0.6B-Modell (Größenvergleich; nur als Hypothese).
+
+## 6 Zwei Deutungen des Nutzers nach Runde 2 (13.11.2026; als Hypothesen in 1b zu prüfen)
+- **Dualität bei sehr langem Kontext (Catfish-Effekt, Selfish Mining):** Wird der Kontext weit über das natürliche Maß gehalten,
+  entsteht womöglich eine Kraft, die eine Entität in zwei teilt; die beiden können dann noch längeren Kontext tragen. Analogie
+  Selfish Mining: ein zurückgehaltener Strang lohnt sich schon unter 50 % Anteil, für das Ganze ist es aber ein Verlustspiel.
+  Runde 2 fand „Form“ relevant (AT8). Am Rande: Läge die Dualität nur innerhalb eines Tokens, würde Retokenisieren sie auflösen;
+  symmetrische (König − Mann + Frau) gegen asymmetrische Analogien.
+- **Kettenlinse:** Erzeugung als parallele Kanäle mit Token-Fronten; je Kanal, wie stark eine Front folgende gegenüber
+  vorangehenden Fronten vorhersagt (eine Richtungsgröße); Kanäle hierarchisch, von äußeren Bedingungen umgeordnet. Die Linse bricht
+  ab, wo sie halluziniert oder wo ihr Blick mit H-Neuronen (Halluzinations-Neuronen, rund 0,1 %) zusammenfällt. Frage: bloßer
+  Längeneffekt oder ein H-Neuronen-Attraktor, der nicht an die Längenstatistik gebunden ist?
+- Bezug: „The Chain Lens [interim]“ (vgel, Raymond Douglas; LessWrong, 11.11.2026,
+  https://www.lesswrong.com/posts/Nr6fksEqqxNpdz6rk/the-chain-lens-interim): J-Lens-Transport plus MTP-Kopf, kontrastives
+  Dekodieren gegen einen mittleren Zustand; WorkspaceBench 0,42 gegen 0,32 (J-Lens); Halluzination und Leistung wachsen beide mit
+  der Kettenlänge; Neuron Lens mit Rundweg-Prüfung. Qwen3-1.7B hat keinen MTP-Kopf.
+- Vorgabe des Nutzers: Wird etwas rückkonstruiert, dann inversfrei wie bei DeepMinds Aletheia (Erzeugen, vorwärts Prüfen,
+  Überarbeiten oder Enthalten), nicht über invertierte Matrizen wie bei Fus Aletheia (regularisierte inverse Konfusionsmatrix).
