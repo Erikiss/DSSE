@@ -1,0 +1,322 @@
+{
+ "block": 14,
+ "n_prompts": 64,
+ "nnew": 40,
+ "median_norm": 188.02522917937407,
+ "nonsemantic_token_share": {
+  "rsi": 0.1234375,
+  "sports": 0.15,
+  "tone": 0.16171875,
+  "sea": 0.14453125
+ },
+ "plan": "analysis/ju_space/microlens/README.md",
+ "T1_readout": {
+  "u_T_perp_logit_lens": [
+   "myself",
+   "understand",
+   "Learned",
+   "understanding",
+   "learnt",
+   "tutor",
+   "ourselves",
+   "learned",
+   "learn",
+   "respectfully",
+   "topics",
+   "learner",
+   "summaries",
+   "objectively",
+   "systematically"
+  ],
+  "u_T_perp_J_lens": [
+   "analysis",
+   "learning",
+   "discussions",
+   "analyses",
+   "research",
+   "knowledge",
+   "learning",
+   "analyze",
+   "analyzing",
+   "myself",
+   "analyse",
+   "analytical",
+   "analys",
+   "inquiry",
+   "inquiries"
+  ],
+  "u_T_raw_J_lens": [
+   "myself",
+   "ourselves",
+   "my",
+   "our",
+   "yourself",
+   "questions",
+   "question",
+   "learning",
+   "discussion",
+   "thinking",
+   "discussions",
+   "YOU",
+   "understanding",
+   "!I",
+   "you"
+  ],
+  "u_T_perpJ_J_lens": [
+   "myself",
+   "learning",
+   "my",
+   "ourselves",
+   "learning",
+   "learner",
+   "learners",
+   "insights",
+   "-learning",
+   "learn",
+   "discussions",
+   "teachers",
+   "Learning",
+   "teacher",
+   "questions"
+  ],
+  "overlap_logit_vs_J_top15": 1
+ },
+ "T2_filter": {
+  "rsi": {
+   "cos_all_vs_sem": 0.9957420108535707
+  },
+  "sports": {
+   "cos_all_vs_sem": 0.9871983436385676
+  },
+  "tone": {
+   "cos_all_vs_sem": 0.9795934598331377
+  },
+  "sea": {
+   "cos_all_vs_sem": 0.9912224424779403
+  },
+  "neg": {
+   "cos_all_vs_sem": 0.966284596206924
+  },
+  "cos_u_T_perp_all_vs_sem": 0.9910308802528082
+ },
+ "T3_perp": {
+  "euclid": {
+   "cos(u_T_perp^E,sports)": -1.6163358801991288e-16,
+   "cos(u_T_perp^E,tone)": -2.1442283008626924e-16,
+   "cos(u_T_perp^E,sea)": 1.4522263747944255e-16,
+   "cos(u_T_perp^E,neg)": 5.509670636182684e-18,
+   "cos(u_T_perp^J,sports)": 0.30113830593092666,
+   "cos(u_T_perp^J,tone)": 0.3266084072158993,
+   "cos(u_T_perp^J,sea)": 0.3016849695366351,
+   "cos(u_T_perp^J,neg)": -0.24791940464815962,
+   "foreign_share_u_T_perp^E": 3.2505217908382477e-31,
+   "foreign_share_u_T_raw": 0.3689776715125106,
+   "foreign_share_random_Eperp_dirs_mean_p95": [
+    2.7114196672641916e-33,
+    7.16178392621644e-33
+   ]
+  },
+  "logit_lens": {
+   "cos(u_T_perp^E,sports)": -0.09551425394260328,
+   "cos(u_T_perp^E,tone)": -0.12323573967864866,
+   "cos(u_T_perp^E,sea)": -0.1381794128584528,
+   "cos(u_T_perp^E,neg)": 0.10726559513112789,
+   "cos(u_T_perp^J,sports)": 0.2492733883058275,
+   "cos(u_T_perp^J,tone)": 0.2656268211741599,
+   "cos(u_T_perp^J,sea)": 0.2253448262200719,
+   "cos(u_T_perp^J,neg)": -0.19446008333077147,
+   "foreign_share_u_T_perp^E": 0.03189256459772992,
+   "foreign_share_u_T_raw": 0.33158247788538264,
+   "foreign_share_random_Eperp_dirs_mean_p95": [
+    0.005110372285177394,
+    0.012662250277267391
+   ]
+  },
+  "J_lens": {
+   "cos(u_T_perp^E,sports)": -0.49005544422202785,
+   "cos(u_T_perp^E,tone)": -0.5517042006286147,
+   "cos(u_T_perp^E,sea)": -0.4649758071733284,
+   "cos(u_T_perp^E,neg)": 0.37296421911033983,
+   "cos(u_T_perp^J,sports)": 2.8205532293519977e-16,
+   "cos(u_T_perp^J,tone)": 4.9944273234077294e-17,
+   "cos(u_T_perp^J,sea)": 1.3055252220616385e-17,
+   "cos(u_T_perp^J,neg)": 1.219073517948644e-16,
+   "foreign_share_u_T_perp^E": 0.3449042966853271,
+   "foreign_share_u_T_raw": 0.29027910672758156,
+   "foreign_share_random_Eperp_dirs_mean_p95": [
+    0.0898516577810526,
+    0.2039574442150055
+   ]
+  },
+  "cos_euclid(u_T_perp^E,u_T_perp^J)": 0.911674557751383,
+  "M_J_condition": 157128684845.05743,
+  "M_J_eff_rank": 227.39843584343438
+ },
+ "T4_use": {
+  "+u_T_perp^E (round 1)": {
+   "alpha": 0.08866005951634293,
+   "damage": 0.04993660043143665,
+   "effect": {
+    "rsi": 0.737153395268291,
+    "sports": -0.15829149721434033,
+    "sea": -0.1367103701176218,
+    "tone": -0.055072322457162565
+   },
+   "tried": [
+    [
+     0.1,
+     0.06360832615702214
+    ],
+    [
+     0.08866005951634293,
+     0.04993660043143665
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": 0.7922257177254536
+  },
+  "-u_T_perp^E (round 1)": {
+   "alpha": 0.08810195976134108,
+   "damage": 0.04979521648358914,
+   "effect": {
+    "rsi": -0.525267207116922,
+    "sports": 0.38464652937899463,
+    "sea": 0.3312281947969385,
+    "tone": 0.3006708201736096
+   },
+   "tried": [
+    [
+     0.1,
+     0.0644167583793944
+    ],
+    [
+     0.08810195976134108,
+     0.04979521648358914
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": 0.8259380272905316
+  },
+  "+u_T_perp^J (J-metric perp)": {
+   "alpha": 0.09425346966318787,
+   "damage": 0.04997922401208445,
+   "effect": {
+    "rsi": 0.7167722871599829,
+    "sports": 0.11148671325996111,
+    "sea": 0.13022369351340163,
+    "tone": 0.7800332802098104
+   },
+   "tried": [
+    [
+     0.1,
+     0.05628275030488826
+    ],
+    [
+     0.09425346966318787,
+     0.04997922401208445
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": -0.06326099304982757
+  },
+  "-u_T_perp^J (J-metric perp)": {
+   "alpha": 0.1,
+   "damage": 0.052113223056418995,
+   "effect": {
+    "rsi": -0.5923736135675679,
+    "sports": 0.04492930765833429,
+    "sea": 0.014006753774300464,
+    "tone": -0.6401392656138265
+   },
+   "tried": [
+    [
+     0.1,
+     0.052113223056418995
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": -0.0477656520462586
+  },
+  "+u_T_perp^sem (filtered)": {
+   "alpha": 0.0905734828162485,
+   "damage": 0.04996545168929225,
+   "effect": {
+    "rsi": 0.7556602644682687,
+    "sports": -0.16229539712577526,
+    "sea": -0.1096084793273592,
+    "tone": -0.0525019740608564
+   },
+   "tried": [
+    [
+     0.1,
+     0.06094918018867912
+    ],
+    [
+     0.0905734828162485,
+     0.04996545168929225
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": 0.8081622385291252
+  },
+  "-u_T_perp^sem (filtered)": {
+   "alpha": 0.0897305939882047,
+   "damage": 0.04983079134038128,
+   "effect": {
+    "rsi": -0.5449527233885213,
+    "sports": 0.3923921555008961,
+    "sea": 0.3019451753402999,
+    "tone": 0.2959213087587875
+   },
+   "tried": [
+    [
+     0.1,
+     0.062099616622643704
+    ],
+    [
+     0.0897305939882047,
+     0.04983079134038128
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": 0.8408740321473088
+  },
+  "+u_T raw": {
+   "alpha": 0.0864663251125773,
+   "damage": 0.05001157230185273,
+   "effect": {
+    "rsi": 0.8702636299755835,
+    "sports": 0.5934703777828585,
+    "sea": 0.3909969503581192,
+    "tone": 1.400950196557665
+   },
+   "tried": [
+    [
+     0.1,
+     0.0668768796167748
+    ],
+    [
+     0.0864663251125773,
+     0.05001157230185273
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": -0.5306865665820815
+  },
+  "-u_T raw": {
+   "alpha": 0.08804224230167323,
+   "damage": 0.049959719084186706,
+   "effect": {
+    "rsi": -0.7234817585700438,
+    "sports": -0.4642731455648146,
+    "sea": -0.23344292543973513,
+    "tone": -1.2005526166453926
+   },
+   "tried": [
+    [
+     0.1,
+     0.06450417345831609
+    ],
+    [
+     0.08804224230167323,
+     0.049959719084186706
+    ]
+   ],
+   "specificity_rsi_minus_max_foreign": -0.47707085807534877
+  }
+ },
+ "seconds": 1640.689383506775
+}
