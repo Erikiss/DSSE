@@ -1831,10 +1831,11 @@ def class_mean_eraser(H, lab, K, tol=1e-10):
 def damage_match(target, drop_of, r0, W, ndraw=5, tol=0.02, iters=30):
     """OD-C2 damage-matched random control. target = the operation's sum-probe drop (base minus operated, seed mean); drop_of(r, lam)
     -> mean drop over ndraw random r-dim subspaces (and the seeds), the caller's random subspaces at dimension r with partial removal
-    z - lam P z. Ladder r0, 2 r0, 4 r0, ... (<= W / 2; r0 always tried); the smallest dimension whose mean drop reaches the target; if
-    the equal-dimension random (r0) already exceeds the target by more than tol, bisection of lam in (0, 1] at r0; a target below tol is
-    matched by the equal-dimension random subspace (lam 1). Matched = |drop - target| <= tol (G45). Returns dict(r, lam, drop, matched,
-    ladder [(r, drop)], note)."""
+    z - lam P z. Ladder r0, 2 r0, 4 r0, ... (<= W / 2; r0 always tried); d* = the smallest dimension whose mean drop reaches the target;
+    if the mean drop at d* exceeds the target by more than tol, bisection of ONE lam in (0, 1] at d*, shared by the draws (plan: only
+    at d* = r0; Amendment 2 of 2026-11-12 extends it to every d*; the r0 case is unchanged); a target below tol is matched by the
+    equal-dimension random subspace (lam 1). Matched = |drop - target| <= tol (G45). Returns dict(r, lam, drop, matched,
+    ladder [(r, drop)], note); r = d*."""
     ladder = []
     if target < tol:
         d0 = float(drop_of(r0, 1.0)); return dict(r=r0, lam=1.0, drop=d0, matched=True, ladder=[(r0, d0)], note="target below tol")
@@ -1842,7 +1843,7 @@ def damage_match(target, drop_of, r0, W, ndraw=5, tol=0.02, iters=30):
     while True:
         dr = float(drop_of(r, 1.0)); ladder.append((r, dr))
         if dr >= target:
-            if r == r0 and dr - target > tol:
+            if dr - target > tol:                                    # Amendment 2: partial removal at the found dimension d*, not only at r0
                 lo, hi, lam, dl = 0.0, 1.0, 1.0, dr
                 for _ in range(iters):
                     mid = 0.5 * (lo + hi); dm = float(drop_of(r, mid))
@@ -1853,7 +1854,8 @@ def damage_match(target, drop_of, r0, W, ndraw=5, tol=0.02, iters=30):
                         lo = mid
                     else:
                         hi = mid
-                return dict(r=r, lam=lam, drop=dl, matched=abs(dl - target) <= tol, ladder=ladder, note="partial removal at r0")
+                return dict(r=r, lam=lam, drop=dl, matched=abs(dl - target) <= tol, ladder=ladder,
+                            note="partial removal at r0" if r == r0 else "partial removal at d* (Amendment 2)")
             return dict(r=r, lam=1.0, drop=dr, matched=abs(dr - target) <= tol, ladder=ladder, note="ladder")
         if 2 * r > W // 2:
             return dict(r=r, lam=1.0, drop=dr, matched=False, ladder=ladder, note="target not reached up to W/2")
@@ -2796,8 +2798,12 @@ def selftest(work=None):
     ck("task-identity / pooled-answer probes run (linear, MLP)", all(np.all((v >= 0) & (v <= 1)) for v in pr.values()), {k: np.round(v, 2).tolist() for k, v in pr.items()})
     f_ = lambda r_, lam: min(1.0, 0.1 * r_ * lam)
     dm, dm2, dm3 = damage_match(0.39, f_, 1, 64), damage_match(0.37, f_, 1, 64), damage_match(0.05, lambda r_, lam: 0.2 * r_ * lam, 1, 64)
-    ok = dm["matched"] and dm["r"] == 4 and not dm2["matched"] and dm3["note"] == "partial removal at r0" and dm3["matched"] and dm3["r"] == 1
-    ck("OD-C2 damage_match (ladder; overshoot at r > r0 unmatched; bisection at r0)", ok, f"{dm['ladder']}; r0 bisection lam {dm3['lam']:.3f}")
+    ok = (dm["matched"] and dm["r"] == 4 and dm["lam"] == 1.0 and dm2["matched"] and dm2["r"] == 4 and 0 < dm2["lam"] < 1
+          and dm2["note"] == "partial removal at d* (Amendment 2)" and dm3["note"] == "partial removal at r0" and dm3["matched"] and dm3["r"] == 1)
+    dm4 = damage_match(0.9, lambda r_, lam: min(0.3, 0.01 * r_ * lam), 1, 64)        # never reached up to W / 2: unmatched, lam 1
+    ok = ok and not dm4["matched"] and dm4["lam"] == 1.0 and dm4["r"] == 32
+    ck("OD-C2 damage_match (ladder; overshoot at d* > r0 matched by partial removal, Amendment 2; bisection at r0; unreachable target unmatched)", ok,
+       f"{dm['ladder']}; d* bisection lam {dm2['lam']:.3f}; r0 bisection lam {dm3['lam']:.3f}")
     e_ = np.zeros((4, 10), int); xx = np.zeros((4, 10), int)
     perm_map = modal_shift_map(e_ + np.array([[1], [2], [3], [4]]), xx, xx, [0, 1, 2, 3]); conc = modal_shift_map(e_ + 5, xx, xx, [0, 1, 2, 3])
     ck("OD-C16 modal-shift map labels", perm_map["label"] == "consistent permutation" and conc["label"] == "concentrated")

@@ -92,3 +92,9 @@ all equal to Appendix E). For 9.5 it has to be regenerated and committed if eith
 - Regularised runs whose task Fisher ratio collapses (e.g. gamma +0.01 from update 1) amplify any rounding difference; bitwise equality with pc_meta holds only with the replica Fisher form, which `fisher='auto'` uses whenever the labels of a batch are shared.
 - OD-C2's literal reading can leave controls unmatched when the doubling overshoots by more than 0.02 at a dimension above r0; if that is frequent, an amendment (bisection at the found dimension) would be needed.
 - Counts not fixed by the plan, chosen here: Lambda's 10 permuted-label recipes (default_rng(4000 + ws)), the S line's one set of 30 permutations per world.
+
+## Amendment 2 (added by the coordinator, 2026-11-13)
+`damage_match` now applies partial removal at the found dimension d* (one lambda shared by the draws) whenever the mean drop at d*
+overshoots the target by more than 0.02, not only at d* = r0 (plan amendments file, Amendment 2). The r0 case runs the same code as
+before; `note` is 'partial removal at d* (Amendment 2)' for d* > r0. The lines above that describe the literal reading (an overshoot
+at a larger dimension stays unmatched) are superseded. Self-test check 'OD-C2 damage_match' updated accordingly.

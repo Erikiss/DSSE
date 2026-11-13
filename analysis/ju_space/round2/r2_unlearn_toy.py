@@ -434,7 +434,8 @@ def damage_match(nets, tasks, base_sp, target, layer, center, r0, key, var_net=N
     """OD-C2 damage-matched random control for an operation at layer ('z1': block z - lam P (z - ref); 'h1' / 'h2': erasure around
     the layer mean): random isotropic subspaces of dimension r0, 2 r0, 4 r0, ... (<= W / 2), NDRAW draws each (rand_sub, key per
     dimension), the drop = mean over the draws and the cell's nets of the sum-probe drop (base minus operated); TC.damage_match picks the
-    smallest dimension whose mean drop reaches the target, else partial removal by bisection of lam at r0; matched within 0.02 (G45).
+    smallest dimension d* whose mean drop reaches the target, with partial removal by bisection of one shared lam at d* when it overshoots
+    by more than 0.02 (Amendment 2; before: only at r0); matched within 0.02 (G45).
     Returns the TC.damage_match dict plus the matched subspaces R [NDRAW, W, r] and the key."""
     W = nets.W; var_net = np.arange(nets.B) if var_net is None else np.asarray(var_net); memo = {}
     kU, kc, kl = LAYER_KEYS[layer]

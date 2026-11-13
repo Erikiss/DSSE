@@ -217,3 +217,10 @@ L 1; about 8 min CPU). The pilot facts the plan lists in 5.1 reappear:
   width); r2_ana fixes the family by calling ct7_family(t7, widths=<G-PC widths>).
 - cross_pc relies on r2_t1's at5 files being TC.save_nets files with meta['spec'] and meta['row'] (as r2_rgi_toy.at5_groups writes
   them); BP model lines are recomputed in r2_pc with the library's definitions (they equal r2_t1's for the same nets up to rounding).
+
+## Amendment 2 (added by the coordinator, 2026-11-13)
+The library's `damage_match` (r2_toy_common) now bisects one shared lambda at the found dimension d* when it overshoots (plan
+amendments file, Amendment 2). This script's wrapper needed no change: it already takes `r` and `lam` from the library result and
+uses them for all five draws (`dm_items`, `dm_chain_items`, C-T7's `dm_R` / `dm_lam`). The notes above about controls that stay
+unmatched under the literal reading describe the state before the amendment; `dm_matched` remains the flag for a control that
+bisection could not bring within 0.02.
