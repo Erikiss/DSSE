@@ -225,7 +225,8 @@ print("Ergebnisse:", DRIVE or WORK)
 # dsse_runs_B) hierher kopieren. Ein vorhandener Ordner wird nie überschrieben; ein Runde-2-Ordner nur, wenn die Sitzung dort fertig ist
 # (session_done.json ohne session_partial.json) oder in NICHT_GELAUFEN steht. Kopiert wird erst unter einem Hilfsnamen, dann umbenannt.
 fertig = lambda d: os.path.isfile(f"{d}/session_done.json") and not os.path.isfile(f"{d}/session_partial.json")
-ORDNER = BRAUCHT + OPTIONAL
+ORDNER = list(BRAUCHT)     # nur Ordner, deren Inhalt die Sitzung liest; OPTIONAL (Versionsangaben) wird nicht kopiert, damit
+                           # parallel startende Sitzungen der Welle 1 nichts gleichzeitig nach dsse_runs kopieren
 if not RUNS:
     print("Kein Google Drive: nichts zu kopieren.")
 elif not ORDNER:

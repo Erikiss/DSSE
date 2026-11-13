@@ -207,9 +207,9 @@ run with `NUR_SELBSTTEST = True`. r2_ana's full self-test (all sessions) is off 
   `axes`: required outputs the seven unlearn/<stage>.json, the .pt files optional; r1_reads left to the script; it starts when axes is
   done or 'not run' (`settled`, so C-Q6 is not dropped when axes is 'not run'); one retry like every step. Order: axes, unlearn,
   GEN loops at 14, b_lo, b_hi. 5 processes instead of the plan's 3 (about 60 s more instead of 240 s); recorded as `PACKING` in the
-  manifest and in `session_done.json` (`packing_table`), and in the notebook text (9,9 / 13,9 / 18,8 min). 'all' from an empty folder
-  in one process is the script author's resume path (finished stages skipped); I could test it only with stubs (no weights here), so
-  the first notebook self-test (MOCK) is its first real run.
+  manifest and in `session_done.json` (`packing_table`), and in the notebook text (9,9 / 13,9 / 18,8 min). The verifiers' caveat
+  ('all' from an empty folder in one process was untested) is checked: under MOCK on the CPU, 'all' in one process and the seven
+  stages in seven processes give identical JSONs for all seven stages (Tests below).
 - **runner_steps-4.** Inputs digest per step record; r2_pc / r2_ana redo steps whose digest differs, removing their outputs, r2_ana's
   mirror and r2_pc's `pc_toy/partial/` in `<work>` and on Drive (reading 20).
 - **runner_steps-5 / runner_gates-8.** session_done.json removed before steps rerun and when an attempt does not finish; wave-2 gate
@@ -255,41 +255,59 @@ run with `NUR_SELBSTTEST = True`. r2_ana's full self-test (all sessions) is off 
 - After worker 5's notes: `r2_sim.py selftest` joins `r2_toy_common.py selftest` (run as `QUICK=1 NT=1 OMP_NUM_THREADS=1`); the
   ref-comparison output is recorded by its committed path `round2/tests/ref_comparison_w5.json`.
 
-## Tests and results
+## Tests and results (after the review fixes, 13 Nov)
 
 - `python test_runner.py [scenarios]` (scratchpad `r2_impl/w9/`; NT=1, one process at a time; stub scripts, fake git, fabricated
-  dsse_runs; no round-1 output exists there). Fast scenarios `units dry q1 guard fail wait q3 wave2 integ cont`: 156 checks pass
-  (52 s); the self-test scenario `selftest` (real rk_loop.py MOCK and pc_meta.py QUICK build the mock tree, stub session scripts): 16 checks
-  pass (422 s). 172 checks in all on the final code. Covered: brace expansion, G7-G9 incl. ties, OD-G9 choices, the R1.final rule; dry runs of all nine
-  sessions write nothing; full runs with step order, BLOCK and env, manifest (sha256, shard and Drive time of every copy, freeze
-  block, Drive times of logs and summaries with freeze_before_first_summary both ways, G3 label, R1.meta, G47, references incl. the
-  committed ref comparison), Drive sync (no r1/, r2in/, local/), read-only copies, resume, single-step rerun; time guard ->
-  `session_partial.json` -> continuation `r2_q2b` -> done with packing log; retry once, blocked dependants, exit 0 without outputs =
-  failure (r2_t4, GEN loop, `r2_theta.py all`); G4 wait, R1.final with one run / without final / valid; block 14 final-missing (only
-  its readers 'not run'); G1 changed plan / not ancestor / other freeze commit, also in the self-test; G2 without an A100; r2_q3 local
-  arrays on a new machine and G33; r2_pc (G5 by R1.final, r2_t1 inputs, R1PC / R2T1, R1 BP nets), r2_ana (declarations need two
-  attempts, mirror, copy exclusions); integrity of copies; Drive errors not fatal; explicit continuation name; self-test with library
-  tests on copies of the mock, a failing library test stops it.
-- The scripts' own self-tests through the runner's `lib_selftests` with the real code: r2_stimuli check ok, r2_rk 35/35, r2_axes 13/13,
-  r2_gen_loop 10/10 at blocks 14 and 8 (52 s on one core, on the runner's mock tree); r2_toy_common 70/70 (144 s) and r2_sim passed (3 s).
-- Notebooks: nbformat-valid; the runner, the builder and every notebook code cell parse under Python 3.11, 3.12 and 3.13 (one PEP-701
-  f-string was removed); the summary cell ran on test outputs (finished, partly 'not run', retried and waiting sessions).
+  dsse_runs; no round-1 output exists there). Fast scenarios `units dry q1 guard fail wait q3 wave2 integ cont fixes nbcopy nb`:
+  226 checks pass (51 s). Long scenarios, run by name: `mockdev` 5 checks pass (207 s; real rk_loop.py MOCK started with
+  RUN_DEVICE=cuda builds on the CPU, the real r2_rk.py selftest passes on that tree), `selftest` 23 checks pass (264 s; real
+  rk_loop.py MOCK and pc_meta.py QUICK build the mock tree, stub session scripts). 254 checks in all, none failing.
+- Covered before and still: brace expansion, G7-G8, the R1.final rule; dry runs of all nine sessions write nothing; full runs with
+  step order, BLOCK and env, manifest (sha256, shard and Drive time of every copy, freeze block, Drive times of logs and summaries,
+  G3 label, R1.meta, G47, references), Drive sync (no r1/, r2in/, local/), read-only copies, resume, single-step rerun; time guard ->
+  continuation `r2_q2b`; retry once, blocked dependants, exit 0 without outputs = failure; G4 waits and R1.final; G1 / G2; r2_q3 local
+  arrays and G33; r2_pc and r2_ana inputs; integrity of copies; Drive errors not fatal; continuation names.
+- New regression tests, by finding: runner_steps-1 (`mockdev`: mock_fixture.json and every shard_done.json say cpu, the build log names
+  the device, the real r2_rk.py selftest 38/38 on it); runner_steps-2 / gates-3 (quick names at W 64 / 128 in the mock and in the
+  copy list, pc_expected with `_quick`, the content check passes with 2 widths / 4 PC models and fails when no net is found);
+  runner_steps-3 / gates-2 (5 calls in order, one 'all' step with 14 recorded outputs, a crash inside 'all' retried once at the end,
+  axes failing twice -> unlearn waits, axes 'not run' -> unlearn still runs, block 14 final-missing -> unlearn runs with
+  R2_MISSING_BLOCKS=14, a deleted unlearn JSON reruns only 'all'); runner_steps-4 (r2_pc redo and cache cleared in work and on Drive;
+  r2_ana redo of all five steps and the mirror; unchanged inputs keep everything); runner_steps-5 / gates-8 (session_done.json removed
+  before a rerun and on failure, in work and on Drive; partial next to done; a recorded output missing on Drive); runner_steps-6 (a
+  finished 0.6B arm stays 'skipped' after a failed 0.6B check; dry run alike); runner_steps-7 / gates-4 (four tie cases);
+  runner_steps-8 / gates-1 (this checkout: 'ok' with the regenerated file; a fabricated stale file: WARNING, manifest status, failing
+  self-test); runner_steps-10 (a retry that writes nothing keeps the list, an empty list reruns geom, pattern fallback of one model);
+  gates-5 (one shard per job, JSON and model; a shard lacking the JSON is not chosen); gates-6 (unit with the fake git); gates-9
+  (declaration refused for r2_pc, four waiting runs recorded); gates-10 (session_done.json fields); (b) amendments WARNING and sha256;
+  (d) `--compile-check` under Python 3.11, 3.12 and 3.13 (28 files), a PEP-701 f-string fails under 3.11, a syntax error stops the
+  self-test first; the notebook cell "Zweiter Ordner" (copy, no overwrite, finished-only, declared, hints, off); notebooks
+  (nbformat-valid; runner, builder and all 81 code cells parse under 3.11-3.13; hub texts, packing note, r2_q3 test list).
+- Real code through the runner's `lib_selftests` (DEVICE=cpu, NT=1, on the CPU-built mock tree): r2_stimuli check ok (4 s), r2_rk
+  38/38 (19 s), r2_axes 16/16 (16 s), r2_gen_loop 11/11 at blocks 14 and 8 (11 s each); r2_q3: r2_rgi_geom 22/22 (38 s), the same
+  for Qwen3-0.6B 22/22 (39 s), r2_rgi_stats 31/31 (55 s, reusing the 1.7B geometry). The mock rk part took 182 s sequentially here
+  (block 14: pilot 17 s + all 53 s; blocks 8 and 20: 17 s + 37 s each), i.e. about 75 s with the three chains in parallel; the
+  8 pc_meta QUICK jobs about 60 s sequentially.
+- The r2_q1 self-test path with the real scripts on the CPU (RUN_DEVICE=cpu, so G2 is skipped; otherwise the notebook's path):
+  `SELFTEST OK: r2_q1` in 221 s (library tests 61 s; MOCK session: axes 8 s, `r2_unlearn_qwen.py … all` 149 s from an empty
+  folder in one process, GEN loops 2 s each). The verifiers' caveat for runner_steps-3 checked directly: 'all' in one process and the
+  seven stages in seven processes (same axes run, same env) give identical unlearn/<stage>.json for all seven stages (NaN = NaN; no
+  field excluded), and the same as the self-test session's 'all' (scratchpad `r2_impl/w9/cmp_unlearn_all.py`). Seven processes took
+  184 s against 149 s for one.
+- r2_toy_common 70/70 and r2_sim (phase 1; unchanged here).
+
 ## Open points
 
 1. **Process count against the cost model.** 7.2 costs r2_q1 and r2_q2 as 3 processes each (one model load per block). r2_q2
    matches; r2_q1 now starts 5 (axes, unlearn 'all', three GEN loops): about 60 s of extra loads, 13.9 min nominal with setup, 18.8
    min with the plan's margin (plan: 12.9 / 17.3). The plan's 3 would need a block-14 driver calling r2_axes, r2_unlearn_qwen 'all' and
    the block-14 GEN loop in one process (another 60 s); not done, because three scripts' module state would share one process.
-2. **Interfaces.** Checked against the scripts present at the end (r2_axes, r2_gen_loop, r2_rk, r2_stimuli, r2_theta, r2_unlearn_qwen,
-   r2_rgi_geom, r2_rgi_stats, r2_rgi_toy, r2_theta_toy, r2_unlearn_toy, r2_pc_toy, r2_theta_verdict, r2_toy_common, r2_sim): stage names,
-   options and outputs agree with the table (r2_theta.py writes theta/b<b>_power.json also when the power step is 'not needed', and its
-   stage `all` runs the block's stages in the plan's order; r2_rgi_geom.py takes `--model qwen3-0.6b` after `<r2_dir>` and reads
-   `<root>/models/<model>`; r2_pc_toy.py reads R1PC and R2T1). Not yet present when I finished: r2_linearity, r2_rgi_verdict,
-   r2_unlearn_verdict, r2_report. For them the table follows 9.4 and these readings: out.json paths `<work>/unlearn/q1.json`,
-   `theta_verdict.json`, `rgi_verdict.json`, `unlearn_verdict.json`, `round2_summary.json` (r2_report's `r2_manifest.json` and
-   `pc_toy/gates.json` optional, next to it); every finished r2_ana output is mirrored into `<r2in>/r2_ana/` so that a later script
-   finds e.g. C-Q1's q1.json under `<r2_root>/r2_ana/`. The notebook self-test catches a mismatch before the main run; the table at the
-   top of the runner is the place to adjust.
+2. **Interfaces.** Checked against the scripts present now (r2_axes, r2_gen_loop, r2_rk, r2_stimuli, r2_theta, r2_unlearn_qwen,
+   r2_rgi_geom, r2_rgi_stats, r2_rgi_toy, r2_theta_toy, r2_unlearn_toy, r2_pc_toy, r2_linearity, r2_theta_verdict, r2_rgi_verdict,
+   r2_unlearn_verdict, r2_report, r2_toy_common, r2_sim): stage names, options and outputs agree with the table. The five analysis
+   scripts take `<r1_dir> <r2_root> <out.json>`; every finished r2_ana output is mirrored into `<r2in>/r2_ana/` so that a later
+   script finds e.g. C-Q1's q1.json under `<r2_root>/r2_ana/`. The notebook self-test catches a mismatch before the main run; the
+   table at the top of the runner is the place to adjust.
 3. **Ref-comparison output** (9.5): committed by implementer 5 at `round2/tests/ref_comparison_w5.json`, regenerated on 13 Nov
    (sha256 f6e0ff2160dda419c951a3ef6c3cdd1b9215823689fd66a17b097d21d603cf1b; its module entries match r2_toy_common.py 3c141614… and
    r2_sim.py 69692014…). It must be regenerated and committed whenever r2_toy_common.py or r2_sim.py change: the runner now reports a
@@ -302,4 +320,11 @@ run with `NUR_SELBSTTEST = True`. r2_ana's full self-test (all sessions) is off 
 6. **Branch.** The notebooks clone `ccr-6fe02b21-est040` (round 1's branch); it must hold the freeze commit and the round-2 code commit.
 7. **My process.** At the start I ran three read-only git commands (`git log --oneline`, `git status --short`, `git branch
    --show-current`) before noticing the no-git rule; nothing was changed. All later git use is the fake git of the tests. No Drive
-   access, no round-1 output, no model weights loaded (MOCK uses the tokenizer and config only).
+   access, no round-1 output, no model weights loaded (MOCK uses the tokenizer and config only). In the fix round: no git command at
+   all, nothing under analysis/ju_space/microlens/ or results/ju_space/microlens/ opened, tests one process at a time with NT=1.
+8. **Waiting runs count as attempts** (runner_gates-9 fix): a session that waited twice (e.g. r2_q1 before round 1 is final) then
+   also has two attempts on record and could be declared 'not run' for r2_ana without ever having run; the declaration stays a
+   deliberate operator entry, and the manifest records both the declaration and the attempts.
+9. **r2_ana's inputs digest covers every copied file**, upstream manifests and `session_attempts.json` included: any later attempt
+   of an upstream session, even one that only skips its steps, redoes all five analysis steps (about 8 min). Conservative by design;
+   a narrower digest would need the list of files each analysis script reads.

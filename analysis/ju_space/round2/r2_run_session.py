@@ -5,6 +5,7 @@ abschnitt11_12_runde2_plan.md, sections 6, 7 and 9.5). The notebooks are built b
     python r2_run_session.py <session> <root> <selftest_dir> --selftest
     python r2_run_session.py <session> <root> <work> <drive_dir> --sync-only
     python r2_run_session.py --mock-r1 <root> <dsse_runs_dir> [rk,pc]
+    python r2_run_session.py --compile-check
 
 <session>    r2_q1 r2_q2 r2_q3 r2_t1 r2_t2 r2_t3 r2_t4 (wave 1), r2_pc r2_ana (wave 2). A continuation session (7.4) is the same
              notebook run again after the time guard stopped a session: the runner names it r2_q1b, r2_q1c, ... itself (an explicit
@@ -34,11 +35,14 @@ met (wait for round 1 or the wave-1 sessions).
 Env: RUN_DEVICE (cuda; 'cpu' only for local code tests: then G2 and the model checks are skipped and recorded as such), NT,
 R2_T0 (epoch seconds of the notebook's first cell; the time guard counts from it), R2_GUARD_S (1200), R2_STEP_TIMEOUT (3600),
 R2_DECLARED_NOT_RUN (wave-1 sessions declared 'not run' after two attempts, for r2_ana; the runner checks the two attempts),
-R1_SRC (round-1 source folder, default: the parent of <drive_dir>); self-test only: R2_MOCK_NPAR (parallel pc_meta jobs of the
-mock tree), R2_MOCK_FAST (blocks 8 and 20 of the mock as patched copies of block 14); for code tests only: R2_REPO (checkout root),
-R2_SCRIPTS (folder of the round-2 scripts), R2_GIT (git executable).
---selftest runs the scripts' own code tests (LIB_SELFTESTS) on copies of a mock dsse_runs tree, then the session (and for wave 2 the
-sessions it reads) under MOCK=1 / QUICK=1 through this runner; nothing is synced to the real Drive.
+R1_SRC (round-1 source folder, default: the parent of <drive_dir>); self-test only: R2_MOCK_NPAR (parallel rk_loop chains and
+pc_meta jobs of the mock tree), R2_LIB_NT (threads of the mock rk build and the library tests, default 1), R2_MOCK_FAST (blocks 8
+and 20 of the mock as patched copies of block 14, stub tests only); for code tests only: R2_REPO (checkout root), R2_SCRIPTS (folder
+of the round-2 scripts), R2_GIT (git executable).
+--selftest compiles every round-2 script (--compile-check), runs the scripts' own code tests (LIB_SELFTESTS) on the CPU on copies of a
+mock dsse_runs tree built on the CPU, then the session (and for wave 2 the sessions it reads) under MOCK=1 / QUICK=1 through this
+runner on the session's device; nothing is synced to the real Drive. It fails if a test fails, if the committed reference
+comparison is stale, or if r2_pc ran no PC code.
 R1.final (2.1, critique v2-12j) is written by the operator, never by a script: dsse_runs/r1_finality.json =
   {"gpu4": {"runs": [{"start": "2026-11-12T15:02Z", "end": "2026-11-12T15:24Z"}, {"start": ..., "end": ...}], "final": true}, ...}
 A shard without shard_done.json (G5), or whose block summary is missing (G4), counts as final only with >= 2 runs and "final": true."""
