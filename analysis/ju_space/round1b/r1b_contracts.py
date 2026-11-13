@@ -211,7 +211,7 @@ SESSIONS = {
                    43.0, (M17,), "all K statistics, K6a / K6b / K6d, Holm families, the K.7 composite"),
     "r1b_L_A": S("L", 1, "B", 2, (done("r1b_K_S1"), xfer("xfer_dmg_ref_R16"), xfer("xfer_so_ax_ustar")), 168.9, (M17,),
                  "step 1 L.POP; L1, L3b, L4 (X2, X6 if tier 2 funded)"),
-    "r1b_L_B": S("L", 1, "B", 3, (done("r1b_L_A"), file("glce"), file("k4_gating"), file("lensout")), 117.2, (M17,),
+    "r1b_L_B": S("L", 1, "B", 3, (done("r1b_L_A"), file("glce"), file("k4_gating")), 117.2, (M17,),
                  "L.R corpus, L2, L3a, L3c, L3d; L5 generation (X1, X3, X4, X5 if tier 2 funded)"),
     "r1b_ana": S("main", 1, "A", 6, (done("r1b_R_ana"), done("r1b_D_ana"), done("r1b_K_ana"), done("r1b_L_A"), done("r1b_L_B"),
                                      done("r1b_K_S2a", ("lensout/*", "lab/*")), done("r1b_R_S5", ("jlens_validity.json",))),
