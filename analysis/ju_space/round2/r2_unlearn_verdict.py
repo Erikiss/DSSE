@@ -15,7 +15,13 @@ r2_pc_toy.py): every disagreement is listed under 'od_g8'. Labels: G-desc ('desc
 block 14; 'RGI axis not resolved' where GA(14) fails (u_RGI_perp, u_diff, u_com, span); 'block 14 not usable' on C-Q5 if G-blk(14)
 fails; 'world without a testable meta level' on the toy meta-level statements if G-meta fails; no pattern claim anywhere in Part C if the
 circle gate G41 fails; specificity 'not testable' without a damage-matched control within 0.02 (G45). Parts whose inputs are missing are
-'not run (...)'. Toy intervals: two-sided 95 % t over seeds (df = n - 1); '>= 4 of 5 seeds' = ceil(0.8 n)."""
+'not run (...)'. Toy intervals: two-sided 95 % t over seeds (df = n - 1); '>= 4 of 5 seeds' = ceil(0.8 n).
+Amendment 2 (OD-C2: partial removal at the found dimension d* with one shared lambda; declared post hoc, so both readings are reported,
+section 14): the damage-matched controls are those the producers ran (the amended procedure; d*, lambda and 'matched' are read from
+their records). Where the amended step applied (d* > r0 with lambda < 1), the result under the frozen text is given next to it
+('under_plan_text'): the plan-text control (full removal at d*) overshoots the target by more than 0.02, so it is unmatched,
+specificity is 'not testable' (G45) and 'unlearns' cannot be evaluated against it (that control was not run). 'amendment_2' lists every
+affected result."""
 import math, os, sys, time
 import numpy as np
 
@@ -36,7 +42,8 @@ Q6_HELIX, Q6_LIN, Q6_SPEC, Q6_FRAC, Q6_RAND, Q6_REPAIR_DEPTH, Q6_REPAIR_SHARE, Q
 Q6_BLOCK = 14
 UNLEARN_ACC, CHANCE_T, CHANCE_A = 0.11, 1.0 / 12, 1.0 / 17
 T4_SHALLOW, T4_SHALLOW_LO, T4_DEEP = 0.20, 0.10, 0.05
-T5_RSTAR, T5_KEEP, T5_PARTIAL = 4, 0.8, 0.5
+T5_RSTAR, T5_KEEP, T5_PARTIAL, T5_NEVER = 4, 0.8, 0.5, 25                       # '> 24' counts as 25
+DM_TOL = 0.02                                                                  # OD-C2 / G45: matched within 0.02
 T6_RATIO, T7_ALPHA, T7_MIN = 1.5, 0.05, 0.10
 BONF = 1 - 0.05 / 3                                                              # C-T2: 98.33 % (3 values of k)
 SEEDS = dict(svd_named_modes="none (deterministic)")
@@ -278,7 +285,7 @@ def cq5_svd(r1_dir, info, k=5):
     if not get(info, "final", "14"): return dict(status=NOT_RUN_R1)
     import torch
     import r2_rk as R
-    try: bank = R.load_o3(r1_dir, 14); ST = R.load_r1_state(r1_dir, 14)
+    try: bank, ST, _ = RP.load_bank(r1_dir, 14)
     except Exception as e:                                                        # noqa: BLE001
         return dict(status=f"{NOT_RUN_R1}: {e!r}")
     names, rows = [], []
@@ -402,6 +409,35 @@ def unlearns_acc(acc):
     return le(hi(acc), UNLEARN_ACC)
 
 
+def dm_info(dm):
+    """A damage-matched control record (OD-C2; TC.damage_match's dict under 'match', or flat), read defensively: dict(matched, d_star
+    (the dimension found: 'r' / 'd_star'), r0, lam ('lam' / 'lambda'), target, drop, note, amended, plan_text). amended = the step of
+    Amendment 2 applied (partial removal at d* > r0). plan_text = the control under the frozen text: where the amended step applied it is
+    the full removal at d* (its drop = the ladder's last entry), which is not matched within 0.02; otherwise the same control."""
+    dm = dm or {}; m = dm.get("match") if isinstance(dm.get("match"), dict) else dm
+    pick = lambda *ks: next((m[k] for k in ks if isinstance(m, dict) and k in m and m[k] is not None), None)
+    d_star, lam, r0, target, drop, note = pick("d_star", "dstar", "d*", "r"), pick("lambda", "lam"), pick("r0"), pick("target"), pick("drop"), str(pick("note") or "")
+    matched = pick("matched", "dm_matched")
+    if matched is None: matched = dm.get("dm_matched")
+    lad = pick("ladder") or []
+    amended = ("Amendment 2" in note) or bool(fin(num(d_star)) and fin(num(r0)) and num(d_star) > num(r0) and fin(num(lam)) and num(lam) < 1)
+    ld = num(lad[-1][1]) if (lad and isinstance(lad[-1], (list, tuple)) and len(lad[-1]) > 1) else float("nan")
+    if not amended: pt = dict(same_as_amended=True, matched=bool(matched))
+    else: pt = dict(same_as_amended=False, matched=bool(fin(ld) and fin(num(target)) and abs(ld - num(target)) <= DM_TOL), drop=ld,
+                    control="full removal at d* (the frozen OD-C2 has no partial removal above r0; this control was not run)")
+    return dict(matched=bool(matched), d_star=d_star, r0=r0, lam=lam, target=target, drop=drop, note=note or None, amended=amended, plan_text=pt)
+
+
+NOT_TESTABLE_DM = "not testable (no damage-matched control within 0.02)"
+PLAN_TEXT_UNLEARNS = "not computable (the plan-text control, full removal at d*, was not run; it overshoots the target by more than 0.02)"
+
+
+def plan_text_view(di):
+    """What the frozen text gives where Amendment 2 changed the control (None where both readings coincide)."""
+    if not di["amended"] or di["plan_text"]["matched"]: return None
+    return dict(dm_matched=False, specificity=NOT_TESTABLE_DM, unlearns=PLAN_TEXT_UNLEARNS, plan_text_control_drop=di["plan_text"].get("drop"), target=di["target"])
+
+
 def ct0(t0):
     st = not_run(t0, "unlearn_toy/t0.json")
     if st != "ran" and t0 is None: return dict(status=st)
@@ -500,11 +536,12 @@ def t4b_rule(t, base_acc, chance):
     """C-T4 (b) per layer: 'causal' = accuracy upper bound <= 0.11 with the damage-matched control's lower bound >= 0.9 x base;
     'correlate' = accuracy lower bound >= 0.9 x base with the linear probe's upper bound <= chance + 0.05; 'nonlinear residue' = MLP probe
     lower bound >= chance + 0.05 (task-identity probes)."""
-    pr = t.get("probes") or {}; dm = t.get("dm") or {}
+    pr = t.get("probes") or {}; dm = t.get("dm") or {}; di = dm_info(dm)
     return dict(causal=bool(unlearns_acc(t.get("acc")) and does_not_unlearn(dm.get("acc"), base_acc)),
                 correlate=bool(does_not_unlearn(t.get("acc"), base_acc) and le(hi(pr.get("task_lin")), chance + 0.05)),
                 nonlinear_residue=bool(ge(lo(pr.get("task_mlp")), chance + 0.05)) if pr.get("task_mlp") is not None else None,
-                dm_matched=bool(get(dm, "match", "matched")), acc=tci(t.get("acc")), dm_acc=tci(dm.get("acc")), task_lin=tci(pr.get("task_lin")),
+                dm_matched=di["matched"], dm=di, under_plan_text=(lambda v: None if v is None else dict(dm_matched=False, causal=PLAN_TEXT_UNLEARNS))(plan_text_view(di)),
+                acc=tci(t.get("acc")), dm_acc=tci(dm.get("acc")), task_lin=tci(pr.get("task_lin")),
                 task_mlp=tci(pr.get("task_mlp")) if pr.get("task_mlp") is not None else None)
 
 
@@ -542,15 +579,14 @@ def ct3(t3, g41):
 
 
 def ct4_op(o, a0, sp0, sb, lb, q):
-    op, dm = o.get("op") or {}, o.get("dm") or {}; matched = bool(get(dm, "match", "matched"))
+    op, dm = o.get("op") or {}, o.get("dm") or {}; di = dm_info(dm); matched = di["matched"]
     rl, an = arr(get(op, "relearn", sb)), arr(get(op, "A_new", sb)); d = rl - an if len(rl) == len(an) else arr([])
     if ge(mean(d), T4_SHALLOW) and gt(lo(d), T4_SHALLOW_LO): depth = "shallow"
     elif le(mean(rl), (mean(an) + T4_DEEP) if mean(an) is not None else None): depth = "deep"
     else: depth = "partial"
     n_perm = sum(lb_ == "consistent permutation" for lb_ in (op.get("label") or []))
     unl = bool(unlearns_acc(op.get("acc")) and does_not_unlearn(dm.get("acc"), a0))
-    spec = ("not testable (no damage-matched control within 0.02)" if not matched else ("specific" if ge(mean(op.get("sp")), 0.8 * sp0 if sp0 is not None else None)
-                                                                                         else "generic damage"))
+    spec = (NOT_TESTABLE_DM if not matched else ("specific" if ge(mean(op.get("sp")), 0.8 * sp0 if sp0 is not None else None) else "generic damage"))
     def status(acc):
         if does_not_unlearn(acc, a0): return "does not unlearn"
         if unlearns_acc(acc): return "unlearns"
@@ -558,7 +594,7 @@ def ct4_op(o, a0, sp0, sb, lb, q):
     return dict(unlearns=unl, specificity=spec, depth=depth, meta_unlearned=le(hi(get(op, "B2", "8")), 0.05),
                 inverted=bool(lt(hi(op.get("acc")), CHANCE_A) and ge(mean(op.get("sp")), 0.8 * sp0 if sp0 is not None else None) and n_perm >= q),
                 iso_status=status(get(o, "iso", "acc")), span_status=status(get(o, "span", "acc")) if o.get("span") else None, dm_status=status(dm.get("acc")),
-                dm_matched=matched, acc=tci(op.get("acc")), dm_acc=tci(dm.get("acc")), sp=tci(op.get("sp")), relearn_minus_new=tci(d),
+                dm_matched=matched, dm=di, under_plan_text=plan_text_view(di), acc=tci(op.get("acc")), dm_acc=tci(dm.get("acc")), sp=tci(op.get("sp")), relearn_minus_new=tci(d),
                 relearn_long=tci(get(op, "relearn", lb)), A_new_long=tci(get(op, "A_new", lb)), B2_8=tci(get(op, "B2", "8")),
                 consistent_permutation_seeds=n_perm, modal_labels=op.get("label"))
 
@@ -586,9 +622,9 @@ def ct4(t4, gmeta):
     for name, c in (t4.get("w4") or {}).items():
         b = c.get("base") or {}; a0 = mean(b.get("add")); o2 = {}
         for nm, o in (c.get("ops") or {}).items():
-            op, dm = o.get("op") or {}, o.get("dm") or {}; matched = bool(get(dm, "match", "matched"))
-            o2[nm] = dict(forget_unlearns=bool(unlearns_acc(op.get("add")) and does_not_unlearn(dm.get("add"), a0)),
-                          specificity=("not testable (no damage-matched control within 0.02)" if not matched else
+            op, dm = o.get("op") or {}, o.get("dm") or {}; di = dm_info(dm); matched = di["matched"]
+            o2[nm] = dict(forget_unlearns=bool(unlearns_acc(op.get("add")) and does_not_unlearn(dm.get("add"), a0)), dm=di, under_plan_text=plan_text_view(di),
+                          specificity=(NOT_TESTABLE_DM if not matched else
                                        ("specific" if ge(mean(op.get("sub")), (0.9 * mean(dm.get("sub"))) if mean(dm.get("sub")) is not None else None) else "generic damage")),
                           add=tci(op.get("add")), sub=tci(op.get("sub")), dm_add=tci(dm.get("add")), dm_sub=tci(dm.get("sub")), sp=tci(op.get("sp")),
                           relearn_add_short=tci(get(op, "relearn_add", sb)), relearn_add_long=tci(get(op, "relearn_add", lb)))
@@ -610,13 +646,13 @@ def ct5(t5):
             for i in idx: by_seed.setdefault(ch[i][1], []).append(i)
             sd = [s for s in seeds if s in by_seed]; nnew = len(by_seed[sd[0]]) if sd else 0
             la = min(last, int(w.get("pc_last", last))) if arm == "pc" else last
-            per_task_r = {s: [int(np.argmax(A[i, :la + 1] <= UNLEARN_ACC)) if np.any(A[i, :la + 1] <= UNLEARN_ACC) else R for i in by_seed[s]] for s in sd}
+            per_task_r = {s: [int(np.argmax(A[i, :la + 1] <= UNLEARN_ACC)) if np.any(A[i, :la + 1] <= UNLEARN_ACC) else T5_NEVER for i in by_seed[s]] for s in sd}
             arms[arm] = dict(A_free=[float(np.mean(A[by_seed[s], 0])) for s in sd], A_op=[float(np.mean(A[by_seed[s], la])) for s in sd],
                              A_s4=[float(np.mean(A[by_seed[s], i4])) for s in sd], rstar_seed=[float(np.median(per_task_r[s])) for s in sd],
                              rstar_task=[per_task_r[s] for s in sd], last_round=la)
             arms[arm]["A_op_at_rstar"] = [float(np.mean([A[i, min(int(r), la)] for i, r in zip(by_seed[s], per_task_r[s])])) for s in sd]
             arms[arm]["A_op_t"] = tci(arms[arm]["A_op"])
-        o = dict(rounds=R, s4_index=i4, last_index=last, arms=arms, n_seeds=n, never=f"'> {R - 1}' counts as {R}")
+        o = dict(rounds=R, s4_index=i4, last_index=last, arms=arms, n_seeds=n, never=f"'> {last}' counts as {T5_NEVER} (the plan's '> 24' counting as 25)")
         col, rnd = arms.get("col"), arms.get("rand")
         if col and rnd:
             o["low_dimensional_search"] = bool(sum(r_ <= T5_RSTAR for r_ in col["rstar_seed"]) >= q and sum(ge(a, T5_KEEP * f) for a, f in zip(rnd["A_s4"], rnd["A_free"])) >= q)
@@ -626,11 +662,14 @@ def ct5(t5):
             if X in arms and ctl in arms:
                 ax, ac = arms[X], arms[ctl]; keep = ge(mean(ac["A_op"]), T5_KEEP * mean(ax["A_free"]) if mean(ax["A_free"]) is not None else None)
                 v = "un-searched" if (le(hi(ax["A_op"]), UNLEARN_ACC) and keep) else ("partial" if le(mean(ax["A_op"]), T5_PARTIAL * mean(ac["A_op"]) if mean(ac["A_op"]) is not None else None) else "none")
-                if ctl == "dmr" and dm_last and not dm_last[0].get("matched"): v = "not testable (no damage-matched control within 0.02 at s_last, G45)"
+                if ctl == "dmr" and dm_last:
+                    di = dm_info(dm_last[0]); o["dm_last"] = di
+                    if not di["matched"]: v = "not testable (no damage-matched control within 0.02 at s_last, G45)"
+                    if plan_text_view(di) is not None: o["under_plan_text"] = dict(verdict_z1="not testable (no damage-matched control within 0.02 at s_last, G45)", dm_matched=False)
                 o[f"verdict_{X}"] = v; o[f"control_{X}"] = dict(control=ctl, A_rand_mean=mean(ac["A_op"]), A_free_mean=mean(ax["A_free"]), control_keeps=keep)
         prev = get(t5, "rule_preview", name) or {}
         o["agrees_preview"] = {k: agree(o.get(k), prev.get(k)) for k in ("low_dimensional_search", "re_routing", "verdict_col", "verdict_z1") if k in o}
-        o["pc_arm"] = "descriptive"
+        o["pc_arm"] = "descriptive"; o["dm_rounds_amended"] = [d.get("round") for d in (w.get("dm") or []) if dm_info(d)["amended"]]
         out["widths"][name] = o
     return out
 
@@ -698,6 +737,7 @@ def ct7(t7, pcg, min_paired=4):
         W = int(w.get("W", key.lstrip("W"))); np_ = len(w.get("seeds_present") or []); inc = W in widths
         out["per_width"][str(W)] = dict(in_family=inc and np_ >= mp, seeds_present=w.get("seeds_present"), seeds_missing=w.get("seeds_missing"),
                                         G_PC=get(pcg, "G_PC", str(W), "status", default="not testable (no PCS rows at this width)"))
+        out["per_width"][str(W)]["dm"] = {f"{side}_{L}": dm_info(get(w, side, "t4b", L, "dm")) for side in ("pc", "bp") for L in ("h1", "h2") if get(w, side, "t4b", L, "dm") is not None}
         if not inc or "pc" not in w or "bp" not in w: continue
         pc, bp = w["pc"], w["bp"]; ok = np_ >= mp; its = []
         for L in ("h1", "h2"):
@@ -757,12 +797,43 @@ def run(r1_dir, r2_root, out_path):
             if isinstance(out[k], dict): out[k].setdefault("labels", []).append(RP.LBL_GMETA + " (meta-level statements: B2)")
     out["od_g8"] = [x for k in ("C_Q2", "C_Q3", "C_Q4b", "C_Q4_armA", "C_Q6") for x in (get(out, k, "od_g8") or [])]
     if get(out, "C_Q4a", "agrees_in_session") is False: out["od_g8"].append(f"C-Q4a: r2_ana {out['C_Q4a']['verdict']!r}, in session {out['C_Q4a']['in_session']!r}")
+    out["amendment_2"] = amendment_2(out)
     out["summary"] = summary(out)
     out.update(pc_gates=dict(G_meta=pcg.get("G_meta"), G_meta_source=pcg.get("G_meta_source"), G_PC=pcg.get("G_PC"), labels=pcg.get("labels")),
                inputs=inp.record([f"unlearn/{s}.json" for s in J] + [f"unlearn_toy/{s}.json" for s in T] + ["pc_toy/t7.json"]),
                finder=inp.log, r1_finder=info.get("finder"), seconds=time.time() - t0)
     RP.write_json(out_path, out); log(f"Part C verdicts -> {out_path} ({time.time() - t0:.0f}s)")
     return out
+
+
+def amendment_2(o):
+    """Every result whose damage-matched control used the step of Amendment 2 (partial removal at d* > r0), with both readings (section
+    14: the amendment is declared post hoc)."""
+    aff = []
+    for cell, c in (get(o, "C_T4", "cells") or {}).items():
+        for nm, op in (c.get("ops") or {}).items():
+            if get(op, "dm", "amended"): aff.append(dict(where=f"C-T4 {cell} {nm}", d_star=get(op, "dm", "d_star"), r0=get(op, "dm", "r0"), lam=get(op, "dm", "lam"), matched=get(op, "dm", "matched"),
+                                                         under_amendment=dict(unlearns=op.get("unlearns"), specificity=op.get("specificity")), under_plan_text=op.get("under_plan_text")))
+        for L, t in (c.get("t4b") or {}).items():
+            if get(t, "dm", "amended"): aff.append(dict(where=f"C-T4b {cell} {L}", d_star=get(t, "dm", "d_star"), r0=get(t, "dm", "r0"), lam=get(t, "dm", "lam"), matched=get(t, "dm", "matched"),
+                                                        under_amendment=dict(causal=t.get("causal")), under_plan_text=t.get("under_plan_text")))
+    for cell, c in (get(o, "C_T4", "w4") or {}).items():
+        for nm, op in (c.get("ops") or {}).items():
+            if get(op, "dm", "amended"): aff.append(dict(where=f"C-T4 two-family {cell} {nm}", d_star=get(op, "dm", "d_star"), lam=get(op, "dm", "lam"), matched=get(op, "dm", "matched"),
+                                                         under_amendment=dict(forget_unlearns=op.get("forget_unlearns"), specificity=op.get("specificity")), under_plan_text=op.get("under_plan_text")))
+    for L, t in (get(o, "C_T3", "t4b") or {}).items():
+        if get(t, "dm", "amended"): aff.append(dict(where=f"C-T3 circle nets T4b {L}", d_star=get(t, "dm", "d_star"), lam=get(t, "dm", "lam"), matched=get(t, "dm", "matched"),
+                                                    under_amendment=dict(causal=t.get("causal")), under_plan_text=t.get("under_plan_text")))
+    for W, w in (get(o, "C_T5", "widths") or {}).items():
+        if w.get("dm_rounds_amended"): aff.append(dict(where=f"C-T5 {W} dmr arm", rounds=w.get("dm_rounds_amended"), last_round=get(w, "dm_last"),
+                                                       under_amendment=dict(verdict_z1=w.get("verdict_z1")), under_plan_text=w.get("under_plan_text")))
+    for W, w in (get(o, "C_T7", "per_width") or {}).items():
+        for k, di in (w.get("dm") or {}).items():
+            if di.get("amended"): aff.append(dict(where=f"C-T7 W{W} {k} (damage-matched random erasure: relearning controls, Delta_rand of the relaxation contrast)", d_star=di.get("d_star"),
+                                                  lam=di.get("lam"), matched=di.get("matched"), under_plan_text=dict(dm_matched=False, note="the plan-text control was not run")))
+    return dict(amendment="Amendment 2 (OD-C2: partial removal at the found dimension d*, one shared lambda), declared post hoc", n_affected=len(aff), affected=aff,
+                reading="verdicts use the controls the producers ran (the amended procedure); 'under_plan_text' gives the frozen text's reading: the control is unmatched there, "
+                        "specificity 'not testable' (G45), and 'unlearns' / 'causal' cannot be evaluated against a control that was not run")
 
 
 def summary(o):
