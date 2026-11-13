@@ -1,0 +1,19 @@
+Round-2 integration test, 2026-11-13, code commit 2b6e058: every session's runner self-test (r2_run_session.py <session> <root> <work> --selftest, RUN_DEVICE=cpu, NT=1, one pinned core per stream; mock round-1 tree on the CPU, library self-tests, then the session under MOCK/QUICK through the real code path). CUDA was not available here.
+r2_q2 rc=0 277s
+r2_q1 rc=0 400s
+r2_q3 rc=0 210s
+r2_t1 rc=0 361s
+r2_t2 rc=0 200s
+r2_t3 rc=0 257s
+r2_t4 rc=0 169s
+r2_pc rc=0 649s
+r2_ana rc=0 1383s
+[r2 05:42:33] SELFTEST OK: r2_q1 in 400s
+[r2 05:40:30] SELFTEST OK: r2_q2 in 276s
+[r2 05:46:03] SELFTEST OK: r2_q3 in 210s
+[r2 05:46:31] SELFTEST OK: r2_t1 in 360s
+[r2 05:49:23] SELFTEST OK: r2_t2 in 199s
+[r2 05:50:48] SELFTEST OK: r2_t3 in 257s
+[r2 05:52:12] SELFTEST OK: r2_t4 in 168s
+[r2 06:01:37] SELFTEST OK: r2_pc (with r2_t1) in 648s
+[r2 06:15:15] SELFTEST OK: r2_ana (with r2_q1, r2_q2, r2_q3, r2_t1, r2_t2, r2_t3, r2_t4, r2_pc) in 1382s
