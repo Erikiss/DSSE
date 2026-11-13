@@ -39,3 +39,13 @@
   IMPLEMENTATION.md, notebooks/build_runde1b_gpu_notebooks.py; 15 Änderungen am Rahmenplan, u. a. Zeitwächter je Sitzung). Die vier
   Teile R, K, D, L laufen jetzt parallel; danach Integrationstest. Offen laut Kern: Einfrier-Konstanten und runde1b_freeze.json,
   r1b_report.py (Rundenauswertung), J-Lens-Download-URL, GPU-/Colab-Test, Inversfrei-Lint.
+
+## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
+- Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
+- Belegte Anknüpfungspunkte (aus den geprüften Berichten in results/ju_space/plans/runde1b/arbeitsstand/):
+  H-Neuronen wurden in Gemma-3-4B gefunden (2-9 Neuronen, AUROC 0,81 auf TriviaQA; Gao et al.); Gemma 4 E2B/E4B haben offizielle
+  MTP-Drafter (google/gemma-4-E2B-it-assistant, -E4B-it-assistant; rund 78 Mio. Parameter, lesen den KV-Cache des Zielmodells),
+  also eine zweite native Mehr-Token-Linse neben Qwen3.5-2B; für Gemma 4 12B gibt es Neuron-Lens-Lesungen aller MLP-Neuronen
+  (stdlogits/neuron-lens).
+- Aufwand: Adapter im Kern-Lader (Hook-Punkte, Chat-Vorlage, Fensteraufmerksamkeit bei langem Kontext), J-Lens-Anpassung, H-Menge,
+  Schadenseichung; grob 4-8 A100-Stunden für K und L (plus D), als eigener Teil G mit eigenem kurzen Plan vor dem Lauf.
