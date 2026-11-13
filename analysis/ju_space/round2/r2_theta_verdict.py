@@ -7,6 +7,10 @@ seeds of a prompt together, stratified by prompt type; row 0 = the point estimat
 cell, power step and FDT text of every block, so that differences between cells and blocks are paired (2.6, 'prompts and keys shared
 across the cells and blocks'). Directions that define a cell (u_push, u_read) are held fixed; the statistics that estimate (U, read-back
 projections, cbar, m*^2, m_A^2, Gamma_b, u_crit in B-Q2) are recomputed per replicate.
+Amendments (abschnitt11_12_runde2_plan_amendments.md): 1 (distinct-pair U statistic in bootstrap replicates; R2 'crosses 1' in the
+direction of the point fit), 3 (b) (a rule bound is undefined when the point value or more than 5 % of the replicates are undefined:
+lohi / bounds_ok / nf_share; the share is written into every rule output), 3 (c) (R4 (i) 'degenerate': no '(RSI-specific)' suffix, the
+block does not enter R3's alignment form).
 
 Inputs: <r1_dir> = the copied round-1 files (gpu*/rk/b<b>/{state.pt, loops.json}, gpu*/summary_b<b>.json, gpu2 / gpu3 dn_delta.json and
 blocks_chosen.json; found by name, OD-G9); <r2_root>/<session>/ = dsse_runs/<session>/ (theta/ of r2_q2, axes/r2_axes.pt of r2_q1; found
@@ -109,7 +113,8 @@ def rule_R1(a, reps, half=None, curve=None, window_reps=None, band=None):
     alpha >= alpha_0 ('SUB' if the 0.5 alpha_0 cell's too); SUPER = every lower bound > 1; otherwise UNDECIDED. alpha* = first downward
     crossing (log-log) with its censored interval, also as D* (damage curve); onset from the paired g(0.5 alpha_0) - g(alpha_0) (half =
     index of the 0.5 alpha_0 point); labels 'damage-limited' (D* > 0.15 nats) and 'convention-sensitive' (window_reps: {window: reps};
-    alpha* intervals of two windows do not overlap); band = the resolvable band of the power re-run (OD-B14)."""
+    alpha* intervals of two windows do not overlap); band = the resolvable band of the power re-run (OD-B14). A point whose bounds are
+    undefined (Amendment 3 (b), lohi) satisfies no bound condition; nonfinite_share / bounds_undefined per series point."""
     a = np.asarray(a, float); C = len(a); L = [lohi(r) for r in reps]; lo = np.array([x[0] for x in L]); hi = np.array([x[1] for x in L])
     soft = any(lo[i] > 1 and hi[k] < 1 for i in range(C) for k in range(i + 1, C))
     hard = any(hi[i] < 1 and lo[k] > 1 for i in range(C) for k in range(i + 1, C)); ge = a >= 1 - 1e-9
@@ -161,7 +166,9 @@ def rule_R2(T, reps, extended=False, T0=0.7):
     'above 1 throughout' / 'below 1 throughout' = the fit's 90 % band lies on one side of 1 over the tested range; 'T_c located' = >= 95 % of
     the bootstrap fits cross 1 (in the direction of the point fit) and the 90 % interval of the crossing lies within [0.2, 1.1] ([0.1, 1.4]
     when a reserve temperature entered); otherwise 'undecided'. Reports the slope dlogG/dT, the crossing, the margin and, with >= 4
-    temperatures, the curvature. Gains are clipped at 1e-6 before the log (sim_gain's convention)."""
+    temperatures, the curvature. Gains are clipped at 1e-6 before the log (sim_gain's convention). Amendment 3 (b): if the point fit is
+    not finite or more than 5 % of the replicate fits are not finite (a gain undefined in some cell), the verdict is 'undecided (gain
+    undefined in x % of the replicates)'; slope, T_c and the band of the finite fits stay reported, with nonfinite_share."""
     T = np.asarray(T, float); o = np.argsort(T); T = T[o]; reps = [reps[i] for i in o]; C = len(T)
     out = dict(T=T.tolist(), points=[S(r) for r in reps], extended=bool(extended), limit=LIMIT_T)
     if C < 2: out["verdict"] = "not decidable (fewer than two temperatures)"; return out
@@ -198,7 +205,8 @@ def rule_R3(entries, what):
     """R3 form on one quantity: entries = [(block, delta, replicate array)] of the entering blocks. Ends = the lowest- and highest-delta
     entering blocks; 'falls with delta' if the paired 90 % interval of high - low lies below 0 and the middle block's point is not above
     the upper end of low's interval; 'rises with delta' mirrored (middle not above the upper end of high's interval); otherwise 'no
-    monotone relation'; two blocks: the middle clause is dropped (marked); fewer: 'not decidable'. The non-overlap form is reported."""
+    monotone relation'; two blocks: the middle clause is dropped (marked); fewer: 'not decidable'. The non-overlap form is reported.
+    An undefined bound (Amendment 3 (b)) satisfies no condition: 'no monotone relation (undecided: a bound is undefined ...)'."""
     e = sorted(entries, key=lambda t: t[1]); n = len(e); out = dict(quantity=what, blocks=[x[0] for x in e], delta=[x[1] for x in e], note=DEPTH)
     if n < 2: out["verdict"] = "not decidable (fewer than two entering blocks)"; return out
     (bl, _, rl), (bh, _, rh) = e[0], e[-1]; mid = e[1] if n == 3 else None
@@ -389,7 +397,8 @@ def cells_json(core, NP):
 
 
 def reserves(cores):
-    """OD-B8 / G21-G23 on the final joint bootstrap: which reserve cells enter their rule."""
+    """OD-B8 / G21-G23 on the final joint bootstrap: which reserve cells enter their rule (an undefined bound, Amendment 3 (b), does
+    not meet a reserve condition)."""
     out = {}; c14 = cores.get(14)
     if c14 and "CT" in c14:
         CT = c14["CT"]; dec = lambda n: CT[n]["all"]["dec"] if n in CT else None
@@ -478,7 +487,9 @@ def power_rerun(core, b, names, a_cells, NP, reps=POWER_REPS):
 
 
 def r4_block(core, b, F, AXB, labels):
-    """R4 critical mode with B-Q2 alignment (default u_crit; (i) converged different loops; (ii) the power-step mode)."""
+    """R4 critical mode with B-Q2 alignment (default u_crit; (i) converged different loops; (ii) the power-step mode). Amendment 3 (c):
+    a 'degenerate' (i) has no single critical mode: no '(RSI-specific)' suffix, and core['align_reps'] stays empty so that the block does
+    not enter R3's alignment form (alignment_entries); the per-loop alignments stay in out['i']['alignment'] (descriptive)."""
     BQ, cfg = core["BQ"], core["cfg"]; js = BQ["js"]; reps = BQ["reps"]; bank = core["bank"]; P = BQ["P"]; ax = core["axes"]
     axes = dict(u_T_perp=(ax["u_T_perp"], ax["null_u_T_perp"]), sports=(ax["sports"], ax["null_sports"]), tone=(ax["tone"], ax["null_tone"]),
                 sea=(ax["sea"], ax["null_sea"]), u_S_perp=(ax["u_S_perp"], None if AXB is None else AXB.get("null_u_S_perp")),

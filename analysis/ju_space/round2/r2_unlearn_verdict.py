@@ -1076,7 +1076,8 @@ def selftest(work):
     q4 = lambda share, hi_, used="u_RSI", sess=None: dict(status="ran", ablation=used, passed_C_Q3=True, restored_share=share, restored_share_ci90=[share - 0.1, hi_], verdict_in_session=sess)
     check("C-Q4a: shallow / deep / partial / not applicable", cq4a(q4(0.6, 0.8), c3, [])["verdict"] == "shallow" and cq4a(q4(0.1, 0.3), c3, [])["verdict"] == "deep" and cq4a(q4(0.1, 0.4), c3, [])["verdict"] == "partial"
           and cq4a(q4(0.3, 0.45), c3, [])["verdict"] == "partial" and cq4a(q4(0.6, 0.8), c3c, [])["verdict"] == "not applicable (nothing removed)" and cq4a(q4(0.6, 0.8, used="span"), c3b, [])["verdict"] == "shallow"
-          and cq4a(q4(0.6, 0.8, sess="deep"), c3, [])["agrees_in_session"] is False and cq4a(None, c3, [])["status"].startswith("not run"))
+          and cq4a(q4(0.6, 0.8, sess="deep"), c3, [])["agrees_in_session"] is False and cq4a(None, c3, [])["status"].startswith("not run")
+          and cq4a(dict(q4(0.6, 0.8), own_axis_gap_cue=0.4, own_axis_gap_abl=0.2), c3, [])["own_axis"] == dict(own_axis_gap_cue=0.4, own_axis_gap_abl=0.2) and cq4a(q4(0.6, 0.8), c3, [])["own_axis"] is None)
     # ---- C-Q4b loop rule
     gone, surv, rer, weak = _row(c=0.02, p=0.5, A=0.05, rel=0.2, Ue=0.05, lo_=-0.1), _row(), _row(c=0.1, p=0.03, A=0.15, rel=0.7, Ue=0.4, lo_=0.2), _row(c=0.2, p=0.03, A=0.3, rel=0.3, Ue=0.1, lo_=-0.1)
     gone_rer = _row(c=0.02, p=0.5, A=0.05, rel=0.7, Ue=0.4, lo_=0.2); two = lambda r: {2: r, 3: r}
@@ -1109,10 +1110,26 @@ def selftest(work):
     check("arm A: stops after round 1 -> 'translation (as predicted), not un-searched'; continued -> loop rule with the R1 seed-0 comparator; G16 recomputed",
           a1["verdict"] == "translation (as predicted), not un-searched" and a1["G16"]["agrees"] and a2["verdict"] == "un-searched" and a2["G16"]["r2_ana"] is True and a3["verdict"] == "undecided (the R1 seed-0 comparator does not re-find RSI)"
           and a4["verdict"] == "survives" and a4["G16"]["agrees"] is False and a4["od_g8"] and arm_a(None, ref, [])["status"].startswith("not run"), (a2["verdict"], a3["verdict"], a4["G16"]))
-    q5 = lambda cd, cr, cs: dict(status="ran", superposition=dict(cos_disatt=cd, cos=cd, coef_RSI=cr, coef_SEA=cs, holds_in_session=True), dose=dict(norm_ratio=1.8, cos_debiased=0.9))
+    # Amendment 3 (a): G16's reference = the percentile interval shifted by (point - median); both readings
+    aB = lambda c1, cont, pct, med, ci=None, n=3, **kw: dict(status="ran", c1=c1, continues=cont, rounds=n if cont else 1, rows=([_row(d=1), dict(gone, d=2), dict(gone, d=3)] if cont else [_row(d=1)]),
+                                                             reference_seed0_RSI_a=dict(c=0.6, ci90=ci or [pct[0] + 0.6 - med, pct[1] + 0.6 - med], ci90_percentile=pct, boot_median=med), verdict_in_session="x", **kw)
+    e1 = arm_a(aB(0.45, True, [0.40, 0.56], 0.5, continues_unshifted=False), ref, []); e2 = arm_a(aB(0.35, True, [0.40, 0.56], 0.5), ref, []); e3 = arm_a(aB(0.55, False, [0.40, 0.56], 0.5), ref, [])
+    e4 = arm_a(aB(0.50, False, [0.55, 0.75], 0.7), ref, []); e5 = arm_a(aB(0.45, True, [0.40, 0.56], 0.5, ci=[0.40, 0.56]), ref, [])
+    check("Amendment 3 (a), arm A: G16 from the recentred interval [q05 + c - m, q95 + c - m] (ci90[0]); the unshifted interval's G16 and the frozen text's verdict are given next to it",
+          e1["G16"]["r2_ana"] is True and e1["G16"]["agrees"] and e1["G16"]["ci90_is_recentred_percentile"] is True and e1["G16"]["unshifted_would_continue"] == dict(in_session=False, r2_ana=False)
+          and e1["verdict"] == "un-searched" and e1["under_plan_text"]["verdict"] == TRANSLATION and e1["under_plan_text"]["same_as_amended"] is False and e2["under_plan_text"]["same_as_amended"] is True
+          and e2["under_plan_text"]["verdict"] == "un-searched" and e3["verdict"] == TRANSLATION and e3["under_plan_text"]["same_as_amended"] is True
+          and e4["verdict"] == TRANSLATION and e4["under_plan_text"]["verdict"].startswith("not computable") and e4["G16"]["agrees"]
+          and e5["G16"]["ci90_is_recentred_percentile"] is False and any("not the percentile interval shifted" in x for x in e5["od_g8"]) and a2["under_plan_text"] is None and a2["G16"]["ci90_is_recentred_percentile"] is None,
+          (e1["G16"]["unshifted_would_continue"], e1["under_plan_text"]["verdict"], e4["under_plan_text"]["verdict"][:40]))
+    a3_ = amendment_3(dict(C_Q4_armA=e1)); a3s = amendment_3(dict(C_Q4_armA=e2)); a3n = amendment_3(dict(C_Q4_armA=a2))
+    check("Amendment 3 list: arm A appears with both readings when they differ; 'same under both' otherwise; no reading for an output written before the amendment",
+          a3_["n_affected"] == 1 and a3_["affected"][0]["under_plan_text"]["verdict"] == TRANSLATION and a3_["G16_under_amendment"] is True and a3_["G16_under_plan_text"] is False
+          and a3s["n_affected"] == 0 and a3s["same_under_both"] is True and a3n["same_under_both"] is None and amendment_3({})["n_affected"] == 0)
+    q5 = lambda cd, cr, cs: dict(status="ran", superposition=dict(cos_disatt=cd, cos=cd, coef_RSI=cr, coef_SEA=cs, holds_in_session=True, cos_boot_median=cd - 0.05), dose=dict(norm_ratio=1.8, cos_debiased=0.9, cos_boot_median=0.85))
     s1 = cq5(q5(0.9, 0.7, 0.7), RP.r1_info(r1), r1, []); s2 = cq5(q5(0.7, 0.7, 0.7), i_p, r1p, [RP.LBL_GDESC]); s3 = cq5(q5(0.9, 0.3, 0.7), i_p, r1p, []); s4 = cq5(q5(0.9, 0.7, 1.1), i_p, r1p, []); s5 = cq5(None, RP.r1_info(os.path.join(work, "none")), os.path.join(work, "none"), [])
     check("C-Q5: superposition holds only with disattenuated cos >= 0.8 and both coefficients in [0.5, 1.5] / sqrt 2", s1["superposition"]["holds"] and not s2["superposition"]["holds"] and not s3["superposition"]["holds"] and not s4["superposition"]["holds"]
-          and s2["superposition"]["agrees_in_session"] is False)
+          and s2["superposition"]["agrees_in_session"] is False and s1["superposition"]["descriptive"] == dict(cos_boot_median=0.9 - 0.05) and s1["dose"]["cos_boot_median"] == 0.85)
     check("C-Q5: +- symmetry from R1 sigma (row 0) in [0.7, 1.4]; label 'block 14 not usable' if G-blk(14) fails; SVD of the 24 stacked d_n with named modes",
           s1["symmetry"]["holds"] is True and s2["symmetry"]["holds"] is False and RP.LBL_BLK14 in s2["labels"] and RP.LBL_BLK14 not in s1["labels"] and s1["svd"]["status"] == "ran" and s1["svd"]["n_directions"] == 24
           and len(s1["svd"]["singular_values"]) == 24 and "mean_RND_response" in s1["svd"]["named_mode_cos_with_top_modes"] and s2["svd"]["named_mode_cos_with_top_modes"]["u_T_perp"][0] > 0.9
