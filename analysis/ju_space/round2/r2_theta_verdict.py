@@ -790,6 +790,32 @@ def synth_bank(seed, lam, noise, bulk=0.0, D=48, NP=64, K=8, loops=(("RSI_a", 2)
     return bank, ref_X, axes, w
 
 
+def synth_two_mode_core(seed, lam_rsi, lam_sea, NP=64, D=400, noise=0.10):
+    """R4 (i) case of the review (finding theta_verdict-2, verifier's construction): RSI_a on mode w1, SEA on an orthogonal mode w2, RND_1
+    without response; M_b = {RSI_a} and SEA converged. Equal gains give 'degenerate'. Returns (bq0 js, r4_block output, core)."""
+    rng = np.random.default_rng(seed); Q, _ = np.linalg.qr(rng.normal(size=(D, 4))); w1, w2, wg, wx = Q.T; W = TH.boot_W(NP)
+    bank = dict(_meta=dict(alpha=1.0, alpha_scale=1.0, suffix="", block=8), _missing=[])
+    for L, ns, lam, w in (("RSI_a", 2, lam_rsi, w1), ("SEA", 1, lam_sea, w2), ("RND_1", 1, 0.0, wx)):
+        p = w.copy(); e = dict(name=L, suffix="", start=torch.as_tensor(w.copy()), d={}, ev={}, rel={}, row={})
+        for n in range(4):
+            po = np.repeat(np.arange(NP), ns); N = len(po); Jp = lam * (w @ p) * w
+            dl = Jp[None] * (1 + 0.5 * rng.normal(size=N))[:, None] + noise * rng.normal(size=(N, D)); x0 = rng.normal(size=(N, D))
+            dt = torch.as_tensor(dl, dtype=torch.float32); ok = torch.ones(N, dtype=torch.bool); d = dl.mean(0); rel, _ = TH.halving_rel(dt, ok, torch.as_tensor(po), NP)
+            e["ev"][n + 1] = dict(delta=dt, ok=ok, prompt_of=torch.as_tensor(po), xp=torch.as_tensor(x0 + dl, dtype=torch.float32), xm=torch.as_tensor(x0 - dl, dtype=torch.float32),
+                                  first_div=[1] * N, damage_of_push=0.01, alpha=1.0)
+            e["d"][n + 1] = torch.as_tensor(d, dtype=torch.float32).double(); e["rel"][n + 1] = rel; e["row"][n + 1] = dict(rel=rel); p = d / np.linalg.norm(d)
+        bank[L] = e
+    BQ = TH.bq0(bank, 8, 1.0, 1.0, dict(sum=[40.0] * NP, cnt=[40] * NP), torch.as_tensor(rng.normal(size=(NP, D)), dtype=torch.float32),
+                dict(u_T_perp=torch.as_tensor(w1), gap_perp_cross=1.0), W)
+    nul = torch.as_tensor(rng.normal(size=(2000, D)))
+    ax = dict(u_T_perp=torch.as_tensor(w1), u_S_perp=torch.as_tensor(w1 + 0.1 * wx), sports=torch.as_tensor(rng.normal(size=D)), tone=torch.as_tensor(rng.normal(size=D)),
+              sea=torch.as_tensor(w2), u_neg=torch.as_tensor(rng.normal(size=D)), null_u_T_perp=nul, null_sports=nul, null_tone=nul, null_sea=nul, gap_perp_cross=1.0)
+    core = dict(BQ=BQ, cfg=_cfg_used(dict(mode=BQ["cfg"]["mode"], u_push=BQ["cfg"]["u_push"], u_read=BQ["cfg"]["u_read"]), BQ["reps"]), bank=bank, axes=ax, k5=None,
+                W=W, NP=NP, cells={}, alpha=1.0)
+    AXB = dict(u_RGI_perp=torch.as_tensor(wg + 0.15 * w1), null_u_RGI_perp=nul, null_u_S_perp=nul, null_u_neg=nul, GA=True)
+    return BQ["js"], r4_block(core, 8, dict(power=None), AXB, []), core
+
+
 def selftest(work, r1_dir=None, r2_root=None):
     os.makedirs(work, exist_ok=True); res = []; t0 = time.time()
 
@@ -875,6 +901,36 @@ def selftest(work, r1_dir=None, r2_root=None):
     r6z = rule_R6(P2.proj(u) / Pz.proj(u), Pz.proj(u), Gc); r6n = rule_R6(-K, P1.proj(u), Gc)
     check("R6: different criteria when G = 2.5 K; 'K not defined' without a turn-1 stance; 'K or G not positive'", r6d["transfer"]["verdict"] == "different criteria"
           and not r6z["defined"] and r6n["transfer"]["verdict"] == "undecided (K or G not positive)", (r6d["transfer"], r6z["verdict"]))
+    # Amendment 3 (b) (review finding theta_verdict-1): undefined bounds. (1) The review's case: a 'mode not resolved' block whose RSI_a
+    # evaluation n = 3 is noise with U <= 0 at the point, so m_A^2 = 0 and the point gains are undefined
+    s2n = np.arange(1, 257) ** -1.2; s2n /= s2n.sum(); poN = np.repeat(np.arange(NP), 2); PaN = None
+    for sd_ in range(100, 300):
+        evN = np.random.default_rng(sd_).normal(size=(2 * NP, 256)) * np.sqrt(s2n)
+        PaN = TH.Pairs(torch.as_tensor(evN), torch.ones(2 * NP, dtype=torch.bool), torch.as_tensor(poN), W)
+        if float(PaN.U()[0]) <= 0: break
+    mA2N = PaN.att2(); uN = R.unit(PaN.mean()[0]); cfgN = dict(mode="not_resolved", u_push=uN, u_read=uN, m2_par=mA2N, mG=torch.sqrt(mA2N)); cellsN = {}
+    for i, (a, T) in enumerate(((0.5, 0.7), (1, 0.7), (2, 0.7), (1, 0.3), (1, 1.0))):
+        c = synth_cell(3000 + i, a, T, 0.05, NP, 4 if a == 0.5 else 2, 256, uN, sd=0.05); cellsN[c["name"]] = c
+    CTN = TH.cell_table(cellsN, cfgN, 1.0, W, windows=("all",))
+    r1N = rule_R1([0.5, 1, 2], [CTN[TH.cell_name(a, 0.7)]["all"]["dec"] for a in (0.5, 1, 2)], 0)
+    r2N = rule_R2([0.3, 0.7, 1.0], [CTN[TH.cell_name(1, T)]["all"]["dec"] for T in (0.3, 0.7, 1.0)])
+    RSN = reserves({14: dict(CT=CTN)}); r5N = rule_R5(0.7, CTN[CELL_A0]["all"]["dec"])
+    check("Amendment 3 (b): m_A^2 = 0 at the point -> R1 UNDECIDED (not SUB), R2 'undecided (gain undefined ...)' with slope and T_c kept, reserves not met, R5 undecided; shares written",
+          float(mA2N[0]) == 0.0 and r1N["verdict"] == "UNDECIDED" and r1N["onset"]["verdict"] == "onset undecided" and all(r1N["bounds_undefined"])
+          and r2N["verdict"].startswith("undecided (gain undefined at the point estimate") and "slope" in r2N and "T_c" in r2N and r2N["nonfinite_share"] > 0.05
+          and not RSN["reserve1_a4_T0.7"]["enters"] and not RSN["reserve2_T0.15"]["enters"] and fin(RSN["reserve2_T0.15"]["nonfinite_share"])
+          and r5N["self_sustainment"] == "undecided" and fin(r5N["nonfinite_share"]), (r1N["verdict"], r2N["verdict"], r1N["nonfinite_share"]))
+    # (2) the 5 % share: a defined point with 4 % undefined replicates keeps its verdict, with 8 % the rule is undecided
+    arr = lambda v, sh, sd: np.r_[v, np.where(np.random.default_rng(sd).random(2000) < sh, np.nan, np.random.default_rng(sd + 1).normal(v, 0.03, 2000))]
+    s4 = rule_R1([0.5, 1, 2], [arr(0.7, 0.04, 1), arr(0.6, 0.04, 3), arr(0.5, 0.04, 5)], 0); s8 = rule_R1([0.5, 1, 2], [arr(0.7, 0.08, 1), arr(0.6, 0.08, 3), arr(0.5, 0.08, 5)], 0)
+    t4 = rule_R2([0.3, 0.7, 1.0], [arr(0.7, 0.04, 7), arr(0.6, 0.04, 9), arr(0.5, 0.04, 11)]); t8 = rule_R2([0.3, 0.7, 1.0], [arr(0.7, 0.08, 7), arr(0.6, 0.08, 9), arr(0.5, 0.08, 11)])
+    q4 = rule_R3([(8, 0.1, arr(1.0, 0.04, 13)), (20, 0.2, arr(0.6, 0.04, 15))], "loop gain"); q8 = rule_R3([(8, 0.1, arr(1.0, 0.08, 13)), (20, 0.2, arr(0.6, 0.08, 15))], "loop gain")
+    tn = rule_R2([0.3, 0.7, 1.0], [np.r_[0.5, np.full(2000, np.nan)]] * 3)
+    check("Amendment 3 (b): 4 % undefined replicates keep SUB / 'below 1 throughout' / 'falls', 8 % give undecided in R1, R2 and R3; no finite replicate fit: no error, slope and T_c kept",
+          s4["verdict"] == "SUB" and s8["verdict"] == "UNDECIDED" and t4["verdict"] == "below 1 throughout" and t8["verdict"].startswith("undecided (gain undefined in")
+          and q4["verdict"].startswith("loop gain falls with delta") and "undecided: a bound is undefined" in q8["verdict"] and q8["bounds_undefined"]
+          and tn["verdict"].startswith("undecided (gain undefined in 100.0 %") and "slope" in tn and "T_c" in tn and abs(s8["nonfinite_share"][0] - 0.08) < 0.02,
+          (s4["verdict"], s8["verdict"], t4["verdict"], t8["verdict"], q8["verdict"], tn["verdict"]))
     # reserves (G21-G23)
     fake = lambda v: dict(all=dict(dec=torch.as_tensor(np.r_[v, np.random.default_rng(int(1000 * v)).normal(v, 0.05, 2000)])))
     cores = {14: dict(CT={TH.cell_name(2, 0.7): fake(1.3), TH.cell_name(1, 1.0): fake(0.9), TH.cell_name(1, 0.3): fake(0.6), TH.cell_name(4, 0.7): fake(1.0)}),
@@ -909,6 +965,13 @@ def selftest(work, r1_dir=None, r2_root=None):
     check("B-Q2: RSI-aligned and RSI-specific on a planted RSI mode; GI-aligned with 'RGI axis not resolved' when GA fails; z_beh", A1["RSI_aligned"]
           and A1["RSI_specific"] and not A1["GI_aligned"] and abs(A1["axes"]["u_T_perp"]["corrected"]["pt"] - 1 / 0.9) < 1e-6 and A1["axes"]["u_T_perp"]["p"] < 0.01
           and abs(A1["z_beh"]["rsi"] - 3.0) < 1e-6 and A2["GI_aligned"] and not A2["RSI_aligned"] and "RGI axis not resolved" in A2["labels"], (A1["RSI_aligned"], A1["RSI_specific"], A2["labels"]))
+    # Amendment 3 (c) (review finding theta_verdict-2): a 'degenerate' R4 (i) gets no '(RSI-specific)' and does not enter R3's alignment form
+    jsD, r4D, coreD = synth_two_mode_core(11, 0.8, 0.8); jsF, r4F, coreF = synth_two_mode_core(11, 1.3, 0.5)
+    blk = {"8": dict(R4=r4D), "20": dict(R4=r4F)}; alD, agD, degD = alignment_entries([8, 20], blk, {8: coreD, 20: coreF}, {8: 0.1, 20: 0.2})
+    check("Amendment 3 (c): R4 (i) 'degenerate' without '(RSI-specific)' although u*_b is RSI-specific; the block is listed 'not entering (degenerate)'; a 'first' RSI_a keeps the suffix and enters",
+          jsD["mode_set"]["members"] == ["RSI_a"] and r4D["i"]["verdict"] == "degenerate" and r4D["verdict"] == "degenerate" and r4D["default"]["RSI_specific"]
+          and coreD["align_reps"] == {} and degD == {"8": "not entering (degenerate)"} and [x[0] for x in alD] == [20] and [x[0] for x in agD] == [20]
+          and r4F["verdict"] == "RSI-aligned (RSI-specific)" and coreF["align_reps"].get("u_T_perp") is not None, (r4D["verdict"], r4F["verdict"], degD))
     # B-Q0 on planted loops: Gamma recovers lambda; guard; switch on a strong bulk self-response; mode not resolved at low SNR
     cb_ref = dict(sum=[40.0] * NP, cnt=[40] * NP)
     for lam in (0.7, 1.3):

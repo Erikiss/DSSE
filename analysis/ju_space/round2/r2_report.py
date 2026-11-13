@@ -639,7 +639,18 @@ def part_B(tv, ttv, t5, pcg):
                              R5=v.get("R5"), R6=r6, Gamma=v.get("Gamma_R3"), enters_R3=v.get("enters_R3"), sentence=v.get("sentence"), od_g8=v.get("od_g8"),
                              m_star2=get(v, "B_Q0", "m_star2"), cross_fit={k: get(v, "B_Q0", "cross_fit", k) for k in ("cos_AB", "lambda_cf", "g_par_AB", "diff", "switch", "reason")},
                              independent_loop=get(v, "B_Q0", "independent_loop"), power_step=get(v, "B_Q6", "status"))
+        und = theta_undefined(tv)
+        for b, e in blocks.items():                                                # Amendment 3 (b): the share of undefined replicates next to each rule verdict
+            for rk in ("R1", "R2", "R4", "R5"):
+                src = get(tv, "blocks", b, rk)
+                if isinstance(src, dict) and isinstance(e.get(rk), dict): e[rk].update(nonfinite_share=src.get("nonfinite_share"), bounds_undefined=src.get("bounds_undefined"))
+                elif isinstance(src, dict) and ("nonfinite_share" in src or "bounds_undefined" in src): e[rk] = dict(verdict=e.get(rk), nonfinite_share=src.get("nonfinite_share"), bounds_undefined=src.get("bounds_undefined"))
+            for c, x in (e.get("R6") or {}).items():
+                src = get(tv, "blocks", b, "R6", "cells", c, "R6")
+                if isinstance(src, dict): x.update(nonfinite_share=src.get("nonfinite_share"), bounds_undefined=src.get("bounds_undefined"))
         out["qwen"] = dict(status=status_of(tv), blocks=blocks, R3={k: (get(v, "verdict") if isinstance(v, dict) else v) for k, v in (tv.get("R3") or {}).items()},
+                           undefined_replicates=dict(entries=und, undecided_for_undefined_bounds=[e for e in und if e.get("bounds_undefined")],
+                                                     rule="Amendment 3 (b): a rule bound is undefined ('undecided') when the point value or more than 5 % of the replicates are undefined"),
                            R3_detail=tv.get("R3"), reserves=tv.get("reserves"), gates=tv.get("gates"), labels_global=tv.get("labels_global"), delta_order=tv.get("delta_order"),
                            labels=uniq(collect(tv, ("labels", "labels_global"))), not_run=uniq(collect_not_run(tv)), note=tv.get("note"))
     if ttv is None: out["toy"] = dict(status="not run (round-2 output missing: theta_toy/verdict.json)")
@@ -652,7 +663,9 @@ def part_B(tv, ttv, t5, pcg):
                           note="B-T1 is a regularisation x capacity diagram of the first-order meta level; the self-referential theta is B-T5's")
     out["verdicts"] = dict(qwen={b: dict(R1=get(v, "R1", "verdict"), R2=get(v, "R2", "verdict"), R4=get(v, "R4", "verdict") or get(v, "R4", "verdict_descriptive"),
                                          R5=get(v, "R5", "verdict"), R6={c: x.get("verdict") for c, x in (v.get("R6") or {}).items()}) for b, v in (get(out, "qwen", "blocks") or {}).items()},
-                           R3=get(out, "qwen", "R3"), toy=dict(P3=get(ttv, "P3", "verdict"), P4=get(ttv, "P4", "verdict"), G27=get(out, "toy", "T5", "G27")) if ttv else None)
+                           R3=get(out, "qwen", "R3"), toy=dict(P3=get(ttv, "P3", "verdict"), P4=get(ttv, "P4", "verdict"), G27=get(out, "toy", "T5", "G27")) if ttv else None,
+                           undecided_for_undefined_bounds=[f"{e['where']}: {e.get('verdict')!r} ({100 * e['share_max']:.1f} % of the replicates undefined)" if fin(e.get("share_max")) else
+                                                           f"{e['where']}: {e.get('verdict')!r} (point value undefined)" for e in (get(out, "qwen", "undefined_replicates", "undecided_for_undefined_bounds") or [])])
     return out
 
 
@@ -671,7 +684,7 @@ def part_C(uv, q1, pcg):
                C_Q2=num_q2, C_Q3=num_q3, C_Q3_G43=get(uv, "C_Q3", "G43"),
                C_Q4a={k: get(uv, "C_Q4a", k) for k in ("verdict", "ablation", "restored_share", "restored_share_ci90", "ceiling", "passed_C_Q3_r2_ana")},
                C_Q4b=dict(verdict=get(uv, "C_Q4b", "verdict"), gate=get(uv, "C_Q4b", "gate"), rows=get(uv, "C_Q4b", "rows"), reference=get(uv, "C_Q4b", "matched_size_reference", "rows")),
-               C_Q4_armA={k: get(uv, "C_Q4_armA", k) for k in ("verdict", "c1", "reference", "G16", "rounds_ran", "comparator")},
+               C_Q4_armA={k: get(uv, "C_Q4_armA", k) for k in ("verdict", "c1", "reference", "G16", "rounds_ran", "comparator", "under_plan_text")},
                C_Q5=dict(superposition=get(uv, "C_Q5", "superposition"), symmetry=get(uv, "C_Q5", "symmetry"), dose=get(uv, "C_Q5", "dose"),
                          svd=dict(singular_values=get(uv, "C_Q5", "svd", "singular_values"), variance_share=get(uv, "C_Q5", "svd", "variance_share"),
                                   named_modes=get(uv, "C_Q5", "svd", "named_mode_cos_with_top_modes"))),
@@ -682,7 +695,7 @@ def part_C(uv, q1, pcg):
     return dict(status="ran", verdicts=uv.get("summary"), key_numbers=key, toy=compact_toy(uv),
                 gates=dict(uv.get("gates") or {}, G42=None if q1 is None else q1.get("G42"), G43=get(uv, "C_Q3", "G43"), G44=get(uv, "C_Q4b", "gate"), G16=get(uv, "C_Q4_armA", "G16")),
                 labels=uniq(collect(uv, ("labels",)) + (collect(q1, ("labels",)) if q1 else [])), od_g8=uv.get("od_g8"), not_run=uniq(collect_not_run(uv)),
-                amendment_2=uv.get("amendment_2"),
+                amendment_2=uv.get("amendment_2"), amendment_3=uv.get("amendment_3"),
                 note="a push is at most 'suppressed'; 'unlearned' only when the instructed or cued ability goes away specifically")
 
 
@@ -735,6 +748,8 @@ IMPLEMENTER8_READINGS = (
     "AT8: 'perturbation-driven' is read from the reduced model for every line (also a regulariser-specific one); a line's 'verdict' is 'ABSENT' where the ABSENT condition holds, the two-step verdict stays in 'rule_verdict'",
     "Amendment 2 (post hoc): Part C verdicts use the damage-matched controls as the producers ran them (the amended OD-C2); 'under_plan_text' gives the frozen text's reading next to every affected result (control unmatched: specificity 'not testable', G45; 'unlearns' / 'causal' False where the accuracy half fails, else not computable because the plan-text control was not run; the C-T4 ladder and C-T7's Holm family are evaluated with these three values)",
     "C-T4 ladder: if the span block unlearns and its isotropic control neither unlearns nor keeps 0.9 x base, the rung is 'undecided (...)'; in W4 'specific' is the retain criterion alone",
+    "Amendment 3 (a) (post hoc): G16 uses armA.json's reference ci90 (the recentred interval) as run; the frozen text's reading is G16 with the stored unshifted percentile interval (ci90_percentile): where it would have stopped arm A the plan-text verdict is 'translation (as predicted), not un-searched', where it would have continued but the session stopped, rounds 2-3 are 'not computable'",
+    "Amendment 3 (b), (c) (clarifications, not post hoc): the report shows the share of undefined replicates next to every theta rule output that carries one and lists every verdict made 'undecided' by an undefined bound; R4 / R3 are read as r2_theta_verdict.py writes them",
     "AT7: NW = the number of valid worlds, ninit 3, seed 1, pjit 0.03 (reference); with fewer than 2 valid worlds the noise is measured on all worlds (flagged)",
     "AT5: slopes over the BP models of r2_t1 plus the PC models of the G-PC widths (receiver means from the pairs with testable nets)",
     "G46: every retrained cell is compared per round-2 source; first95 None on both sides counts as agreement; weights are not compared; r2_rgi_toy's r1_job_name is not used (the job name is derived from the net name)",
@@ -750,9 +765,40 @@ def amendments(repo=None):
     for i in range(1, len(parts) - 1, 2):
         body = parts[i + 1]; low = " ".join(body.lower().split())
         ph = bool(re.search(r"declared post hoc|marked 'post hoc'|marked post hoc", low)) or ("post hoc" in low and "not post hoc" not in low)
-        out.append(dict(title=parts[i].strip(), post_hoc=ph, change=" ".join(body.split("**Change.**", 1)[1].split("**")[0].split())[:900] if "**Change.**" in body else None,
+        secs = [(m.group(1).strip().rstrip("."), " ".join(m.group(2).split())) for m in re.finditer(r"\*\*((?:Change|Clarification)[^*]*)\*\*(.*?)(?=\*\*|\Z)", body, re.S)]
+        stm = [" ".join(x.split()) for x in re.split(r"(?<=[.;])\s+", body) if "post hoc" in x.lower()]
+        out.append(dict(title=parts[i].strip(), post_hoc=ph, change=secs[0][1][:900] if secs else None, changes=[dict(heading=h, text=t[:1500]) for h, t in secs],
+                        post_hoc_statement=" ".join(stm)[:600] if stm else None,
                         consequence="affected results are reported both under the plan text and under the amendment (section 14)" if ph else None))
-    return dict(path=AMEND_REL, present=True, sha256=sha256_file(p), amendments=out)
+    return dict(path=AMEND_REL, present=True, sha256=sha256_file(p), n_amendments=len(out), amendments=out)
+
+
+def theta_undefined(tv):
+    """Amendment 3 (b): every theta rule output that carries 'nonfinite_share' (the share of undefined bootstrap replicates; a bound is
+    undefined when the point value or more than 5 % of the replicates are), with its verdict and 'bounds_undefined'. Read defensively:
+    the share may be a number, a list (per series point) or a dict (per input). Returns [dict(where, verdict, share_max, share,
+    bounds_undefined)]; 'undecided_for_undefined_bounds' = the entries whose bounds are undefined."""
+    out = []
+
+    def mx(v):
+        xs = [num(x) for x in (v.values() if isinstance(v, dict) else v if isinstance(v, list) else [v])]
+        xs = [x for x in xs if fin(x)]; return max(xs) if xs else None
+
+    def anyt(v):
+        return bool(any(bool(x) for x in (v.values() if isinstance(v, dict) else v)) if isinstance(v, (list, dict)) else bool(v))
+
+    def walk(o, path, depth=0):
+        if depth > 9: return
+        if isinstance(o, dict):
+            if "nonfinite_share" in o or "bounds_undefined" in o:
+                out.append(dict(where=path, verdict=o.get("verdict"), share_max=mx(o.get("nonfinite_share")), share=o.get("nonfinite_share"),
+                                bounds_undefined=anyt(o.get("bounds_undefined")) if "bounds_undefined" in o else None))
+            for k, v in o.items():
+                if isinstance(v, (dict, list)): walk(v, f"{path}/{k}" if path else str(k), depth + 1)
+        elif isinstance(o, list):
+            for j, v in enumerate(o): walk(v, f"{path}[{j}]", depth + 1)
+    walk(tv or {}, "")
+    return out
 
 
 def notes_deviations(folder=HERE):
@@ -944,6 +990,11 @@ def run(r1_dir, r2_root, out_path):
     od = dict(C=get(C, "od_g8"), B={b: get(v, "od_g8", "disagreements") for b, v in (get(B, "qwen", "blocks") or {}).items() if get(v, "od_g8", "disagreements")})
     dev = dict(amendments=am, packing=pk, not_run=notrun, labels=labels, flags=dict(A=A.get("flags"), blocks=info.get("block_flags"), G3=get(G, "G3", "labels"), G34=d34.get("flag"),
                                                                                   G46=repro.get("differing"), pc_gates=pcg.get("labels")),
+               amendment_results={"Amendment 2 (post hoc; OD-C2)": dict(n_affected=get(C, "amendment_2", "n_affected"), affected=get(C, "amendment_2", "affected")),
+                                  "Amendment 3 (a) (post hoc; G16)": C.get("amendment_3"),
+                                  "Amendment 3 (b) (clarification; undefined theta bounds)": get(B, "verdicts", "undecided_for_undefined_bounds"),
+                                  "Amendment 3 (c) (clarification; R4 (i) 'degenerate')": {b: get(v, "R4", "verdict") for b, v in (get(B, "qwen", "blocks") or {}).items()
+                                                                                          if "degenerate" in str(get(v, "R4", "verdict"))}},
                od_g8_disagreements=od, readings_implementer_8=list(IMPLEMENTER8_READINGS), notes=notes_deviations(),
                note="results are reported against the frozen plan text (section 14); every deviation is listed here: amendments (post hoc ones marked), packing changes and continuation "
                     "sessions, parts 'not run', flags, labels, OD-G8 disagreements, and the implementers' readings and stated deviations (NOTES_w*.md)")
