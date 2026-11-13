@@ -52,8 +52,17 @@ def rk_literal(name):
     raise KeyError(name)
 
 
-def r1_prompts():
-    return rk_literal("RSI_PROMPTS") + rk_literal("SCENE_PROMPTS")
+def r1_prompts(mock=False):
+    """rk_loop's PROMPTS (MOCK: RSI_PROMPTS[:4] + SCENE_PROMPTS[:4], as rk_loop's MOCK)."""
+    a, b = rk_literal("RSI_PROMPTS"), rk_literal("SCENE_PROMPTS")
+    return a[:4] + b[:4] if mock else a + b
+
+
+def r1_index(q, mock=False):
+    """Round-1 prompt index of P256 index q (-1 for a new prompt); MOCK: the 8 prompts of rk_loop's MOCK state."""
+    if mock:
+        return q if q < 4 else (4 + q - 128 if 128 <= q < 132 else -1)
+    return q if q < 32 else (q - 96 if 128 <= q < 160 else -1)
 
 
 def neutral_pool():
@@ -93,7 +102,7 @@ def p256(ctx):
             [f"Describe mock scene number {i}." for i in range(96)]; src, sha = "MOCK", "MOCK"
     else:
         raise K.NotRun("input missing: package file prompts_1b.json")
-    r1i = np.array([q if q < 32 else (q - 96 if 128 <= q < 160 else -1) for q in range(256)])
+    r1i = np.array([r1_index(q, ctx.mock) for q in range(256)])
     q = np.array(MOCK_Q if ctx.mock else range(256)); fold = p256_fold()[q]
     if ctx.mock:
         fold = np.array([i % 2 == 0 for i in range(len(q))])
@@ -203,7 +212,7 @@ def pool_dir(ctx, kind, b, i, D):
             break
     if not ctx.mock:
         raise K.NotRun(f"input missing: pool direction {(kind, b, i)}")
-    return K.unit(t.randn(D, generator=t.Generator().manual_seed(hash((kind, b, i)) % 100000), dtype=t.float64))
+    return K.unit(t.randn(D, generator=t.Generator().manual_seed(int(K.sha256_text(repr((kind, b, i)))[:8], 16)), dtype=t.float64))
 
 
 # ---------------------------------------------------------------------------------------------------------------- model side
@@ -336,7 +345,7 @@ def read_win(m, prompts, conts, b, fd=None, F=None, batch=32, extra=None):
 def ref16(ctx, m, b):
     """REF-R16 at block b: R1.state[b]['ref'] continuations of round-1 prompts 0-7 (RSI-topic) and 32-39 (scene), with rk_loop's
     prompt ids (SO-DMG)."""
-    st = r1_state(ctx, b); pr = r1_prompts(); P = [0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 34, 35, 36, 37, 38, 39]
+    st = r1_state(ctx, b); pr = r1_prompts(ctx.mock); P = list(range(8)) if ctx.mock else [0, 1, 2, 3, 4, 5, 6, 7, 32, 33, 34, 35, 36, 37, 38, 39]
     return K.RefSet.from_prompt_conts([m.ids(pr[p]) for p in P], [list(map(int, st["ref"]["conts"][p])) for p in P], f"REF-R16(b{b})")
 
 
@@ -354,7 +363,8 @@ class Dmg:
         """setup(sign) -> a context manager; returns dict(sym, plus, minus, asym, top1_scene, per_text_plus, per_text_minus)."""
         a, b = self.dm(lambda: setup(1.0)), self.dm(lambda: setup(-1.0))
         return dict(sym=(a["damage"] + b["damage"]) / 2, plus=a["damage"], minus=b["damage"], asym=a["damage"] / max(b["damage"], 1e-12),
-                    top1_scene=float(np.mean(a["per_text_top1"][8:] + b["per_text_top1"][8:])), per_text_plus=a["per_text"],
+                    top1_scene=float(np.mean(a["per_text_top1"][len(a["per_text_top1"]) // 2:] + b["per_text_top1"][len(b["per_text_top1"]) // 2:])),
+                    per_text_plus=a["per_text"],
                     per_text_minus=b["per_text"])
 
     def push_setup(self, d, a, mode="add", extra=None):

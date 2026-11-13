@@ -172,24 +172,36 @@ def S(part, tier, account, wave, after=(), minutes=0.0, models=(), content="", r
                 content=content, runtime=runtime, r1=tuple(r1), r2=tuple(r2), jlens=jlens, optional=tuple(optional))
 
 
+def R2_Q0(*blocks):
+    """round-2 u*_b files (SO-AX U*: r2_q2/theta/b<b>_q0.pt / .json) for R sessions that need u*_b before r1b_R_S0 has finished"""
+    return tuple(f"r2_q2/theta/b{b}_q0.{x}" for b in blocks for x in ("pt", "json"))
+
+
+R_S2 = ("r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S2_06")
+R_AXDIRS = ("ax1b/**", "r2/**/dirs_*", "r2/**/checks.json", "r2/**/r31_calibration.json")   # AX-1b and the loops' directions (not the pairs)
 _R_TIER1 = ("r1b_R_S0", "r1b_R_S1", "r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S2_06", "r1b_R_S3", "r1b_R_S5", "r1b_R_S6", "r1b_R_S7")
 SESSIONS = {
     "r1b_P0": S("main", 0, "B", 0, (), 68.2, (M17, M35), "P0-R, P0-D, P0-K (K0 items 1-9 incl. the Qwen3.5-2B load), P0-L; shared "
                 "engineering items; SO-PILOT material only; engineering numbers only", jlens=True),
     "r1b_R_S0": S("R", 1, "A", 1, (), 22.2, (), "R0, R8.1, R9.5; SO-AX package (AX1, U*, leave-loop-out modes, SG10); r1b_xfer exports",
                   r1=R1_S0, r2=R2_S0),
-    "r1b_R_S2_14": S("R", 1, "A", 1, (), 58.5, (M17,), "R2.1 (axis texts), R2.2 at 14; AX-1b(14)", r1=R1(14)),
+    "r1b_R_S2_14": S("R", 1, "A", 1, (), 58.5, (M17,), "R2.1 (axis texts), R2.2 at 14; AX-1b(14)", r1=R1(14), r2=R2_Q0(14)),
     "r1b_R_S1": S("R", 1, "A", 1, (done("r1b_R_S0"),), 35.9, (M17,), "R1 closed and open loop", r1=R1_ALL),
-    "r1b_R_S2_18": S("R", 1, "A", 2, (done("r1b_R_S2_14"),), 60.8, (M17,), "R2.1 reads, R2.2 at 18; AX-1b(18)", r1=R1(18)),
-    "r1b_R_S2_06": S("R", 1, "A", 2, (done("r1b_R_S2_14"),), 60.8, (M17,), "R2.1 reads, R2.2 at 6; AX-1b(6)", r1=R1(6)),
-    "r1b_R_S3": S("R", 1, "A", 3, tuple(done(s) for s in ("r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S2_06")), 100.2, (M17,),
-                  "R3.3, TXT0 (R3.4), R4.1-R4.3", r1=R1_ALL),
-    "r1b_R_S5": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_K_S1", ("k4j.json",))), 29.1, (M17,),
-                  "R5.1, R5.2, R5.3, R5.5; AX-1b at the lens blocks; RG10, RG11", r1=R1_ALL, jlens=True),
-    "r1b_R_S6": S("R", 1, "A", 4, (done("r1b_R_S3"),), 63.2, (M17,), "R6.1, R6.2, R6.3", r1=R1_ALL),
-    "r1b_R_S7": S("R", 1, "A", 4, (done("r1b_R_S3"),), 21.8, (M17,), "R7.1-R7.3 (RG13, RG14 in session)", r1=R1_ALL),
+    "r1b_R_S2_18": S("R", 1, "A", 2, (done("r1b_R_S2_14", ("ax1b/**",)),), 60.8, (M17,), "R2.1 reads, R2.2 at 18; AX-1b(18)", r1=R1(18),
+                     r2=R2_Q0(18)),
+    "r1b_R_S2_06": S("R", 1, "A", 2, (done("r1b_R_S2_14", ("ax1b/**",)),), 60.8, (M17,), "R2.1 reads, R2.2 at 6; AX-1b(6)", r1=R1(6),
+                     r2=R2_Q0(6)),
+    "r1b_R_S3": S("R", 1, "A", 3, tuple(done(s, R_AXDIRS) for s in ("r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S2_06")), 100.2, (M17,),
+                  "R3.3, TXT0 (R3.4), R4.1-R4.3", r1=R1_ALL, r2=R2_Q0(14, 18, 6)),
+    "r1b_R_S5": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_K_S1", ("k4j.json",))) + tuple(done(s, ("ax1b/**",)) for s in R_S2), 29.1,
+                  (M17,), "R5.1, R5.2, R5.3, R5.5; AX-1b at the lens blocks; RG10, RG11", r1=R1_ALL, r2=R2_Q0(14, 18, 6), jlens=True),
+    "r1b_R_S6": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_R_S2_14", ("ax1b/**",))), 63.2, (M17,), "R6.1, R6.2, R6.3", r1=R1_ALL,
+                  r2=R2_Q0(14, 18, 6)),
+    "r1b_R_S7": S("R", 1, "A", 4, (done("r1b_R_S3"), done("r1b_R_S2_14", R_AXDIRS), done("r1b_R_S0", ("r0_table.json",))), 21.8, (M17,),
+                  "R7.1-R7.3 (RG13, RG14 in session)", r1=R1_ALL, r2=R2_Q0(14)),
     "r1b_R_ana": S("R", 1, "A", 5, tuple(done(s) for s in _R_TIER1), 55.3, (M17,),
-                   "R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check", r1=R1_ALL),
+                   "R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check", r1=R1_ALL,
+                   r2=R2_Q0(14, 18, 6) + ("r2_ana/theta_verdict.json",)),
     "r1b_D_A": S("D", 1, "B", 1, (), 202.3, (M17, M06), "G-LCE-1 / G-LCE-2 first (SG9), stream prefills, D1 (main, neutral, "
                  "degradation, non-competing, D1-h), D1-c, D1-d, D1-e, D1-f, D1-r, D1-v, D1-s", optional=(file("sg8_preview"),)),
     "r1b_D_B": S("D", 1, "A", 2, (), 122.2, (M17,), "G-LCE-3, D2"),
@@ -218,10 +230,12 @@ SESSIONS = {
                  0.0, (), "L-ANA; round-level families; cross-part labels; side-by-side tables; runde1b_summary.json; merged manifest",
                  runtime="cpu"),
     # tier 2 (main §4.2; funding in runde1b_freeze.json, SG7)
-    "r1b_R_S5L": S("R", 2, "A", 5, (trig("rg11", "decision", "eq", "refit"),), 105.0, (M17,),
-                   "R5.4 (bf16 refit), repeated R5.1, R5.2 / R5.3 at newly valid blocks", r1=R1_ALL, jlens=True),
+    "r1b_R_S5L": S("R", 2, "A", 5, (trig("rg11", "decision", "eq", "refit"), done("r1b_R_S5"), done("r1b_R_S3", ("txt0/**", "r3/**")))
+                   + tuple(done(s, ("ax1b/**",)) for s in R_S2), 105.0, (M17,),
+                   "R5.4 (bf16 refit), repeated R5.1, R5.2 / R5.3 at newly valid blocks", r1=R1_ALL, r2=R2_Q0(14, 18, 6), jlens=True),
     "r1b_R_S8": S("R", 2, "A", 6, (trig("rg15", "J1_and_J2", "true"),), 19.5, (M06,), "R8.2 (J3 in session)"),
-    "r1b_R_ana2": S("R", 2, "A", 7, (any_done("r1b_R_S5L", "r1b_R_S8"),), 10.2, (M17,), "R pass 2"),
+    "r1b_R_ana2": S("R", 2, "A", 7, (any_done("r1b_R_S5L", "r1b_R_S8"), done("r1b_R_ana", ("r1b_R_verdict.json", "ana/**"))), 10.2, (M17,),
+                    "R pass 2"),
     "r1b_D_R": S("D", 2, "A", 6, (done("r1b_D_ana"),), 119.0, (M17,), "D's reserves R1, R2 (conditional on d_verdict triggers.R2), R3"),
     "r1b_K_S6": S("K", 2, "A", 6, (trig("k_verdict", "gates.G-K5", "ne", "calibrated"),), 58.0, (M17,), "RK-1 (MTP head, bf16)"),
     "r1b_K_S7": S("K", 2, "B", 4, (done("r1b_K_S3"),), 53.0, (M35,), "RK-2 (H-link on the native lens, Qwen3.5-2B)"),
