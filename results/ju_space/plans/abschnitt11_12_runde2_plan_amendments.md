@@ -49,3 +49,40 @@ zero-shot 0.998; permuted ring never level 1; arcs of 3 not composing; conjugati
 no ring code in one-hot nets. These are smoke-test values at W 64, not session data. The change makes the controls meet OD-C2's own
 stated tolerance; it does not move a threshold and does not depend on which way any verdict goes. Declared post hoc with respect to
 that smoke test.
+
+## Amendment 3 (2026-11-13T04:18:00Z)
+
+**Reason.** The code review of the round-2 scripts (reviewers blinded to round-1 outputs; findings unlearn_b-2, theta_verdict-1 and
+theta_verdict-2) found one miscalibrated gate and two places where the frozen text is silent.
+
+(a) G16's reference, the 90 % prompt-bootstrap percentile interval of c(d_1) of the seed-0 half of R1 RSI_a, is not centred on the
+statistic it describes. Each bootstrap replicate of the cosine of a noisy mean direction carries the sampling noise of the mean twice
+in its norm, so the replicates are centred near c / sqrt(2 - rel) and not at c. In synthetic checks with the script's own function
+(D 2048, 64 pairs) the point estimate lay above the interval's upper end in every run, and a c_1 from the same population never fell
+below the lower end. G16 would then fire only for a drop of roughly 12 % (rel 0.8) to 25 % (rel 0.5), so arm A would almost never
+continue to rounds 2-3; the bias favours the outcome the plan states in advance ('translation (as predicted), not un-searched'). G16
+decides what is generated, so the bias cannot be repaired after the session (check scripts: r2_review/unlearn_b/ and its verify/
+folder in the session scratchpad).
+
+**Change (a).** In G16 (5.2 C-Q4 arm A; section 6) the reference interval is the percentile interval shifted so that the bootstrap
+median coincides with the point estimate: with c the point value, m the median and [q05, q95] the percentiles of the 2,000 replicates,
+the interval is [q05 + c - m, q95 + c - m]. Arm A continues to rounds 2-3 if c_1 falls below its lower end. The unshifted percentile
+interval, m, and the G16 value that the unshifted interval would have given are stored next to it. Level, rule wording and every
+threshold stay as frozen. The descriptive cosine intervals of C-Q5 keep their definition and additionally report the bootstrap median.
+
+**Clarification (b), theta rules.** The frozen text does not say what happens when the gain of a cell is undefined in a bootstrap
+replicate (zero attenuation, possible at a 'mode not resolved' block and for the norm gain in the switch case). A rule bound counts as
+undefined (the rule's outcome is 'undecided', a reserve condition is not met) when the point value is undefined or more than 5 % of
+the 2,000 replicates are undefined. This takes over R6's convention ('>= 95 % of the joint bootstrap replicates'). The share of
+undefined replicates is written into every rule output. No threshold changes.
+
+**Clarification (c), R4 (i).** When rule (i) returns 'degenerate' (no single critical mode), the suffix '(RSI-specific)' is not
+appended to the R4 verdict, and the block does not enter R3's alignment form; it is listed there as 'not entering (degenerate)'. The
+per-loop alignments stay reported as descriptive, as R4 (i) says.
+
+**Outputs seen before writing.** No round-2 session output exists. Of round 1 the author had seen the same files as for Amendment 1;
+these include the c values of the block-14 loops. The author had also seen implementer 7's smoke-test report named in Amendment 2 and
+an outside probe (results/ju_space/microlens/mlpp_probe_b14.json: a new measurement on rebuilt round-1 axes at block 14, made after
+the freeze by another agent). The three items were found by reviewers on synthetic data and by reading the code; none depends on a
+seen value. Because the author knows round-1 c values, (a) is declared post hoc with respect to round 1. Its direction is known:
+it makes a continuation of arm A more likely, that is, it removes a bias towards the outcome the plan predicted.

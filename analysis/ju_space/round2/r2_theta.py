@@ -558,9 +558,12 @@ def stage_q0(cx):
     extra, rsib = {}, None
     if cx.b != 14:
         rsib = stage_rsib(cx)
-        if rsib.get("status") == "ran":
-            extra = {RSIB: dict(ST=rk.ST, rows=rsib["rows"], start=R.unit(rk.ST["axes"]["u_T_perp"].double()))}
+        if rsib.get("status") == "ran":                 # the loop from its exported entries (as r2_theta_verdict.py reads it), not from the
+            P = _load_pt(cx.path(f"b{cx.b}_r2RSIb.pt"))  # in-memory round-2 state, which a re-copied state.pt would lack (review finding theta-1)
+            extra = {RSIB: dict(ST=P["entries"], rows=rsib["rows"], start=P["start"].double(), suffix=P["suffix"])}
     loops = R.load_r1_json(cx.r1, f"rk/b{cx.b}/loops.json", cx.b); bank = R.o3_bank(rk.ST, loops, cx.b, extra=extra)
+    if rsib is not None and rsib.get("status") == "ran" and RSIB not in bank:     # never a silent 'no independent loop' for a loop that ran (G49)
+        raise RuntimeError(f"r2RSIb ran but its entries are missing in {cx.path(f'b{cx.b}_r2RSIb.pt')}: B-Q0 not written (the step fails and is retried)")
     ref = rk.ST["ref"]; NP = rk.NP; kb = R.cbar_read([rk.PIDS[p] for p in range(NP)], ref["conts"])
     cnt = [len(c) for c in ref["conts"]]; sm = [float(m) * n if n else 0.0 for m, n in zip(kb["per_text_mean"].tolist(), cnt)]
     cbar_ref = dict(sum=sm, cnt=cnt, pooled=kb["pooled"], n_tokens=kb["n_tokens"])
