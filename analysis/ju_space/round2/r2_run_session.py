@@ -59,8 +59,8 @@ class Step:
     after     steps (comma separated) that must have finished successfully before (a 'not run' among them makes this step 'not run')
     settled   steps that must be done or 'not run' before (their 'not run' does not pass on; a failed one blocks this step)
     opt       optional outputs (hashed into the step record when present); quick_out: required outputs under MOCK / QUICK
-    local     the step writes local-only arrays under <work>/local that the steps in needed_by read; they are never synced, so on a new
-              machine the step runs again unless all of needed_by are done
+    local     the step writes local-only arrays under <work>/local that the steps in needed_by read (True, or a glob of its files below
+              <work>); they are never synced, so on a new machine the step runs again unless all of needed_by are done
     needs     'qwen06': runs only if Qwen3-0.6B was downloaded and its checksum holds (G33)
     gate_in_script  the script applies its own gate and may write no output; exit code 0 is then enough
     r1_reads  G4: a step at a block whose round-1 summary is final-missing is 'not run (round-1 output missing)' if it reads round-1
@@ -91,7 +91,7 @@ def _geom(m, extra, needs=""):
     """A1 states, A3 gradients, O7, O8 of one model, then A2-A5 statistics (r_DiD in the second model's statistics)."""
     tag = "17" if m == M17 else "06"
     return [Step(f"geom_{tag}", None, "r2_rgi_geom.py", QW + extra, f"rgi/geom_meta_{m}.json rgi/causal_{m}.pt rgi/dirs_{m}.pt",
-                 local=True, needed_by=f"stats_{tag}", needs=needs),
+                 local=f"local/*_{m}.*", needed_by=f"stats_{tag}", needs=needs),
             Step(f"stats_{tag}", None, "r2_rgi_stats.py", QW + extra, f"rgi/geom_stats_{m}.json", opt=f"rgi/geom_draws_{m}.npz",
                  after=f"geom_{tag}" + ("" if m == M17 else ",stats_17"), needs=needs)]
 
@@ -163,8 +163,9 @@ R1_PC = ("gpu*/pc/jobs/pc_mup_*.json", "gpu*/pc/models/pc_mup_*.pt",
          "r1_finality.json")
 R1_G46 = ("gpu*/pc/jobs/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}.json",        # G46: the R1 BP cells that round 2 retrains (AT2, AT5,
           "gpu*/pc/models/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}.pt")         # B-T1/B-T2, C-T nets): every BP main cell without regulariser
-R1_QUICK = ("gpu*/pc/jobs/bp_mup_W{64,128}_s*_K12_g0_wd1_quick.json",       # self-test only: pc_meta QUICK's names in the mock tree, which
-            "gpu*/pc/models/bp_mup_W{64,128}_s*_K12_g0_wd1_quick.pt")       # r2_pc_toy looks for under QUICK (pc_mup_* matches already)
+R1_QUICK = ("gpu*/pc/jobs/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}_quick.json",   # self-test only (r2_pc, r2_ana): pc_meta QUICK's names in
+            "gpu*/pc/models/bp_{mup,sp}_W*_s*_K{1,12}_g0_wd{0,1}_quick.pt")    # the mock tree, which r2_pc_toy looks for under QUICK (C-T7's
+                                                                            # BP side; pc_mup_* matches already) and r2_report under G46
 R2_ALL = "*"                                                                # r2_ana: every output of the other sessions (see plan_r2)
 WAVE1 = ("r2_q1", "r2_q2", "r2_q3", "r2_t1", "r2_t2", "r2_t3", "r2_t4")
 SESSIONS = {   # start: G4 / G5 / the round-2 sessions that must be done first; shards: round-1 folders read (meta: version metadata only)
@@ -668,6 +669,14 @@ def plan_r1(src, patterns, blk=None):
     return files, choices, skipped
 
 
+def r1_patterns(ctx):
+    """The session's round-1 copy list (7.3); a self-test of a session that reads round-1 PC files adds R1_QUICK (runner_steps-2)."""
+    pats = tuple(SESSIONS[ctx.base]["r1"])
+    if ctx.selftest and set(R1_PC) & set(pats):
+        pats += R1_QUICK
+    return pats
+
+
 def plan_r2(src, base):
     """Round-2 inputs of a wave-2 session as [(session, rel, source path)]: r2_pc copies r2_t1's AT5 BP nets; r2_ana every output
     of the other sessions except the local-only arrays and the state.pt copies (7.3), logs and the runner's temporary files."""
@@ -953,6 +962,7 @@ class Ctx:
         self.guard_s = math.inf if self.selftest else float(os.environ.get("R2_GUARD_S", GUARD_S_DEFAULT))
         self.step_timeout = float(os.environ.get("R2_STEP_TIMEOUT", 3600))
         self.blk, self.models, self.code_commit, self.manifest_path = None, {}, "unknown", None
+        self.inputs_digest = None      # sha256 over the copied inputs (kind, path, sha256); r2_pc / r2_ana redo steps made from others
 
     def elapsed(self):
         return time.time() - self.t0
@@ -978,6 +988,7 @@ class RStep:
         self.out = [fmt(o) for o in (st.quick_out if ctx.selftest and st.quick_out is not None else st.out)]
         self.opt = [fmt(o) for o in st.opt]
         self.after = [fmt(a) for a in st.after]
+        self.settled = [fmt(a) for a in st.settled]
         self.needed_by = [fmt(a) for a in st.needed_by]
         self.env = {k: fmt(v) for k, v in {**STEP_ENV.get(ctx.base, {}), **st.env}.items()}
         if b is not None:
@@ -1000,7 +1011,7 @@ def resolve_steps(ctx):
     assert len(set(names)) == len(names), f"duplicate step names in {ctx.base}: {names}"
     known = set(names)
     for s in steps:
-        assert all(a in known for a in s.after + s.needed_by), f"{ctx.base}/{s.name}: unknown step in after/needed_by"
+        assert all(a in known for a in s.after + s.settled + s.needed_by), f"{ctx.base}/{s.name}: unknown step in after/settled/needed_by"
     return steps
 
 
@@ -1119,7 +1130,8 @@ def exec_step(ctx, rs):
         prev = [q for q in ((load_json(rs.marker) or {}).get("local") or []) if os.path.isfile(os.path.join(ctx.work, q))]
         local = sorted({k for k, v in after.items() if before.get(k) != v} | set(prev))
         if not local and ok:                                # nothing new: the script found its arrays in place
-            local = sorted(after)
+            pat = rs.st.local if isinstance(rs.st.local, str) else "local/**"
+            local = sorted(k for k in after if fnmatch_path(k.replace(os.sep, "/"), pat))
     rec = dict(name=rs.name, status="ok" if ok else "failed", rc=rc, seconds=secs, attempt=ctx.attempt, ended=iso(), code_commit=ctx.code_commit,
                block=rs.b, command=rs.cmdline(ctx, short=True), outputs=outs, missing=missing, no_output=bool(ok and missing),
                local=local, inputs_digest=ctx.inputs_digest, note=note or None)
@@ -1363,6 +1375,10 @@ def run_session(session, root, work, drive):
     say(f"G1 plan freeze: {'ok' if g1['ok'] else 'FAILED'} (sha256 {'ok' if g1['sha256_ok'] else 'differs/missing'}, freeze commit "
         f"{(g1['freeze_commit'] or 'none')[:10]}, ancestor of {ctx.code_commit[:10]}: {g1['freeze_is_ancestor']})")
     say(f"G2 GPU: {g2.get('gpu') or g2.get('note')} -> {'ok' if g2['ok'] else 'FAILED (an A100 is required)'}")
+    if not g1["amendments"]["sha256"]:
+        say(f"WARNING: the amendments file {AMEND_REL} is missing in this checkout (the manifest records its sha256 as None)")
+    else:
+        say(f"amendments: {AMEND_REL} sha256 {g1['amendments']['sha256'][:12]}...")
     check = dict(time=iso(), attempt=ctx.attempt, G1=g1, G2=g2)
     if not g1["ok"] or not g2["ok"]:                     # G1: refuse to run with any other plan file (section 14), also in a self-test
         dump_json(dict(check, result="stopped: G1/G2"), os.path.join(ctx.work, "start_check.json")); sync(ctx.work, ctx.drive)
@@ -1371,11 +1387,15 @@ def run_session(session, root, work, drive):
     # start conditions (7.3)
     sc = start_conditions(ctx)
     check["start"] = sc
-    if not sc["ok"]:
-        dump_json(dict(check, result="waiting"), os.path.join(ctx.work, "start_check.json")); sync(ctx.work, ctx.drive)
+    if not sc["ok"]:                                     # recorded as an attempt (result 'waiting'), so that a wave-2 session that
+        dump_json(dict(check, result="waiting"), os.path.join(ctx.work, "start_check.json"))     # never starts can be declared (gates-9)
+        attempts.append(dict(attempt=ctx.attempt, n=len(attempts) + 1, started=iso(t_attempt), ended=iso(), code_commit=ctx.code_commit,
+                             gpu=g2.get("gpu"), t0=iso(ctx.t0), result="waiting", waiting=sc["waiting"], ran=[]))
+        dump_json(attempts, os.path.join(ctx.work, "session_attempts.json"))
+        sync(ctx.work, ctx.drive)
         for w in sc["waiting"]:
             say(f"waiting: {w}")
-        say("start conditions not met (7.3): nothing was run")
+        say(f"start conditions not met (7.3): nothing was run (waiting run recorded as attempt {len(attempts)} in session_attempts.json)")
         return EXIT_WAIT
     dump_json(dict(check, result="started"), os.path.join(ctx.work, "start_check.json"))
     attempts.append(dict(attempt=ctx.attempt, n=len(attempts) + 1, started=iso(), code_commit=ctx.code_commit, gpu=g2.get("gpu"),
@@ -1395,7 +1415,7 @@ def run_session(session, root, work, drive):
         for r in (load_json(p) or {}).get("copied", []):
             prevrec[(r["kind"], r["path"])] = r["sha256"]
     if meta["r1"]:
-        files, choices, skipped = plan_r1(ctx.src, meta["r1"], ctx.blk)
+        files, choices, skipped = plan_r1(ctx.src, r1_patterns(ctx), ctx.blk)
         copied += [dict(r, kind="r1") for r in copy_tree_files(files, ctx.r1, "round-1 files")]
     if meta["r2"]:
         copied += [dict(r, kind="r2") for r in copy_tree_files(plan_r2(ctx.src, base), ctx.r2in, "round-2 inputs", keep_top=("r2_ana",),
@@ -1403,6 +1423,11 @@ def run_session(session, root, work, drive):
     changed = [r["path"] for r in copied if prevrec.get((r["kind"], r["path"])) not in (None, r["sha256"])]
     if changed:
         say(f"WARNING: {len(changed)} input files differ from an earlier attempt of this session: {changed[:5]}")
+    ctx.inputs_digest = hashlib.sha256("\n".join(sorted(f"{r['kind']}:{r['path']}:{r['sha256']}" for r in copied)).encode()).hexdigest()
+    steps = resolve_steps(ctx)
+    invalidated = invalidate_changed(ctx, steps) if base in RERUN_ON_INPUT_CHANGE else []
+    attempts[-1]["invalidated"] = invalidated
+    dump_json(attempts, os.path.join(ctx.work, "session_attempts.json"))
     shards_read = sorted({r["source"] for r in copied if r["kind"] == "r1" and r["source"] in SHARDS   # shards whose data (not only
                           and r["path"].split("/", 1)[1] not in ("shard_done.json", "code_commits.txt")})        # metadata) is read
     rmeta = r1_meta(ctx.r1) if meta["r1"] else {}
@@ -1440,15 +1465,21 @@ def run_session(session, root, work, drive):
                       sha256=sha256_file(fpath) if fpath and os.path.isfile(fpath) else None,
                       drive_mtime=iso(os.path.getmtime(fpath)) if fpath and os.path.isfile(fpath) else None),
         copied=copied, duplicate_choices=choices, not_copied=skipped, inputs_changed_since_earlier_attempt=changed,
+        inputs_digest=ctx.inputs_digest, steps_redone_for_changed_inputs=invalidated, packing=PACKING.get(base, "as in plan 7.2"),
         drive_metadata=drive_meta(ctx.src, g1["freeze_time"] or FREEZE_TIME),
         models=ctx.models, references=references_record(),
         declarations=dict(R2_DECLARED_NOT_RUN=declared("R2_DECLARED_NOT_RUN")),
-        time_guard_s=ctx.guard_s if math.isfinite(ctx.guard_s) else None, steps=[s.name for s in resolve_steps(ctx)])
+        time_guard_s=ctx.guard_s if math.isfinite(ctx.guard_s) else None, steps=[s.name for s in steps])
     dump_json(manifest, ctx.manifest_path)
     say(f"manifest written: {os.path.basename(ctx.manifest_path)} ({len(copied)} copied files; references {manifest['references']['n_ok']}"
         f"/{len(REF_SHA256)} present)")
+    comp = manifest["references"]["comparison"]
+    if comp["status"] != "ok":
+        say(f"WARNING: reference comparison {comp['path']}: {comp['status']}" + (f" ({comp.get('changed')})" if comp.get("changed") else ""))
+    todo = would_run(ctx, steps)
+    if todo:                                             # not done until this attempt finishes (runner_steps-5, runner_gates-8)
+        remove_done_record(ctx, f"steps to run: {', '.join(todo)}")
     sync(ctx.work, ctx.drive)
-    steps = resolve_steps(ctx)
     st, ran, guard = run_steps(ctx, steps)
     return finalize(ctx, steps, st, ran, guard, attempts, copied, t_attempt)
 
@@ -1485,9 +1516,9 @@ def dry_run(session, root, work, drive, verbose=False):
                       f"G8 {ctx.blk['G8'].get('ok')}, G9 {ctx.blk['G9'].get('ok')}")
     if meta["r1"]:
         print(f"copy list, round 1 (into {ctx.r1}/<shard>/, read-only):")
-        files = plan_r1(ctx.src, meta["r1"], ctx.blk)[0] if src_ok else []
+        files = plan_r1(ctx.src, r1_patterns(ctx), ctx.blk)[0] if src_ok else []
         full = lambda f: f"{f[0]}/{f[1]}" if f[0] else f[1]
-        for pat in meta["r1"]:
+        for pat in r1_patterns(ctx):
             hits = [f for f in files if any(fnmatch_path(full(f), e) for e in expand([pat]))]
             per = ", ".join("%s: %d" % (sh or "dsse_runs", sum(h[0] == sh for h in hits)) for sh in sorted({h[0] for h in hits}))
             print(f"  {pat}: {len(hits)} files" + (f" ({per})" if hits else ""))
@@ -1508,13 +1539,15 @@ def dry_run(session, root, work, drive, verbose=False):
     except Exception:                                      # noqa: BLE001 - dry run: report only
         ctx.models = {}
     steps = resolve_steps(ctx)
-    by_name = {s.name: s for s in steps}
-    print(f"steps ({len(steps)}; outputs relative to <work>; each skipped when its outputs exist):")
+    by_name, st = {s.name: s for s in steps}, {}
+    print(f"steps ({len(steps)}; outputs relative to <work>; each skipped when its outputs exist; packing: {PACKING.get(base, 'as in plan 7.2')}):")
     for i, rs in enumerate(steps, 1):
-        why = not_run_reason(ctx, rs) if ctx.blk or rs.st.needs else None
-        state = f"not run ({why})" if why else ("done" if is_done(ctx, rs, by_name) else "to run")
+        pre = step_state(ctx, rs, st, by_name)            # the order of run_steps: done first, then 'not run', else it would run
+        st[rs.name] = pre if pre and pre["state"] != "blocked" else dict(state="ran")
+        state = ("done" if pre["state"] == "skipped" else pre["state"]) + f" ({pre['note']})" if pre and pre["state"] != "blocked" else "to run"
+        deps = (f"   after: {', '.join(rs.after)}" if rs.after else "") + (f"   settled: {', '.join(rs.settled)}" if rs.settled else "")
         print(f"  [{i:2d}] {rs.name:<16} {rs.cmdline(ctx, short=True)}")
-        print(f"       -> {' '.join(rs.out)}" + (f"   after: {', '.join(rs.after)}" if rs.after else "") + f"   [{state}]")
+        print(f"       -> {' '.join(rs.out)}" + deps + f"   [{state}]")
     return EXIT_DONE
 
 

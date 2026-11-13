@@ -1792,24 +1792,8 @@ def selftest(work):
     fs_ = plan_text_full(syn, lambda d_: (seen.append(d_["lam"]), dict(acc=[0.5, 0.7], probes=dict(task_lin=[0.1, 0.3])))[1])
     syn_ok = (seen == [1.0] and fs_["drop"] == 0.45 and fs_["matched"] is False and fs_["r"] == 8 and fs_["lam"] == 1.0 and syn["lam"] == 0.4
               and fs_["acc_t"]["boot95"] is not None and fs_["probes_t"]["task_lin"]["values"] == [0.1, 0.3] and np.allclose(fs_["acc"], [0.5, 0.7]))
-    base_sp = sum_probe_gen(nets, tasks, allv); vv = np.repeat(allv, NDRAW)
-    lad = damage_match(nets, tasks, base_sp, 1e9, "z1", ref, 1, "selftest|a2")["ladder"]; tgt2 = None; mx = -np.inf
-    for k_ in range(1, len(lad)):
-        mx = max(mx, lad[k_ - 1][1])
-        if lad[k_][1] - mx > 0.03:
-            tgt2 = mx + 0.005; break
-    if tgt2 is None:
-        check("full_at_dstar: forced Amendment-2 control on the QUICK nets", False, f"no ladder step > 0.03: {lad}")
-    else:
-        dm2 = damage_match(nets, tasks, base_sp, tgt2, "z1", ref, 1, "selftest|a2")
-        fwd2 = lambda d_: {k: v for k, v in _draw_mean(_fwd(nets, tasks, vv, items=dm_items(d_, ref, allv, "z1")), B).items() if k in ("acc", "integrity", "sp")}
-        ft2 = plan_text_full(dm2, fwd2); dl = dict((int(r_), d_) for r_, d_ in dm2["ladder"])
-        ok2 = (AMEND2 in dm2["note"] and dm2["r"] > 1 and dm2["lam"] < 1 and isinstance(ft2, dict) and ft2["r"] == dm2["r"] and ft2["matched"] is False
-               and abs(ft2["drop"] - dl[dm2["r"]]) < 1e-12 and abs(float(np.mean(base_sp - ft2["sp"])) - ft2["drop"]) < 1e-9
-               and abs(float(np.mean(base_sp - fwd2(dm2)["sp"])) - dm2["drop"]) < 1e-9 and ft2["acc_t"]["boot95"] is not None)
-        check("full_at_dstar: plan-text field None unless Amendment 2; else lam 1 on the same d* draws (its sum-probe drop = the ladder's at d*), "
-              "unmatched, per-seed values with t interval and bootstrap", none_ok and syn_ok and ok2,
-              f"d* {dm2['r']} lam {dm2['lam']:.3f} target {tgt2:.3f} drop(lam 1) {ft2['drop'] if ft2 else None}")
+    check("full_at_dstar: plan_text_full gives None unless Amendment 2; else lam 1 (the control itself unchanged), drop = the ladder's at d*, "
+          "unmatched, per-seed values with t interval and bootstrap (nested for probes)", none_ok and syn_ok, str({k: fs_[k] for k in ("r", "lam", "drop", "matched")}))
     for st in STAGES:
         try:
             r = run_stage(out, st); check(f"stage {st} runs and writes JSON with a rule preview", "rule_preview" in r and r["meta"]["plan_sha256"] == PLAN_SHA256)
@@ -1857,6 +1841,42 @@ def selftest(work):
               f"{len(dms)} controls, {n_a2} with Amendment 2; bad {bad_dm[:3]}")
     except Exception as ex:                                                       # noqa: BLE001
         import traceback; traceback.print_exc(); check("unlearn_toy-3 / -4 / -5 checks on the stage outputs", False, repr(ex))
+    # full_at_dstar at every site on real nets: damage_match forced to report Amendment 2's step at lam 1, so each site's plan-text
+    # pass must reproduce the matched control's own measures exactly (same draws, same lam); t4b also against the ladder's drop at d*
+    real_dm = damage_match
+    globals()["damage_match"] = lambda *a, **k: dict(real_dm(*a, **k), lam=1.0, note="partial removal at d* (Amendment 2) [selftest: forced, lam 1]")
+    try:
+        sp0 = sum_probe_gen(nets, tasks, allv); tbF, _ = t4b_layers(nets, tasks, dict(sp=sp0), "selftest|forced", relearn=False, mlp=False)
+        recF = unsearch(nets, ws_of, ("z1", "dmr"), 2, BUDGETS[0], (BUDGETS[0],), BUDGETS[0], "selftest|forced", keep_dirs=False)
+        cellF = t4_cell(out, arm, W); w4F = t4_w4(out, W4_WIDTHS[0])
+        eq = lambda a_, b_: np.allclose(np.asarray(a_, float), np.asarray(b_, float), rtol=0, atol=1e-12)
+        bad_f = []
+        for L, t in list(tbF.items()) + [(f"cell|{L}", t) for L, t in cellF["t4b"].items()]:
+            fd, dmv = t["dm"]["match"]["full_at_dstar"], t["dm"]
+            if not (fd and fd["lam"] == 1.0 and all(eq(fd[k], dmv[k]) for k in ("acc", "integrity", "sp")) and set(fd["probes"]) == set(dmv["probes"])
+                    and all(eq(fd["probes"][k], dmv["probes"][k]) for k in dmv["probes"]) and fd["probes_t"]):
+                bad_f.append(f"t4b {L}")
+            if not L.startswith("cell") and abs(float(np.mean(sp0 - fd["sp"])) - dict((int(r_), d_) for r_, d_ in t["dm"]["match"]["ladder"])[t["dm"]["match"]["r"]]) > 1e-9:
+                bad_f.append(f"t4b {L} ladder")
+        for nm, o in cellF["ops"].items():
+            fd = o["dm"]["match"]["full_at_dstar"]
+            if not (fd and all(eq(fd[k], o["dm"][k]) for k in ("acc", "integrity", "sp")) and fd["acc_t"]["n"] == B):
+                bad_f.append(f"t4 {nm}")
+        for nm, o in w4F["ops"].items():
+            fd = o["dm"]["match"]["full_at_dstar"]
+            if not (fd and all(eq(fd[k], o["dm"][k]) for k in ("add", "sub", "sp"))):
+                bad_f.append(f"w4 {nm}")
+        dmc = [i for i, (a_, b_, j_) in enumerate(recF["chains"]) if a_ == "dmr"]; fd = recF["dm"][0]["full_at_dstar"]
+        for k in ("side_acc", "side_sp"):
+            per_seed = [np.mean([recF[k][i, 1] for i in dmc if recF["chains"][i][1] == b]) for b in range(B)]
+            if not (fd and eq(fd[k], per_seed) and fd[k + "_t"]["n"] == B):
+                bad_f.append(f"t5 dmr {k}")
+        check("full_at_dstar wired at every site (t4b h1 / h2 incl. C-T3 / C-T7, C-T4 z1 ops, W4 ops, C-T5 dmr): forced lam 1 reproduces the matched "
+              "control's measures; t4b plan-text drop = the ladder's at d*", not bad_f, f"bad {bad_f}; {len(cellF['ops'])} z1 ops, {len(w4F['ops'])} W4 ops")
+    except Exception as ex:                                                       # noqa: BLE001
+        import traceback; traceback.print_exc(); check("full_at_dstar wired at every site", False, repr(ex))
+    finally:
+        globals()["damage_match"] = real_dm
     p0 = tdir(out, "t0.json")
     if os.path.exists(p0):
         a = read_json(p0); os.remove(p0); b = run_stage(out, "t0")
