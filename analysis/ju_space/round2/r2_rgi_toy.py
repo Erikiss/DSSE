@@ -79,6 +79,19 @@ NSHUF, NPERM_S = 10, 30
 RT_STEPS, WARM_STEPS = 40, (10, 40)
 CH = 4096                                                                  # chains per host chunk of an accuracy evaluation
 SEARCH_FLOATS = 2 ** 27 if QUICK else 2 ** 29                              # activation budget of one batched search call
+SEEDS = dict(                                                              # OD-G6: every random stream of these stages (written out)
+    net_init="torch.manual_seed(ws) for init 0, torch.manual_seed(10000 init + ws) otherwise (TC.init_seed, W1); AT4 B variants init 7",
+    fresh_F="torch.manual_seed(50000 + 101 ws + j) (TC.fresh_seed; B2's fresh nets)",
+    coord_check_probe="torch.Generator().manual_seed(init seed) (TC.train)",
+    delta_floor="torch.Generator().manual_seed(77 + ws): h1 then h2, 50 raw then 50 controlled label permutations (TC.delta_stats)",
+    lambda_perm="np.random.default_rng(4000 + ws): 10 permutations of the anchor labels (TC.lambda_line)",
+    s_perm="np.random.default_rng(31 + ws): 30 permuted correspondences (TC.s_perms)",
+    t1_shuffle="np.random.default_rng(123 + ws of A): 10 shuffled maps, identity excluded (f_pairs)",
+    loo_shuffle="np.random.default_rng(1000 k + q), q = 0..9, for anchor k (f_pairs)",
+    recipe="np.random.default_rng(7): the 200 chains; np.random.default_rng(1): the 200 evaluation pairs (TC.recipe_chains)",
+    other_split="np.random.default_rng(5000 + ws): one permutation per slot (TC.other_splits); shared split = its first permutation",
+    coding="np.random.default_rng(6000 + ws): px, py (TC.coding_perms)",
+    torch_global="torch.manual_seed(0) at the start of every stage")
 
 
 # ====================================================================================================================== I/O
@@ -115,6 +128,11 @@ def read_json(path):
         return json.load(f)
 
 
+def write_result(path, res):
+    """A stage output: the result dict with the seeds of OD-G6 (SEEDS) added, written atomically."""
+    write_json(path, dict(res, seeds=SEEDS))
+
+
 def save_bundle(path, nets, infos, extra=None):
     """All nets of one architecture in one file (atomic): parameters, tables, per-net info dicts, weight checksums."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -146,11 +164,13 @@ def say(*a):
 # ====================================================================================================================== models
 def info_of(spec, row, **kw):
     """Per-model record: identity, data definition (world, task family ky, anchor slots and their shifts, pretraining split) and the
-    training row of TC.train (first95, checkpoint, level1, eval_point, held-out, checksum)."""
+    training row of TC.train (first95, checkpoint, level1, eval_point, held-out, checksum). 'param_arm' = the parameterisation (bp_mup /
+    bp_sp); 'arm' is overwritten by the callers' condition arm ('nat', 'late', 'early', 'nat2'), as the output rows use it."""
     s = TC.full_spec(spec)
     pre = list(M.world(s["ws"])[0])
     shifts = [int(c) for c in (s["shifts"] if s["shifts"] is not None else pre[:s["K"]])]
-    d = dict(name=TC.net_name(s), ws=int(s["ws"]), init=int(s["init"]), W=int(s["W"]), arm=s["arm"], kind=s["kind"], depth=s["depth"],
+    d = dict(name=TC.net_name(s), ws=int(s["ws"]), init=int(s["init"]), W=int(s["W"]), arm=s["arm"], param_arm=s["arm"], kind=s["kind"],
+             depth=s["depth"],
              act=s["act"], lr=s["lr"], wd=s["wd"], ky=int(s["ky"]), split=s["split"] if isinstance(s["split"], str) else "custom",
              coding=s["coding"] if (s["coding"] is None or isinstance(s["coding"], str)) else "custom", gamma=s["gamma"],
              reg=s["reg"] if s["gamma"] else None, when=s["when"] if s["gamma"] else None,
@@ -172,7 +192,7 @@ def late_fields(f95):
 
 def r1_job_name(info, K=NPRE):
     """pc_meta's job name of a round-1 cell with the same definition (for G46's reproduction check; only init 0 nets have one)."""
-    return f"{info['arm']}_W{info['W']}_s{info['ws']}_K{K}_g0_wd{info['wd']:g}"
+    return f"{info['param_arm']}_W{info['W']}_s{info['ws']}_K{K}_g0_wd{info['wd']:g}"
 
 
 class Pool:
@@ -186,7 +206,10 @@ class Pool:
         self.groups.append(nets)
         out = []
         for i, inf in enumerate(infos):
-            self.models.append(dict(inf, g=g, i=i))
+            d = dict(inf, g=g, i=i)
+            if not d.get("param_arm"):                        # bundles written before param_arm existed: the net's own spec
+                d["param_arm"] = ((nets.meta[i] if i < len(nets.meta) else {}).get("spec") or {}).get("arm")
+            self.models.append(d)
             out.append(len(self.models) - 1)
         return out
 
@@ -236,6 +259,37 @@ def anchor_ho(inf, a):
     idx = np.asarray(perm)[ntr:]
     x, y = TC.PAIRS[idx, 0], TC.PAIRS[idx, 1]
     return x, y, (x + inf["ky"] * y + c) % P
+
+
+def nonfinite(pool, mids):
+    """Models whose parameters are not all finite (a diverged net). They drop out of every line (dropped_row): a single such net must
+    cost one row, not the stage (its numpy fits, e.g. the least squares of Phi, would raise), and such a net never passes level 1."""
+    bad = set()
+    for g, ms in pool.by_group(mids).items():
+        nets = pool.groups[g]
+        ok = torch.ones(nets.B, dtype=torch.bool, device=nets.device)
+        for v in nets.p.values():
+            ok &= torch.isfinite(v.reshape(nets.B, -1)).all(1)
+        ok = ok.cpu().numpy()
+        bad |= {m for m in ms if not ok[pool.models[m]["i"]]}
+    return bad
+
+
+def dropped_row(pool, m):
+    """Row of a model with non-finite weights: identity and training fields only, level1 False, every line absent (null)."""
+    r = model_row(pool.models[m])
+    r.update(finite_weights=False, level1=False, dropped="non-finite weights: dropped from every line (AT8 drops a model that fails level 1)")
+    return r
+
+
+def finite(*arrays):
+    return all(np.isfinite(np.asarray(a, dtype=np.float64)).all() for a in arrays)
+
+
+def nmean(v):
+    """Mean over the finite values (None / NaN skipped); None if there is none."""
+    v = [float(x) for x in v if x is not None and math.isfinite(float(x))]
+    return float(np.mean(v)) if v else None
 
 
 class Evals:
@@ -466,11 +520,19 @@ def phis(pool, mids, fc, tcols):
     ev, hs = Evals(pool), {}
     for m in mids:
         inf = pool.models[m]
-        proj = np.stack([TC.proj_linspan(tcols[m], np.asarray(v, np.float64)) for v in fc[m]["v"]])
+        if not finite(tcols[m], fc[m]["v"]):                  # non-finite anchors or columns: no projection (rgi_toy-4)
+            continue
+        try:
+            proj = np.stack([TC.proj_linspan(tcols[m], np.asarray(v, np.float64)) for v in fc[m]["v"]])
+        except np.linalg.LinAlgError:
+            continue
         hs[m] = ev.add(m, proj, *ho_stack(inf["ws"], inf["ky"]))
     ev.run()
     out = {}
     for m in mids:
+        if m not in hs:
+            out[m] = dict(Phi=None, acc_proj=None)
+            continue
         accp, den = ev.get(hs[m]), float(np.mean(fc[m]["acc_end"]))
         out[m] = dict(Phi=float(np.mean(accp) / den) if den > 0 else float("nan"), acc_proj=accp)
     return out
@@ -489,7 +551,14 @@ def f_pairs(pool, pairs, fc, tcols, nshuf=NSHUF, loo=True):
         A, B = pool.models[a], pool.models[b]
         CA, CB = tcols[a][:, ia], tcols[b][:, ib]
         n = len(ia)
-        r1, e1 = TC.t1_choose_r(CA, CB)
+        if not finite(CA, CB, fc[a]["v"]):                    # non-finite anchors or columns: no map (rgi_toy-4)
+            jobs.append(None)
+            continue
+        try:
+            r1, e1 = TC.t1_choose_r(CA, CB)
+        except np.linalg.LinAlgError:
+            jobs.append(None)
+            continue
         rng = np.random.default_rng(123 + A["ws"])
         perms = [p for p in (rng.permutation(n) for _ in range(nshuf)) if np.any(p != np.arange(n))]
         nper = 1 + len(perms)
@@ -516,7 +585,12 @@ def f_pairs(pool, pairs, fc, tcols, nshuf=NSHUF, loo=True):
         jobs.append((r1, e1, nper, h_new, h_loo))
     ev.run()
     out = []
-    for r1, e1, nper, h_new, h_loo in jobs:
+    for job in jobs:
+        if job is None:
+            out.append(dict(r1=None, loo_err1=None, t1=None, t1_shuf=None, t1_gain=None, t1_tasks=None, loo=None, loo_shuf=None,
+                            note="not computed (non-finite anchors or columns)"))
+            continue
+        r1, e1, nper, h_new, h_loo = job
         acc = ev.get(h_new).reshape(NNEW, nper)
         d = dict(r1=r1, loo_err1=e1, t1=float(acc[:, 0].mean()), t1_shuf=float(acc[:, 1:].mean()),
                  t1_gain=float((acc[:, 0] - acc[:, 1:].mean(1)).mean()), t1_tasks=acc[:, 0])
@@ -682,7 +756,7 @@ def t34_pairs(pool, pairs, fc, t3_ok=lambda a, b: False):
         chains, targets = [], []
         for pi, (a, b) in enumerate(pairs):
             if mode == "t3":
-                if not t3_ok(a, b):
+                if not t3_ok(a, b) or not (torch.isfinite(all_h2(a)).all() and torch.isfinite(all_h2(b)).all()):
                     continue
                 S, best = stitch_fit_t(all_h2(a), all_h2(b))
                 out[pi]["stitch"] = dict(lam=best[0], R2=best[1])
@@ -734,9 +808,9 @@ def tci(v):
     return dict(n=n, mean=float(v.mean()), lo=float(v.mean() - h), hi=float(v.mean() + h))
 
 
-def model_row(inf, keys=("name", "ws", "init", "W", "arm", "kind", "depth", "act", "lr", "wd", "ky", "split", "coding", "cond", "reg",
+def model_row(inf, keys=("name", "ws", "init", "W", "arm", "param_arm", "kind", "depth", "act", "lr", "wd", "ky", "split", "coding", "cond", "reg",
                          "gamma", "k", "target_x", "p", "level1", "eval_point", "first95", "checkpoint", "updates", "updates_total", "branch_updates",
-                         "final_heldout", "final_train", "checksum", "coord_check", "variant", "shifts")):
+                         "final_heldout", "final_train", "checksum", "coord_check", "variant", "shifts", "finite_weights", "dropped")):
     return {k: inf[k] for k in keys if k in inf}
 
 
@@ -861,19 +935,27 @@ def stage_r0(out):
     nets, infos = (load_bundle(bundle)[:2] if os.path.exists(bundle) else train_r0(bundle))
     pool = Pool()
     mids = pool.add(nets, infos)
-    dl = deltas(pool, mids)
+    bad = nonfinite(pool, mids)
+    dl = deltas(pool, [m for m in mids if m not in bad])
     rows = []
     for m in mids:
-        r = model_row(pool.models[m])
-        r.update(delta_fields(dl[m]))
+        if m in bad:
+            r = dropped_row(pool, m)
+            r.update(delta_h2=None)
+        else:
+            r = model_row(pool.models[m])
+            r.update(delta_fields(dl[m]), finite_weights=True)
         rows.append(r)
-    nat = [r for r in rows if r["arm"] == "nat"]
+    fin = lambda r: r.get("delta_h2") is not None and math.isfinite(r["delta_h2"])
+    nat = [r for r in rows if r["arm"] == "nat" and fin(r)]
     nat_ok = [r for r in nat if r["level1"]]
     use = nat_ok or nat
-    delta_nat = float(np.mean([r["delta_h2"] for r in use]))
-    flags = [] if nat_ok else ["no natural net passes level 1: delta_nat from all natural nets"]
+    delta_nat = float(np.mean([r["delta_h2"] for r in use])) if use else None
+    flags = ([] if nat_ok else ["no natural net passes level 1: delta_nat from all natural nets"]) + (
+        [] if use else ["no natural net with a finite delta: every ratio undefined"])
     for r in rows:
-        r["log2_ratio"] = math.log2(r["delta_h2"] / delta_nat) if (r["delta_h2"] > 0 and delta_nat > 0) else None
+        r["log2_ratio"] = (math.log2(r["delta_h2"] / delta_nat) if (delta_nat is not None and fin(r) and r["delta_h2"] > 0 and delta_nat > 0)
+                           else None)
 
     def per_gamma(arm, reg, gammas):
         out_ = []
@@ -897,12 +979,13 @@ def stage_r0(out):
                + [dict(arm=a, gamma=c["gamma"], reason="fails level 1 in an init") for a, cs in (("sham_late", sham), ("task_early", et),
                                                                                                     ("sham_early", esh)) for c in cs if not c["pass_both"]])
     res = dict(stage="r0", measurement="AT0", world=R0_WORLD, inits=list(R0_INITS), W=W_MAIN, quick=QUICK, delta_nat=delta_nat,
-               delta_nat_from=[r["init"] for r in use], delta_nat_all_inits=float(np.mean([r["delta_h2"] for r in nat])), flags=flags, task_late_grid=grid, selection=sel, sham_late=sham, task_early=et,
+               delta_nat_from=[r["init"] for r in use], delta_nat_all_inits=float(np.mean([r["delta_h2"] for r in nat])) if nat else None,
+               flags=flags, task_late_grid=grid, selection=sel, sham_late=sham, task_early=et,
                sham_early=esh, levels=levels, dropped=dropped, models=rows, seconds=time.time() - t0,
                rule="AT0: closest grid gamma by the mean log2 ratio over the 2 inits, accepted within 0.4 and level 1 in both inits; else the "
                     "closest passing gamma (flagged); else dropped; each grid gamma used once (farther target moves on)")
-    write_json(path, res)
-    say(f"r0: delta_nat {delta_nat:.4f}; task-late levels " + ", ".join(f"x {s['target_x']:+d}: {s['gamma']} ({s['status']})" for s in sel)
+    write_result(path, res)
+    say(f"r0: delta_nat {delta_nat if delta_nat is None else round(delta_nat, 4)}; task-late levels " + ", ".join(f"x {s['target_x']:+d}: {s['gamma']} ({s['status']})" for s in sel)
         + f"; sham late {levels['sham_late']}; early task {levels['task_early']}, sham {levels['sham_early']} ({time.time() - t0:.0f}s)")
 
 
@@ -982,6 +1065,10 @@ def at_lines(pool, mids, recursion_on=True, pairs_by=("ws", "cond")):
     mediators) and per ordered cross-init pair within (world, condition): S, free T1 gain, LOO-anchor, and (recursion_on) round trip,
     warm start and pooling. Returns (per-model dict, pair list, pooling list)."""
     t0 = time.time()
+    bad = nonfinite(pool, mids)
+    if bad:
+        say(f"  {len(bad)} model(s) with non-finite weights dropped from every line: {[pool.models[m]['name'] for m in sorted(bad)]}")
+    mids = [m for m in mids if m not in bad]
     fc = free_columns(pool, mids)
     al = alphas(pool, mids)
     say(f"  free columns and alphas of {len(mids)} models ({time.time() - t0:.0f}s)")
@@ -1038,15 +1125,15 @@ def at_lines(pool, mids, recursion_on=True, pairs_by=("ws", "cond")):
         plist.append(d)
     for m in mids:      # per receiver model: mean over its pairs (2.7 C20)
         mine = [n for n, (a, b) in enumerate(pairs) if b == m]
-        per[m].update(S_gain=float(np.mean([S[n]["S_gain"] for n in mine])) if mine else None,
-                      T1_gain=float(np.mean([F[n]["t1_gain"] for n in mine])) if mine else None,
-                      T1=float(np.mean([F[n]["t1"] for n in mine])) if mine else None,
-                      LOO=float(np.mean([F[n]["loo"] for n in mine])) if mine else None,
-                      LOO_shuf=float(np.mean([F[n]["loo_shuf"] for n in mine])) if mine else None,
-                      n_senders=len(mine))
+        per[m].update(S_gain=nmean([S[n]["S_gain"] for n in mine]), T1_gain=nmean([F[n]["t1_gain"] for n in mine]),
+                      T1=nmean([F[n]["t1"] for n in mine]), LOO=nmean([F[n].get("loo") for n in mine]),
+                      LOO_shuf=nmean([F[n].get("loo_shuf") for n in mine]), n_senders=len(mine))
         if recursion_on and pool.models[m]["arm"] != "nat2":
             snd = [n for n, (a, b) in enumerate(pairs) if a == m and R[n]]
-            per[m].update(RG=float(np.mean([R[n]["RG"] for n in snd])) if snd else None)
+            per[m].update(RG=nmean([R[n]["RG"] for n in snd]))
+        per[m]["finite_weights"] = True
+    for m in bad:
+        per[m] = dropped_row(pool, m)
     return per, plist, PL
 
 
@@ -1072,19 +1159,21 @@ def stage_r1(out):
     pool = Pool()
     mids = pool.add(nets, infos)
     per, plist, PL = at_lines(pool, mids)
-    natm = [m for m in mids if pool.models[m]["arm"] == "nat"]
+    natm = [m for m in mids if pool.models[m]["arm"] == "nat" and per[m].get("finite_weights", True)]
     b2 = b2_fields(pool, natm)
     for ws in todo:
         wm = [m for m in mids if pool.models[m]["ws"] == ws]
         nat = [m for m in wm if pool.models[m]["arm"] == "nat"]
-        ok = [m for m in nat if pool.models[m]["level1"]]
-        use = ok or nat
-        dnat = float(np.mean([per[m]["delta_h2"] for m in use]))
-        dnat_all = float(np.mean([per[m]["delta_h2"] for m in nat]))
+        fin = [m for m in nat if per[m].get("delta_h2") is not None and math.isfinite(per[m]["delta_h2"])]
+        ok = [m for m in fin if per[m]["level1"]]
+        use = ok or fin
+        dnat = float(np.mean([per[m]["delta_h2"] for m in use])) if use else None
+        dnat_all = float(np.mean([per[m]["delta_h2"] for m in fin])) if fin else None
         rows = []
         for m in wm:
             r = dict(per[m])
-            r["x"] = math.log2(r["delta_h2"] / dnat) if (r.get("delta_h2") is not None and r["delta_h2"] > 0 and dnat > 0) else None
+            r["x"] = (math.log2(r["delta_h2"] / dnat) if (dnat is not None and r.get("delta_h2") is not None and math.isfinite(r["delta_h2"])
+                                                           and r["delta_h2"] > 0 and dnat > 0) else None)
             if pool.models[m]["arm"] in ("nat", "nat2"):
                 r["p"], r["k"] = 0.0, 0
             if m in b2:
@@ -1104,7 +1193,7 @@ def stage_r1(out):
                          "(late), |gamma| / 0.01 (early), 0 (natural); S_gain / T1_gain / T1 / LOO = mean over the model's 2 pairs as "
                          "receiver; RG = mean over its pairs as sender; pooling_world = alpha averaged over all of the world's models at the "
                          "first checkpoint (AT1's literal reading), pooling = the same within each condition (descriptive)")
-        write_json(os.path.join(out, "rgi_toy", "r1", f"w{ws}.json"), res)
+        write_result(os.path.join(out, "rgi_toy", "r1", f"w{ws}.json"), res)
         say(f"r1: world {ws} written ({len(rows)} models)")
     r1_at3(out)
 
@@ -1167,7 +1256,7 @@ def r1_at3(out):
                  if any(d[k]["change"] is not None for d in w["within_run"])]
         ch[k] = tci(per_w)
     res["within_run_change_over_worlds"] = ch
-    write_json(os.path.join(out, "rgi_toy", "r1", "at3.json"), res)
+    write_result(os.path.join(out, "rgi_toy", "r1", "at3.json"), res)
 
 
 # ====================================================================================================================== AT5 (cross)
@@ -1204,6 +1293,12 @@ def at5_groups(out, worlds):
     return groups
 
 
+def pair_ids(A, B):
+    """Identity fields of an AT5 pair row (A_arm / B_arm = the parameterisation, as r2_pc_toy's cross_pc rows)."""
+    return dict(A=A["name"], B=B["name"], ws=A["ws"], A_W=A["W"], B_W=B["W"], A_arm=A["param_arm"], B_arm=B["param_arm"], A_init=A["init"],
+                B_init=B["init"], A_level1=A["level1"], B_level1=B["level1"])
+
+
 def stage_cross(out):
     todo = [ws for ws in X_WORLDS if not os.path.exists(os.path.join(out, "rgi_toy", "cross", f"w{ws}.json"))]
     if not todo:
@@ -1215,6 +1310,8 @@ def stage_cross(out):
     for nets, infos in at5_groups(out, todo):
         mids += pool.add(nets, infos)
     say(f"cross: {len(mids)} nets ready ({time.time() - t0:.0f}s); lines")
+    allm, bad = mids, nonfinite(pool, mids)
+    mids = [m for m in allm if m not in bad]
     fc = free_columns(pool, mids)
     al = alphas(pool, mids)
     lam = lambdas(pool, mids)
@@ -1239,13 +1336,13 @@ def stage_cross(out):
                  Lambda_null_perm=lam[m]["perm"], Phi=ph[m]["Phi"], acc_proj=ph[m]["acc_proj"], acc_free=fc[m]["acc_end"],
                  A_free=float(fc[m]["A"].mean()), acc_alpha=al[m]["acc"], alpha=al[m]["alpha"],
                  X=float(np.mean(al[m]["acc"]) / np.mean(fc[m]["acc_end"])) if np.mean(fc[m]["acc_end"]) > 0 else None,
-                 r1_job_name=r1_job_name(inf) if inf["init"] == 0 else None)
+                 r1_job_name=r1_job_name(inf) if inf["init"] == 0 else None, finite_weights=True)
         per[m] = r
+    for m in bad:
+        per[m] = dict(dropped_row(pool, m), r1_job_name=r1_job_name(pool.models[m]) if pool.models[m]["init"] == 0 else None)
     plist = []
     for n, (a, b) in enumerate(pairs):
-        A, B = pool.models[a], pool.models[b]
-        d = dict(A=A["name"], B=B["name"], ws=A["ws"], A_W=A["W"], B_W=B["W"], A_arm=A["arm"], B_arm=B["arm"], A_init=A["init"],
-                 B_init=B["init"], A_level1=A["level1"], B_level1=B["level1"])
+        d = pair_ids(pool.models[a], pool.models[b])
         d.update(S[n])
         d.update(F[n])
         d.update(t4=T[n]["t4"], t4_mean=T[n]["t4_mean"], t3=T[n]["t3"], t3_mean=T[n]["t3_mean"], stitch=T[n]["stitch"])
@@ -1254,19 +1351,18 @@ def stage_cross(out):
         rec_ = [n for n, (a, b) in enumerate(pairs) if b == m]
         snd = [n for n, (a, b) in enumerate(pairs) if a == m]
         for tag, sel in (("as_receiver", rec_), ("as_sender", snd)):
-            per[m][tag] = dict(n=len(sel), S_gain=float(np.mean([S[n]["S_gain"] for n in sel])), T1_gain=float(np.mean([F[n]["t1_gain"] for n in sel])),
-                               LOO=float(np.mean([F[n]["loo"] for n in sel])), T4=float(np.mean([T[n]["t4_mean"] for n in sel])),
-                               T3=float(np.mean([T[n]["t3_mean"] for n in sel if T[n]["t3_mean"] is not None]))
-                               if any(T[n]["t3_mean"] is not None for n in sel) else None)
+            per[m][tag] = dict(n=len(sel), S_gain=nmean([S[n]["S_gain"] for n in sel]), T1_gain=nmean([F[n]["t1_gain"] for n in sel]),
+                               LOO=nmean([F[n].get("loo") for n in sel]), T4=nmean([T[n]["t4_mean"] for n in sel]),
+                               T3=nmean([T[n]["t3_mean"] for n in sel]))
     for ws in todo:
-        wm = [m for m in mids if pool.models[m]["ws"] == ws]
+        wm = [m for m in allm if pool.models[m]["ws"] == ws]
         names = {pool.models[m]["name"] for m in wm}
         res = dict(stage="cross", measurement="AT5 cross-model matrix among BP nets (descriptive)", world=ws, quick=QUICK,
                    widths=list(X_WIDTHS), t3_max_width=T3_MAXW, models=[per[m] for m in wm], pairs=[p for p in plist if p["A"] in names],
                    seconds=time.time() - t0,
                    notes="PC pairs (r2_pc) and the slope label (r2_ana) are not here; as_receiver / as_sender = means over the model's pairs "
                          "in this world; t3 only where both widths <= the T3 limit")
-        write_json(os.path.join(out, "rgi_toy", "cross", f"w{ws}.json"), res)
+        write_result(os.path.join(out, "rgi_toy", "cross", f"w{ws}.json"), res)
         say(f"cross: world {ws} written")
 
 
@@ -1384,15 +1480,19 @@ def stage_fam(out):
     Bs = [m for m in allm if pool.models[m]["variant"] != "A"]
     shared = {m: list(range(8)) if pool.models[m]["variant"] == "8 shared shifts + spare" else list(range(NPRE)) for m in Bs}
     say(f"fam: {len(allm)} nets ready ({time.time() - t0:.0f}s); lines")
-    fc = free_columns(pool, allm)
-    al12 = alphas(pool, list(A_of.values()))
-    al8 = alphas(pool, list(A_of.values()), slots_of={m: list(range(8)) for m in A_of.values()})
-    alB = alphas(pool, Bs, slots_of={m: [pool.models[m]["anchors"][k] for k in shared[m]] for m in Bs})
-    lam = lambdas(pool, allm)
-    dl = deltas(pool, allm)
+    bad = nonfinite(pool, allm)
+    good = [m for m in allm if m not in bad]
+    gA = [m for m in A_of.values() if m not in bad]
+    gB = [m for m in Bs if m not in bad]
+    fc = free_columns(pool, good)
+    al12 = alphas(pool, gA)
+    al8 = alphas(pool, gA, slots_of={m: list(range(8)) for m in gA})
+    alB = alphas(pool, gB, slots_of={m: [pool.models[m]["anchors"][k] for k in shared[m]] for m in gB})
+    lam = lambdas(pool, good)
+    dl = deltas(pool, good)
     tcols = task_cols_np(pool)
-    ph = phis(pool, allm, fc, tcols)
-    pairs = [(A_of[pool.models[b]["ws"]], b) for b in Bs]
+    ph = phis(pool, good, fc, tcols)
+    pairs = [(A_of[pool.models[b]["ws"]], b) for b in gB if A_of.get(pool.models[b]["ws"]) in gA]
     alA = lambda a, b: (al8 if len(shared[b]) == 8 else al12)[a]["alpha"]
     S = s_pairs(pool, [(a, b, alA(a, b), [pool.models[b]["anchors"][k] for k in shared[b]]) for a, b in pairs])
     F = f_pairs(pool, [(a, b, shared[b], shared[b]) for a, b in pairs], fc, tcols)
@@ -1400,32 +1500,42 @@ def stage_fam(out):
     say(f"fam: pair lines ({time.time() - t0:.0f}s)")
 
     def mrow(m):
+        if m in bad:
+            return dropped_row(pool, m)
         r = model_row(pool.models[m])
-        r.update(delta_fields(dl.get(m)))
+        r.update(delta_fields(dl.get(m)), finite_weights=True)
         r.update(Lambda=lam[m]["Lambda"], Lambda_per_shift=lam[m]["per_shift"], Lambda_targets=lam[m]["targets"], Phi=ph[m]["Phi"],
                  acc_free=fc[m]["acc_end"], A_free=float(fc[m]["A"].mean()))
         return r
     A_rows = []
     for ws, a in sorted(A_of.items()):
         r = mrow(a)
-        r.update(acc_alpha12=al12[a]["acc"], acc_alpha8=al8[a]["acc"], X=float(np.mean(al12[a]["acc"]) / np.mean(fc[a]["acc_end"]))
-                 if np.mean(fc[a]["acc_end"]) > 0 else None)
+        if a not in bad:
+            r.update(acc_alpha12=al12[a]["acc"], acc_alpha8=al8[a]["acc"], X=float(np.mean(al12[a]["acc"]) / np.mean(fc[a]["acc_end"]))
+                     if np.mean(fc[a]["acc_end"]) > 0 else None)
         A_rows.append(r)
-    variants = {}
-    for n, (a, b) in enumerate(pairs):
+    variants, pidx = {}, {b: n for n, (a, b) in enumerate(pairs)}
+    for b in Bs:
         v = pool.models[b]["variant"]
         r = mrow(b)
-        r.update(shared_anchors=len(shared[b]), alpha_in_A=float(np.mean(al8[a]["acc"] if len(shared[b]) == 8 else al12[a]["acc"])),
-                 B_own_alpha=float(np.mean(alB[b]["acc"])), S_gain=S[n]["S_gain"], accB=S[n]["accB"], accB_perm=S[n]["accB_perm"],
-                 T1=F[n]["t1"], T1_shuf=F[n]["t1_shuf"], T1_gain=F[n]["t1_gain"], LOO=F[n]["loo"], LOO_shuf=F[n]["loo_shuf"], r1=F[n]["r1"],
-                 T4=T[n]["t4"], T4_mean=T[n]["t4_mean"])
+        if b not in bad:
+            r.update(shared_anchors=len(shared[b]), B_own_alpha=float(np.mean(alB[b]["acc"])))
+        if b in pidx:
+            n = pidx[b]
+            a = pairs[n][0]
+            r.update(alpha_in_A=float(np.mean(al8[a]["acc"] if len(shared[b]) == 8 else al12[a]["acc"])), S_gain=S[n]["S_gain"],
+                     accB=S[n]["accB"], accB_perm=S[n]["accB_perm"], T1=F[n]["t1"], T1_shuf=F[n]["t1_shuf"], T1_gain=F[n]["t1_gain"],
+                     LOO=F[n]["loo"], LOO_shuf=F[n]["loo_shuf"], r1=F[n]["r1"], T4=T[n]["t4"], T4_mean=T[n]["t4_mean"])
+        elif b not in bad:
+            r["pair_note"] = "no pair: A of this world has non-finite weights"
         variants.setdefault(v, []).append(r)
     summ = {}
     need = max(1, math.ceil(0.8 * len(FAM_WORLDS)))
     for v, rows in variants.items():
         nl1 = sum(bool(r["level1"]) for r in rows)
         summ[v] = dict(n_worlds=len(rows), n_level1=nl1, trains=nl1 >= need, rule_trains=f">= {need} of {len(FAM_WORLDS)} worlds' B nets pass level 1",
-                       **{k: tci([r[k] for r in rows]) for k in ("S_gain", "Lambda", "T1_gain", "LOO", "Phi", "T4_mean", "B_own_alpha", "alpha_in_A")})
+                       n_nonfinite=sum(r.get("finite_weights") is False for r in rows),
+                       **{k: tci([r.get(k) for r in rows]) for k in ("S_gain", "Lambda", "T1_gain", "LOO", "Phi", "T4_mean", "B_own_alpha", "alpha_in_A")})
     if calib is None or not calib.get("testable", False):
         summ["ReLU"] = dict(summ.get("ReLU", {}), trains=False, testable=False, note="not testable (G40: no lr in {2e-3, 5e-3} passes level 1 in world 0)")
     res = dict(stage="fam", measurement="AT4 family arm (natural delta; upper bound for real model families)", worlds=list(FAM_WORLDS), W=W_MAIN,
@@ -1434,7 +1544,7 @@ def stage_fam(out):
                      "with init 7 (torch.manual_seed(70000 + ws), as ref crit/family*.py), one factor changed each; S over the shared anchors "
                      "(8 for the 8-shift variant); every accuracy in B on B's labels; summary t intervals over worlds are descriptive (the "
                      "family verdict is r2_rgi_verdict's)")
-    write_json(path, res)
+    write_result(path, res)
     say("fam: " + "; ".join((f"{v}: S-gain {s['S_gain']['mean']:+.3f} (level 1 {s['n_level1']}/{s['n_worlds']})"
                              if s.get("S_gain", {}).get("mean") is not None else f"{v}: {s.get('note', 'no values')}") for v, s in summ.items())
         + f" ({time.time() - t0:.0f}s)")
@@ -1475,6 +1585,8 @@ def stage_forcing(out):
     mids = []
     for nets, infos in forcing_groups(out):
         mids += pool.add(nets, infos)
+    allm, bad = mids, nonfinite(pool, mids)
+    mids = [m for m in allm if m not in bad]
     fc = free_columns(pool, mids)
     lam = lambdas(pool, mids)
     dl = deltas(pool, mids)
@@ -1491,8 +1603,10 @@ def stage_forcing(out):
         r.update(delta_fields(dl.get(m)))
         r.update(Lambda=lam[m]["Lambda"], Lambda_per_shift=lam[m]["per_shift"], Phi=ph[m]["Phi"], acc_proj=ph[m]["acc_proj"],
                  acc_free=fc[m]["acc_end"], A_free=float(fc[m]["A"].mean()),
-                 free_column="bottleneck coefficients (v = U e)" if pool.models[m]["kind"] == "bneck" else "free slot column")
+                 free_column="bottleneck coefficients (v = U e)" if pool.models[m]["kind"] == "bneck" else "free slot column", finite_weights=True)
         rows[m] = r
+    for m in bad:
+        rows[m] = dropped_row(pool, m)
     plist = []
     for n, (a, b) in enumerate(pairs):
         d = dict(cond=pool.models[a]["cond"], ws=pool.models[a]["ws"], A=pool.models[a]["name"], B=pool.models[b]["name"])
@@ -1501,20 +1615,20 @@ def stage_forcing(out):
         rows[b].setdefault("_t1", []).append(F[n])
     for r in rows.values():
         f = r.pop("_t1", [])
-        r.update(T1_gain=float(np.mean([x["t1_gain"] for x in f])) if f else None, LOO=float(np.mean([x["loo"] for x in f])) if f else None)
+        r.update(T1_gain=nmean([x["t1_gain"] for x in f]), LOO=nmean([x.get("loo") for x in f]))
     summ = {}
     for c in F_CONDS:
-        rr = [rows[m] for m in mids if pool.models[m]["cond"] == c]
+        rr = [rows[m] for m in allm if pool.models[m]["cond"] == c]
         summ[c] = dict(n=len(rr), n_level1=sum(bool(r["level1"]) for r in rr),
                        **{k: float(np.mean([r[k] for r in rr if r.get(k) is not None])) if any(r.get(k) is not None for r in rr) else None
                           for k in ("Lambda", "Phi", "T1_gain", "LOO", "A_free", "delta_h2", "final_heldout")})
     res = dict(stage="forcing", measurement="AT6 forcing controls (descriptive)", worlds=list(F_WORLDS), inits=list(F_INITS), W=W_MAIN,
-               quick=QUICK, conditions=list(F_CONDS), shared_steps=SHARED_STEPS, bottleneck_dt=BNECK_DT, models=[rows[m] for m in mids],
+               quick=QUICK, conditions=list(F_CONDS), shared_steps=SHARED_STEPS, bottleneck_dt=BNECK_DT, models=[rows[m] for m in allm],
                pairs=plist, summary=summ, seconds=time.time() - t0,
                notes="natural = the same-definition reference nets trained here; shared split = one 50 % split of the (x, y) pairs for all "
                      "pretraining tasks, 10,000 updates, evaluated at the end (W0); bottleneck = rank-4 task slot U E (ref rgi_bneck), its own "
                      "improvement = the dt coefficients; T1 / LOO between the two inits of a world and condition")
-    write_json(path, res)
+    write_result(path, res)
     say("forcing: " + "; ".join(f"{c}: Phi {s['Phi']:.2f} T1 gain {s['T1_gain']:+.3f} Lambda {s['Lambda']:.2f}" for c, s in summ.items()
                                  if s["Phi"] is not None and s["T1_gain"] is not None and s["Lambda"] is not None) + f" ({time.time() - t0:.0f}s)")
 
@@ -1609,6 +1723,42 @@ def selftest(out):
         ts = TC.taskset_from_spec(fam_spec("8 shared shifts + spare", 2))
         _check(res, "8 shared shifts + spare: 9 pretraining tasks, slot 8 = spare shift", ts["ntask"] == 9 and
                set(np.unique(ts["t"]).tolist()) == set(range(9)) and info_of(fam_spec("8 shared shifts + spare", 2), None)["shifts"][8] == TC.spare_shift(2))
+        # review rgi_toy-2: the parameterisation survives the condition arm (r1_job_name, AT5's A_arm / B_arm; legacy infos backfilled)
+        i_sp = dict(info_of(dict(W=64, ws=2, init=0, arm="bp_sp"), None, cond="nat", arm="nat"), level1=True)
+        i_mu = dict(info_of(dict(W=128, ws=2, init=1), None, cond="nat", arm="nat"), level1=True)
+        pid = pair_ids(i_sp, i_mu)
+        pl_ = Pool()
+        pl_.add(tr.nets, [{k: v for k, v in info_of(s_, r, cond="nat", arm="nat").items() if k != "param_arm"} for s_, r in zip(specs, tr.rows)])
+        _check(res, "rgi_toy-2: param_arm kept beside the condition arm; r1_job_name = pc_meta's job name; A_arm / B_arm = parameterisation",
+               i_sp["arm"] == "nat" and i_sp["param_arm"] == "bp_sp" and r1_job_name(i_sp) == "bp_sp_W64_s2_K12_g0_wd1"
+               and pid["A_arm"] == "bp_sp" and pid["B_arm"] == "bp_mup" and all(m_["param_arm"] == "bp_mup" for m_ in pl_.models),
+               dict(arm=i_sp["arm"], param_arm=i_sp["param_arm"], r1_job_name=r1_job_name(i_sp), A_arm=pid["A_arm"], B_arm=pid["B_arm"]))
+        # review rgi_toy-3: every stage output carries the seeds (OD-G6)
+        tp = os.path.join(out, "rgi_toy", "seeds_check.json")
+        write_result(tp, dict(stage="check"))
+        rr = read_json(tp)
+        os.remove(tp)
+        _check(res, "rgi_toy-3: write_result puts the SEEDS of OD-G6 into a stage output",
+               rr.get("seeds") == jsonable(SEEDS) and all(k in SEEDS for k in ("s_perm", "t1_shuffle", "loo_shuffle", "lambda_perm", "delta_floor",
+                                                                              "recipe", "other_split", "coding")), sorted(rr.get("seeds", {})))
+        # review rgi_toy-4: a net with non-finite weights drops out with a flag; the other models' lines are unchanged; phis never raises
+        nets2 = tr.nets.clone()
+        nets2.p["W2"][1] = float("nan")
+        pool2 = Pool()
+        m2 = pool2.add(nets2, [info_of(s_, r, cond="nat", arm="nat") for s_, r in zip(specs, tr.rows)])
+        per2, pl2, _ = at_lines(pool2, m2)
+        poolg = Pool()
+        mg = poolg.add(tr.nets.subset([0, 2]), [info_of(specs[i], tr.rows[i], cond="nat", arm="nat") for i in (0, 2)])
+        perg, plg, _ = at_lines(poolg, mg)
+        same = all(per2[m2[i]].get(k) == perg[mg[j]].get(k) for i, j in ((0, 0), (2, 1)) for k in ("S_gain", "T1_gain", "LOO", "Lambda", "Phi", "delta_h2", "RG"))
+        fc2 = free_columns(pool2, m2)
+        ph2 = phis(pool2, m2, fc2, task_cols_np(pool2))
+        bn = per2[m2[1]]["name"]
+        _check(res, "rgi_toy-4: a net with non-finite weights drops out of every line (flag, level1 False); the other lines are unchanged; Phi of "
+                    "the bad net is None instead of an exception",
+               per2[m2[1]]["finite_weights"] is False and per2[m2[1]]["level1"] is False and per2[m2[1]].get("S_gain") is None and len(pl2) == 2
+               and all(bn not in (p_["A"], p_["B"]) for p_ in pl2) and same and ph2[m2[1]]["Phi"] is None and ph2[m2[0]]["Phi"] is not None,
+               dict(dropped=per2[m2[1]].get("dropped"), pairs=len(pl2), lines_unchanged=same))
     ok = all(r["passed"] for r in res)
     write_json(os.path.join(out, "rgi_toy", "selftest.json"), dict(passed=ok, checks=res, quick=QUICK, device=str(DEV)))
     print(f"selftest: {sum(r['passed'] for r in res)}/{len(res)} checks passed", flush=True)

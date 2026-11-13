@@ -77,7 +77,7 @@ class R1PC:
     is logged."""
 
     def __init__(self, root):
-        self.root = root; self.log = []
+        self.root = root; self.log = []; self.logged = set()
         self.shards = sorted(d for d in (os.listdir(root) if os.path.isdir(root) else []) if SHARD_RE.match(d) and os.path.isdir(os.path.join(root, d)))
         self.expected, self.done = {}, {}
         for sh in self.shards:
@@ -92,7 +92,8 @@ class R1PC:
         c1 = [c for c in cands if name in self.expected.get(c[0], set())] or cands
         c2 = [c for c in c1 if self.done.get(c[0])] or c1
         ch = max(c2, key=lambda c: os.path.getmtime(c[1]))
-        self.log.append(dict(name=name, candidates=[c[0] for c in cands], chosen=ch[0], rule="pc_expected > shard_done > most recent"))
+        if name not in self.logged:
+            self.logged.add(name); self.log.append(dict(name=name, candidates=[c[0] for c in cands], chosen=ch[0], rule="pc_expected > shard_done > most recent"))
         return ch
 
     def find(self, name, kind="models"):
@@ -168,7 +169,8 @@ def stage_gates(out):
     res.update(n_rows=len(R), shards=r1.shards, shard_done=r1.done, inventory_G37=inv,
                missing_jobs=sorted(exp - {r.get("name") for r in R}) if exp else "no expected-job lists found", pc_missing=r1.missing_lists(),
                finder=r1.log, note="record only: r2_pc runs every width (critique v2-11); r2_ana applies G-PC (G35 fallback: g_meta_fallback)")
-    print(f"  gates: {len(R)} rows, G-meta {res['G_meta']}, G-PC {{{', '.join(f'{W}: {v['pass_']}' for W, v in res['G_PC'].items())}}}", flush=True)
+    gp = ", ".join(f"{W}: {v['pass_']}" for W, v in res["G_PC"].items())
+    print(f"  gates: {len(R)} rows, G-meta {res['G_meta']}, G-PC {{{gp}}}", flush=True)
     return res
 
 
@@ -318,10 +320,11 @@ def ct7_family(t7, widths=None, alpha=CLAIM_ALPHA, min_effect=CLAIM_MIN):
         n_ok = len(t7["widths"][f"W{W}"]["seeds_present"])
         v = np.asarray(v, float); v = v[np.isfinite(v)]; n = len(v)
         if n_ok < MIN_PAIRED or n < 2:
-            rows.append(dict(W=W, item=name, n=n, testable=False)); continue
+            rows.append(dict(W=W, item=name, n=n, testable=False, values=v.tolist())); continue
         m, sd = float(v.mean()), float(v.std(ddof=1)); se = sd / math.sqrt(n)
         t = m / se if se > 0 else (math.inf if m != 0 else 0.0); p = float(2 * stats.t.sf(abs(t), n - 1)) if math.isfinite(t) else 0.0
-        rows.append(dict(W=W, item=name, n=n, testable=True, mean=m, sd=sd, t=t, p=p, **{k: v_ for k, v_ in tci(v).items() if k in ("lo", "hi")}))
+        rows.append(dict(W=W, item=name, n=n, testable=True, mean=m, sd=sd, t=t, p=p, **{k: v_ for k, v_ in tci(v).items() if k in ("lo", "hi")},
+                         boot95=UT.boot95(v), values=v.tolist()))     # 2.6: paired seed bootstrap next to the t test (review pc_toy-5)
     tst = [r for r in rows if r["testable"]]; order = sorted(range(len(tst)), key=lambda i: tst[i]["p"]); mm = len(tst); run = 0.0
     for rank, i in enumerate(order):
         run = max(run, min(1.0, (mm - rank) * tst[i]["p"])); tst[i]["p_holm"] = run
@@ -332,10 +335,36 @@ def ct7_family(t7, widths=None, alpha=CLAIM_ALPHA, min_effect=CLAIM_MIN):
                 note="preview over every width that ran; r2_ana restricts the family to the G-PC widths (G36) and no 'at equilibrium' claim")
 
 
+def file_sha256(path):
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def t7_inputs(r1, W):
+    """The round-1 nets a C-T7 width is computed from (review pc_toy-4): per seed with both nets found [seed, PC file name, its
+    sha256, BP file name, its sha256]."""
+    out = []
+    for s in SEEDS:
+        pc, bp = r1.find(job_name("pc_mup", W, s)), r1.find(job_name("bp_mup", W, s))
+        if pc and bp:
+            out.append([int(s), os.path.basename(pc), file_sha256(pc), os.path.basename(bp), file_sha256(bp)])
+    return out
+
+
 def stage_t7(out):
-    r1 = R1PC(r1_root(out)); res = dict(widths={})
+    """C-T7 at every width of T7_WIDTHS. A width's partial result is reused only if it was computed with the same code (r2_toy_common,
+    r2_unlearn_toy, r2_pc_toy), QUICK, seeds, budgets and the same round-1 net files (sha256); a width that did not run is never stored
+    as a partial; t7.json lists the widths taken from a partial (from_partial) and meta.partials their code hashes (review pc_toy-4)."""
+    r1 = R1PC(r1_root(out)); res = dict(widths={}, from_partial=[])
     for W in T7_WIDTHS:
-        res["widths"][f"W{W}"] = UT.cached(out, f"t7_W{W}", lambda W=W: t7_width(r1, W), sub=SUB)
+        res["widths"][f"W{W}"] = UT.cached(out, f"t7_W{W}", lambda W=W: t7_width(r1, W), sub=SUB, extra=dict(r1_nets=t7_inputs(r1, W)),
+                                           store=lambda r: "pc" in r)
+        if UT.PROV["partials"].get(f"{SUB}/t7_W{W}", {}).get("reused"):
+            res["from_partial"].append(W)
     res["finder"] = r1.log; res["rule_preview"] = ct7_family(res)
     return res
 
@@ -486,24 +515,25 @@ def stage_cross_pc(out):
         d.setdefault("stitch", None)
     for ws in worlds:
         ms = [m for m in mods if info(m)["ws"] == ws]
-        if not ms:
-            continue
         res = dict(stage="cross_pc", measurement="AT5 cross-model pairs with a PC net (descriptive)", world=ws, quick=QUICK, plan_sha256=UT.PLAN_SHA256,
                    pc_widths=sorted({info(m)["W"] for m in ms if info(m)["kind"] == "pc"}), t3_max_width=T3_MAXW,
                    models=[{k: v_ for k, v_ in per[m].items() if k != "v_free"} for m in ms], pairs=[P_[p] for p in pairs if p[0] in ms],
                    finder=r1.log, meta=dict(UT.meta("cross_pc", t_start), r1pc=r1_root(out), r2t1=t1root),
-                   notes="every PC width runs (critique v2-11); pairs at a width without G-PC(W) are 'not testable' (r2_ana); "
-                         "t3 only where both widths <= the T3 limit and the receiver is a BP net")
+                   notes=("every PC width runs (critique v2-11); pairs at a width without G-PC(W) are 'not testable' (r2_ana); "
+                          "t3 only where both widths <= the T3 limit and the receiver is a BP net") + ("" if ms else "; no model of this world was found"))
         write_json(res, pdir(out, "cross_pc", f"w{ws}.json")); print(f"  cross_pc: world {ws} written ({len(res['pairs'])} pairs)", flush=True)
     return None
 
 
 # ================================================================================================================ CLI
 def run_stage(out, st):
+    UT.PROV["partials"].clear(); UT.PROV["nets"].clear()
     if st == "cross_pc":
-        done = sorted(glob.glob(pdir(out, "cross_pc", "w*.json")))
-        if done:
-            print(f"[cross_pc] outputs exist, skipped: {len(done)} files", flush=True); return None
+        files = [pdir(out, "cross_pc", f"w{ws}.json") for ws in SEEDS]
+        if all(os.path.exists(f) for f in files):
+            print(f"[cross_pc] every world file exists, skipped: {len(files)} files", flush=True); return None
+        if any(os.path.exists(f) for f in files):
+            print(f"[cross_pc] only {sum(os.path.exists(f) for f in files)} of {len(files)} world files exist: every world is recomputed and rewritten", flush=True)
         t0 = time.time(); print(f"[cross_pc] start (device {DEV}, QUICK {QUICK})", flush=True); stage_cross_pc(out)
         print(f"[cross_pc] done ({time.time() - t0:.0f}s)", flush=True); return None
     path = pdir(out, f"{st}.json")

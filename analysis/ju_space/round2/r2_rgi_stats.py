@@ -147,17 +147,26 @@ def gram_units(U):
 
 
 def para_step(Ge, Psi):
-    """Ge [R, X, 2, NCELL, 4, X, 2, NCELL, 4] (products of the per-object half contrasts e(x, h, o)), Psi [R, NCELL, 2, 4] ->
-    Pp [R, X, X, NCELL, NCELL] (mean over h != h', i != i') and Prel [R, X, NCELL] (h = h', i != i', same cell)."""
-    T2 = torch.einsum("rcik,rxhckygdm->rxhciygdm", Psi, Ge); G = torch.einsum("rxhciygdm,rdjm->rxhciygdj", T2, Psi)
-    Pp = (G[:, :, 0, :, 0, :, 1, :, 1] + G[:, :, 0, :, 1, :, 1, :, 0] + G[:, :, 1, :, 0, :, 0, :, 1] + G[:, :, 1, :, 1, :, 0, :, 0]) / 4   # [R, X, c, Y, d]
-    Dg = torch.diagonal(torch.diagonal(G, dim1=1, dim2=5), dim1=2, dim2=5)                                                     # [R, h, i, g, j, X, c]
-    Prel = (Dg[:, 0, 0, 0, 1] + Dg[:, 0, 1, 0, 0] + Dg[:, 1, 0, 1, 1] + Dg[:, 1, 1, 1, 0]) / 4
-    return Pp.permute(0, 1, 3, 2, 4), Prel
+    """Ge [R, X, 2, NCELL, 4, X, 2, NCELL, 4] (products of the per-object half contrasts e(x, h, o); also without the leading R, then
+    shared by all draws), Psi [R, NCELL, 2, 4] -> Pp [R, X, X, NCELL, NCELL] (mean over h != h', i != i') and Prel [R, X, NCELL] (h = h',
+    i != i', same cell). Exact reordering of the definition: Pp = 1/4 sum_{k,m} B[c,k,d,m] A[x,c,k,y,d,m] with A = sum over h != h' of Ge
+    and B = sum over i != i' of Psi[c,i,k] Psi[d,i',m]; Prel the same with h = h' and c = d."""
+    B = torch.einsum("rck,rdm->rckdm", Psi[:, :, 0], Psi[:, :, 1]) + torch.einsum("rck,rdm->rckdm", Psi[:, :, 1], Psi[:, :, 0])
+    B2 = torch.einsum("rck,rcm->rckm", Psi[:, :, 0], Psi[:, :, 1]) + torch.einsum("rck,rcm->rckm", Psi[:, :, 1], Psi[:, :, 0])
+    if Ge.dim() == 9:
+        A = Ge[:, :, 0, :, :, :, 1] + Ge[:, :, 1, :, :, :, 0]                                             # [R, X, c, k, Y, d, m]
+        A2 = torch.diagonal(torch.diagonal(torch.diagonal(Ge, dim1=1, dim2=5), dim1=1, dim2=4), dim1=1, dim2=3).sum(-2)   # [R, k, m, X, c]
+        Pp = torch.einsum("rckdm,rxckydm->rxycd", B, A) / 4; Prel = torch.einsum("rckm,rkmxc->rxc", B2, A2) / 4
+    else:
+        A = Ge[:, 0, :, :, :, 1] + Ge[:, 1, :, :, :, 0]                                                   # [X, c, k, Y, d, m]
+        A2 = torch.diagonal(torch.diagonal(torch.diagonal(Ge, dim1=0, dim2=4), dim1=0, dim2=3), dim1=0, dim2=2).sum(-2)   # [k, m, X, c]
+        Pp = torch.einsum("rckdm,xckydm->rxycd", B, A) / 4; Prel = torch.einsum("rckm,kmxc->rxc", B2, A2) / 4
+    return Pp, Prel
 
 
 def pp_draws(K, Lam, Psi, chunk):
-    """Per-draw Pp [R, NX, NX, NCELL, NCELL], Prel [R, NX, NCELL] of the A2 contrasts from the unit Gram K (device float64)."""
+    """Per-draw Pp [R, NX, NX, NCELL, NCELL], Prel [R, NX, NCELL] of the A2 contrasts from the unit Gram K (device float64): the contrasts'
+    e-Gram Lam K Lam' per draw, then para_step."""
     dev = K.device; out_p, out_r = [], []
     for i in range(0, Lam.shape[0], chunk):
         L = Lam[i:i + chunk].to(dev); Ps = Psi[i:i + chunk].to(dev); R = L.shape[0]
@@ -588,9 +597,10 @@ def causal_point(Ge, PP):
 
 
 def causal_draws(Ge, Psi, chunk):
+    """Per-draw Pp, Prel of the causal units (Ge fixed: only the paraphrase weights vary)."""
     out_p, out_r = [], []
     for i in range(0, Psi.shape[0], chunk):
-        Ps = Psi[i:i + chunk].to(Ge.device); Pp, Prel = para_step(Ge[None].expand(Ps.shape[0], *Ge.shape), Ps); out_p.append(Pp.cpu()); out_r.append(Prel.cpu())
+        Pp, Prel = para_step(Ge, Psi[i:i + chunk].to(Ge.device)); out_p.append(Pp.cpu()); out_r.append(Prel.cpu())
     return torch.cat(out_p), torch.cat(out_r)
 
 
@@ -617,7 +627,7 @@ def run(r2_dir, m="qwen3-1.7b", force=False):
     A = dict(dot=z["dot"], obj=z["obj"], lex=z["lex"], last=dz["last"], mean=dz["mean"], W=cz["W"].numpy())   # each array read once (NpzFile is lazy)
     NL, D = A["dot"].shape[1], A["dot"].shape[2]
     labels = dz["labels"].astype(np.int64); des_d = draw_design(N_DRAWS); des_pt = point_design(); Lam, Psi, _ = weights(des_d); LL, PP = point_operators(des_pt)
-    chunk = 64 if dev.type == "cuda" else 8
+    chunk = 64 if dev.type == "cuda" else 4                                     # draws per product (4 is fastest on one CPU core)
     ctx = dict(dev=dev, unit=unit, neu=neu, pool=pool, Lam=Lam, Psi=Psi, LL=LL, PP=PP, des_pt=des_pt, chunk=chunk, labels=labels, g_self=dr["g_self_f2"].double())
     fp = dict(version=VERSION, model=m, mock=MOCK, n_draws=N_DRAWS, n_dboot=N_DBOOT, seeds=SEEDS, inputs={k: v.get("sha256") for k, v in inp.items()})
     BS = []; os.makedirs(P["cache"], exist_ok=True); n_cached = 0

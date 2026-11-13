@@ -34,9 +34,14 @@ def _fin(x): return x is not None and isinstance(x, (int, float)) and math.isfin
 
 
 def run(root, r1_dir, r2_dir, b):
-    """The GEN loop of block b (skipped when rgi/dyn_b<b>.json exists). Returns the JSON written."""
+    """The GEN loop of block b. Skipped when rgi/dyn_b<b>.json exists and, for a loop that ran, rgi/dyn_b<b>.pt too (review axes-2: a
+    lost .pt is rebuilt from the cached ev_r2GEN* / dir_r2GEN* entries of the state copy, or regenerated with the same keys if that copy
+    is gone; the .pt is written before the JSON). Returns the JSON written."""
     js_p, pt_p = out_paths(r2_dir, b)
-    if os.path.exists(js_p): R.log(f"GEN loop b{b}: {js_p} exists, skipped"); return json.load(open(js_p))
+    if os.path.exists(js_p):
+        js = json.load(open(js_p))
+        if js.get("status") != "ran" or os.path.exists(pt_p): R.log(f"GEN loop b{b}: {js_p} exists, skipped"); return js
+        R.log(f"GEN loop b{b}: {pt_p} missing, rebuilding it")
     base = dict(script="r2_gen_loop.py", plan="final plan (abschnitt11_12_runde2_plan.md) section 3.1 A6 (b)", block=b, loop=LOOP, nseed=NSEED,
                 rounds=ROUNDS, keys="keyseed('r2GEN' + SUF_b, n, p, s, b)", ga_threshold=GA_AUC, mock=R.MOCK)
     if not R.block_final(r1_dir, b):
@@ -117,6 +122,15 @@ def selftest(root, r1_dir, r2_dir):
     check("resume: an existing output is kept", os.path.getmtime(out_paths(o, b)[0]) == t0 and js2 == json.loads(json.dumps(js2)))
     os.remove(out_paths(o, b)[0]); js3 = run(root, r1_dir, o, b)
     check("rerun from the cached evaluations gives the same rows", json.dumps(js3["rows"]) == json.dumps(js["rows"]))
+    jp, pp = out_paths(o, b); P0 = torch.load(pp, map_location="cpu", weights_only=False); os.remove(pp); js4 = run(root, r1_dir, o, b)
+    P1 = torch.load(pp, map_location="cpu", weights_only=False) if os.path.exists(pp) else None
+    same = P1 is not None and all(torch.equal(P1["d"][n], P0["d"][n]) for n in range(1, 5)) and all(
+        P1["ev"][n]["conts"] == P0["ev"][n]["conts"] and torch.equal(P1["ev"][n]["delta"], P0["ev"][n]["delta"]) for n in range(ROUNDS))
+    tj, tp = os.path.getmtime(jp), (os.path.getmtime(pp) if P1 is not None else None); run(root, r1_dir, o, b)
+    gj = out_paths(g, b)[0]; tg = os.path.getmtime(gj); jg = run(root, r1_dir, g, b)
+    check("axes-2: a missing dyn_b<b>.pt is rebuilt (identical) with unchanged rows, the next run skips; a 'not run' JSON needs no .pt",
+          same and json.dumps(js4["rows"]) == json.dumps(js["rows"]) and js4["E_GI"] == js["E_GI"] and os.path.getmtime(jp) == tj and os.path.getmtime(pp) == tp
+          and jg["status"] == "not run (AUC gate)" and os.path.getmtime(gj) == tg and not os.path.exists(out_paths(g, b)[1]))
     ok = all(r["ok"] for r in res); R.write_json(os.path.join(base, f"selftest_b{b}.json"), dict(ok=ok, tests=res))
     print(f"r2_gen_loop selftest (block {b}): {sum(r['ok'] for r in res)}/{len(res)} passed", flush=True); return ok
 

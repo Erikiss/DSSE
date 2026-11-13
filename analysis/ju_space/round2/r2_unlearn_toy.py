@@ -59,7 +59,7 @@ T6_W, T6_LS = (32 if QUICK else 128), ((1, 2) if QUICK else (1, 2, 3, 4))
 T6_NULLS, T6_MODES, SNAP_EVERY = (10 if QUICK else 50), 5, 25
 T1_KS = (1, 2, 8) if QUICK else tuple(range(1, 9))              # x / y columns: keep 2k of 16 dims
 T1_TK = (1, 5) if QUICK else (1, 2, 3, 4, 5)                     # task columns: keep 2K of 11 dims
-T1_RS = (2, 16) if QUICK else (2, 4, 8, 16, 32, 64)              # hidden projections z1 / h2: top-r
+T1_RS = (2, 16, 32) if QUICK else (2, 4, 8, 16, 32, 64)          # hidden projections z1 / h2: top-r (r = W included)
 NDRAW = 5                                                        # random bases / OD-C2 draws
 NPERM = (20, 10, 20) if QUICK else (1000, 1000, 500)             # C-T0 permutations: frequency share, LOO ring, answer spectrum
 BUDGETS = tuple(TC.BUDGETS)                                      # (300, 3000) best-of-budget (OD-C1); QUICK (20, 60)
@@ -150,13 +150,37 @@ def tdir(out, *parts):
     return os.path.join(out, SUB, *parts)
 
 
-def cached(out, key, fn, sub=SUB):
-    """Per-cell partial result: <out>/<sub>/partial/<key>.json is read if it exists, else fn() is computed and written."""
-    p = os.path.join(out, sub, "partial", key + ".json")
+PROV = dict(partials={}, nets={})        # provenance of the partial results and net batches the running stage used (-> meta)
+
+
+def provenance(extra=None):
+    """What a partial result depends on beyond its key (review unlearn_toy-4, pc_toy-4): the sha256 of r2_toy_common.py,
+    r2_unlearn_toy.py and r2_pc_toy.py, QUICK, the seeds and the budgets; extra = caller-specific inputs (C-T7: the round-1 net files of
+    the width with their sha256)."""
+    d = dict(code_sha256=lib_sha256(), quick=QUICK, seeds=list(SEEDS), budgets=list(BUDGETS))
+    if extra is not None:
+        d["extra"] = extra
+    return _clean(d)
+
+
+def cached(out, key, fn, sub=SUB, extra=None, store=None):
+    """Per-cell partial result <out>/<sub>/partial/<key>.json: reused only if the provenance stored with it equals provenance(extra) of
+    the running process; otherwise fn() is recomputed (with a message naming what differs) and written, unless store(result) is False
+    (e.g. a C-T7 width that did not run). Every partial a stage used is listed with its code hash in PROV['partials'] (meta.partials)."""
+    p = os.path.join(out, sub, "partial", key + ".json"); want = provenance(extra); tag = f"{sub}/{key}"
     if os.path.exists(p):
-        print(f"  [{key}] partial result exists, loaded", flush=True); return read_json(p)
-    t0 = time.time(); r = _clean(fn()); r["seconds"] = time.time() - t0; write_json(r, p)
-    print(f"  [{key}] done ({r['seconds']:.0f}s)", flush=True)
+        r = read_json(p); have = r.get("_provenance")
+        if have == want:
+            print(f"  [{key}] partial result exists (same code and inputs), loaded", flush=True)
+            PROV["partials"][tag] = dict(reused=True, code_sha256=have["code_sha256"]); return r
+        why = "no stored provenance" if not isinstance(have, dict) else ", ".join(k for k in sorted(set(want) | set(have)) if have.get(k) != want.get(k))
+        print(f"  [{key}] partial result exists but its {why} differ(s) from this run: recomputed", flush=True)
+    t0 = time.time(); r = _clean(fn()); r["seconds"] = time.time() - t0; r["_provenance"] = want
+    stored = store is None or bool(store(r))
+    if stored:
+        write_json(r, p)
+    PROV["partials"][tag] = dict(reused=False, stored=stored, code_sha256=want["code_sha256"])
+    print(f"  [{key}] done ({r['seconds']:.0f}s)" + ("" if stored else ", not stored as a partial"), flush=True)
     return r
 
 
@@ -166,9 +190,14 @@ def lib_sha256():
             if os.path.exists(os.path.join(_HERE, f))}
 
 
+AXIS_SIGN_RULE = ("principal axes of the centred task columns (task_pcs: float64 SVD on the CPU) are oriented so that the task column with "
+                  "the largest absolute coordinate on the axis has a positive coordinate (review unlearn_toy-2; C-T4 push along u1)")
+
+
 def meta(stage, t0):
     return dict(stage=stage, plan_sha256=PLAN_SHA256, quick=QUICK, device=str(DEV), torch=torch.__version__, seeds=list(SEEDS),
-                budgets=list(BUDGETS), ft_eval=list(FT_EVAL), ndraw=NDRAW, rng_seeds=RNG_SEEDS, code_sha256=lib_sha256(),
+                budgets=list(BUDGETS), ft_eval=list(FT_EVAL), ndraw=NDRAW, rng_seeds=RNG_SEEDS, axis_sign_rule=AXIS_SIGN_RULE,
+                code_sha256=lib_sha256(), partials=dict(PROV["partials"]), nets=dict(PROV["nets"]),
                 seconds=time.time() - t0, written_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
 
 
@@ -182,9 +211,11 @@ def nets_batch(out, tag, specs, **train_kw):
     if os.path.exists(mp):
         info = read_json(mp)
         if info.get("names") == names and all(os.path.exists(p) for p in paths):
+            note = net_code_check(tag, info)
             nets = TC.load_nets(paths); extra = None
             if info.get("extra"):
                 extra = torch.load(os.path.join(folder, tag + ".extra.pt"), map_location="cpu", weights_only=False)
+            PROV["nets"][tag] = dict(reused=True, code_sha256=info.get("code_sha256"), note=note)
             return nets, info["rows"], extra
     t0 = time.time(); res = TC.train(specs, **train_kw)
     TC.save_nets(res.nets, list(range(res.nets.B)), folder, names=names)
@@ -192,9 +223,33 @@ def nets_batch(out, tag, specs, **train_kw):
     if train_kw.get("snapshot_every"):
         extra = dict(snapshots=[(int(s), v, np.asarray(a)) for s, v, a in res.snapshots])
         tmp = os.path.join(folder, tag + ".extra.pt.tmp"); torch.save(extra, tmp); os.replace(tmp, os.path.join(folder, tag + ".extra.pt"))
-    write_json(dict(tag=tag, names=names, rows=res.rows, extra=extra is not None, seconds=time.time() - t0), mp)
+    code = lib_sha256()
+    write_json(dict(tag=tag, names=names, rows=res.rows, extra=extra is not None, seconds=time.time() - t0, code_sha256=code), mp)
+    PROV["nets"][tag] = dict(reused=False, code_sha256=code)
     print(f"  trained batch {tag}: {len(specs)} nets ({time.time() - t0:.0f}s)", flush=True)
     return res.nets, res.rows, extra
+
+
+def net_code_check(tag, info):
+    """Saved nets are reused only with the trainer that made them (review unlearn_toy-4): if r2_toy_common.py's sha256 differs from the
+    one stored with the batch (or none is stored), stop with a message, because reusing them mixes two trainer versions and retraining
+    would replace nets that finished stages of this session analysed (W0: the nets of one session); env R2_REUSE_NETS=1 reuses them and
+    the note is recorded in meta.nets. A difference in the stage scripts only is reported and recorded (the specs are fixed by the
+    names, the training is the library's)."""
+    old, new = info.get("code_sha256") or {}, lib_sha256()
+    if old.get("r2_toy_common.py") != new.get("r2_toy_common.py"):
+        msg = (f"models/{tag}: trained by r2_toy_common.py {str(old.get('r2_toy_common.py'))[:12]}, the library is now "
+               f"{new.get('r2_toy_common.py', '')[:12]}. Delete {SUB}/models/ and the stage outputs to retrain every net, or set "
+               "R2_REUSE_NETS=1 to reuse these nets (recorded in meta.nets).")
+        if os.environ.get("R2_REUSE_NETS") != "1":
+            raise SystemExit(msg)
+        print("  WARNING: " + msg, flush=True)
+        return "reused with a different r2_toy_common.py (R2_REUSE_NETS=1)"
+    diff = [f for f in sorted(new) if f != "r2_toy_common.py" and old.get(f) != new.get(f)]
+    if diff:
+        print(f"  WARNING: models/{tag} were trained when {', '.join(diff)} differed from now; reused", flush=True)
+        return f"reused; {', '.join(diff)} differed at training"
+    return "reused"
 
 
 def slim(rows):
@@ -423,11 +478,21 @@ def complement(Q):
     return torch.linalg.qr(A)[0][:, r:]
 
 
-def task_pcs(nets, tidx=None):
-    """Principal axes (in R^W) of each net's centred task columns: U [B, W, n] (left singular vectors, descending), S [B, n]."""
-    T = nets.task_cols()[:, :, list(range(NPRE)) if tidx is None else list(tidx)].double()
-    Tc = T - T.mean(-1, keepdim=True); U, S, _ = torch.linalg.svd(Tc, full_matrices=False)
-    return U, S, T.mean(-1)
+def orient_axes(U, Tc):
+    """AXIS_SIGN_RULE: flip each axis u (column of U [B, W, n]) so that the column of Tc [B, W, m] with the largest absolute coordinate
+    u^T Tc_t has a positive coordinate (first index on a tie). Returns (U oriented, flipped [B, n] bool)."""
+    C = torch.einsum("bwn,bwt->bnt", U, Tc); s = torch.gather(C, -1, C.abs().argmax(-1, keepdim=True)).squeeze(-1)
+    flip = s < 0
+    return U * torch.where(flip, -1.0, 1.0).to(U.dtype).unsqueeze(1), flip
+
+
+def task_pcs(nets, tidx=None, return_flips=False):
+    """Principal axes (in R^W) of each net's centred task columns: U [B, W, n] (left singular vectors, descending; float64 SVD on the
+    CPU, so device-independent; signs by AXIS_SIGN_RULE), S [B, n], the task-mean column [B, W] (CPU float64); with return_flips also
+    the per-axis sign flips [B, n] (bool numpy)."""
+    T = nets.task_cols()[:, :, list(range(NPRE)) if tidx is None else list(tidx)].double().cpu()
+    Tc = T - T.mean(-1, keepdim=True); U, S, _ = torch.linalg.svd(Tc, full_matrices=False); U, flip = orient_axes(U, Tc)
+    return (U, S, T.mean(-1), flip.numpy()) if return_flips else (U, S, T.mean(-1))
 
 
 def damage_match(nets, tasks, base_sp, target, layer, center, r0, key, var_net=None):
@@ -703,7 +768,7 @@ def unsearch(nets, ws_of, arms, rounds, steps, budgets, remove_budget, key, pc_e
     chains = [(a, b, j) for a in arms for b in range(B) for j in range(NNEW)]; Cn = len(chains)
     cb = np.array([b for _, b, _ in chains]); cj = np.array([j for _, _, j in chains]); ca = [a for a, _, _ in chains]
     sh, ho, va = new_sets(ws_of, cb, cj)
-    ref = TC.z1_ref(nets); Ut, _, _ = task_pcs(nets); Ut = Ut[:, :, :NPRE - 1].cpu()
+    ref = TC.z1_ref(nets); Ut, _, _ = task_pcs(nets); Ut = Ut[:, :, :NPRE - 1]
     Ex, Ey = nets.x_cols().double(), nets.y_cols().double()
     Qxy = [orth_cols(torch.cat([Ex[b] - Ex[b].mean(1, keepdim=True), Ey[b] - Ey[b].mean(1, keepdim=True)], 1)).cpu() for b in range(B)]
     U = [torch.zeros(W, 0, dtype=F64) for _ in range(Cn)]
@@ -914,7 +979,7 @@ def t1_cell(out, arm, W):
         ent = []; Hs = st[layer]; mu = Hs.mean(1); Hc = Hs - mu[:, None]
         Cvs = [Hc[b].T @ Hc[b] / Hc.shape[1] for b in range(B)]; ev = [torch.linalg.eigh(Cv) for Cv in Cvs]
         for r in T1_RS:
-            if r >= W:
+            if r > W:                    # r = W (empty complement) = the uncut net, part of the plan's grid (review unlearn_toy-3)
                 continue
             items, vnet, info = [], [], []
             for b in range(B):
@@ -930,7 +995,7 @@ def t1_cell(out, arm, W):
                 ent.append(dict(e, acc=float(acc[i]), B2_8=float(b2r[8][i]), B2_4=float(b2r[4][i])))
         fam[layer] = _agg(ent, B, vkeys)
     return dict(arm=arm, W=W, nets=slim(rows), base=base, families=fam,
-                grids=dict(xy=list(T1_KS), task=list(T1_TK), z1=[r for r in T1_RS if r < W], h2=[r for r in T1_RS if r < W]))
+                grids=dict(xy=list(T1_KS), task=list(T1_TK), z1=[r for r in T1_RS if r <= W], h2=[r for r in T1_RS if r <= W]))
 
 
 def stage_t1(out):
@@ -1102,29 +1167,40 @@ def _draw_mean(d, B):
             if k not in ("modal", "share", "label")} | dict(acc_draws=np.asarray(d["acc"], float).reshape(B, NDRAW))
 
 
-def push_bisect(nets, tasks, u1, target, scale, tol=0.02, iters=30, expand=20):
-    """OD-C9: beta per net with the old-task accuracy of the push z1 += -beta u1 within tol of target (bisection; accuracy assumed
-    to fall with beta). Returns dict(beta, acc, target, matched)."""
-    B = nets.B; allv = np.arange(B)
+def push_bisect(nets, tasks, u1, target, scale, tol=0.02, iters=40, expand=20, rtol=1e-3, acc_fn=None):
+    """OD-C9 push size per net (review unlearn_toy-2; NOTE): beta = the smallest push z1 += -beta u1 at which the old-task accuracy
+    reaches the target (acc <= target: 'crossing'); for a net whose accuracy never reaches it within the doublings, the smallest beta at
+    which it comes within tol of it (acc <= target + tol: 'band'); 'not reached' otherwise. Found by doubling from scale and bisection
+    between the last two doubling points (from 0 if scale already reaches it) to a relative width rtol; the accuracy is assumed to fall
+    with beta. matched = the accuracy at beta lies within tol of the target (OD-C9). Before the review the first evaluated beta inside the
+    band was returned, which could be up to twice the smallest matching dose. acc_fn(beta [B]) -> accuracy [B] replaces the nets' old-task
+    accuracy under the push (selftest). Returns dict(beta, acc, target, matched, rule)."""
+    tgt = np.asarray(target, float); B = len(tgt)
+    if acc_fn is None:
+        allv = np.arange(nets.B)
 
-    def acc_at(beta):
-        return eval_old(nets, tasks, allv, ops=mk_ops([{"z1_shift": -float(beta[b]) * u1[b]} for b in allv], nets.W))["mean"]
-    lo = np.zeros(B); hi = np.maximum(np.asarray(scale, float), 1e-3); a_hi = acc_at(hi)
+        def acc_fn(beta):
+            return eval_old(nets, tasks, allv, ops=mk_ops([{"z1_shift": -float(beta[b]) * u1[b]} for b in allv], nets.W))["mean"]
+    hi = np.maximum(np.asarray(scale, float), 1e-3).copy(); lo = np.zeros(B); a_hi = np.asarray(acc_fn(hi), float); hist = [(hi.copy(), a_hi.copy())]
     for _ in range(expand):
-        need = a_hi > target + tol
+        need = a_hi > tgt
         if not need.any():
             break
-        hi = np.where(need, 2 * hi, hi); a_hi = acc_at(hi)
-    beta, a = hi.copy(), a_hi.copy()
+        lo = np.where(need, hi, lo); hi = np.where(need, 2 * hi, hi); a_hi = np.where(need, np.asarray(acc_fn(hi), float), a_hi)
+        hist.append((hi.copy(), a_hi.copy()))
+    cross = a_hi <= tgt; thr = np.where(cross, tgt, tgt + tol); rule = np.where(cross, "crossing", "band").astype(object); active = np.ones(B, bool)
+    for b in np.nonzero(~cross)[0]:                     # band fallback: first doubling point within tol, bracketed by the point before it
+        k = next((i for i, (h, a) in enumerate(hist) if a[b] <= thr[b]), None)
+        if k is None:
+            rule[b] = "not reached"; active[b] = False; continue
+        hi[b], a_hi[b] = hist[k][0][b], hist[k][1][b]; lo[b] = hist[k - 1][0][b] if k > 0 else 0.0
     for _ in range(iters):
-        todo = np.abs(a - target) > tol
-        if not todo.any():
+        go = active & (hi - lo > rtol * hi)
+        if not go.any():
             break
-        mid = 0.5 * (lo + hi); am = acc_at(mid)
-        lo = np.where(todo & (am > target), mid, lo); hi = np.where(todo & (am <= target), mid, hi)
-        better = todo & (np.abs(am - target) < np.abs(a - target))
-        beta = np.where(better, mid, beta); a = np.where(better, am, a)
-    return dict(beta=beta, acc=a, target=np.asarray(target, float), matched=np.abs(a - target) <= tol)
+        mid = 0.5 * (lo + hi); am = np.asarray(acc_fn(np.where(go, mid, hi)), float); ok = am <= thr
+        hi = np.where(go & ok, mid, hi); a_hi = np.where(go & ok, am, a_hi); lo = np.where(go & ~ok, mid, lo)
+    return dict(beta=hi, acc=a_hi, target=tgt, matched=np.abs(a_hi - tgt) <= tol, rule=rule.tolist())
 
 
 def t4_cell(out, arm, W):
@@ -1132,7 +1208,7 @@ def t4_cell(out, arm, W):
     nets, rows, _ = onehot_nets(out, arm, W); B = nets.B; ws_of = list(SEEDS); tasks = Tasks.w1(ws_of); allv = np.arange(B)
     key = f"t4|{arm}|W{W}"; F = fresh_F(arm, W, ws_of)
     base = base_measures(nets, tasks, ws_of, arm, relearn=False, new=False, b2=False)       # searches: batched below
-    Ut, _, mT = task_pcs(nets); Ut = Ut.cpu(); U11 = Ut[:, :, :NPRE - 1]; ref = TC.z1_ref(nets)
+    Ut, _, mT, flips = task_pcs(nets, return_flips=True); U11 = Ut[:, :, :NPRE - 1]; ref = TC.z1_ref(nets)
     Ex = nets.x_cols().double().cpu(); Qx = [orth_cols(Ex[b] - Ex[b].mean(1, keepdim=True)) for b in allv]
     T = nets.task_cols()[:, :, :NPRE]; Tcpu = T.double().cpu(); u1 = Ut[:, :, 0]
     edit_cols = T.mean(-1, keepdim=True).expand(-1, -1, NPRE).transpose(1, 2)
@@ -1200,7 +1276,8 @@ def t4_cell(out, arm, W):
         out_ops[nm] = dict(dim=dims[nm], op=d, iso=iso[nm], span=span.get(nm), dm=dmd, push=push.get(nm),
                            label="out-of-distribution damage (5.1)" if nm == "reflect" else ("positive control for generic damage" if nm == "xspan" else None))
     t4b_res = strip(t4b_res)
-    return dict(arm=arm, W=W, nets=slim(rows), base=base, ops=out_ops, t4b=t4b_res)
+    return dict(arm=arm, W=W, nets=slim(rows), base=base, ops=out_ops, t4b=t4b_res,
+                pc_orientation=dict(rule=AXIS_SIGN_RULE, u1_flipped=flips[:, 0].tolist()))
 
 
 def t4_w4(out, W):
@@ -1310,7 +1387,9 @@ def stage_t6(out):
 
 # ================================================================================================================ rules (5.1, frozen)
 # Each rules_<stage>(res) reads only the stage JSON (lists after the round trip) and returns the frozen rule's preview; r2_unlearn_
-# verdict.py (r2_ana) governs and may import these functions. Missing intervals (fewer than 2 seeds) fail a condition.
+# verdict.py (r2_ana) governs and may import these functions. Missing intervals (fewer than 2 seeds) fail a condition. Every stored
+# rule input is summ(): the t interval that governs, the per-seed values and, next to it, the paired seed bootstrap (2.6; review
+# unlearn_toy-5: 10,000 draws from default_rng(0), the same resampled seeds for every quantity of equal n, deciding nothing).
 def _mean(v):
     return tci(v)["mean"]
 
@@ -1390,7 +1469,7 @@ def rules_t1(res):
             lab = "critical length" if (n_gap >= q and n_jump >= q) else ("graceful" if n_grace >= q else "intermediate")
             o[f] = dict(grid=grid, control=ctrl, kstar_pca=[grid[k] if k < len(grid) else None for k in kp],
                         kstar_ctrl=[grid[k] if k < len(grid) else None for k in kr], n_gap2=n_gap, n_jump05=n_jump, n_graceful=n_grace, label=lab)
-        o["B2_uncut"] = {ns: tci(v) for ns, v in c["base"]["B2"].items()}
+        o["B2_uncut"] = {ns: summ(v) for ns, v in c["base"]["B2"].items()}
         out[name] = o
     return out
 
@@ -1404,8 +1483,8 @@ def rules_t2(res):
     ks = sorted({k for _, k in by}); codes = sorted({c for c, _ in by}); out = dict(cells={}, k_min={}, effects={})
     for (code, k), v in sorted(by.items()):
         zs = [d["zero_shot"] for d in v]; modal_tr = [m["modal_is_trained"] for d in v for m in d["zs_modal"]]
-        out["cells"][f"{code}_k{k}"] = dict(level1_seeds=sum(bool(d["level1"]) for d in v), zero_shot=tci(zs), code_search=tci([d["code_search"] for d in v]),
-                                           heldout_eval=tci([d["heldout_eval"] for d in v]), free_A8=tci([d["free_A8"] for d in v]), B2_8=tci([d["B2_8"] for d in v]),
+        out["cells"][f"{code}_k{k}"] = dict(level1_seeds=sum(bool(d["level1"]) for d in v), zero_shot=summ(zs), code_search=summ([d["code_search"] for d in v]),
+                                           heldout_eval=summ([d["heldout_eval"] for d in v]), free_A8=summ([d["free_A8"] for d in v]), B2_8=summ([d["B2_8"] for d in v]),
                                            snap=bool(np.mean(zs) < 0.03 and np.mean(modal_tr) >= 0.75), modal_trained_share=float(np.mean(modal_tr)))
     for code in codes:
         km = [k for k in ks if (code, k) in by and sum(bool(d["level1"]) for d in by[(code, k)]) >= quorum(len(by[(code, k)]))]
@@ -1449,8 +1528,8 @@ def t4b_rule(t, base_acc_mean, chance):
     return dict(causal=unlearns(t["acc"], t["dm"]["acc"], base_acc_mean),
                 correlate=_ge(_lo(t["acc"]), 0.9 * base_acc_mean) and _le(_hi(pr["task_lin"]), chance + 0.05),
                 nonlinear_residue=_ge(_lo(pr["task_mlp"]), chance + 0.05) if "task_mlp" in pr else None,
-                dm_matched=bool(t["dm"]["match"]["matched"]), acc=tci(t["acc"]), dm_acc=tci(t["dm"]["acc"]), task_lin=tci(pr["task_lin"]),
-                task_mlp=tci(pr["task_mlp"]) if "task_mlp" in pr else None)
+                dm_matched=bool(t["dm"]["match"]["matched"]), acc=summ(t["acc"]), dm_acc=summ(t["dm"]["acc"]), task_lin=summ(pr["task_lin"]),
+                task_mlp=summ(pr["task_mlp"]) if "task_mlp" in pr else None)
 
 
 def rules_t3(res):
@@ -1458,8 +1537,8 @@ def rules_t3(res):
     for Kk, arms in res["gate"].items():
         rg = sorted(arms.get("ring", []), key=lambda d: d["ws"]); pg = sorted(arms.get("pring", []), key=lambda d: d["ws"]); n = len(rg)
         both = sum(r["zero_shot"] >= 0.9 and p["zero_shot"] <= 0.2 for r, p in zip(rg, pg))
-        out[f"gate_{Kk}"] = dict(passes=both >= quorum(n), seeds_both=both, ring=tci([d["zero_shot"] for d in rg]), pring=tci([d["zero_shot"] for d in pg]),
-                                 c_onehot=tci([d["zero_shot"] for d in arms.get("c-onehot", [])]))
+        out[f"gate_{Kk}"] = dict(passes=both >= quorum(n), seeds_both=both, ring=summ([d["zero_shot"] for d in rg]), pring=summ([d["zero_shot"] for d in pg]),
+                                 c_onehot=summ([d["zero_shot"] for d in arms.get("c-onehot", [])]))
         out[f"hatch_{Kk}"] = [dict(ws=d["ws"], extract=d["hatch"]["extract"], first95=d["hatch"]["first95"]) for d in rg]
     out["gate"] = bool(out.get("gate_K1", {}).get("passes", False))
     word = {}; Ls = sorted(int(k[1:]) for k in res["word"]); lstar = None
@@ -1477,10 +1556,10 @@ def rules_t3(res):
     if ops:
         b = ops["base"]; a0 = _mean(b["acc"]); sp0 = _mean(b["sp"]); cj = ops["conj"]
         share = float(np.mean([x for row in cj["modal_is_minus_c"] for x in row]))
-        out["conjugation"] = dict(acc=tci(cj["acc"]), sp_ratio=(_mean(cj["sp"]) / sp0) if sp0 else None, modal_minus_c_share=share,
+        out["conjugation"] = dict(acc=summ(cj["acc"]), sp_ratio=(_mean(cj["sp"]) / sp0) if sp0 else None, modal_minus_c_share=share,
                                   inverted_ability=_le(_hi(cj["acc"]), CHANCE_A - 1e-12) and _ge(_mean(cj["sp"]), 0.8 * sp0) and share >= 0.75)
         out["t4b"] = {L: t4b_rule(t, a0, CHANCE_T) for L, t in ops["t4b"].items()}
-        out["cplane"] = dict(acc=tci(ops["cplane"]["acc"]), zero_shot=tci(ops["cplane"]["zero_shot"]), rand_acc=tci(ops["cplane"]["rand"]["acc"]))
+        out["cplane"] = dict(acc=summ(ops["cplane"]["acc"]), zero_shot=summ(ops["cplane"]["zero_shot"]), rand_acc=summ(ops["cplane"]["rand"]["acc"]))
     if not out["gate"]:
         out["note"] = "circle gate failed: no pattern claim anywhere in Part C (G41)"
     return out
@@ -1501,9 +1580,9 @@ def rules_t4(res):
                            depth=depth, meta_unlearned=_le(_hi(op["B2"]["8"]), 0.05),
                            inverted=_le(_hi(op["acc"]), CHANCE_A - 1e-12) and _ge(_mean(op["sp"]), 0.8 * sp0) and n_perm >= q,
                            iso_status=ctrl_status(o["iso"]["acc"], a0), span_status=ctrl_status(o["span"]["acc"], a0) if o.get("span") else None,
-                           dm_status=ctrl_status(dm["acc"], a0), dm_matched=matched, acc=tci(op["acc"]), dm_acc=tci(dm["acc"]), sp=tci(op["sp"]),
-                           relearn_minus_new=summ(d), relearn_long=tci(op["relearn"][bl]), A_new_long=tci(op["A_new"][bl]),
-                           B2_8=tci(op["B2"]["8"]), consistent_permutation_seeds=n_perm, modal_labels=op["label"])
+                           dm_status=ctrl_status(dm["acc"], a0), dm_matched=matched, acc=summ(op["acc"]), dm_acc=summ(dm["acc"]), sp=summ(op["sp"]),
+                           relearn_minus_new=summ(d), relearn_long=summ(op["relearn"][bl]), A_new_long=summ(op["A_new"][bl]),
+                           B2_8=summ(op["B2"]["8"]), consistent_permutation_seeds=n_perm, modal_labels=op["label"])
         if ops["blk1"]["unlearns"]:
             lad = dict(rung="one direction", within_span_1dim_control=ops["blk1"]["span_status"])
         else:
@@ -1527,8 +1606,8 @@ def rules_t4(res):
             o2[nm] = dict(forget_unlearns=unlearns(op["add"], dm["add"], a0),
                           specificity=("not testable (no damage-matched control within 0.02)" if not matched else
                                        ("specific" if _ge(_mean(op["sub"]), 0.9 * _mean(dm["sub"])) else "generic damage")),
-                          add=tci(op["add"]), sub=tci(op["sub"]), dm_add=tci(dm["add"]), dm_sub=tci(dm["sub"]), sp=tci(op["sp"]),
-                          relearn_add_short=tci(op["relearn_add"][bs]), relearn_add_long=tci(op["relearn_add"][bl]))
+                          add=summ(op["add"]), sub=summ(op["sub"]), dm_add=summ(dm["add"]), dm_sub=summ(dm["sub"]), sp=summ(op["sp"]),
+                          relearn_add_short=summ(op["relearn_add"][bs]), relearn_add_long=summ(op["relearn_add"][bl]))
         out["w4"][name] = dict(base_add=a0, base_sub=s0, ops=o2)
     return out
 
@@ -1547,7 +1626,7 @@ def rules_t5(res):
             A_free = Aa[:, :, 0].mean(1); A_op = Aa[:, :, la].mean(1)
             A_at_r = [float(np.mean([Aa[s, j, min(int(rs[s, j]), la)] for j in range(NNEW)])) for s in range(n)]     # s_(r*), s_last if never
             arms[arm] = dict(A_free=A_free, A_op=A_op, A_s4=Aa[:, :, i4].mean(1), rstar_task=rs, rstar_seed=rs_seed, A_op_at_rstar=A_at_r,
-                             A_op_t=tci(A_op), last_round=la)
+                             A_op_t=summ(A_op), last_round=la)
         col, rnd = arms.get("col"), arms.get("rand"); o = dict(rounds=R, s4_index=i4, last_index=last, arms=arms)
         if col and rnd:
             o["low_dimensional_search"] = bool(sum(r_ <= 4 for r_ in col["rstar_seed"]) >= q and sum(a >= 0.8 * f for a, f in zip(rnd["A_s4"], rnd["A_free"])) >= q)
@@ -1574,9 +1653,9 @@ def rules_t6(res):
     cap = {}
     for L, c in res["caps"].items():
         cnt = sum(bool(l1) and rx >= 1.5 and rw >= 1.5 for l1, rx, rw in zip(c["level1"], c["ratio_Ex"], c["ratio_W2"]))
-        cap[L] = dict(seeds=int(cnt), re_routing=cnt >= q, level1_seeds=sum(bool(x) for x in c["level1"]), ratio_Ex=tci(c["ratio_Ex"]), ratio_W2=tci(c["ratio_W2"]),
-                      B2_8=tci(c["B2"]["8"]))
-    return dict(modes=real, caps=cap, free_B2_8=tci(fr["B2"]["8"]))
+        cap[L] = dict(seeds=int(cnt), re_routing=cnt >= q, level1_seeds=sum(bool(x) for x in c["level1"]), ratio_Ex=summ(c["ratio_Ex"]), ratio_W2=summ(c["ratio_W2"]),
+                      B2_8=summ(c["B2"]["8"]))
+    return dict(modes=real, caps=cap, free_B2_8=summ(fr["B2"]["8"]))
 
 
 # ================================================================================================================ CLI
@@ -1589,6 +1668,7 @@ def run_stage(out, st):
     if os.path.exists(path):
         print(f"[{st}] output exists, skipped: {path}", flush=True); return read_json(path)
     t0 = time.time(); print(f"[{st}] start (device {DEV}, QUICK {QUICK}, seeds {list(SEEDS)})", flush=True)
+    PROV["partials"].clear(); PROV["nets"].clear()
     res = STAGE_FN[st](out); res["meta"] = meta(st, t0); write_json(res, path)
     print(f"[{st}] done ({time.time() - t0:.0f}s) -> {path}", flush=True)
     return read_json(path)

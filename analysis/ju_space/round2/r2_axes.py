@@ -23,7 +23,9 @@ Statistics (stage 'stats', no model) per block b of B3 (fold = R1.state[b]['axes
   u_RGI_perpT = u_RGI_perp orthogonalised against u_T_perp (R1), nulls the same way;
   u_dir = mean_p (x_RSI_PRO,p - x_RGI_PRO,p) (session texts, shared keys), cross-fitted centred AUC of RSI_PRO against RGI_PRO, nulls by
     within-prompt sign flips (seed 22); u_diff / u_com = unit(unit(u_T_perp) -/+ unit(u_RGI_perp));
-  cross-fitted centred AUC and gap of every axis (session RSI, RGI, TOPIC, GI^TOP, dir); split-half rel over the 20 K2 halvings;
+  cross-fitted centred AUC and gap of every axis with a text pair (session RSI, RGI, TOPIC, GI^TOP, dir, and u_RGI_perp / u_RGI_perpT
+  on the RGI texts with their projected fold axes; u_diff / u_com combine two text pairs and have none); split-half rel over the 20 K2
+  halvings;
   disattenuated cos(u_T_perp, u_RGI_perp) / sqrt(rel_T rel_RGI) with a 90 % prompt-bootstrap interval (2,000 replicates, seed BOOT_SEED,
   the same draws at every block); norms of the common part mean_p (a_p + b_p) / 2 and of the difference part mean_p (a_p - b_p) / 2 with
   their split-half rel (a_p = R1's per-prompt RSI difference projected like u_T_perp / |u_T_perp|, b_p = the RGI difference projected
@@ -284,7 +286,8 @@ def main(root, r1_dir, r2_dir, stage="all"):
     (round-1 output missing)' (G4); if no block of B3 is final, r2_axes.json says so and nothing else is written."""
     P = paths(r2_dir); info = R.r1_blocks(r1_dir); upto = 2 if stage == "all" else STAGES.index(stage)
     have_texts = os.path.exists(P["texts"]); have_reads = os.path.exists(P["reads"]) and os.path.exists(P["tok"])
-    need_model = (not have_texts) or (upto >= 1 and not have_reads and not (upto == 2 and os.path.exists(P["pt"]) and os.path.exists(P["json"])))
+    done = upto == 2 and all(os.path.exists(P[k]) for k in ("pt", "json", "tok"))     # review axes-1: tok14.pt is an output too
+    need_model = (not have_texts) or (upto >= 1 and not have_reads and not done)
     rk = None
     if need_model:
         host = host_block(r1_dir, info)
@@ -295,8 +298,8 @@ def main(root, r1_dir, r2_dir, stage="all"):
         rk = R.open_block(root, r1_dir, r2_dir, host)
     T = stage_texts(rk, P)
     if upto == 0: return None
-    if upto == 2 and os.path.exists(P["pt"]) and os.path.exists(P["json"]): return json.load(open(P["json"]))
-    RD = stage_read(rk, T, r1_dir, info["B3"], P, final14=R.block_final(r1_dir, 14))
+    if done: return json.load(open(P["json"]))
+    RD = stage_read(rk, T, r1_dir, info["B3"], P, final14=R.block_final(r1_dir, 14))   # rewrites tok14.pt (and the local reads) if missing
     if upto == 1: return None
     dev = torch.device("cuda" if (os.environ.get("DEVICE", "cpu") != "cpu" and torch.cuda.is_available()) else "cpu")
     js = stage_stats(r1_dir, info, T, RD, P, dev); R.log(f"O2 done: GA {js['GA']}")
@@ -324,10 +327,16 @@ def selftest(root, r1_dir, r2_dir):
     synthetic block with planted axes checks the statistics themselves (AUC, rel, disattenuated cosine and its bootstrap interval)."""
     assert R.MOCK, "selftest needs MOCK=1"; res = []
 
-    def check(name, cond, info=""):
+    def check(name, cond, info="", same_device=False):
+        """same_device: compares texts or reads made here with the fixture's stored ones; a failure names both devices (review rk-1)."""
+        if same_device and not cond: info = f"{info} | {R.same_device_note(r1_dir)}"
         res.append(dict(test=name, ok=bool(cond), info=str(info))); print(f"[{'PASS' if cond else 'FAIL'}] {name} {info}", flush=True)
     X, STb, stmt, neg, truth = synthetic_block(); P = len(STb["axes"]["fold"]); W = R.prompt_bootstrap(P, B=N_BOOT, seed=BOOT_SEED)
     Tb, Jb = block_stats(99, X, STb, stmt, neg, W, torch.device("cpu"))
+    a3 = Jb["axes"]
+    check("axes-3: AUC and gap of the projected axes u_RGI_perp / u_RGI_perpT (planted signal: AUC 1; gap of u_RGI_perp = Delta_RGI)",
+          a3["RGI_perp"]["auc"] >= 0.99 and a3["RGI_perpT"]["auc"] >= 0.99 and abs(a3["RGI_perp"]["gap_cross"] - Jb["Delta_RGI"]) < 1e-12 * max(1.0, abs(Jb["Delta_RGI"]))
+          and a3["RGI_perpT"]["gap_cross"] > 0, (a3["RGI_perp"], a3["RGI_perpT"]))
     lo, hi = Jb["cos_T_RGI_disatt_ci90"]; c_true = float(truth["t"] @ truth["r"])
     check("synthetic block: GA, high rel, disattenuated cos near the planted cosine, interval covers it and the estimate",
           Jb["GA"] and Jb["axes"]["RGI"]["auc"] >= 0.99 and Jb["rel"]["u_T_perp"]["rel"] > 0.9 and Jb["rel"]["u_RGI_perp"]["rel"] > 0.9
@@ -340,9 +349,10 @@ def selftest(root, r1_dir, r2_dir):
     js = main(root, r1_dir, r2_dir, "all"); P = paths(r2_dir); pt = torch.load(P["pt"], map_location="cpu", weights_only=False)
     rk = R._RK or R.open_block(root, r1_dir, r2_dir, 14)
     check("three blocks with statistics", sorted(js["blocks"]) == ["14", "20", "8"] and all(v["status"] == "ok" for v in js["blocks"].values()), list(js["blocks"]))
-    check("MOCK RSI texts reproduce the MOCK round-1 texts (same keys)", js["match_rate"]["RSI_PRO"]["identical_share"] == 1.0 and js["match_rate"]["RSI_ANTI"]["identical_share"] == 1.0, js["match_rate"])
-    check("reading the R1 texts reproduces R1 Xp / Xa", max(js["r1_read_check"].values()) < 1e-5, js["r1_read_check"])
-    check("u_S and u_neg reproduce R1; no flags", all(v["reproduction"]["u_S_rel_diff"] < 1e-6 and v["reproduction"]["u_neg_rel_diff"] < 1e-6 and not v["flags"] for v in js["blocks"].values()))
+    check("MOCK RSI texts reproduce the MOCK round-1 texts (same keys)", js["match_rate"]["RSI_PRO"]["identical_share"] == 1.0 and js["match_rate"]["RSI_ANTI"]["identical_share"] == 1.0, js["match_rate"], same_device=True)
+    check("reading the R1 texts reproduces R1 Xp / Xa", max(js["r1_read_check"].values()) < 1e-5, js["r1_read_check"], same_device=True)
+    check("u_S and u_neg reproduce R1; no flags", all(v["reproduction"]["u_S_rel_diff"] < 1e-6 and v["reproduction"]["u_neg_rel_diff"] < 1e-6 and not v["flags"] for v in js["blocks"].values()),
+          {b: (v["reproduction"]["u_S_rel_diff"], v["reproduction"]["u_neg_rel_diff"]) for b, v in js["blocks"].items()}, same_device=True)
     ok = True
     for b, B in pt["blocks"].items():
         uR, uRT, Q5 = B["u_RGI_perp"].double(), B["u_RGI_perpT"].double(), B["basis_RGI"]; tT = R.unit(B["u_T_perp"].double())
@@ -354,7 +364,8 @@ def selftest(root, r1_dir, r2_dir):
         ok &= abs(float(B["u_diff"].norm()) - 1) < 1e-5 and abs(float(B["u_com"].norm()) - 1) < 1e-5
     check("axes by definition (orthogonality, nulls projected, u_dir, GA from AUC)", ok)
     X14 = pt["blocks"][14]["X"]; R1 = rk.ST["axis_rsi"]
-    check("session RSI states equal R1 Xp / Xa at block 14 (identical MOCK texts)", float((X14["RSI_PRO"] - R1["Xp"]).abs().max() / R1["Xp"].abs().max()) < 1e-5)
+    e14 = float((X14["RSI_PRO"] - R1["Xp"]).abs().max() / R1["Xp"].abs().max())
+    check("session RSI states equal R1 Xp / Xa at block 14 (identical MOCK texts)", e14 < 1e-5, f"{e14:.1e}", same_device=True)
     tok = torch.load(P["tok"], map_location="cpu", weights_only=False); m = torch.stack([t.double().mean(0) for t in tok["sets"]["RGI_PRO"]["tok"]])
     check("per-token block-14 dump: six sets, means equal the block-14 reads", sorted(tok["sets"]) == sorted(["RGI_PRO", "RGI_ANTI", "R1_RSI_PRO", "R1_RSI_ANTI", "R1_SEA_PRO", "R1_SEA_ANTI"])
           and float((m - X14["RGI_PRO"].double()).abs().max() / X14["RGI_PRO"].abs().max()) < 5e-3)
@@ -370,6 +381,19 @@ def selftest(root, r1_dir, r2_dir):
         ok &= abs(F["RGI"]["g0"] - Jb["Delta_RGI"]) < 1e-12 and abs(F["RSI"]["g0"] - Jb["g0_RSI"]) < 1e-12
         ok &= float((B["basis_R1"].T @ F["RSI"]["a_A"]).abs().max()) < 1e-9 and float((B["basis_RGI"].T @ F["RGI"]["a_B"]).abs().max()) < 1e-9
     check("O1 fixed axes: unit, orthogonal to their basis, g on them = g_0 (RSI) and Delta_RGI (RGI)", ok)
+    ok = all(abs(v["axes"]["RGI_perp"]["gap_cross"] - v["Delta_RGI"]) < 1e-12 * max(1.0, abs(v["Delta_RGI"])) and all(0 <= v["axes"][a]["auc"] <= 1 for a in ("RGI_perp", "RGI_perpT"))
+             for v in js["blocks"].values())
+    for b, B in pt["blocks"].items():                                                 # recomputable from r2_axes.pt without a model
+        tT = R.unit(B["u_T_perp"].double()); aA, aB = (R.unit(a - (a @ tT) * tT) for a in (B["fixed_axes"]["RGI"]["a_A"], B["fixed_axes"]["RGI"]["a_B"]))
+        ok &= R.cross_fit_on_axes(B["X"]["RGI_PRO"], B["X"]["RGI_ANTI"], B["fold"], aA, aB)["auc"] == js["blocks"][str(b)]["axes"]["RGI_perpT"]["auc"]
+    check("axes-3: every block reports AUC and gap of u_RGI_perp and u_RGI_perpT (gap of u_RGI_perp = Delta_RGI; recomputable from r2_axes.pt)", ok)
+    # axes-1: tok14.pt lost after r2_axes.pt / .json were written (e.g. a cut Drive sync): the rerun rebuilds it and keeps the rest
+    T0 = torch.load(P["tok"], map_location="cpu", weights_only=False); m0 = {k: os.path.getmtime(P[k]) for k in ("pt", "json", "texts")}
+    os.remove(P["tok"]); main(root, r1_dir, r2_dir, "all"); T1 = torch.load(P["tok"], map_location="cpu", weights_only=False) if os.path.exists(P["tok"]) else None
+    same = T1 is not None and sorted(T1["sets"]) == sorted(T0["sets"]) and all(T1["sets"][k]["conts"] == T0["sets"][k]["conts"] and all(torch.equal(a, c) for a, c in zip(T1["sets"][k]["tok"], T0["sets"][k]["tok"])) for k in T0["sets"])
+    m1 = {k: os.path.getmtime(P[k]) for k in ("pt", "json", "texts")}; t1 = os.path.getmtime(P["tok"]) if T1 is not None else None; main(root, r1_dir, r2_dir, "all")
+    check("axes-1: a missing tok14.pt is rebuilt (identical), r2_axes.pt / .json and the texts are kept, the next run skips",
+          same and m1 == m0 and os.path.getmtime(P["tok"]) == t1 and {k: os.path.getmtime(P[k]) for k in ("pt", "json", "texts")} == m0)
     # G4 with block 14 not final (no summary_b14.json): a separate process (one process = one block) hosts the texts at block 8
     import subprocess
     nf = os.path.join(r2_dir, "selftest_nonfinal14"); shutil.rmtree(nf, ignore_errors=True); shutil.copytree(r1_dir, os.path.join(nf, "r1"))

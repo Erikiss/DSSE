@@ -56,7 +56,8 @@ class Step:
     script    file in analysis/ju_space/round2/; args: its command line ({root} {r1} {work} {r2in} {b} are filled in)
     out       required outputs relative to <work> (space separated, glob patterns allowed). The step is done when the runner
               recorded its success (steps/<name>.json) and every output exists; then it is skipped (7.4).
-    after     steps (comma separated) that must have finished successfully before
+    after     steps (comma separated) that must have finished successfully before (a 'not run' among them makes this step 'not run')
+    settled   steps that must be done or 'not run' before (their 'not run' does not pass on; a failed one blocks this step)
     opt       optional outputs (hashed into the step record when present); quick_out: required outputs under MOCK / QUICK
     local     the step writes local-only arrays under <work>/local that the steps in needed_by read; they are never synced, so on a new
               machine the step runs again unless all of needed_by are done

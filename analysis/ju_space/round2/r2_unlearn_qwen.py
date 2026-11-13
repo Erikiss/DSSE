@@ -43,7 +43,7 @@ per-pair arrays, texts as token ids, bootstrap draws). A stage whose round-1 inp
 status 'not run (round-1 output missing)' (G4, G6); C-Q4b with a closed gate 'not testable (gate ...)'.
 Usage: python r2_unlearn_qwen.py <root> <r1_dir> <r2_dir> [q3 | q4a | q2 | q4b | armA | q5 | q6 | all | selftest]
        env DEVICE, NT, MOCK; BLOCK (must be 14 if set)."""
-import contextlib, hashlib, json, math, os, shutil, subprocess, sys, time
+import contextlib, gc, hashlib, json, math, os, shutil, subprocess, sys, time, traceback
 import numpy as np, torch
 
 HERE = os.path.dirname(os.path.abspath(__file__)); JU = os.path.dirname(HERE)
@@ -528,9 +528,10 @@ class Ctx:
         """O2 / O1 at block 14 from r2_axes.py's outputs; dict(B=None, BJ) if block 14 has no O2 statistics there (round-1 output missing)."""
         if self._o2 is not None: return self._o2
         p_pt, p_js = os.path.join(self.r2, "axes", "r2_axes.pt"), os.path.join(self.r2, "axes", "r2_axes.json")
-        if not (os.path.exists(p_pt) and os.path.exists(p_js)): raise MissingInput(f"{p_pt} missing: run r2_axes.py first (same session)")
+        if not os.path.exists(p_js): raise MissingInput(f"{p_js} missing: run r2_axes.py first (same session)")
         AJ = json.load(open(p_js)); BJ = AJ.get("blocks", {}).get(str(BLOCK), {})
-        if BJ.get("status") != "ok": self._o2 = dict(B=None, BJ=BJ); return self._o2
+        if BJ.get("status") != "ok": self._o2 = dict(B=None, BJ=dict(BJ, status=BJ.get("status") or AJ.get("status") or "missing")); return self._o2
+        if not os.path.exists(p_pt): raise MissingInput(f"{p_pt} missing: run r2_axes.py first (same session)")
         AX = torch.load(p_pt, map_location="cpu", weights_only=False); B = AX["blocks"][BLOCK]; rk = self.rk
         assert dict(AX["instr"]) == dict(S.O2_INSTR), "O2 instructions differ from r2_stimuli.O2_INSTR"
         assert list(AX["prompts"]) == list(rk.PROMPTS), "O2 prompts differ from rk.PROMPTS"
@@ -593,11 +594,21 @@ def r1_meta_gpu1(r1_dir):
     m = json.load(open(p)); return {k: m.get(k) for k in ("gpu", "torch", "transformers", "code_commit")}
 
 
+_LOG = dict(stage=None, start=0, open_records=[], open_stage=None)
+
+
+def stage_finder_log():
+    """The round-1 file choices of the running stage: open_block's (made in this process, perhaps by an earlier stage) and the stage's own,
+    so that a stage's JSON does not depend on how many stages share the process."""
+    pre = list(_LOG["open_records"]) if _LOG["open_stage"] not in (None, _LOG["stage"]) else []
+    return pre + list(R.FINDER_LOG[_LOG["start"]:])
+
+
 def write_outputs(r2_dir, stage, js, pt=None):
     """.pt first, then the JSON (the JSON's existence marks the stage done)."""
     js_p, pt_p = out_paths(r2_dir, stage)
     if pt is not None: R.torch_save(pt_p, pt)
-    js = dict(js, finder=list(R.FINDER_LOG), versions=versions()); R.write_json(js_p, js); return js
+    js = dict(js, finder=stage_finder_log(), versions=versions()); R.write_json(js_p, js); return js
 
 
 def not_run(r2_dir, stage, status, **extra):
@@ -812,6 +823,19 @@ def load_r1_k6(ctx):
         k6 = ctx.rk.ST.get("k6"); return (k6, "R1.state[14]['k6'] (k6.json missing)") if k6 is not None else (None, "missing")
 
 
+Q2_STATE_KEY, Q2_STATE_PREFIXES = "r2_q2_valid", ("k6_r2_", "r2_b05_")
+
+
+def q2_state_purge(ST, sig):
+    """Review unlearn_a-1: q2's round-2 state entries (k6_r2_*, r2_b05_*; only q2 writes them, and they survive a new VM with the synced
+    state) count only for the code fingerprint and inputs recorded in ST['r2_q2_valid']; if that entry is missing or differs, every such
+    entry is deleted so that it is recomputed (the guard protects round-1 keys only). Returns the deleted keys."""
+    if ST.get(Q2_STATE_KEY) == sig: return []
+    gone = sorted(k for k in ST if isinstance(k, str) and k.startswith(Q2_STATE_PREFIXES))
+    for k in gone: del ST[k]
+    return gone
+
+
 def stage_q2(ctx):
     rk = ctx.rk; O = ctx.o2(); ST = rk.ST
     if O["B"] is None: return not_run(ctx.r2, "q2", NOT_RUN_R1, error=f"O2 at block 14: {O['BJ'].get('status', 'missing')}")
@@ -819,6 +843,9 @@ def stage_q2(ctx):
     dirs = dict(u_RSI=ctx.u_rsi, u_diff=O["u_diff"], u_RGI_perp=O["u_RGI_perp"], u_com=O["u_com"], cov_14_3=R.pool_dir("cov", BLOCK, 3, D=D))
     k6, k6_src = load_r1_k6(ctx); flags = [] if k6_src == "k6.json" else [f"R1.k6 from {k6_src}"]
     nulls = R.k6_null_dirs(BLOCK, D=D); nn = len(nulls)
+    vsig = sig_of("q2-state", code_sha256(), *[dirs[k] for k in sorted(dirs)], *nulls, [x["question"] for x in H30 + RGI], ctx.alpha)
+    purged = q2_state_purge(ST, vsig)                                            # before rk.k6_direction can return a stale entry
+    if ST.get(Q2_STATE_KEY) != vsig: R.st_put(Q2_STATE_KEY, vsig)
     J = dict(K6={}, alpha_u={}, texts={}, behaviour={}, content={}, perplexity={}, rules={}); P = dict(texts={}, content={}, perplexity={})
     # ---- (a) K6 at 0.03 nats (descriptive)
     if k6 is not None:
@@ -883,7 +910,7 @@ def stage_q2(ctx):
         J["rules"][nm] = dict(concept=c, statements=s, ctrl_p5=ctrl, **rule_suppressed(t["g"], t["g0"], t["ratio_ci90"][1], ctrl, b["Ue_fin"], b["z_fin"], M0, dmg,
                                                                                      t["m_foreign"], t["m_concept"]))
     labels = {nm: list(O["labels_rgi"]) for nm in ("u_RGI_perp", "u_diff", "u_com")}
-    js = base_info("q2", dict(status="ran", flags=flags, GA14=O["GA"], labels=labels, g0=dict(RSI=O["refs"]["RSI"]["g0"], RGI=O["refs"]["RGI"]["g0"]),
+    js = base_info("q2", dict(status="ran", flags=flags, state_entries_purged=purged, GA14=O["GA"], labels=labels, g0=dict(RSI=O["refs"]["RSI"]["g0"], RGI=O["refs"]["RGI"]["g0"]),
                               Delta_RGI=O["Delta_RGI"], Delta_T=ctx.Delta_T, n_nulls=nn, statement_counts=dict(H30=len(H30), RGI30=len(RGI)), **J,
                               notes=["alpha_u calibrated on the counter-push -alpha_u unit(u) (the push of rule (iii)); damage_plus = damage of +alpha_u unit(u)",
                                      "null directions recalibrated to 0.05 nats on +d (rk.set_alpha's rule, start alpha_14), evaluated at +-f on H30 and RGI30",
@@ -1303,11 +1330,9 @@ def q6_relation(rk, rel, items, tr, te, cache):
     return out, arr
 
 
-def stage_q6(root, r1_dir, r2_dir):
-    """C-Q6 (R1 inputs: none). Block 14 is opened through r2_rk when its round-1 outputs are final, else the model is loaded without a
-    round-1 state (open_model_only)."""
-    try: rk = R.open_block(root, r1_dir, r2_dir, BLOCK); how = "open_block"
-    except R.R1Missing as e: rk = open_model_only(root, r2_dir); how = f"model only ({e})"
+def stage_q6(root, r1_dir, r2_dir, rk, how):
+    """C-Q6 (R1 inputs: none). rk: block 14 opened through r2_rk when its round-1 outputs are final, else the model loaded without a round-1
+    state (open_model_only; run_stage decides)."""
     cache = Cache(r2_dir, "q6"); items = q6_items(rk.enc); tr, te = S.nesting_split()
     rels, arrs = {}, {}
     for rel in S.NEST_RELS:
@@ -1342,28 +1367,99 @@ def open_model_only(root, r2_dir):
 # Driver
 # ======================================================================================================================================
 STAGE_FN = dict(q3=stage_q3, q4a=stage_q4a, q2=stage_q2, q4b=stage_q4b, armA=stage_armA, q5=stage_q5)
+# prerequisites inside <r2_dir>: 'axes' = r2_axes.py's outputs (axes/r2_axes.json, axes/r2_axes.pt); q4a also needs q3's outputs
+PREREQ = dict(q3=("axes",), q4a=("axes", "q3"), q2=("axes",), q4b=(), armA=(), q5=(), q6=())
+_HOOK_DICTS = ("_forward_hooks", "_forward_pre_hooks", "_forward_hooks_with_kwargs", "_forward_hooks_always_called", "_forward_pre_hooks_with_kwargs",
+               "_backward_hooks", "_backward_pre_hooks")
+
+
+def _hook_snapshot(model):
+    return {id(m): {n: set(getattr(m, n).keys()) for n in _HOOK_DICTS if isinstance(getattr(m, n, None), dict)} for m in model.modules()}
+
+
+def _hook_restore(model, snap):
+    """Removes every hook registered after the snapshot (all hook dicts of every module). Returns the number of forward / pre-hooks removed."""
+    n = 0
+    for m in model.modules():
+        s = snap.get(id(m), {})
+        for nm in _HOOK_DICTS:
+            d = getattr(m, nm, None)
+            if not isinstance(d, dict): continue
+            for k in [k for k in d if k not in s.get(nm, set())]:
+                d.pop(k); n += nm in ("_forward_hooks", "_forward_pre_hooks")
+    return n
+
+
+@contextlib.contextmanager
+def stage_scope(rk, stage):
+    """Isolation of one stage in a process that runs several ('all'): on exit, also after an exception, every hook registered on the model
+    during the stage is removed, rk.TEMP and rk.Gumbel are restored, steering and the early-stop switch are off; after a failure rk.ST is
+    reloaded from its saved state, so no unsaved entry survives; GPU memory is released (gc, torch.cuda.empty_cache)."""
+    snap = _hook_snapshot(rk.model); temp, gum = rk.TEMP, rk.Gumbel; ok = False
+    try:
+        yield
+        ok = True
+    finally:
+        n = _hook_restore(rk.model, snap); rk.TEMP, rk.Gumbel = temp, gum; rk.steer_off(); rk.capped_reset(); rk.CAP["on"] = False; rk.CAP.pop("h", None)
+        if not ok and R._RK is rk and os.path.exists(R.BLK.get("state", "")):
+            rk.ST = torch.load(R.BLK["state"], map_location="cpu", weights_only=False)
+        if n: log(f"{stage}: {n} leftover hook(s) removed")
+        gc.collect()
+        if torch.cuda.is_available(): torch.cuda.empty_cache()
+
+
+def _selftest_injection(rk, stage):
+    """Code test only (MOCK and env R2_UNLEARN_FAIL=<stage>): the stage fails after leaving a WriteOrth hook, a temperature, a steering
+    switch and an unsaved state entry behind, so that the 'all' test sees that stage_scope contains a failure."""
+    if not (R.MOCK and os.environ.get("R2_UNLEARN_FAIL") == stage): return
+    if R._RK is rk:
+        R.WriteOrth(R.unit(rk.ST["axes"]["u_T_perp"].double())[None]).__enter__(); rk.ST["r2_selftest_unsaved"] = 1
+        rk.STEER.update(v=R.unit(rk.ST["axes"]["u_T_perp"].float()), V=None, alpha=1.0, cap=rk.ST["ref"]["cap"], sign=torch.tensor([1.0]), rowstart=torch.tensor([rk.START]))
+    rk.TEMP = 0.3
+    raise RuntimeError(f"injected failure in stage {stage} (selftest, R2_UNLEARN_FAIL)")
 
 
 def run_stage(root, r1_dir, r2_dir, stage):
     """Runs one stage (skipped when unlearn/<stage>.json exists). Block 14 is opened through r2_rk.open_block; a block whose round-1 outputs
-    are missing or not final (G4) gives 'not run (round-1 output missing)' (C-Q6, which reads no round-1 file, runs anyway)."""
+    are missing or not final (G4) gives 'not run (round-1 output missing)' (C-Q6, which reads no round-1 file, runs anyway: the model is then
+    loaded without a round-1 state). The stage runs inside stage_scope."""
     if stage not in STAGES: raise SystemExit(f"unknown stage {stage!r}; stages: {', '.join(STAGES)}")
     if os.environ.get("BLOCK", str(BLOCK)) not in ("", str(BLOCK)): raise SystemExit(f"r2_unlearn_qwen.py works at block {BLOCK}; env BLOCK={os.environ['BLOCK']}")
     js_p, _ = out_paths(r2_dir, stage)
-    if os.path.exists(js_p): log(f"{stage}: {js_p} exists, skipped"); return json.load(open(js_p))
-    t0 = time.time()
-    if stage == "q6": js = stage_q6(root, r1_dir, r2_dir)
-    else:
-        try: rk = R.open_block(root, r1_dir, r2_dir, BLOCK)
-        except R.R1Missing as e: return not_run(r2_dir, stage, NOT_RUN_R1, error=str(e))
-        js = STAGE_FN[stage](Ctx(root, r1_dir, r2_dir, stage, rk))
+    if os.path.exists(js_p): log(f"{stage}: {js_p} exists, skipped"); return dict(json.load(open(js_p)), _done_earlier=True)
+    t0 = time.time(); _LOG.update(stage=stage, start=len(R.FINDER_LOG)); was_open = R._RK is not None
+    try: rk = R.open_block(root, r1_dir, r2_dir, BLOCK); how = "open_block"
+    except R.R1Missing as e:
+        if stage != "q6": return not_run(r2_dir, stage, NOT_RUN_R1, error=str(e))
+        rk = open_model_only(root, r2_dir); how = f"model only ({e})"
+    if not was_open and R._RK is not None: _LOG.update(open_records=list(R.FINDER_LOG[_LOG["start"]:]), open_stage=stage)
+    with stage_scope(rk, stage):
+        _selftest_injection(rk, stage)
+        js = stage_q6(root, r1_dir, r2_dir, rk, how) if stage == "q6" else STAGE_FN[stage](Ctx(root, r1_dir, r2_dir, stage, rk))
     log(f"{stage}: {js.get('status')} ({time.time() - t0:.0f} s)"); return js
 
 
 def main(root, r1_dir, r2_dir, stage):
-    try:
-        for st in (STAGES if stage == "all" else (stage,)): run_stage(root, r1_dir, r2_dir, st)
-    except MissingInput as e: raise SystemExit(f"r2_unlearn_qwen.py: {e}")
+    """One stage, or 'all' = the seven stages in order in this process (one model load). Every stage whose prerequisites exist runs (PREREQ:
+    q3, q4a and q2 need r2_axes.py's outputs, q4a also needs q3); a failing stage does not stop the independent later ones, and the stages
+    that depend on it are skipped. A stage whose output exists is skipped, so a rerun repeats only what failed. Prints a per-stage summary
+    and returns 0 if every stage is done ('ran', 'not run (...)', 'not testable (...)', or done earlier), else 1."""
+    stages = list(STAGES) if stage == "all" else [stage]; summary, bad = {}, set()
+    for st in stages:
+        dead = [p for p in PREREQ[st] if p in bad]
+        if dead: summary[st] = f"skipped (prerequisite {', '.join(dead)} failed)"; bad.add(st); continue
+        try:
+            js = run_stage(root, r1_dir, r2_dir, st); summary[st] = ("done earlier: " if js.get("_done_earlier") else "") + str(js.get("status"))
+        except MissingInput as e:
+            summary[st] = f"failed (missing round-2 input: {e})"; bad.add(st); log(f"{st}: {summary[st]}")
+        except Exception as e:                                                   # noqa: BLE001 - one stage must not stop the others
+            traceback.print_exc(); summary[st] = f"failed ({type(e).__name__}: {e})"; bad.add(st)
+        finally:
+            gc.collect()
+            if torch.cuda.is_available(): torch.cuda.empty_cache()
+    print("[r2_unlearn] summary: " + " | ".join(f"{st}: {v}" for st, v in summary.items()), flush=True)
+    for st, v in summary.items(): print(f"[r2_unlearn]   {st:5s} {v}", flush=True)
+    return 1 if bad else 0
 
 
 # ======================================================================================================================================
@@ -1696,4 +1792,4 @@ if __name__ == "__main__":
     if stage == "selftest":
         os.environ["MOCK"] = "1"; R.MOCK = True; os.environ.setdefault("DEVICE", "cpu"); sys.exit(0 if selftest(root, r1_dir, r2_dir) else 1)
     if stage != "all" and stage not in STAGES: raise SystemExit(f"unknown stage {stage!r}; stages: {', '.join(STAGES)}, all, selftest")
-    main(root, r1_dir, r2_dir, stage)
+    sys.exit(main(root, r1_dir, r2_dir, stage))

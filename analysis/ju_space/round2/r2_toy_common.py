@@ -2197,7 +2197,13 @@ def fourier_cols(cv, k):
 
 
 def _share_by_k_tot(Tc, cv, tot):
-    return np.array([((fourier_cols(cv, k).T @ Tc) ** 2).sum() / tot for k in range(1, 9)])
+    """share_by_k with the total energy given; the 8 frequencies' centred regressors are orthonormalised by one stacked np.linalg.qr
+    (the same LAPACK QR per matrix as fourier_cols)."""
+    Phis = []
+    for k in range(1, 9):
+        Phi = np.stack([np.cos(2 * np.pi * k * cv / P), np.sin(2 * np.pi * k * cv / P)], 1); Phis.append(Phi - Phi.mean(0))
+    Qs = np.linalg.qr(np.stack(Phis))[0]
+    return np.array([((Qs[k].T @ Tc) ** 2).sum() / tot for k in range(8)])
 
 
 def share_by_k(Tc, cv):
@@ -2235,12 +2241,15 @@ def _loo_prep(C):
 
 
 def _loo_ring_prep(prep, cv, K, lam=1e-2):
-    """loo_ring with its invariants precomputed: the same floating-point operations in the same order as c1_structure.loo_ring."""
-    Tc, Ys, tots = prep; n = len(cv); rows = [_ring_feats(c, K) for c in cv]; Lm = lam * np.eye(2 * K + 1); err, tot = 0.0, 0.0
+    """loo_ring with its invariants precomputed: the same floating-point operations as c1_structure.loo_ring (design rows [feats(c), 1]
+    built once; the 12 normal-equation systems solved by one stacked np.linalg.solve, which runs the same LAPACK solve per system)."""
+    Tc, Ys, tots = prep; n = len(cv); Lm = lam * np.eye(2 * K + 1)
+    Aall = np.stack([np.r_[_ring_feats(c, K), 1.0] for c in cv]); keep = ~np.eye(n, dtype=bool)
+    As = [Aall[keep[i]] for i in range(n)]
+    Wt = np.linalg.solve(np.stack([A.T @ A + Lm for A in As]), np.stack([A.T @ Y for A, Y in zip(As, Ys)]))
+    err, tot = 0.0, 0.0
     for i in range(n):
-        A = np.stack([rows[j] for j in range(n) if j != i]); A = np.c_[A, np.ones(len(A))]
-        w = np.linalg.solve(A.T @ A + Lm, A.T @ Ys[i]); pred = np.r_[rows[i], 1.0] @ w
-        err += ((pred - Tc[i]) ** 2).sum(); tot += tots[i]
+        pred = Aall[i] @ Wt[i]; err += ((pred - Tc[i]) ** 2).sum(); tot += tots[i]
     return 1 - err / tot
 
 
