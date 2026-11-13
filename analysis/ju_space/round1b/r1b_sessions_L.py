@@ -23,7 +23,7 @@ STEPS = {
         _s("l1_pip", A, "l/l1_pip.pt", "pop_select", 5),
         _s("l1_rot", A, "l/l1_rot.pt", "pop_select", 4),
         _s("l1_resel", A, "l/l1_resel.pt", "pop_select", 3),
-        _s("l1_cal", A, "l/l1_cal.pt", "l1_pip", 5, drop_if=("T5",)),
+        _s("l1_cal", A, "l/l1_cal.pt", "l1_pip", 5),
         _s("l1_era_cal", A, "l/l1_era_cal.json", "pop_select", 2),
         _s("l1_era", A, "l/l1_era.pt", "l1_era_cal", 5),
         _s("l1_stats", A, "l/l1.json", "l1_pip,l1_rot,l1_resel,l1_cal,l1_era", 2),
@@ -53,7 +53,7 @@ STEPS = {
         _s("lr_tf", B, "l/lr_tf.pt", "lr_gen", 5),
         # L2
         _s("l2a_lce", B, "l/l2a_lce.json", minutes=2),
-        _s("l2a_main", B, "l/l2a_main.pt", "l2a_lce", 5, drop_if=("T3",)),
+        _s("l2a_main", B, "l/l2a_main.pt", "l2a_lce", 5),
         _s("l2a_own", B, "l/l2a_own.pt", "l2a_lce", 5),
         _s("l2a_stats", B, "l/l2a.json", "l2a_main,l2a_own", 1),
         _s("l2b", B, "l/l2b.json", "lr_tf", 3),

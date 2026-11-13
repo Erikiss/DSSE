@@ -40,7 +40,7 @@ def digit_runs(pieces):
     """Completed maximal digit runs per chain position q: [(q, value)] (leading minus signs ignored)."""
     out, cur, q0 = [], "", None
     for q, p in enumerate(pieces):
-        p = p or ""
+        p = "".join(map(str, p)) if isinstance(p, (list, tuple)) else (p or "")
         if p.strip().isdigit() and p.strip() == p.strip("-"):
             cur += p.strip()
         else:

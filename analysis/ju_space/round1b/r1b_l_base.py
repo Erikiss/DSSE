@@ -57,6 +57,9 @@ def cfg(ctx):
                 sigma_n=4000, nboot=2000, ref_heldout=64, max_spin=200, xmap_E=(2, 3, 4, 5, 6), t2_items=128, docs_min=36000,
                 long_skip=2000, long_len=32768)
     if not ctx.mock:
+        for t, kv in (("T2", dict(lrb_items=24)), ("T3", dict(eqmi_docs=16)), ("T4", dict(l3b_sets=4)), ("T5", dict(l1c_seeds=2))):
+            if ctx.trimmed(t):                    # L.8 trims 2-5 (sizes only; trim 1 drops the extensions through funding)
+                full.update(kv)
         return full
     m = dict(full)
     m.update(n_fam=4, lr_new=48, lrb_items=3, lrb_keys=8, lrb_new=40, n_ctrl=9, nat=4, nat_len=48, win0=8, win=8, pos_scale=1 / 16,
