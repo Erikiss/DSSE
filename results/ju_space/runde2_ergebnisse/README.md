@@ -7,3 +7,11 @@ Vom Betreiber aus Google Drive (`dsse_runs/r2_ana`, Konto A) heruntergeladen und
 - `session_done_r2_ana.json`: Lauf von r2_ana (drei Versuche: zweimal wartend, der dritte vollständig; Code-Stand 8171b86).
 `unlearn_verdict.json` und `r2_manifest.json` liegen nur in Drive. Alle Sitzungen liefen mit Code-Stand 8171b86 und dem eingefrorenen
 Plan (sha256 5e476340…); die Ergänzungen 1-3 stehen in `results/ju_space/plans/abschnitt11_12_runde2_plan_amendments.md`.
+
+## Auswertung (13.11.2026)
+- `AUSWERTUNG.md`: geprüfte Auswertung auf Deutsch (Kurz, Teil A/B/C, Bedeutung für RSI, Einschränkungen, nächste Schritte).
+  Entstanden aus vier unabhängigen Lesungen (Teil A, B, C, Freigaben), einer Gegenprüfung und einer Synthese.
+  Alle Dezimalzahlen im Text wurden maschinell gegen die drei JSON-Dateien hier abgeglichen (222 von 222 gefunden).
+- `auswertung_lesungen.json`: die vier Lesungen (englisch, mit Fundstellen in den Dateien und Planzeilen).
+- `auswertung_gegenpruefung.json`: die Gegenprüfung (rund 300 Werte nachgerechnet; 18 Korrekturen, davon 3 abschwächend; Datenprobleme).
+  Die Korrekturen sind in `AUSWERTUNG.md` eingearbeitet.

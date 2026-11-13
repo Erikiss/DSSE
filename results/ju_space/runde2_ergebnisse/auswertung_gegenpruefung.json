@@ -1,0 +1,132 @@
+{
+ "summary": "The four readings agree with the files to the digit. I checked roughly 300 quoted values against round2_summary.json, rgi_verdict.json and theta_verdict.json and recomputed the main statistics from the stored per-block numbers:\n- D = 0.022268 and Spearman = 0.5324;\n- the thirds {20, 21, 22, 23, 26} and {13, 14, 15, 16, 27};\n- the causal-line D values −0.2816 and −0.4710 over the composed thirds {22, 23, 24, 26} and {13, 14, 15, 16};\n- the AT7 rates, the T5 phase counts and the C-T4 / C-T5 numbers.\n\nAll of them match. The plan citations are correct, and every label, 'not decidable' and 'not testable' is reported with its reason. No item-level verdict misreads a rule.\n\nThe corrections are about interpretation and a few small slips:\n1. **Part A's causal-line decline is most likely an artefact of the read-out.** The gradient at the object positions is exactly 0 at block 27 and close to 0 at blocks 22-26, because few or no layers connect those positions to the answer token. The 'falls' verdict rests on exactly those blocks.\n2. **Part A's RSI summary turns an 'undecided' result into a negative.** It reads 'V6: undecided' plus a failed separability gate as 'nothing ties the geometry to delta'. In fact D is small but positive, with an interval that excludes 0, and delta cannot be separated from depth here.\n3. **Part B's 'no regime in which RSI content sustains itself' goes beyond the measurement.** The gains it measures belong to the shared, non-RSI mode that all loops converge to. The one in-context carry estimate on the RSI axis itself (T 1.0) has an interval that includes 1, and it is descriptive.\n4. **Small slips:**\n   - the damage wording at block 14;\n   - which condition lowers S most;\n   - the dFG upper bounds;\n   - the toy interval convention (Part B said 90 % where the plan's toy rules use 95 %);\n   - the alternative L* = 9;\n   - the claim that 'below chance cannot be certified';\n   - the count of not-run items;\n   - the claim that Amendment 1 made the guard stricter.\n\nSeparately, some outputs suggest run or reporting problems rather than findings: the Qwen3-0.6B arm has no passing block at all, several corrected cosines exceed 1, the theta bootstrap intervals are asymmetric, and the summary table prints descriptive R4 strings as if they were verdicts. These are listed under data_problems.",
+ "corrections": [
+  {
+   "part": "A",
+   "item": "A7 causal line (headline 'loses generality in the late, high-delta blocks'; problem 8; open question 3)",
+   "problem": "The late-block decline is reported as a property of the model; the reading treats tiny gradients only as a hedge. The files point to a structural artefact of the read-out.\n- A3 takes the gradient of the next-token logit after 'I would' with respect to leaves added at the object positions (plan lines 456-460; S: gates.G29.a1.object_positions.A3_USER = [9..14]).\n- After block 27 no layer links those positions to the answer position, so the gradient is identically 0: R: A7.g_self_spillover.S_self[27] = 0.0, z_self[27] = null. Block 27's 'not composed' is therefore a 0/0, not FG_causal(CHG-DES) >= 0.8.\n- At blocks 22-26 only 5 to 1 layers remain: |S_self| <= 6.3e-5, against 0.0146 / 0.0122 at blocks 18 / 19, with z_self -0.41 to 1.37.\n- The top composed third {22, 23, 24, 26} lies in this regime: sigma_causal upper bounds 0.5743 / 2.2872 / 2.1679 at blocks 22-24, rho_causal -0.0434 / 0.0328 at blocks 23 / 24 (R: A7.per_block.blocks.<b>.numbers.causal).\n- The plan expected identical unembedding gradients near the output (line 467), not vanishing ones, so the composed gate (G32) does not screen them out.",
+   "correct_reading": "The rule output is computed correctly: D(FG_causal) = -0.2816, simultaneous interval [-0.3436, -0.2197], hence 'causal generality falls with delta or depth'. But it most plausibly reflects the object-position gradient vanishing near the output, not a loss of causal generality in the representation, and it supports neither a delta nor a representational depth effect. Causal statistics are interpretable only up to about block 20.",
+   "severity": "weakens a conclusion"
+  },
+  {
+   "part": "A",
+   "item": "for_rsi (4): 'Nothing ties the general-improvement geometry to the size of the semantic space (delta) beyond plain depth'",
+   "problem": "This reads 'V6: undecided' (plan line 546) and a failed gate as a negative.\n- The top-minus-bottom difference is positive with an interval that excludes 0: D 0.022268 [0.001866, 0.047872] (S: parts.A.key_numbers.over_blocks).\n- Spearman is 0.5324 [-0.0180, 0.7265].\n- 'Beyond depth' was not testable: G31 fails (ratio 0.4646; plan line 1353), and the 0.6B arm that could have separated delta from depth had no passing block (R: A7.arm_0p6B.n_P 0).",
+   "correct_reading": "The relation to delta is undecided (V6). A small positive top-minus-bottom difference exists, below the 0.10 margin, and inside one model delta cannot be separated from depth. This is absence of a decision, not evidence that nothing ties the geometry to delta.",
+   "severity": "weakens a conclusion"
+  },
+  {
+   "part": "A",
+   "item": "Headline 'improvement-specific excess dFG is at most 0.066'; A7 blocks item 'IS ... is absent everywhere'",
+   "problem": "0.0657 is the largest point estimate.\n- Simultaneous upper bounds reach 0.1431 (block 27), 0.1325 (25), 0.1289 (26), 0.1222 (24) and 0.1030 (23) (R: A7.per_block.blocks.<b>.numbers.dFG_sim), so dFG >= 0.10 is not excluded at blocks 23-27.\n- At blocks 18 and 26 the simultaneous lower bound is above 0 (0.0018, 0.0024).",
+   "correct_reading": "IS fails at all 16 blocks: the dFG point estimate is < 0.10 everywhere, and the dFG_val lower bound is < 0 everywhere (-0.082 to -0.042). The excess is small in point estimate but not shown to be absent, and at blocks 18 and 26 it is detectably above 0.",
+   "severity": "minor"
+  },
+  {
+   "part": "A",
+   "item": "AT5 slope labels; problem (6) and open question (9): which 5 BP models are missing",
+   "problem": "The reading says the files do not explain the gap. They do.\n- r2_rgi_verdict.py at5() keeps only models with level1 true.\n- S: reproduction.G46.cells lists exactly five AT5 W 64 nets without first95 in round 2:\n  - 'AT5 nets (r2_t1) | bp_mup_W64_s*_K12_g0_wd1' first95_r2 [1050, 700, 950, null, 850];\n  - '... | bp_sp_W64_s*_K12_g0_wd1' first95_r2 [null, null, null, 4450, null].",
+   "correct_reading": "The 5 missing models (60 - 55) are almost certainly these W 64 nets that never reached level 1. The cross-model slope is therefore conditioned on generalisation, and BP-SP W 64 enters it with a single net. No label changes.",
+   "severity": "minor"
+  },
+  {
+   "part": "A",
+   "item": "AT8 answer (late arm), what_it_means: 'the task squeeze lowers them most'",
+   "problem": "This holds for Lambda (task_late+0.01: 0.1334) but not for S. Sham_late-0.1 gives S 0.2630, below task_late+0.01 at 0.2880 (R: AT8.lines.late.lines.S.condition_means).",
+   "correct_reading": "Every regularised condition lowers Lambda and S below their natural values (0.8177, 0.6153). The task squeeze lowers Lambda most; for S the strongest sham level (-0.1) lowers it slightly more.",
+   "severity": "minor"
+  },
+  {
+   "part": "A",
+   "item": "Problem (3) and A6 self-loop key numbers: 'Every frozen loop exceeds 0.15 nats at d_1-d_3'",
+   "problem": "Not every push exceeds 0.15 nats. RND_1 d_1 is 0.1155, and RND_2 d_1 and d_2 are 0.1129 and 0.1345 (R: A6.blocks.14.loops.RND_1/RND_2.damage_d1_d3).",
+   "correct_reading": "Every block-14 loop exceeds 0.15 nats at one or more of its counted pushes (damage_ok false for all six loops), which is what OD-A5 (line 1573) excludes on.",
+   "severity": "minor"
+  },
+  {
+   "part": "A",
+   "item": "A6 self loop, what_it_means: 'slightly negative at 18'",
+   "problem": "The drift at block 18 is larger than 'slightly'.\n- RSI_a on u_RGI_perpT: A -0.2294 (c -0.1791, p 0.0465) at d_3 and A -0.1698 (p 0.1489) at d_4. d_3 is close to the -0.25 'drawn away' threshold (line 559).\n- Part B shows the same tilt at block 18: TV blocks.18.R4.default.axes.u_RGI_perp cos -0.1678, corrected -0.193, p 0.136.",
+   "correct_reading": "Descriptively, there is a moderate drift toward the RGI_ANTI pole at block 18. It stays below the rule's p and A thresholds, and no dynamics verdict exists because G-blk fails.",
+   "severity": "minor"
+  },
+  {
+   "part": "A",
+   "item": "Headline 'Descriptively, the round-1 RSI direction does not move ... (no response)'; for_rsi (3) 'no more general for improving than for changing'",
+   "problem": "(a) A3 'no response' at blocks 18 and 6 is an unlabelled rule verdict. Only A3_u_T_perp_spillover/14 carries the descriptive label.\n(b) Causal-general fails only because the simultaneous lower bounds of dFG_causal are < 0 (-0.378 to -0.039). The point estimate of dFG_causal is not reported, so 'no more general' turns a failed test into a negative finding.",
+   "correct_reading": "'No response' (z_self and z_other < 3) is a rule verdict at blocks 18 and 6 and descriptive at block 14. An improvement-specific causal generality is not shown; it is not shown to be absent either.",
+   "severity": "minor"
+  },
+  {
+   "part": "A",
+   "item": "Problem (7) and open question (2): 0.6B arm, 'separability on an empty passing set is undefined'",
+   "problem": "Two parts of this are off.\n- r2_rgi_stats.separability() returns ok=False with status 'fewer than 6 blocks' for any block set under 6, so the G31 flag on the 0.6B arm is a code default, not a computed failure.\n- passing_set() returns the longest run of any length, so P = [] means that not one of the 28 blocks of Qwen3-0.6B passed C0 and 'not uncomposed'.",
+   "correct_reading": "The 0.6B arm has zero passing blocks (R: A7.arm_0p6B.P [], flags G30, G31). That is the stronger signal of a possible run or stimulus problem, and the G31 flag on this arm carries no information.",
+   "severity": "minor"
+  },
+  {
+   "part": "A",
+   "item": "Problem (1): BA's 'C0 for IMP-CHG' presented as a deviation from the plan",
+   "problem": "The plan text supports both readings.\n- Line 523 and OD-A4 (line 1571) define C0 with pointwise bounds, but only for IMP-DES and CHG-DES.\n- Lines 520-521 say that every other per-block bound uses the sup-t simultaneous band over P.\nImplementer reading 12 chose the second.",
+   "correct_reading": "This is a genuine ambiguity (as the verdict item's 'unclear' says), not a script error. Under the pointwise reading, blocks 25-27 also have RGI geometry (13 to 16 blocks, top and bottom counts 4 to 5); no over-block or combined verdict changes.",
+   "severity": "minor"
+  },
+  {
+   "part": "B",
+   "item": "for_rsi: 'Within the tested range, Part B finds no regime in which RSI content sustains or amplifies itself through the model's own text'",
+   "problem": "The measured gains are not gains of RSI content.\n- Every theta cell pushes and reads along u*_b, the shared mode. At block 14, Gamma pools RSI_a, RSI_b, SEA, SPO and RND_1 (TV blocks.14.B_Q0.Gamma.components).\n- u*_b is not RSI-aligned: corrected cos with u_T_perp 0.170 (p 0.209) at block 14, -0.074 at 18, 0.103 at 6.\n- On the RSI axis itself only descriptive values exist:\n  - one-step gains along the RSI start of 0.024-0.053 (TV blocks.<b>.B_Q0.evaluations.RSI_a.0.g_par, RSI_b 0.053);\n  - K on u_T_perp, which at T 1.0 is 1.053 [0.743, 1.538] (TV blocks.14.R6.cells.a1_T1.K_u_T_perp), an interval that includes 1.\n- All block-14 rule outputs are descriptive (G11).",
+   "correct_reading": "Part B shows that the mode onto which the RSI, sea, sports and random loops converge is sub-critical, at pushes >= 0.5 alpha_0 and T 0.15-1.0; this is descriptive at block 14. It does not measure how RSI content itself feeds back. The only RSI-axis estimate of the in-context carry, descriptive and with a noisy denominator, cannot exclude self-sustainment at T 1.0.",
+   "severity": "weakens a conclusion"
+  },
+  {
+   "part": "B",
+   "item": "Problem 4 (toy tau_c regression): 'uses a 95 % (2.5/97.5) interval, unlike the plan's 90 %'",
+   "problem": "The 90 % convention belongs to the Qwen prompt bootstrap. Plan line 345 (section 2.6) sets two-sided 95 % intervals for every toy rule, and the T5 regression is a toy statistic.",
+   "correct_reading": "95 % is the toy convention. The real problem is degeneracy: all 17 nets switch between tau 1 and 2, so y is constant, the coefficients are of order 1e-15 (S: parts.B.toy.T5.tau_c_regression), and the result should read 'not estimable'.",
+   "severity": "minor"
+  },
+  {
+   "part": "C",
+   "item": "Problem 1 and C-T3 word-length cap: 'literal text gives L* = 9'",
+   "problem": "At L 9, seed 4 has jstar 2 (contiguous) but jstar_literal 4 (S: parts.C.toy.C_T3.word.L9), so an untrained shift at distance 3 has zero-shot accuracy < 0.5. Line 1036 requires that j*(L) 'covers every untrained shift', and a seed with a failed shift at distance 3 does not, under either reading of j*.",
+   "correct_reading": "L* = 12 is the reading consistent with 'covers every untrained shift': 3 of 5 seeds cover at L 9, 5 of 5 at L 12. L* = 9 follows only if 'covers' means j* >= max distance regardless of failed shifts in between. The alternative is weak, not an equal reading.",
+   "severity": "minor"
+  },
+  {
+   "part": "C",
+   "item": "Problem 13: 'With 5 seeds this rule can hardly ever certify below-chance accuracy'",
+   "problem": "The same file shows t(4) upper bounds below 1/17 in several C-T4 operations (S: parts.C.toy.C_T4.cells.<cell>.ops.<op>.acc_hi):\n- W 256 reflection: acc 0.0185, upper bound 0.0264;\n- reflection at W 128 and W 64: 0.0421 and 0.0473;\n- x-span: 0.0387-0.0528;\n- W 256 edit 0.0513 and block11 0.0573.\nThe conjugation fails because its between-seed SD is large (0.0453), not because of the seed count.",
+   "correct_reading": "Conjugation is not 'inverted' because its upper bound, 0.1061, is >= 1/17. The rule can certify below-chance accuracy when the seeds agree. In the C-T4 operations 'inverted' fails on the probe or modal-map conditions, which are not in the summary.",
+   "severity": "minor"
+  },
+  {
+   "part": "C",
+   "item": "for_rsi (4): 'Round 1 never showed a self-sustaining RSI loop'",
+   "problem": "Round 1's block-14 verdict is 'not decidable (pilot gate GO3 failed; descriptive only; would have read: undecided (positive control failed))' (S: gates.G13.V_RSI). Not having shown such a loop is not the same as having shown that none exists.",
+   "correct_reading": "Round 1 could not decide whether a self-sustaining RSI loop exists. C-Q4b's gate stayed closed because neither a 'likely' would-have-read verdict nor an attracted random loop existed (G13, G14).",
+   "severity": "minor"
+  },
+  {
+   "part": "gates",
+   "item": "Amendment 1 item: 'removes an upward bias ... makes the G17 guard harder to pass ... cannot have favoured a passing guard'",
+   "problem": "The amended bootstrap still leaves U-based intervals shifted upward.\n- G and SNR intervals sit high, e.g. TV blocks.18.cells.a1_T0.3.windows.all.G 0.1192 [0.1066, 0.1622] and first20 0.1140 [0.1078, 0.1716].\n- 12 rotation intervals exclude their own point estimate: TV blocks.14.cells.{a0.5_T0.7, a1_T0.3, a1_T0.15} and blocks.6.cells.a1_T0.3, all three windows each.\nThis fits r2_theta.py Pairs (lines 123-138), which weights within-prompt cross-seed products by w_p^2 and removes only same-pair copies.",
+   "correct_reading": "Amendment 1 changes no verdict: every gain bound is <= 0.343 and every G17 p5 is >= 0.66. But it is not established that the guard ended up stricter, because a residual upward drift of the replicates remains.",
+   "severity": "minor"
+  },
+  {
+   "part": "gates",
+   "item": "'Parts not run' item: '12 rule items are closed by gates'",
+   "problem": "S: deviations.not_run lists C-Q4b twice ('C_Q4b/gate/in_session' and 'C_Q4b'). The reader's own enumeration names 11 items: pull-and-delta, 8 R3 items, C-Q4b and C-T7.",
+   "correct_reading": "11 distinct items (12 entries), plus P3 'not decidable' in the theta toy.",
+   "severity": "minor"
+  },
+  {
+   "part": "gates",
+   "item": "G46 item: W 64 gaps 'possibly the two rounds average different seed sets'",
+   "problem": "Different seed sets cannot be the whole explanation. In 'AT5 nets (r2_t1) | bp_sp_W64_s*_K12_g0_wd1', seed 3's first95 itself differs (4500 vs 4450). Every W >= 128 cell matches to |dB2(8)| <= 8.9e-5 with identical first95.",
+   "correct_reading": "W 64 retrained nets are not identical to round 1. The training path differs, plausibly through numerical divergence over runs of up to 6,000 updates, possibly together with different seed sets in the means. Every cell stays within G46 tolerance and no verdict changes.",
+   "severity": "minor"
+  }
+ ],
+ "data_problems": "These items point to run, code or reporting problems rather than findings.\n\n1. **Qwen3-0.6B arm has no passing block** (R: A7.arm_0p6B.P = [], n_P = 0).\n   - passing_set() in r2_rgi_stats.py returns the longest run of any length, so not one of 28 blocks passed C0 and 'not uncomposed'. Qwen3-1.7B has 16 contiguous passing blocks.\n   - The G31 flag on this arm is the code default for fewer than 6 blocks.\n   - Check C0_parts and 'uncomposed' in rgi/geom_stats_qwen3-0.6b.json (on Drive) before reading this arm as a result. It removed r_DiD.\n\n2. **A3 causal read-out vanishes near the output.**\n   - The leaf at the object positions (A3_USER 9-14) cannot reach the answer token after block 27: R: A7.g_self_spillover.S_self[27] = 0.0, z = null.\n   - At blocks 22-26, |S_self| <= 6.3e-5, against 0.012-0.015 at blocks 18-19.\n   - Block 27's 'not composed' is a 0/0 decision, and the composed pattern is non-monotone (20, 21 out; 22-26 in; 27 out).\n   - The causal line's top third {22, 23, 24, 26} rests on noise-dominated statistics: sigma_causal upper bounds 0.57-2.29, rho_causal -0.043 / 0.033.\n   - The G32 gate was designed for identical unembedding gradients (plan line 467), not vanishing ones.\n\n3. **Reliability-corrected cosines above 1 in all parts:**\n   - S4 1.0436 / 1.2190 / 1.1516 (R: A6.gen.<b>.S4);\n   - RND_1 debiased cos 1.468 at block 18 (TV blocks.18.R4.random_start_debiased_cos);\n   - B-Q0 debiased cos RSI_b 1.043 and SEA -1.051 at block 14, SEA -1.142 and r2RSIb 1.030 at block 6;\n   - C-Q5 cos_disatt 1.139, above its own interval [0.821, 1.102]; dose cos_debiased 1.048 with bootstrap median 1.167.\n\n   A likely cause, not verified, is that the split-half rel over-corrects when the compared estimates share prompts. Thresholds applied to these values are then biased toward passing: mode-set membership, 'generic attractor', R_4 'common attractor', and the C-Q5 superposition rule (raw cos 0.789 < 0.8).\n\n4. **Theta bootstrap asymmetries:**\n   - 12 rotation intervals exclude their own point estimate;\n   - G and SNR intervals sit above their point estimates;\n   - even-part norm intervals exclude the point at all three blocks: 4.321 vs [4.726, 6.076], 8.499 vs [10.28, 13.78], 0.8795 vs [1.067, 1.423].\n\n   This is consistent with the w_p^2 weighting of within-prompt cross-seed products in Pairs (r2_theta.py lines 123-138) and with the noisy-norm bias. No verdict is affected, because every bound is <= 0.343.\n\n5. **Format and censoring:**\n   - theta_verdict.json holds 9 NaN values (blocks.*.R1.alpha_up), contrary to implementer reading 28 ('strict JSON');\n   - alpha_star = {0, 0, 0} encodes 'no crossing' without a censoring note;\n   - the toy tau_c regression is degenerate: y is constant over 17 nets, and coefficients of about 1e-15 are reported with intervals.\n\n6. **C-T5 internal inconsistency.** The col arm's per-seed r* at W 128 is 6.5, 12, 11.5 and 5.5 (the first r with A_3000 <= 0.11), yet A_3000 at s_24 is 0.2509 [0.2099, 0.2919]. Either accuracy recovers after first falling to 0.11 or below, or r* is triggered by validation noise (4 validation pairs).\n\n7. **Report-layer bugs:**\n   - round2_summary parts.B.verdicts.qwen.<b>.R4 prints the descriptive strings as verdicts (r2_report.py line 666 falls back to verdict_descriptive), although TV R4.verdict is null at every block;\n   - block-14 R5 has no rule-level label;\n   - the A7 per-block items at block 14 lack G-desc, although r2_rgi_verdict.py's own docstring (line 25) promises it on every block-14 verdict;\n   - AT8.family.not_testable = [] even though G40 excluded ReLU;\n   - key_numbers.self_loop_rows = {};\n   - the causal_line '*_ci' fields hold pointwise intervals under an 'intervals: simultaneous' note;\n   - parts.B.verdicts.R3.not_entering is null while R3_detail has the reasons, and the reason string 'G-blk failed or summary missing' is given although all summaries exist;\n   - the A6 GEN records carry no damage flag, although the block-14 GEN pushes exceed 0.15 nats (0.1697 / 0.2212 / 0.2685);\n   - deviations.packing.r2_ana is stale (written 6 s before the session ended);\n   - parts.C.labels contains an entry with an empty path;\n   - the G46 'reproduction differs' label is missing from parts.B.toy.labels;\n   - P3 'not decidable' is an implementer reading that is not listed as a deviation;\n   - the G1 freeze metadata is null in the four toy sessions (plan line 1431).\n\n8. **Part C control matching:**\n   - OD-C2 marks negative targets as 'matched'. Example: edit at W 64 has target -0.0957 and control drop 0.3664, and the edit fails 'unlearns' through that control alone.\n   - W 256 reflection 'unlearns' against an unmatched control (drop 0.075 vs target 0.470), with a margin of 0.0003.\n   - Both conflict with G45's 'within 0.02'.\n\n9. **Toy reproduction and model counts:**\n   - W 64 retrained nets do not reproduce round 1 exactly: B2(8) differs by 0.006-0.028, and first95 is 4500 vs 4450 for bp_sp_W64 seed 3. All W >= 128 cells match to <= 9e-5.\n   - AT5's 55 BP models equal 60 minus the 5 W 64 nets that never reached level 1, so the cross-model slope is conditioned on generalisation.\n\n10. **AT6 (descriptive):** bottleneck-4 Phi = 0.99999999 is probably a construction effect, and wd x5 has no net that reached level 1."
+}
