@@ -47,6 +47,7 @@
 - 14.11. 01:50 MEZ: Teile R und K fertig umgesetzt, Mock-Tests bestanden (R: 13 Sitzungen; K: 12 Sitzungen inkl. RK-1 mit CE- und
   Soft-MTP-Kopf). Alle vier Teile damit fertig. Läuft jetzt: Integrationstest (alle Slots im Mock-Modus, Rundenauswertung,
   Notebooks) und Bau der Paketdateien (R: 192 neue Prompts; K: Labelbank, REF-K16; D: Reize; L: Langdokument-Liste).
+- 14.11. 04:00 MEZ: Integrationstest bestanden (alle 32 Sitzungen im Mock-Modus; 2 Klebefehler K->R und K->L mit 3 Korrekturen behoben; tests/integration_cpu.txt)
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

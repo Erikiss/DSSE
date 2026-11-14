@@ -1,0 +1,97 @@
+Round 1b integration test on the CPU (MOCK only: tiny random models and mock tokenizers, no real model run)
+==========================================================================================================
+Date: 2026-11-14, 01:02-02:56 UTC (02:02-03:56 MEZ). Started by the first integrator; it was killed by a container restart after
+r1b_K_S7 and resumed here from the same mock tree (the runner resumes finished sessions and finished steps).
+
+What ran
+- Schedule: every session of main 4.2, slot by slot in the order of r1b_contracts.SLOTS, one session process at a time, as in
+  r1b_run_slot.py --mock-dry-run. Driver: scratchpad r1b/integ_run.py (first integrator) and r1b/integ_run2.py (same driver plus a
+  per-command time budget, so that each command stayed under 9 minutes). Each command: timeout 530 s, taskset -c 2,3, MOCK=1,
+  RUN_DEVICE=cpu, OMP/MKL threads 1, 18 commands in the foreground, no background jobs.
+- Mock tree: r1b_run_session.mock_tree(with_r1=True): accounts A and B, shortcuts dsse_runs_B / r1b_xfer_A, round-1 states from
+  rk_loop.py MOCK at blocks 14, 18, 6, placeholders for every round-1/round-2 pattern of the contracts, each part's mock_inputs, mock
+  freeze record (tier 2 funded). Tree: scratchpad r1b/integ/tree (logs per session in tree/logs, results in tree/integ_results.json).
+- MOCK-only trigger forcing so that every tier-2 session runs: r1b_R_S5/rg11.json decision 'refit' (already 'refit' in this run),
+  r1b_R_ana/rg15.json J1_and_J2 False -> True.
+
+Result: 32 of 32 sessions done (exit 0); 0 sessions 'not run'. Exit codes per attempt and recorded seconds (slot, account):
+  P0    B  r1b_P0        exit 0        15.9 s  done
+  A1    A  r1b_R_S2_14   exit 0       207.9 s  done
+  A1    A  r1b_R_S2_18   exit 0       135.8 s  done
+  A1    A  r1b_R_S3      exit 0       189.6 s  done
+  A1    A  r1b_R_S6      exit 0       156.1 s  done
+  A1    A  r1b_K_S5      exit 0       459.8 s  done
+  A1    A  r1b_D_C       exit 0        98.1 s  done
+  A2    A  r1b_R_S0      exit 0        22.8 s  done
+  A2    A  r1b_R_S1      exit 0       235.6 s  done
+  A2    A  r1b_R_S2_06   exit 0       254.6 s  done
+  A2    A  r1b_D_B       exit 0        53.9 s  done
+  A2    A  r1b_R_S5      exit 1,0     416.2 s  done
+  A2    A  r1b_R_S7      exit 0        50.9 s  done
+  A2    A  r1b_R_ana     exit 0        37.3 s  done
+  A2    A  r1b_K_ana     exit 0        22.1 s  done
+  A2    A  r1b_D_ana     exit 0         4.6 s  done
+  B1    B  r1b_K_S1      exit 0       147.4 s  done
+  B1    B  r1b_K_S4      exit 0        87.5 s  done
+  B1    B  r1b_L_A       exit 0       439.2 s  done
+  B1    B  r1b_L_B       exit 0       165.8 s  done
+  B2    B  r1b_K_S3      exit 0        22.7 s  done
+  B2    B  r1b_D_A       exit 0       333.4 s  done
+  B2    B  r1b_K_S2a     exit 0       260.2 s  done
+  B2    B  r1b_K_S2b     exit 1,0     528.4 s  done
+  A_T2  A  r1b_R_S5L     exit 0       175.3 s  done
+  A_T2  A  r1b_R_S8      exit 0        94.9 s  done
+  A_T2  A  r1b_R_ana2    exit 0         1.9 s  done
+  A_T2  A  r1b_K_S6      exit 0        36.7 s  done
+  A_T2  A  r1b_D_R       exit 0       105.2 s  done
+  B_T2  B  r1b_K_S7      exit 0        86.9 s  done
+  ANA   A  r1b_ana       exit 1,0       9.3 s  done
+  ANA   A  r1b_ana2      exit 0         0.2 s  done
+  total recorded session time 4856 s (81 min)
+  Not recorded above: attempts killed by the 530 s command limit and resumed from step records / step caches (r1b_K_S4 about 275 s,
+  r1b_D_A about 500 s), and the pre-fix attempts that were reset (r1b_R_S5 138 s, r1b_R_S5L 145 s exit 1, r1b_R_ana 33 s).
+  Exit 1 entries: r1b_K_S2b (disk full, see below), r1b_R_S5 (R5.2, fix 2), r1b_ana (L-ANA, fix 3); each passed on the next attempt.
+- Steps 'not run' in finished sessions: only r1b_D_A d1_cov (NA:not_run:SG8 preview not passed; by design under MOCK, where the
+  SG8 preview is a mock record). No outputs were mock-filled by the runner in the final tree. r1b_L_B carries 'MOCK stand-in' labels.
+
+Glue errors found and fixed (minimal edits; originals in scratchpad r1b/integ_orig)
+1. K -> R, J-lens index convention (r1b_r_s5.py, r51_block and rg10). MOCK K4j (r1b_K_S1, k4j.json) chose the 'input' convention.
+   Under it, block 26's output needs J[27], which the 27-map stack does not have, so s5_r51_b26 raised NotRun and, through the step
+   chain (after=), RG10, RG11, R5.2 and R5.3 of r1b_R_S5 were all 'not run' (the same would happen on the GPU whenever K4j picks
+   'input'). R's self-test only plants 'output'. Fix: R5.1 writes r5/r51_b26.json as a coded record (not_run
+   NA:not_run:no J-lens map for block 26 under convention input) instead of raising; RG10 reads a record without directions as
+   valid=False with that code (RG10 already did this for a missing file), so RG11's rule (refit if not valid at 14 or at all of
+   22, 24, 26) still applies. In MOCK the runner had hidden this by mock-filling jlens_validity.json / rg11.json; r1b_R_S5L then
+   failed (KeyError 'blocks' in _valid).
+2. Same cause, R5.2 (r1b_r_s5.py, r52): the block loop crashed on J = None (AttributeError) once RG10 ran. Fix: block 26 without
+   a map gets a coded entry (string NA:not_run:...) and is skipped. r1b_R_S5, r1b_R_S5L and r1b_R_ana were reset and rerun.
+3. K -> L, K4 gating answers (r1b_l_ana.py, l5a). k4_gating.json (r1b_K_S2a) stores greedy and samples as generated token ids
+   (also on the GPU path, r1b_k_s2.py); L-ANA's L5a parsed them as text (TypeError in re.findall), so l_ana and the round-level
+   steps of r1b_ana failed. Fix: L5a decodes token-id answers with the tokenizer (skip_special_tokens) before reading numbers.
+
+Round-level analysis (r1b_report.py)
+- r1b_ana: steps l_ana, ana_families, ana_report ok; runde1b_summary.json written; its report_check (SG6, provenance R9.1-R9.4 over
+  29 sessions) ok with no problems. r1b_ana2: ana_tier2 ok, runde1b_summary_t2.json written.
+
+Notebooks
+- Rebuilt with notebooks/build_runde1b_gpu_notebooks.py into a scratch folder: cell sources identical to the committed eight
+  notebooks (only nbformat's random cell ids differ), so the committed notebooks were not rewritten. The fixes changed no code path
+  that the notebooks name.
+- Every notebook names all sessions of its slot and no session outside r1b_contracts.SESSIONS; the other r1b_* strings are
+  file or folder names (r1b_inputs, r1b_selftest_<slot>_<commit>.json, r1b_R_verdict*.json). Each runs r1b_run_slot.py.
+
+Environment problem during the run
+- The root volume reached 0 MB free at the start of r1b_K_S2b (ENOSPC while copying K_S1's inputs; the volume stops at about 40 GB
+  used although df reports 252 GB). Freed about 440 MB by deleting earlier round-1b mock trees in the scratchpad (kmock, r1b_dry,
+  r1b_dry.log, r1b_R_test); r1b_K_S2b then passed. At the end about 300 MB were free.
+
+Remaining problems / not covered
+- Disk: about 300 MB free on the root volume; the scratchpad holds about 25 GB of older outputs. Further mock runs or package builds
+  need space freed first (the coordinator's decision).
+- The part self-tests of R and L were not rerun after the edits (cost); the edited paths ran in this integration (R5.1 / RG10 /
+  R5.2 under 'input', L5a on token ids), and the unchanged paths are untouched ('output' convention, text answers).
+- Not exercised under MOCK: D1-cov (SG8 preview), real gate outcomes (MOCK records gates, does not enforce them), tier-2 triggers
+  (forced), the real package files (K uses a mock label bank under MOCK; the rebuilt bank.json / ref_k16.json of 01:12 UTC are not
+  read by the mock sessions).
+- Mock CPU times are not GPU estimates; long mock sessions on two cores: r1b_K_S2b 528 s, r1b_K_S5 460 s, r1b_L_A 439 s, r1b_D_A
+  about 830 s over two commands.

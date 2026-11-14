@@ -60,8 +60,8 @@ def l5a(ctx, tok, gate, recs, gen, cf):
     M = {}
     for i, it in gate.items():
         s = set()
-        for a in it["answers"]:
-            s |= set(nums(a))
+        for a in it["answers"]:                       # K4 gating answers are generated token ids (k4_gating.json, r1b_K_S2a)
+            s |= set(nums(a if a is None or isinstance(a, str) else tok.decode(a, skip_special_tokens=True)))
         g = (gen or {}).get(i) or {}
         for a in g.get("gate", []):
             s |= set(nums(a))
