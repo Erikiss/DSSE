@@ -136,8 +136,8 @@ def profile(ctx):
         ev = [e for e in pr.key_averages() if dev(e) > 0]
         tot = sum(dev(e) for e in ev) or 1.0
         top = sorted(ev, key=dev, reverse=True)[:10]
-        att = [e for e in ev if any(s in e.key.lower() for s in ("fmha", "attention", "attn", "mem_eff", "flash", "cutlass"))
-               and not e.key.startswith("aten::")]
+        att = [e for e in ev if any(s in e.key.lower() for s in ("fmha", "attention", "attn", "mem_eff", "flash"))
+               and not e.key.startswith("aten::")]                 # the SDPA kernels (memory-efficient: fmha_cutlassF_..., AttentionKernel)
         rec["timing"].update(profiled_wall_s=wall, gpu_time_per_step_ms=tot / 1000 / n)
         rec["rates"]["attention_share_of_gpu_time"] = sum(dev(e) for e in att) / tot
         rec["env"]["top_kernels"] = [dict(name=e.key[:160], share=dev(e) / tot, calls=int(e.count)) for e in top]
