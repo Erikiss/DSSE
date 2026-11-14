@@ -169,3 +169,24 @@ actual calibration, format, selection and damage gates.
 
 Never merge this branch automatically. All delivered changes remain confined to
 G source, its plan/notes and the six explicitly requested G notebooks.
+
+## Colab installation repair
+
+The first operator's pilot export stopped during `venv` creation: Colab Python
+3.13 could not run `ensurepip`. This occurred before GPU checking or model loading.
+All six notebooks now create the environment with `with_pip=False` and use the
+kernel's existing pip to install pip into that isolated target. They repair a
+missing target pip, recheck installed package versions on resume, and write the
+ready marker only after verification. Environment directories include the Python
+major/minor version as well as CPU/CUDA identity.
+
+Validation: seven installation regression tests and six notebook structural
+tests pass. The original failure was also reproduced on local Python 3.13.5
+without `ensurepip`; the corrected actual notebook cell then installed all pinned
+CPU dependencies, passed `pip check`, resumed without reinstalling, and completed
+the native E2B mock pilot. This checks installation, not real CUDA execution.
+
+Open the updated GitHub notebook in Colab and retain the original settings.
+The corrected setup cell runs directly from the notebook, so an existing
+`source.json` pin remains usable; no Drive experiment deletion or new experiment
+name is needed for this installation-only repair.

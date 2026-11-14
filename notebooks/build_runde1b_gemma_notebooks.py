@@ -196,30 +196,60 @@ DEPENDENCIES = r'''
 import venv
 
 ENV_KIND = "cpu" if MODE == "mock" or SLOT == "ANA" else "cu128"
-ENV_PATH = BASE / "envs" / ("torch210-tf5101-ct015-acc112-" + ENV_KIND)
+PYTHON_TAG = f"py{sys.version_info.major}{sys.version_info.minor}"
+ENV_PATH = BASE / "envs" / ("torch210-tf5101-ct015-acc112-" + ENV_KIND + "-" + PYTHON_TAG)
 PINS = {"torch": "2.10.0", "transformers": "5.10.1", "compressed-tensors": "0.15.0", "accelerate": "1.12.0"}
 if MODE != "mock" and SLOT != "ANA":
     PINS["pyarrow"] = "23.0.0"
+
+def g_installed_versions(python):
+    check = "import json,importlib.metadata as m; print(json.dumps({p:m.version(p) for p in " + repr(list(PINS)) + "}))"
+    result = subprocess.run([str(python), "-c", check], capture_output=True, text=True)
+    if result.returncode:
+        return {}
+    try:
+        versions = json.loads(result.stdout)
+        return versions if isinstance(versions, dict) else {}
+    except (ValueError, TypeError):
+        return {}
+
+def g_versions_match(versions):
+    return all(str(versions.get(package, "")).split("+", 1)[0] == wanted
+               for package, wanted in PINS.items())
+
 if INSTALL_DEPENDENCIES:
     ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
     with (ENV_PATH.parent / (ENV_PATH.name + ".lock")).open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         PYTHON = ENV_PATH / "bin" / "python"
         if not PYTHON.is_file():
-            venv.EnvBuilder(with_pip=True).create(ENV_PATH)
+            # Colab kann Python ohne funktionierendes ensurepip bereitstellen.
+            venv.EnvBuilder(with_pip=False).create(ENV_PATH)
+        pip_ready = subprocess.run([str(PYTHON), "-m", "pip", "--version"],
+                                   capture_output=True, text=True).returncode == 0
+        if not pip_ready:
+            # Das vorhandene Colab-pip installiert ausschließlich im Ziel-Umfeld.
+            # Dies repariert auch eine zuvor unterbrochene Einrichtung.
+            subprocess.run([sys.executable, "-m", "pip", "--python", str(PYTHON),
+                            "install", "--disable-pip-version-check", "pip==25.3"], check=True)
         marker = ENV_PATH / "g_dependencies.json"
-        if not marker.is_file() or json.loads(marker.read_text()) != PINS:
+        try:
+            recorded_pins = json.loads(marker.read_text())
+        except (OSError, ValueError):
+            recorded_pins = None
+        if recorded_pins != PINS or not g_versions_match(g_installed_versions(PYTHON)):
             subprocess.run([str(PYTHON), "-m", "pip", "install", "--quiet", "torch==2.10.0", "--index-url", "https://download.pytorch.org/whl/" + ENV_KIND], check=True)
             packages = [f"{package}=={pin}" for package, pin in PINS.items() if package != "torch"]
             subprocess.run([str(PYTHON), "-m", "pip", "install", "--quiet", *packages, "numpy", "scipy", "scikit-learn", "nbformat"], check=True)
+            if not g_versions_match(g_installed_versions(PYTHON)):
+                raise RuntimeError("Die G-Paketinstallation ist unvollständig. Diese Zelle erneut ausführen.")
             marker.write_text(json.dumps(PINS, sort_keys=True))
 else:
     PYTHON = Path(sys.executable)
-check = "import json,importlib.metadata as m; print(json.dumps({p:m.version(p) for p in " + repr(list(PINS)) + "}))"
-installed = json.loads(subprocess.run([str(PYTHON), "-c", check], check=True, capture_output=True, text=True).stdout)
+installed = g_installed_versions(PYTHON)
 for package, wanted in PINS.items():
-    if installed[package].split("+", 1)[0] != wanted:
-        raise RuntimeError(f"Falsche Paketversion: {package} {installed[package]} statt {wanted}")
+    if str(installed.get(package, "")).split("+", 1)[0] != wanted:
+        raise RuntimeError(f"Fehlende oder falsche Paketversion: {package} {installed.get(package, 'fehlt')} statt {wanted}")
 ENV = dict(os.environ, OMP_NUM_THREADS="1", MKL_NUM_THREADS="1", TOKENIZERS_PARALLELISM="false", R1B_G_COMMIT=COMMIT)
 ENV["MOCK"] = "1" if MODE == "mock" else "0"
 if MODE == "mock":
