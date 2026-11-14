@@ -180,14 +180,30 @@ def _gumbel(gens, V, dev):
     return torch.stack([-torch.log(-torch.log(torch.rand(V, generator=G, device=dev).clamp_(1e-12, 1 - 1e-7))) for G in gens])
 
 
+def mask4(full_am, q_len):
+    """The 4-D boolean SDPA mask transformers 5.22.2 builds itself for a padded batch (causal over the cache positions and the 2-D
+    padding mask): [B, 1, q_len, kv_len], True = attend (passed through unchanged by create_causal_mask). tests/fast_identity.py
+    checks it against the mask transformers builds."""
+    torch = _t()
+    kv = full_am.shape[1]; dev = full_am.device
+    q = torch.arange(kv - q_len, kv, device=dev); k = torch.arange(kv, device=dev)
+    return (k[None, :] <= q[:, None])[None, None] & full_am.bool()[:, None, None, :]
+
+
 def decode(model, tok, prompts, keys, T=0.7, max_new=64, probe=None, mask_eos=False, advance=None, greedy=False, on_step=None,
-           spin_fn=None, stop=True):
+           spin_fn=None, stop=True, nosync=None, gen_out=None):
     """Keyed Gumbel-max decoding (rk_loop's draw: one torch.rand(V) per row and step on a generator seeded with the key; scores =
     logits / T + g; argmax), KV cache, left padding, explicit positions. Step 0 is the prefill; step k >= 1 processes x_k.
     Per row (length n = number of generated tokens before the stop token): tokens x_1..x_n; per position k = 1..n: a, a2 [n, C] (probe
     channels while processing x_k), e (entropy at T 1 of the next-token distribution), peos (its EOS mass), s (-log q(x_(k+1)), the
     stop token or the extra draw at the end); zs via spin_fn(step, zs [B, S]) (per-step reduction, e.g. packed spins).
-    advance [B]: draws discarded per row before decoding (the twin protocol's draw-and-discard). on_step(step, probe) switches windows."""
+    advance [B]: draws discarded per row before decoding (the twin protocol's draw-and-discard). on_step(step, probe) switches windows
+    (a function of the step only). nosync: the engine switch engine.fast.l_decode_nosync (None: the running session's freeze record):
+    _decode_nosync, same values without per-step host syncs. gen_out: a list that receives the per-row generator states at the end."""
+    if nosync is None:
+        nosync = K.engine_fast(None, "l_decode_nosync")
+    if nosync:
+        return _decode_nosync(model, tok, prompts, keys, T, max_new, probe, mask_eos, advance, greedy, on_step, spin_fn, stop, gen_out)
     torch = _t()
     from transformers import DynamicCache
     dev = K.model_device(model)
@@ -254,9 +270,15 @@ def decode(model, tok, prompts, keys, T=0.7, max_new=64, probe=None, mask_eos=Fa
         cur_pos = cur_pos[:, -1:] + 1
     if probe is not None:
         probe.buf = None
+    if gen_out is not None:
+        gen_out.extend(G.get_state() for G in gens)
     n = length.cpu().tolist()
     stack = lambda L_: torch.stack(L_, 1) if L_ else None
     TOK, A, A2, E, PE, S_ = (stack(rec[k]) for k in ("tok", "a", "a2", "e", "peos", "s"))
+    return _results(B, n, max_new, TOK, A, A2, E, PE, S_, e0, s0, rec)
+
+
+def _results(B, n, max_new, TOK, A, A2, E, PE, S_, e0, s0, rec):
     res = []
     for r in range(B):
         k = n[r]
@@ -269,6 +291,100 @@ def decode(model, tok, prompts, keys, T=0.7, max_new=64, probe=None, mask_eos=Fa
             d["z"] = [tuple(x[r] for x in z) if isinstance(z, tuple) else z[r] for z in rec["z"][:k]]
         res.append(d)
     return res
+
+
+CHECK_EVERY = 8
+
+
+def _decode_nosync(model, tok, prompts, keys, T, max_new, probe, mask_eos, advance, greedy, on_step, spin_fn, stop, gen_out):
+    """decode() without per-step host syncs (engine.fast.l_decode_nosync): per-step outputs stay on the device and are copied once at
+    the end; stop tokens are detected with torch.isin on the device; whether any row is alive is read every CHECK_EVERY steps; a padded
+    batch gets the 4-D mask transformers would build (mask4; an unpadded batch None, as transformers' own skip), so the 2-D mask's
+    fast_all sync is skipped. Steps run after every row has stopped are discarded: their records lie beyond every row's length, the
+    generators are reset to their states after the last step decode() would have run, and on_step is called again with that step.
+    Same kernels, same values (tests/fast_identity.py; r1b_P0b on the A100)."""
+    torch = _t()
+    from transformers import DynamicCache
+    dev = K.model_device(model)
+    eos, stops = K.stop_tokens(tok, model)
+    B = len(prompts)
+    ids, am, pad = K.pad_left(prompts, tok.pad_token_id)
+    padded = bool((am == 0).any())                      # host tensors: no device sync
+    ids, am = ids.to(dev), am.to(dev)
+    V = model.get_output_embeddings().weight.shape[0]
+    gens = [torch.Generator(device=dev).manual_seed(int(k)) for k in keys]
+    if advance is not None:
+        for r, n in enumerate(advance):
+            for _ in range(int(n)):
+                torch.rand(V, generator=gens[r], device=dev)
+    eos_t = torch.tensor(eos, device=dev); stop_t = torch.tensor(sorted(int(x) for x in stops), dtype=torch.long, device=dev)
+    padv = torch.full((B,), tok.pad_token_id, dtype=torch.long, device=dev)
+    cache = DynamicCache()
+    pos = (am.cumsum(-1) - 1).clamp_min(0)
+    cur, full_am, cur_pos = ids, am, pos
+    alive = torch.ones(B, dtype=torch.bool, device=dev)
+    length = torch.zeros(B, dtype=torch.long, device=dev)
+    rec = dict(tok=[], a=[], a2=[], e=[], peos=[], s=[], z=[])
+    s0 = e0 = None; anyalive, snaps = [], []
+    for step in range(max_new + 1):
+        if on_step is not None:
+            on_step(step, probe)
+        if probe is not None:
+            probe.begin()
+        with torch.no_grad():
+            out = model(input_ids=cur, attention_mask=mask4(full_am, cur.shape[1]) if padded else None, position_ids=cur_pos,
+                        past_key_values=cache, use_cache=True, logits_to_keep=1)
+        lg = out.logits[:, -1].float()
+        lp = torch.log_softmax(lg, -1); p = lp.exp()
+        e = -(p * lp).sum(-1); pe = p[:, eos_t].sum(-1)
+        if step >= 1:
+            rec["e"].append(e); rec["peos"].append(pe)
+            if probe is not None and probe.buf and "a" in probe.buf:
+                rec["a"].append(probe.buf["a"][:, -1]); rec["a2"].append(probe.buf["a2"][:, -1])
+            if probe is not None and probe.buf and "zs" in probe.buf and spin_fn is not None:
+                rec["z"].append(spin_fn(step, probe.buf["zs"][:, -1]))
+        else:
+            e0 = e
+        sc = lg.clone()
+        if mask_eos:
+            sc[:, eos_t] = -float("inf")
+        if greedy:
+            nxt = sc.argmax(-1)
+        else:
+            nxt = (sc / T + _gumbel(gens, V, dev)).argmax(-1)
+        snaps.append([G.get_state() for G in gens])
+        s = -lp.gather(1, nxt[:, None])[:, 0]
+        if step >= 1:
+            rec["s"].append(s)
+        else:
+            s0 = s
+        is_stop = torch.isin(nxt, stop_t) if stop else torch.zeros(B, dtype=torch.bool, device=dev)
+        if step < max_new:
+            length = torch.where(alive & ~is_stop, length + 1, length)
+        alive = alive & ~is_stop
+        anyalive.append(alive.any())
+        if step < max_new:
+            rec["tok"].append(torch.where(alive, nxt, padv))
+        if step == max_new or ((step + 1) % CHECK_EVERY == 0 and not bool(anyalive[-1])):
+            break
+        cur = torch.where(alive, nxt, padv)[:, None]
+        full_am = torch.cat([full_am, torch.ones(B, 1, dtype=full_am.dtype, device=dev)], 1)
+        cur_pos = cur_pos[:, -1:] + 1
+    aa = torch.stack(anyalive).cpu().tolist()
+    last = next((k for k, v in enumerate(aa) if not v), len(aa) - 1)       # the step at which decode() would have stopped
+    if last < len(aa) - 1:
+        for G, st in zip(gens, snaps[last]):
+            G.set_state(st)
+        if on_step is not None:
+            on_step(last, probe)
+    if probe is not None:
+        probe.buf = None
+    if gen_out is not None:
+        gen_out.extend(G.get_state() for G in gens)
+    n = length.cpu().tolist()
+    stack = lambda L_: torch.stack(L_, 1).cpu() if L_ else None
+    TOK, A, A2, E, PE, S_ = (stack(rec[k]) for k in ("tok", "a", "a2", "e", "peos", "s"))
+    return _results(B, n, max_new, TOK, A, A2, E, PE, S_, e0.cpu(), s0.cpu(), rec)
 
 
 def tf_pass(model, tok, seqs, starts, probe=None, batch=16, chunk=256, lastpos=False, wpos_fn=None, eff=False, kl_with=None):

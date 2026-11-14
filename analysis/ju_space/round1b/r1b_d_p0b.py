@@ -4,7 +4,9 @@ is discarded). Each item runs under r1b_pilot.Rec.item: an out-of-memory error o
   decode_rates  an untimed warm-up forward and decode, then per length 4,096 / 16,384 / 28,672 / 32,000 (random token ids, no analysis
                 material): B = 1 prefill of L - 700 tokens (synchronised), the prefix offloaded to host memory (LCE.offload, as the
                 sessions do), and keyed decode rates for B = 1..4 (a 700-token chunk over B cache copies, 32 tokens; the returned cache is
-                dropped at once); peak memory per item
+                dropped at once), each with DynamicCache and with the in-place KV buffer (engine.fast.lce_inplace_kv): rates of both and
+                the GPU bit identity of the tokens and of every step's logits (plus the in-place prefill at the shortest and longest
+                length); peak memory per item
   parity        on SO-PILOT's PG19 slices (book 25 at 16,384 and at 32,768 tokens): the last 700 tokens' log-probs on the crop path
                 (another chunk, crop, the chunk) and on the copy path against one full recompute, and SO-LCE's chunked token_logprobs
                 (2,048-token chunks, the L2a form) against one full causal pass (max and median |log-prob difference|, relative
@@ -27,7 +29,7 @@ def _setup(ctx):
 
 
 def decode_rates(ctx):
-    torch = K._torch(); tok, model, stop, c = _setup(ctx); rec = P.Rec(); eng = LCE(model)
+    torch = K._torch(); tok, model, stop, c = _setup(ctx); rec = P.Rec(); eng = LCE(model, inplace=False); eng_ip = LCE(model, inplace=True)
     Ls = (4096, 16384, 28672, 32000) if not c.mock else (300, 400, 500, 600)
     n, nch = (32, 700) if not c.mock else (8, 40)
     rng = np.random.default_rng(20261115)
@@ -46,15 +48,35 @@ def decode_rates(ctx):
         rec.item(f"prefill_L{L}", prefill)
         if "base" not in st:
             continue
+        if L in (Ls[0], Ls[-1]):
+            def pre_ip():                                 # the in-place buffer's prefill (a view of the buffer) against the plain one
+                c1, l1 = eng.fwd(ids[:2048] if not c.mock else ids[:64]); del c1
+                c2, l2 = eng_ip.fwd(ids[:2048] if not c.mock else ids[:64]); del c2
+                rec["code_checks"][f"inplace_prefill_identical_L{L}"] = bool(K._torch().equal(l1, l2))
+            rec.item(f"inplace_prefill_L{L}", pre_ip)
         for B in (1, 2, 3, 4):
-            def dec(B=B):
-                cb = LCE.copy(st["base"], B); lgb = eng.fwd(torch.tensor([chunk] * B), cb)[1]
-                P.sync(); t = time.time()
-                y = eng.decode(cb, lgb[:, -1], [ctx.key("r1bP0_D", L, B, b) for b in range(B)], 0.7, n, stop)[0]
-                P.sync(); dt = time.time() - t
-                rec["rates"][f"decode_tok_s_L{L}_B{B}"] = B * n / dt; rec["rates"][f"decode_ms_step_L{L}_B{B}"] = 1000 * dt / n
-                del cb, lgb, y
-            rec.item(f"decode_L{L}_B{B}", dec)
+            for ip in (False, True):
+                def dec(B=B, ip=ip):
+                    e = eng_ip if ip else eng; lgs = []; f0 = e.fwd
+                    e.fwd = lambda *a, **k: (lambda r: (lgs.append(r[1]), r)[1])(f0(*a, **k))       # per-step logits, kept on the device
+                    try:
+                        cb = LCE.copy(st["base"], B, inplace=ip); lgb = e.fwd(torch.tensor([chunk] * B), cb)[1]; del lgs[:]
+                        P.sync(); t = time.time()
+                        y = e.decode(cb, lgb[:, -1], [ctx.key("r1bP0_D", L, B, b) for b in range(B)], 0.7, n, stop)[0]
+                        P.sync(); dt = time.time() - t
+                    finally:
+                        del e.fwd
+                    tag = f"L{L}_B{B}" + ("_inplace" if ip else "")
+                    rec["rates"][f"decode_tok_s_{tag}"] = B * n / dt; rec["rates"][f"decode_ms_step_{tag}"] = 1000 * dt / n
+                    if not ip:
+                        st["ref"] = (y, [x.clone() for x in lgs])
+                    elif "ref" in st:
+                        y0, l0 = st.pop("ref")
+                        rec["code_checks"][f"inplace_identical_L{L}_B{B}"] = bool(torch.equal(y0, y) and len(l0) == len(lgs)
+                                                                                 and all(torch.equal(u, v) for u, v in zip(l0, lgs)))
+                    del cb, lgb, y, lgs[:]
+                rec.item(f"decode_L{L}_B{B}" + ("_inplace" if ip else ""), dec)
+            st.pop("ref", None)
         st.clear(); P.free()
     rec["env"].update(engine=eng.record(), lengths=list(Ls), n_new=n, chunk=nch)
     ctx.write_json("p0b/d_decode.json", rec, config=dict(lengths=list(Ls), n_new=n, chunk=nch, B=[1, 2, 3, 4]))

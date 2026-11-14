@@ -113,7 +113,7 @@ class Lens:
 
     # ---- the rollout
     def rollout(self, block, Hreal, Hprior, seeds, J=16, variant="E", lam=1.0, plaus=0.1, greedy=False, T=None, keys=None,
-                ops=None, reinj=None, forced=None, sets=True, dla=False, fov=True, prefix=None, bias=None, keep_first=False):
+                ops=None, reinj=None, forced=None, sets=True, dla=False, fov=True, prefix=None, bias=None, keep_first=False, kept_rows=None):
         """Hreal / Hprior [N, D]: the vectors written at the placeholder (block-l output for 'E'; block-26 output for 'L', already
         n26 * unit(J_l h)). prefix: (DynamicCache for B = 1, length) of a shared filler prefix (SO-LCE copy path, K6f / K6e-d).
         ops: neuron interventions (r1b_k_base.Interv) with 'when' on the chain position (state['p0']); reinj: (beta * (h - mu) [N, D]).
@@ -155,7 +155,8 @@ class Lens:
             if ops:                                    # rows 'real': the expert (real) stream of this call's 2N rows
                 ops = [dict(o, rows=(torch.arange(B) < N)) if isinstance(o.get("rows"), str) else o for o in ops]
             iv = Interv(self.model, ops, st) if ops else None
-            G = Gumbel(dev, T, list(keys) * 2) if keys is not None else None
+            kept = RC.engine_fast(None, "k_gumbel_kept_rows") if kept_rows is None else bool(kept_rows)
+            G = Gumbel(dev, T, list(keys) if kept else list(keys) * 2) if keys is not None else None   # kept: the N kept rows only
             toks = torch.zeros(N, J, dtype=torch.long); first = None
             pos = torch.arange(ids.shape[1], device=dev)[None].repeat(B, 1) + off
             with torch.no_grad(), RC.sdpa_efficient(dev):            # K.0: the memory-efficient kernel is asserted
@@ -172,7 +173,7 @@ class Lens:
                         first = dict(lr=lr.cpu(), lp=lp.cpu(), plaus=torch.isfinite(s).cpu())
                     if bias is not None:
                         s = s + (bias(k) if callable(bias) else bias)
-                    sel = s / T + G(torch.zeros(B, s.shape[1], device=dev))[:N] if G is not None else s
+                    sel = s / T + G(torch.zeros(N if kept else B, s.shape[1], device=dev))[:N] if G is not None else s
                     top2 = sel.topk(2, -1); x = top2.indices[:, 0]
                     if forced is not None:
                         for i, f in enumerate(forced):

@@ -75,10 +75,18 @@ def write_pilot_pins(draft, out):
     return rec
 
 
+ENGINE_FAST = ("l_decode_nosync", "lce_inplace_kv", "k_gumbel_kept_rows")
+ACTIVE_FREEZE = {}                               # the freeze record of the session running in this process (set by Ctx)
+
+
 def engine_fast(freeze, name):
-    """A numerics-preserving engine switch runde1b_freeze.json engine.fast.<name> (default False when absent; main §9.1): every
-    switch has a CPU bit-identity test (tests/fast_identity.py) and a GPU bit-identity measurement in r1b_P0b."""
-    return bool((((freeze or {}).get("engine") or {}).get("fast") or {}).get(name, False))
+    """A numerics-preserving engine switch runde1b_freeze.json engine.fast.<name> (default False when absent; main §9.1):
+    l_decode_nosync (r1b_l_engine.decode without per-step host syncs), lce_inplace_kv (SO-LCE's KV cache in a preallocated buffer),
+    k_gumbel_kept_rows (K's keyed rollouts draw the Gumbel noise for the kept rows only). Every switch has a CPU bit-identity test
+    (tests/fast_identity.py) and a GPU bit-identity measurement in r1b_P0b. freeze None: the record of the running session."""
+    assert name in ENGINE_FAST, name
+    fz = ACTIVE_FREEZE if freeze is None else freeze
+    return bool((((fz or {}).get("engine") or {}).get("fast") or {}).get(name, False))
 
 
 def _torch():
@@ -1011,6 +1019,7 @@ class Ctx:
         self.quick = QUICK if quick is None else quick
         self.pilot = (session in PILOT_SESSIONS) if pilot is None else pilot
         self.freeze, self.manifest, self.declared = freeze or {}, manifest or {}, tuple(declared)
+        ACTIVE_FREEZE.clear(); ACTIVE_FREEZE.update(self.freeze)          # engine.fast switches (engine_fast(None, name))
         self.t0, self.guard_s, self.step = t0 or time.time(), guard_s, step
         self.r1, self.r2 = os.path.join(self.inp, "r1"), os.path.join(self.inp, "r2")
         self.models_used, self.keys_used, self.jlens_sha256, self.step_started = {}, set(), None, iso()

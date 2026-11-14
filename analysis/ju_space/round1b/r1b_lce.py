@@ -12,7 +12,12 @@
 Every forward runs under r1b_core.sdpa_efficient (SG9: on the GPU only the memory-efficient SDPA kernel is allowed; a math fallback
 raises). Left padding (attention mask, positions = cumsum(mask) - 1) is for short contexts only; long rows have equal lengths. Keyed
 decoding uses rk_loop's Gumbel (r1b_core.gumbel_class: verbatim source, sha256-checked); stop tokens are masked before the fixed answer
-length (never sampled), every sampled token is fed, so the cache ends with the answer and block means cover every answer token."""
+length (never sampled), every sampled token is fed, so the cache ends with the answer and block means cover every answer token.
+
+Engine switch engine.fast.lce_inplace_kv (runde1b_freeze.json; default off): the KV cache of every layer lives in a preallocated buffer
+(InplaceLayer): a forward slice-assigns the new keys / values and attends over a view of the filled length, instead of DynamicLayer's
+torch.cat rewrite of the whole cache; crop moves the filled length back; copy writes the B row copies into buffers with headroom;
+offload releases the buffer. Same values and kernels (bit identity: tests/fast_identity.py on the CPU, r1b_P0b on the A100)."""
 import copy, time
 import r1b_core as K
 
@@ -22,21 +27,83 @@ def _t():
     return torch
 
 
+_INPLACE = {}
+
+
+def inplace_layer_cls():
+    """InplaceLayer(DynamicLayer) (built on first use, so that importing this module needs no transformers)."""
+    if "cls" in _INPLACE:
+        return _INPLACE["cls"]
+    from transformers.cache_utils import DynamicLayer
+
+    class InplaceLayer(DynamicLayer):
+        """keys / values are views [:, :, :n] of the buffers _kb / _vb; update() slice-assigns the new states; when the buffer is full
+        or keys is not its prefix view (after copy.copy, batch ops, offload), the states move into a new buffer with headroom."""
+        headroom = 256
+
+        def lazy_initialization(self, key_states, value_states):
+            super().lazy_initialization(key_states, value_states)
+            self._kb = self._vb = None
+
+        def _is_view(self, B, need):
+            kb = getattr(self, "_kb", None)
+            return (kb is not None and self.keys is not None and self.keys.numel() > 0 and kb.shape[0] == B and need <= kb.shape[-2]
+                    and self.keys.data_ptr() == kb.data_ptr() and self.keys.device == kb.device)
+
+        def update(self, key_states, value_states, *args, **kwargs):
+            torch = _t()
+            if not self.is_initialized:
+                self.lazy_initialization(key_states, value_states)
+            n = self.get_seq_length(); t = key_states.shape[-2]; need = n + t; B = key_states.shape[0]
+            if not (n == 0 and getattr(self, "_kb", None) is not None and self._kb.shape[0] == B and need <= self._kb.shape[-2]) \
+                    and not self._is_view(B, need):
+                cap = need + max(int(self.headroom), 0)
+                shp = tuple(key_states.shape[:2]) + (cap,) + tuple(key_states.shape[3:])
+                kb = torch.empty(shp, dtype=key_states.dtype, device=key_states.device)
+                vb = torch.empty(tuple(value_states.shape[:2]) + (cap,) + tuple(value_states.shape[3:]), dtype=value_states.dtype,
+                                 device=value_states.device)
+                if n:
+                    kb[:, :, :n].copy_(self.keys); vb[:, :, :n].copy_(self.values)
+                self.keys = self.values = None
+                self._kb, self._vb = kb, vb
+            self._kb[:, :, n:need].copy_(key_states); self._vb[:, :, n:need].copy_(value_states)
+            self.keys, self.values = self._kb[:, :, :need], self._vb[:, :, :need]
+            return self.keys, self.values
+
+        def get_seq_length(self):
+            if not self.is_initialized or self.keys is None or self.keys.numel() == 0:
+                return 0
+            return self.keys.shape[-2]
+
+    _INPLACE["cls"] = InplaceLayer
+    return InplaceLayer
+
+
 class LCE:
-    def __init__(self, model):
+    def __init__(self, model, inplace=None):
+        """inplace: the in-place KV buffer (None: engine.fast.lce_inplace_kv of the running session's freeze record)."""
         self.model, self.dev = model, K.model_device(model)
         self.calls, self.secs, self.tokens, self.kernel = 0, 0.0, 0, None
+        self.inplace = K.engine_fast(None, "lce_inplace_kv") if inplace is None else bool(inplace)
+
+    def new_cache(self):
+        from transformers import DynamicCache
+        from transformers.cache_utils import DynamicLayer
+        c = DynamicCache(config=self.model.config)
+        if self.inplace:
+            IL = inplace_layer_cls()
+            c.layers = [IL() if type(l) is DynamicLayer else l for l in c.layers]
+        return c
 
     def fwd(self, ids, cache=None, keep=1, am=None, pos=None):
         """Forward of ids [T] or [B, T] over cache (None: new DynamicCache); keep: int (last positions) or index tensor. Returns
         (cache, logits [B, k, V] float32)."""
         torch = _t()
-        from transformers import DynamicCache
         ids = torch.as_tensor(ids, dtype=torch.long, device=self.dev)
         ids = ids[None] if ids.dim() == 1 else ids
         past = 0 if cache is None else cache.get_seq_length()
         if cache is None:
-            cache = DynamicCache(config=self.model.config)
+            cache = self.new_cache()
         if pos is None:
             if am is None:
                 pos = (past + torch.arange(ids.shape[1], device=self.dev))[None].expand(ids.shape[0], -1)
@@ -71,20 +138,32 @@ class LCE:
         return cache
 
     @staticmethod
-    def copy(cache, B=1):
+    def copy(cache, B=1, inplace=None):
         """Branch copy: a new cache whose layers hold B copies of the source rows (B = 1: a plain copy), written into fresh tensors on
-        the model device without an intermediate single copy; the source may be offloaded to the CPU (offload)."""
+        the model device without an intermediate single copy; the source may be offloaded to the CPU (offload). inplace: the copy's
+        layer kind (None: the source's; True: in-place buffers with headroom; False: DynamicLayer)."""
         torch = _t(); c = copy.copy(cache); c.layers = []
+        IL = _INPLACE.get("cls") if inplace is not True else inplace_layer_cls()
         for lay in cache.layers:
-            nl = copy.copy(lay)
+            ip = (IL is not None and isinstance(lay, IL)) if inplace is None else bool(inplace)
+            if ip and not isinstance(lay, IL):
+                nl = IL.__new__(IL); nl.__dict__.update(lay.__dict__)
+            elif not ip and IL is not None and isinstance(lay, IL):
+                from transformers.cache_utils import DynamicLayer
+                nl = DynamicLayer.__new__(DynamicLayer); nl.__dict__.update({k: v for k, v in lay.__dict__.items() if k not in ("_kb", "_vb")})
+            else:
+                nl = copy.copy(lay)
             for a in ("keys", "values"):
                 src = getattr(lay, a)
                 if src is None:
                     continue
                 dev = torch.device("cuda") if (src.device.type == "cpu" and torch.cuda.is_available()) else src.device
-                dst = torch.empty((src.shape[0] * int(B),) + tuple(src.shape[1:]), dtype=src.dtype, device=dev)
+                n = src.shape[-2]; extra = int(IL.headroom) if ip else 0
+                dst = torch.empty((src.shape[0] * int(B),) + tuple(src.shape[1:-2]) + (n + extra, src.shape[-1]), dtype=src.dtype, device=dev)
                 for b in range(int(B)):
-                    dst[b * src.shape[0]:(b + 1) * src.shape[0]].copy_(src)
+                    dst[b * src.shape[0]:(b + 1) * src.shape[0], ..., :n, :].copy_(src)
+                if ip:                                   # the copy's own buffer with headroom (never the source's)
+                    setattr(nl, "_kb" if a == "keys" else "_vb", dst); dst = dst[..., :n, :]
                 setattr(nl, a, dst)
             c.layers.append(nl)
         return c
@@ -97,6 +176,8 @@ class LCE:
                 t = getattr(lay, a)
                 if t is not None and t.device.type != "cpu":
                     setattr(lay, a, t.to("cpu"))
+            if hasattr(lay, "_kb"):                      # in-place buffer: released (the filled part went to the host above)
+                lay._kb = lay._vb = None
         _t().cuda.empty_cache() if _t().cuda.is_available() else None
         return cache
 
@@ -143,7 +224,8 @@ class LCE:
 
     def record(self):
         torch = _t()
-        r = dict(kernel=self.kernel, calls=self.calls, tokens=self.tokens, seconds=round(self.secs, 2), versions=K.versions())
+        r = dict(kernel=self.kernel, calls=self.calls, tokens=self.tokens, seconds=round(self.secs, 2), versions=K.versions(),
+                 inplace_kv=self.inplace)
         if torch.cuda.is_available():
             r.update(peak_memory_gb=round(torch.cuda.max_memory_allocated() / 1e9, 3), gpu=torch.cuda.get_device_name(0),
                      tf32_matmul=bool(torch.backends.cuda.matmul.allow_tf32))
