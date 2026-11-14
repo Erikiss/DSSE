@@ -21,6 +21,15 @@ def main(d, root):
         K.dump_json(dict(sessions={s: "declared not run (L self-test)" for s in sess}), os.path.join(t[acct], "r1b_declared_not_run.json"))
         for s in sess:                                    # producers recorded as 'not run' (the runner's own marker)
             K.dump_json(dict(reason="L self-test: non-L producer not run", code="NA:not_run:L_selftest"), os.path.join(t[acct], s, "session_not_run.json"))
+    xd = os.path.join(t["A"], "r1b_xfer"); man = {}               # MOCK A -> B exports (placeholders with their sha256)
+    for name in ("dmg_ref_R16.json", "so_ax_ustar.pt"):
+        p = os.path.join(xd, name)
+        if name.endswith(".json"):
+            K.dump_json(dict(mock=True, fid="xfer_" + name.split(".")[0]), p)
+        else:
+            K._torch().save({"mock": True}, p)
+        man[name] = dict(sha256=K.sha256_file(p), session="r1b_R_S0", rel="xfer/" + name)
+    K.dump_json(man, os.path.join(xd, "xfer_manifest.json"))
     env = dict(os.environ, MOCK="1", RUN_DEVICE="cpu", DEVICE="cpu", R1B_FREEZE=t["freeze"], PYTHONUNBUFFERED="1")
     errs = []
     for sess, acct in (("r1b_L_A", "B"), ("r1b_L_B", "B"), ("r1b_ana", "A")):
