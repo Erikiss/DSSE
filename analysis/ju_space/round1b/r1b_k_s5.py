@@ -182,6 +182,8 @@ def k9_part(ctx, i, n):
     torch = T_()
     E = S2.env(ctx); A = axes(ctx); model = E["model"]; nL = E["lens"].nL; S = S2.states(ctx); s0 = S["St"]["t0"]
     T, L4 = k9_texts(ctx, E)
+    if ctx.trimmed("K-drop2"):                  # K's drop order item 2 (K.8): K9's c4 and c5 (the analysis skips their pairs)
+        T = {k: v for k, v in T.items() if k not in ("c4", "c5")}
     chans = []
     for l in (14, 18):
         if f"ustar{l}" in A["ax"]:

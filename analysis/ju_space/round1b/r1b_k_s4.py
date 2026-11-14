@@ -251,7 +251,8 @@ def k8b_plan(ctx, E, nt=None):
     cal = RC.load_json(own(ctx, "k/k8b/cal.json")) if own(ctx, "k/k8b/cal.json") else {}
     ntm = nt or cal.get("n_templates", N(ctx, 256, 4))
     main = [dict(sid=f"m{k}", template=k, seed=0, items=t) for k, t in enumerate(_templates(ctx, bnd, ntm, 71))]
-    bist = [dict(sid=f"b{k}_{s}", template=1000 + k, seed=s, items=t) for k, t in enumerate(_templates(ctx, bnd, N(ctx, 24, 2), 171)) for s in range(N(ctx, 16, 3))]
+    nb = N(ctx, 16 if ctx.trimmed("K-drop3") else 24, 2)   # K's drop order item 3 (K.8): the K8b bistability block with 16 templates
+    bist = [dict(sid=f"b{k}_{s}", template=1000 + k, seed=s, items=t) for k, t in enumerate(_templates(ctx, bnd, nb, 171)) for s in range(N(ctx, 16, 3))]
     tqa = [dict(sid=f"q{k}", template=2000 + k, seed=0, items=t) for k, t in enumerate(_templates(ctx, sess, N(ctx, 192, 4), 271))]
     return main, bist, tqa
 
