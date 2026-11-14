@@ -10,7 +10,10 @@ Plan: `results/ju_space/plans/runde1b/` (main §2.3 shared objects, §3.1 gates,
 | `r1b_run_slot.py` | runs a slot's sessions in one notebook runtime, waiting for start conditions; `--mock-dry-run`. |
 | `r1b_sessions_R/D/K/L.py` | your session registries (stubs with one MOCK-only example step each; replace the example). |
 | `r1b_sessions_main.py`, `r1b_report.py` | round level: r1b_ana's steps after L-ANA (CF families, four answers, labels, side-by-side tables, merged manifest, SG6 report check) and the tier-2 report session r1b_ana2 (CPU, ANA notebook). |
-| `../../../notebooks/build_runde1b_gpu_notebooks.py` | builds the 8 slot notebooks (German cells). |
+| `../../../notebooks/build_runde1b_gpu_notebooks.py` | builds the 9 slot notebooks (German cells; P0b added in the fix round). |
+| `r1b_pilot.py` | SO-PILOT: `python r1b_pilot.py build <tokenizer> <wikitext103 dir> <pg19 dir> <out>` (pilot_material.json), r1b_P0b's guard (`Rec.item`), Drive and summary steps. |
+| `r1b_r_p0b.py`, `r1b_d_p0b.py`, `r1b_k_p0b.py`, `r1b_l_p0b.py` | the parts' items of the re-pilot r1b_P0b (section 11). |
+| `tests/fast_identity.py` | CPU bit-identity tests of the three `engine.fast` switches (section 11). |
 
 ## 1. Registering steps
 
@@ -58,6 +61,15 @@ float32, TF32 off, matmul 'highest', sdpa attention. A model the default cannot 
 `pad_left`, `stop_tokens`, `generate(model, tok, rows, T, max_new, setup=...)` (keyed Gumbel-max, token-identical to rk_loop.generate),
 `mean_read(model, prompts, conts, block, pad_id)` (= rk_loop.read at any block), `with sdpa_efficient(device):` for every forward above
 2K tokens (SG9 / G-LCE-2). A real model on the CPU is refused; tests use MOCK=1.
+`model_pins(name, freeze)` takes runde1b_freeze.json `models[name]` where present and raises when the record and `MODELS` disagree on
+repo, revision, layers, hidden or a file's sha256 (sha256 = the union of both file lists). Qwen3.5-2B is pinned in `MODELS` (revision
+15852e8c, sha256 of the safetensors file, tokenizer.json, config.json); `load_model` passes the record to a registered loader that
+takes `freeze`; r1b_k_s3's loader records the 15 mtp.* shapes on the model (`model.r1b_mtp_shapes`; the tensors are read by
+`mtp_tensors`, since transformers drops '^mtp.*' on load). Datasets: `fetch_dataset` knows Hugging Face snapshots (`<root>/data/<name>`)
+and `source: "gcs"` (PG19: `url_template`, exact file names, per-file sha256, `<root>/datasets/<name>`); CLI `fetch-models`,
+`fetch-datasets`. Before the freeze, pilot sessions read `results/ju_space/plans/runde1b/runde1b_pilot_pins.json` (models, datasets,
+jlens, engine of the draft record; `python r1b_core.py pilot-pins <draft> <out>`) instead of the absent freeze record
+(`r1b_core.freeze_record(pilot=True)`); runner, slot runner and notebooks do the same.
 
 ## 5. Hooks
 
@@ -100,8 +112,9 @@ band' / 'dose capped'. REF-U32 = REF-R16 + REF-K16 (`RefSet` supports `+`): repo
   `NA_TIER2`, `NA_COND`; `code_counts(obj)` for summaries; `labelled(value, *labels)`; `dist(values, groups)` for R9.4.
 - SO-PVAL: `interval`, `p_one_sided` ((1 + #null) / 2001), `p_rank`, `p_pi` (K.4), `holm`, `bh`, `boot_idx`, `boot_two_level`,
   `prompt_bootstrap` (P256, seed 1001).
-- r1b_P0 writes JSON only, with top-level keys from `PILOT_KEYS` (rates, memory, throughput, parity, code_checks, timing, env, notes);
-  the runner merges them into `r1b_P0/p0_engineering.json` for the freeze record.
+- r1b_P0 / r1b_P0b write JSON only, with top-level keys from `PILOT_KEYS` (rates, memory, throughput, parity, code_checks, timing, env,
+  notes); the runner merges r1b_P0's into `r1b_P0/p0_engineering.json` (r1b_P0b: `p0b_aggregate.json`; its own compact summary step
+  writes `r1b_P0b/p0b_engineering.json`) for the freeze record.
 
 ## 9. MOCK and tests (CPU here: `taskset -c 3`, one heavy process at a time)
 
@@ -121,3 +134,38 @@ band' / 'dose capped'. REF-U32 = REF-R16 + REF-K16 (`RefSet` supports `+`): repo
 Exit codes: 0 done, 1 failed (rerun: finished steps skipped), 2 gate, 3 time guard (continuation 'b', 'c', ... starts at once in the
 slot), 4 waiting, 5 'not run' (tier 2 unfunded / not triggered). Time guard per session: 4.5 h after the session's start. Before the
 freeze `FROZEN_PLAN_SHA256` and `FREEZE_RECORD_SHA256` in r1b_run_session.py are empty, so only r1b_P0 (SG1 off) can run for real.
+
+## 11. Fix round before the freeze (14 November 2026; arbeitsstand/freeze_prep.json)
+
+- Part D: `decode(...)[0]` instead of `y, *_ = decode(...)` everywhere (the returned cache stayed alive in `_`: the pilot's B = 3 OOM at
+  28K / 32K); p0_d offloads the prefix. `r1b_d_stim.cfg` reads `engine.D.B_long` / `engine.D.B_mid` (absent: 3 / 7).
+- Datasets and models: see section 4. `datasets.wikitext103.rk1_train_offset_lines` must be present outside the pilot (r1b_k_rk raises
+  instead of using 0); the draft's 40000 stays (SO-PILOT's passages end at raw train line 34712).
+- SO-PILOT: `results/ju_space/plans/runde1b/pilot_material.json` (32 new prompts, 8 WikiText-103 train passages at raw lines
+  34261-34712 by line range and text sha256, PG19 pilot books 25-28 with a 16,384- and a 32,768-token slice each by offsets and token
+  sha256). Keys: `r1bP0_R`, `r1bP0_D`, `r1bP0_K`, `r1bP0_L0`, `r1bP0_L0duet`, `r1bP0_fast` (registered in `KEYS['main']`).
+- Re-pilot `r1b_P0b` (account B, tier 0, pilot mode, slot/notebook P0b, Drive `dsse_runs/r1b_P0b`, about 60 A100-minutes; starts
+  after r1b_P0): p0b_r_rates (R-P's list under cost_R2.py's names: LOAD, GEN, GEN80/200/360, RD14, RDX, RALL, RFULL, RSHORT, FWD, FB,
+  SOFT, DMG), p0b_r_replay (rk_loop MOCK opener), p0b_d_decode (warm-up; B = 1-4 at 4,096 / 16,384 / 28,672 / 32,000; plain and in-place
+  KV with GPU bit identity), p0b_d_parity (crop / copy / chunked against a full recompute at 16,384 and 32,768 on PG19 slices),
+  p0b_d_profile (torch.profiler, 32K, B = 1), p0b_k_rates (K0 items 3-5, keyed rollouts 80/160/320 with and without capture, kept-rows
+  identity), p0b_k_checks (items 6, 8, 9), p0b_k_35 (item 7: Qwen3.5-2B load, G-K18, G-K17, rates, its J-lens), p0b_l_decode (L0 (i)
+  without the prefill, padded rows, nosync identity), p0b_l_long (L0 (iii), (iv), (vii)), p0b_drive (copy into the Drive session folder,
+  cold read of another runtime's file), p0b_summary (`p0b_engineering.json`). Every item runs under `r1b_pilot.Rec.item`: an
+  out-of-memory or other error is recorded as a code and the session continues.
+- Engine switches `engine.fast.<name>` in runde1b_freeze.json (default False when absent; read with `r1b_core.engine_fast(freeze,
+  name)`, `freeze=None` = the running session's record, set by `Ctx`):
+  - `l_decode_nosync`: `r1b_l_engine.decode` without per-step host syncs (`_decode_nosync`: device-side records copied once, stops via
+    `torch.isin`, any-alive read every 8 steps, `mask4` = the 4-D mask transformers builds for a padded batch, None unpadded; extra
+    steps after the last stop are discarded, generators reset, `on_step` re-called with the last step). Argument `nosync=`.
+  - `lce_inplace_kv`: SO-LCE's `InplaceLayer` (preallocated buffers, slice-assign, attend over a view; fwd, crop, crop_layers, copy with
+    headroom and kind conversion `LCE.copy(..., inplace=)`, offload releases the buffer, decode, token_logprobs). Argument `LCE(model,
+    inplace=)`.
+  - `k_gumbel_kept_rows`: `Lens.rollout` draws the Gumbel noise for the N kept rows only. Argument `kept_rows=`.
+  - Tests: `MOCK=1 python tests/fast_identity.py <root>` (58 bitwise checks: logits of every step, tokens, every recorded quantity,
+    generator states, masks, probe state, every LCE operation, rollout records); r1b_P0b runs both paths on the A100 and records
+    `*_identical_*` verdicts in `p0b_engineering.json`. Set a switch True in the freeze record only if its GPU verdicts are all True.
+- Trims: R ['RL1', 'RL2'] = level RL2; D T1-T8, L T2-T5 through `Ctx.trimmed`; K: `K-drop1` (K7b), `K-drop2` (K9 c4 / c5), `K-drop3`
+  (K8b bistability block with 16 templates), `K-drop6` (K10a delta2); `K-drop4` (K6c(ii)) and `K-drop5` (K6e descriptive arms) are not
+  implemented.
+- `python r1b_core.py keys <out>` imports r1b_sessions_R (R's loop names) before writing r1b_keys.json.

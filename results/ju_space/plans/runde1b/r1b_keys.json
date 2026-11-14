@@ -1,0 +1,141 @@
+{
+ "registry": {
+  "R": {
+   "prefixes": [
+    "r1b_",
+    "r1b06_"
+   ],
+   "tags": [
+    "r1b_axis",
+    "r1b_dose",
+    "r1b_free",
+    "r1b_fdtchk",
+    "r1b_lab",
+    "r1b_lensfit",
+    "r1b_k1",
+    "r1b_turn",
+    "r1b_turn_rnd",
+    "r1b_krep",
+    "r1b_krep2",
+    "r1b_Q4B",
+    "r1b06_axis",
+    "r1b06_ref"
+   ],
+   "loops": [
+    "RSI_a",
+    "RSI_b",
+    "SEA_t",
+    "SPO_t",
+    "SEA_raw",
+    "RND_1",
+    "RND_2"
+   ]
+  },
+  "D": {
+   "prefixes": [
+    "r1bD"
+   ],
+   "tags": [
+    "r1bD1",
+    "r1bD1r",
+    "r1bD1v",
+    "r1bD2",
+    "r1bD3",
+    "r1bD4",
+    "r1bD4a",
+    "r1bD5",
+    "r1bD_INJ",
+    "r1bD_pool",
+    "r1bD_shuf"
+   ]
+  },
+  "K": {
+   "prefixes": [
+    "r1bK_"
+   ],
+   "tags": [
+    "r1bK_hn",
+    "r1bK_s3",
+    "r1bK_gate",
+    "r1bK_K4T",
+    "r1bK_K6e",
+    "r1bK_ses",
+    "r1bK_long",
+    "r1bK_bnd",
+    "r1bK_K10a",
+    "r1bK_K3f",
+    "r1bK_V7",
+    "r1bK_cal"
+   ]
+  },
+  "L": {
+   "prefixes": [
+    "r1bL"
+   ],
+   "tags": [
+    "r1bL0",
+    "r1bL2",
+    "r1bL2b",
+    "r1bL2s",
+    "r1bL3",
+    "r1bL3t",
+    "r1bL4",
+    "r1bL5",
+    "r1bLX",
+    "r1bL1rot",
+    "r1bL-ERA",
+    "r1bL2perm",
+    "r1bL-CTRL",
+    "r1bL5-FM",
+    "r1bL-BOOT",
+    "r1bL-SUR",
+    "r1bL-SHUF"
+   ]
+  },
+  "main": {
+   "prefixes": [
+    "r1bP0_"
+   ],
+   "tags": [
+    "r1bP0_R",
+    "r1bP0_D",
+    "r1bP0_K",
+    "r1bP0_L0",
+    "r1bP0_L0duet",
+    "r1bP0_fast",
+    "r1bP0_selftest"
+   ],
+   "pattern": "^r1bP0_[A-Za-z0-9_.-]+$"
+  }
+ },
+ "round1_round2": {
+  "tags": [
+   "ref",
+   "axis",
+   "mirror",
+   "theta",
+   "theta2",
+   "r2PWR",
+   "r2fdt",
+   "r2CNT",
+   "r2Q4B",
+   "r2ARMA",
+   "r2SUP",
+   "r2DOSE",
+   "r2CHK"
+  ],
+  "families": [
+   "r2GEN",
+   "r2RSIb",
+   "RSI_a",
+   "RSI_b",
+   "SEA",
+   "SPO",
+   "RND_1",
+   "RND_2"
+  ]
+ },
+ "keyseed_source_sha256": "4eab8cc78cf56b87febfb6f66379fd253e06fc61c144b8f7a6ee324e28f2e1e4",
+ "problems": [],
+ "written": "2026-11-14T13:08:56Z"
+}

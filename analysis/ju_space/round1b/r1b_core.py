@@ -1374,8 +1374,11 @@ if __name__ == "__main__":
         for nm in a[2:]:
             print(nm, fetch_dataset(nm, a[1], fz))
         raise SystemExit(0)
-    if a and a[0] == "keys":
-        r = write_keys(a[1]); print("problems:", r["problems"]); raise SystemExit(1 if r["problems"] else 0)
+    if a and a[0] == "keys":                     # with part R's loop names registered (r1b_sessions_R imported; main §9.1)
+        import r1b_sessions_R  # noqa: F401  (registers R's loops in the module r1b_core, not in this __main__)
+        import r1b_core as _K
+        r = _K.write_keys(a[1]); print("problems:", r["problems"], "R loops:", r["registry"]["R"]["loops"])
+        raise SystemExit(1 if r["problems"] else 0)
     if a and a[0] == "pilot-pins":
         write_pilot_pins(a[1], a[2]); print("written", a[2]); raise SystemExit(0)
     print(__doc__)
