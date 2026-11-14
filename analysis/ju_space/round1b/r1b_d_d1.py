@@ -521,37 +521,63 @@ def p0_d(ctx):
     Ls = (4096, 16384, 28672, 32000) if not c.mock else (1000, 1200, 1400, 1500); rng = np.random.default_rng(20261114)
     rates, memory, parity, notes = {}, {}, {}, []
     cuda = torch.cuda.is_available(); sync = (lambda: torch.cuda.synchronize()) if cuda else (lambda: None)
-    for L in Ls:
+    def _free():
+        import gc
+        gc.collect()
+        if cuda:
+            torch.cuda.empty_cache()
+
+    def _oom(e):
+        return isinstance(e, getattr(torch, "OutOfMemoryError", RuntimeError)) or "out of memory" in str(e).lower()
+
+    for L in Ls:                                  # every stage in its own guard: an out-of-memory error is a probe result here
         ids = [int(x) for x in rng.integers(1000, 100000, L - 700)]; chunk = [int(x) for x in rng.integers(1000, 100000, 700)]
+        r, base = {}, None
         if cuda:
             torch.cuda.reset_peak_memory_stats()
-        sync(); t = time.time(); base, lg = eng.fwd(ids); sync(); r = dict(prefill_s=time.time() - t)
-        t = time.time(); base, lg2 = eng.fwd(chunk, base); sync(); r["chunk_s"] = time.time() - t; eng.crop(base, len(ids))
-        t = time.time(); cp = LCE.copy(base); cp, lg3 = eng.fwd(chunk, cp); sync(); r["copy_chunk_s"] = time.time() - t
-        parity[f"{L}|crop_vs_copy_max_abs_logit"] = float((lg2[0, -1] - lg3[0, -1]).abs().max()); del cp
-        n = 32 if not c.mock else 8
-        for B in ((1, 2, 3, 4) if L == Ls[-1] else (1, 2, 3)):
+        try:
+            sync(); t = time.time(); base, lg = eng.fwd(ids); sync(); r["prefill_s"] = time.time() - t
+            t = time.time(); base, lg2 = eng.fwd(chunk, base); sync(); r["chunk_s"] = time.time() - t; eng.crop(base, len(ids))
+            lg2 = lg2[0, -1].clone(); del lg
+        except RuntimeError as e:
+            if not _oom(e):
+                raise
+            r["prefill_s"] = K.coded("NaN:oom"); notes.append(f"L {L} prefill/chunk: {str(e)[:80]}"); base = None; _free()
+        if base is not None:
             try:
-                cb = LCE.copy(base, B); _, lgb = eng.fwd(torch.tensor([chunk] * B), cb)
-                sync(); t = time.time()
-                y, *_ = eng.decode(cb, lgb[:, -1], [ctx.key("r1bP0_D", L, B, b) for b in range(B)], 0.7, n, stop); sync()
-                r[f"decode_tok_s_B{B}"] = B * n / (time.time() - t); del cb
-            except RuntimeError as e:                     # out of memory: a probe result, not a failure
-                r[f"decode_tok_s_B{B}"] = K.coded("NaN:oom"); notes.append(f"L {L} B {B}: {str(e)[:80]}")
-                torch.cuda.empty_cache() if cuda else None
-        try:                                              # non-rewriting cache: StaticCache, B = 1, token parity with DynamicCache
-            from transformers import StaticCache
-            sc = StaticCache(config=model.config, max_cache_len=L + n + 8)
-            _, lgs = eng.fwd(ids + chunk, sc); sync(); t = time.time()
-            ys, *_ = eng.decode(sc, lgs[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop); sync()
-            r["static_decode_tok_s_B1"] = n / (time.time() - t)
-            cd = LCE.copy(base); _, lgd = eng.fwd(chunk, cd)
-            yd, *_ = eng.decode(cd, lgd[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop)
-            parity[f"{L}|static_vs_dynamic_tokens_identical"] = bool((ys == yd).all()); del sc, cd
-        except Exception as e:
-            notes.append(f"L {L} StaticCache: {type(e).__name__}: {str(e)[:120]}")
+                t = time.time(); cp = LCE.copy(base); cp, lg3 = eng.fwd(chunk, cp); sync(); r["copy_chunk_s"] = time.time() - t
+                parity[f"{L}|crop_vs_copy_max_abs_logit"] = float((lg2 - lg3[0, -1]).abs().max()); del cp, lg3
+            except RuntimeError as e:
+                if not _oom(e):
+                    raise
+                r["copy_chunk_s"] = K.coded("NaN:oom"); notes.append(f"L {L} copy path: {str(e)[:80]}")
+            _free()
+            n = 32 if not c.mock else 8
+            for B in ((1, 2, 3, 4) if L == Ls[-1] else (1, 2, 3)):
+                try:
+                    cb = LCE.copy(base, B); _, lgb = eng.fwd(torch.tensor([chunk] * B), cb)
+                    sync(); t = time.time()
+                    y, *_ = eng.decode(cb, lgb[:, -1], [ctx.key("r1bP0_D", L, B, b) for b in range(B)], 0.7, n, stop); sync()
+                    r[f"decode_tok_s_B{B}"] = B * n / (time.time() - t); del cb, lgb, y
+                except RuntimeError as e:                 # out of memory: a probe result, not a failure
+                    if not _oom(e):
+                        raise
+                    r[f"decode_tok_s_B{B}"] = K.coded("NaN:oom"); notes.append(f"L {L} B {B}: {str(e)[:80]}")
+                _free()
+            try:                                          # non-rewriting cache: StaticCache, B = 1, token parity with DynamicCache
+                from transformers import StaticCache
+                sc = StaticCache(config=model.config, max_cache_len=L + n + 8)
+                _, lgs = eng.fwd(ids + chunk, sc); sync(); t = time.time()
+                ys, *_ = eng.decode(sc, lgs[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop); sync()
+                r["static_decode_tok_s_B1"] = n / (time.time() - t); del sc, lgs
+                _free()
+                cd = LCE.copy(base); _, lgd = eng.fwd(chunk, cd)
+                yd, *_ = eng.decode(cd, lgd[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop)
+                parity[f"{L}|static_vs_dynamic_tokens_identical"] = bool((ys == yd).all()); del cd, lgd
+            except Exception as e:
+                notes.append(f"L {L} StaticCache: {type(e).__name__}: {str(e)[:120]}")
         memory[str(L)] = dict(peak_gb=round(torch.cuda.max_memory_allocated() / 1e9, 3) if cuda else K.coded("NaN:cpu"))
-        rates[str(L)] = r; del base
+        rates[str(L)] = r; base = None; _free()
     blob = os.urandom(64 << 20); t = time.time(); p = ctx.path("p0/_drive_probe.bin")
     with open(p, "wb") as f:
         f.write(blob); f.flush(); os.fsync(f.fileno())

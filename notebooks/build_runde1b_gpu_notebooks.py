@@ -205,7 +205,8 @@ RC = None
 if NUR_SELBSTTEST:
     print("NUR_SELBSTTEST = True: kein Hauptlauf.")
 else:
-    env = dict(os.environ, R1B_ACCOUNT=KONTO, R1B_ROOT=ROOT, RUN_DEVICE="{'cpu' if cpu else 'cuda'}", NT="8", R1B_RUNTIME_T0=repr(T0))
+    env = dict(os.environ, R1B_ACCOUNT=KONTO, R1B_ROOT=ROOT, RUN_DEVICE="{'cpu' if cpu else 'cuda'}", NT="8", R1B_RUNTIME_T0=repr(T0),
+               PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")   # weniger Speicherzersplitterung bei langen Kontexten
     cmd = [sys.executable, "-u", f"{{R1B}}/r1b_run_slot.py", SLOT, ROOT, WORK, RUNS, "--poll-s", str(ABFRAGE_S),
            "--wait-h", str(WARTEN_MAX_H), "--runtime-h", str(LAUFZEIT_MAX_H)]
     RC = subprocess.run(cmd, env=env).returncode
