@@ -114,6 +114,13 @@
   results/ju_space/plans/runde1b/l_cal.json (mehrere CPU-Stunden; Punkt a allein über 1 h); (4) Qwen3.5-2B-Linearaufmerksamkeit
   läuft ohne Zusatzpakete langsam (P0b misst die Rate); (5) Plantext 9.1: engine-Schlüssel, Pins-Datei, p0b_engineering.json.
   Nächster Schritt des Nutzers: runde1b_P0b.ipynb in Konto A laufen lassen; danach Einfrier-Datensatz aus p0b_engineering.json.
+- 14.11. 15:15 MEZ: Volle L-CAL hier nach 2 h abgebrochen (Grenze für Hintergrundjobs); nur Punkt (a) fertig (71 min mit 2 Kernen)
+  und DURCHGEFALLEN: Treffer localist 0/5, redundant 0/5, dense 0/5, dthr 5/5, xor3 0/5 -> G-cal-L1 falsch; ohne Korrektur liest
+  L-ANA alle von L1 abhängigen Zweige 'not testable (pipeline calibration failed)'. VOR DEM EINFRIEREN: Klassifikation in
+  r1b_l_cal.item_a / r1b_l_rules (PIP-Baum, Schwellen) prüfen und korrigieren oder bewusst so einfrieren. Restliche Punkte b-n
+  lokal fortsetzen (Ergebnis von a liegt bei): python results/ju_space/plans/runde1b/arbeitsstand/lcal/lcal_resumable.py
+  results/ju_space/plans/runde1b/l_cal.json results/ju_space/plans/runde1b/arbeitsstand/lcal/cache (mehrere CPU-Stunden;
+  nach einer Änderung an r1b_l_cal.py oder r1b_l_stats.py den Cache löschen und alles neu rechnen).
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
