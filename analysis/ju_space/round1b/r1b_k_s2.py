@@ -256,7 +256,7 @@ def run_cells(ctx, E, cells, J=16, cb=None, **kw):
                            tok=tk, claims=sc["claims"], censor=sc["censor"], repeats=sc["repeats"], **{x: c[x] for x in c.get("carry", ())})
                 for f in ("lpr", "lpp", "e", "ent", "cdm", "top1", "alt", "fov"):
                     if f in r:
-                        rec[f] = r[f][k].half() if f != "alt" else r[f][k]
+                        rec[f] = r[f][k].half() if f not in ("alt", "lpr", "lpp") else r[f][k]
                 rec["aX"] = {nm: v[k].half() for nm, v in r["aX"].items()}
                 rec["share"] = {nm: v[k].half() for nm, v in r["share"].items()}
                 out.append(rec)
@@ -606,9 +606,9 @@ def k6f_part(ctx, i, n):
                 finally:
                     hk.remove()
                 lp_full = lg.gather(1, torch.tensor(r["tok"], device=lg.device)[:, None])[:, 0].cpu()
-                dmax = max(dmax, float((lp_full - r["lpr"].float()).abs().max())); flips += int((lg.argmax(-1).cpu() != torch.tensor(r["tok"])).sum())
-            parity[Lf] = dict(max_abs_dlogp=dmax, flip_rate=flips / max(1, sum(len(r["tok"]) for r in r0)),
-                              ok=bool(dmax < (1e-4 if not ctx.mock else 1e-3)), note="contrastive argmax flips are not Gumbel flips")
+                dmax = max(dmax, float((lp_full - r["lpr"].float()).abs().max()))
+            parity[Lf] = dict(max_abs_dlogp=dmax, flip_rate=coded("NaN:not_applicable_greedy_contrastive"), ok=bool(dmax < 1e-4),
+                              note="log-prob parity of the chosen tokens (cached vs recomputed); K6f's chains are greedy contrastive, so no Gumbel flips")
     for r in rows:
         r["share"] = {}
     save(ctx, f"k/k6f/part{i}.pt", dict(rows=rows, parity=parity, b_star=bstar))

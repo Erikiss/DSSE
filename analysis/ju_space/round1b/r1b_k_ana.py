@@ -941,7 +941,8 @@ def k10a_stats(rows):
                          ("sequential: token route dominates at lag 2" if lt(c, 0.5) else "mixed"))
     d1, d2 = out.get("delta1", {}).get("string"), out.get("delta2", {}).get("string")
     out["final"] = d1 if d1 == d2 else ("dose-dependent route share (not a model property in 0.05-0.15 nats)" if d2 else f"{d1} (single dose)")
-    sz = max([r["eff"].get("structural_zero_max", 0.0) for r in rows] or [0.0]); out["structural_zero_max"] = sz
+    sz = max([r["eff"].get("structural_zero_max") or 0.0 for r in rows] or [0.0]); out["structural_zero_max"] = sz
+    out["G_K10_kv_structural_zero"] = "ok" if sz == 0.0 else "descriptive (code check failed)"
     hz = {}
     for k in (1, 2, 4, 8):
         ps = {}

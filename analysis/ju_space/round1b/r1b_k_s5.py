@@ -243,7 +243,7 @@ def k10a_texts(ctx):
     texts = []
     for k, P in enumerate(prompts):
         ids = list(P)
-        for s in range(N(ctx, 64, 24)):
+        for s in range(N(ctx, 64, 48)):
             with torch.no_grad():
                 lg = model(input_ids=torch.tensor([ids], device=ctx.device), logits_to_keep=1).logits[0, -1].float()
             ids.append(int((lg / 0.7 + noise(ctx, k, len(ids), lg.shape[0], lg.device)).argmax()))
@@ -393,7 +393,7 @@ def _effects(res, base, T0, kind, A, E, tblocks):
     for l in [b for b in tblocks if b <= 14]:
         for sg in res:
             sz = max(sz, float((res[sg]["kv"][l][T0 + 1:] - base[l][T0 + 1:]).abs().max()))
-    out["structural_zero_max"] = sz
+    out["structural_zero_max"] = sz if kind == "dir" else None      # populations include neurons below block 14 (no structural zero)
     out["div"] = float(np.mean([r["div"] for r in res.values()]))
     return out
 

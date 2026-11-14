@@ -137,7 +137,9 @@ class _ClampSeq:
 def _modes(X, d, texts, B=RC.N_BOOT):
     from sklearn.cluster import KMeans
     from sklearn.metrics import silhouette_score
-    X = np.asarray(X); d = np.asarray(d); best, lab = (0.1, 1), np.zeros(len(d), int)
+    X = np.asarray(X); d = np.maximum(np.asarray(d, float), 0.0); best, lab = (0.1, 1), np.zeros(len(d), int)
+    if d.sum() < 1e-9:
+        return dict(k=None, silhouette=coded("NaN:no_damage"), main_share=coded("NaN:no_damage"), ci=None, category="mode structure undecided")
     if len(d) >= 8:
         Z = X / (np.linalg.norm(X, axis=1, keepdims=True) + 1e-9)
         for k in (2, 3, 4):
