@@ -19,6 +19,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 import r1b_contracts as C
 import r1b_run_session as R
+import r1b_core as K
 from r1b_core import load_json
 
 PY, RUNNER = sys.executable, os.path.join(HERE, "r1b_run_session.py")
@@ -40,7 +41,7 @@ def run_one(s, root, work, runs, env):
 def run_slot(slot, root, workbase, runs, poll_s=120.0, wait_h=10.0, runtime_h=23.0):
     d = C.SLOTS[slot]; acct = d["account"]; P = R.Paths(runs, acct)
     env = dict(os.environ, R1B_ACCOUNT=acct, R1B_SLOT=slot, RUN_DEVICE="cpu" if d["runtime"] == "cpu" else os.environ.get("RUN_DEVICE", "cuda"))
-    fz = load_json(R.freeze_path(), {}) or {}
+    fz = K.freeze_record(all(s in K.PILOT_SESSIONS for s in d["sessions"]), R.freeze_path())[0]
     rc_all, report = 0, {}
     for s in d["sessions"]:
         fails, t_wait = 0, time.time()

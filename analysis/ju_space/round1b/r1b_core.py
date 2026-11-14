@@ -4,6 +4,7 @@
                                                           needs config.json and the tokenizer only; default env R1B_ROOT)
     python r1b_core.py fetch-models <root> <name> ...    download pinned models and check their sha256 (notebooks)
     python r1b_core.py keys <out.json>                   write the SO-KEYS registry (package file r1b_keys.json)
+    python r1b_core.py pilot-pins <draft.json> <out>     write runde1b_pilot_pins.json (models, datasets, jlens, engine of a draft record)
 
 Contents (API in IMPLEMENTATION.md):
   models      MODELS, register_loader, ensure_model, load_model (float32, TF32 off, 'highest' matmul; MOCK=1: rk_loop's tiny random
@@ -35,11 +36,48 @@ MODELS = {   # main §2.1; 'sha256': file -> sha256 (qwen3-1.7b from gpu/data/ch
     C.M17: dict(repo="Qwen/Qwen3-1.7B", revision="70d244cc86ccca08cf5af4e1e306ecf908b1ad5e", sha256=None, layers=28, hidden=2048),
     C.M06: dict(repo="Qwen/Qwen3-0.6B", revision="c1899de289a04d12100db370d81485cdf75e47ca",
                 sha256={"model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"}, layers=28, hidden=1024),
-    C.M35: dict(repo="Qwen/Qwen3.5-2B", revision=None, sha256=None, layers=24, hidden=2048),
+    C.M35: dict(repo="Qwen/Qwen3.5-2B", revision="15852e8c16360a2fea060d615a32b45270f8a8fc",   # 15 mtp.* tensors in the safetensors file
+                sha256={"model.safetensors-00001-of-00001.safetensors": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1",
+                        "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+                        "config.json": "ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4"}, layers=24, hidden=2048),
 }
 JLENS = dict(name="Qwen3-1.7B_jacobian_lens.pt", src="qwen3-1.7b/jlens/Salesforce-wikitext/Qwen3-1.7B_jacobian_lens.pt",
              sha256="6fcc79011bd921ffd87612255e2e99950a124fa519470ee44ebaf161c39be9d6", n=27)
 PILOT_KEYS = {"provenance", "rates", "memory", "throughput", "parity", "code_checks", "timing", "env", "notes"}   # SO-PILOT whitelist
+PILOT_SESSIONS = ("r1b_P0", "r1b_P0b")          # the pilot (SO-PILOT material only, engineering numbers only) and its re-pilot
+PILOT_PINS = "runde1b_pilot_pins.json"          # in the plan folder: models, datasets, jlens, engine of the draft record (pilot only)
+
+
+def freeze_record(pilot=False, path=None):
+    """(record, path): runde1b_freeze.json (R1B_FREEZE or the plan folder). Before the freeze, and in a pilot session only, the
+    committed pins file runde1b_pilot_pins.json stands in for it (models, datasets, jlens and engine pins of the draft record), so that
+    the pilot can fetch the pinned models, PG19 and the lenses; it carries no plan, package, trim or funding entries."""
+    p = path or os.environ.get("R1B_FREEZE") or os.path.join(REPO, C.PLAN_DIR, "runde1b_freeze.json")
+    if os.path.isfile(p) or not pilot:
+        return load_json(p, {}) or {}, p
+    q = os.path.join(REPO, C.PLAN_DIR, PILOT_PINS)
+    return (load_json(q, {}) or {}, q) if os.path.isfile(q) else ({}, p)
+
+
+def write_pilot_pins(draft, out):
+    """The pilot pins file (PILOT_PINS) from a draft freeze record: its models, datasets, jlens and engine entries only."""
+    d = load_json(draft)
+    rec = dict(status="pilot pins: the models, datasets, jlens and engine entries of the draft freeze record; read by the pilot sessions "
+                      "(r1b_P0, r1b_P0b) and the notebooks' fetch steps only while runde1b_freeze.json is absent; not a freeze record",
+               source=dict(path=os.path.relpath(os.path.abspath(draft), REPO), sha256=sha256_file(draft)),
+               **{k: d[k] for k in ("models", "datasets", "jlens", "engine") if k in d})
+    if isinstance((rec.get("engine") or {}).get("D"), dict):
+        rec["engine"]["D"]["note"] = "read by r1b_d_stim.cfg (engine.D.B_long / engine.D.B_mid; absent: 3 / 7)"
+    for nm in rec.get("models") or {}:
+        model_pins(nm, rec)                      # the draft must agree with the code's pins
+    dump_json(rec, out)
+    return rec
+
+
+def engine_fast(freeze, name):
+    """A numerics-preserving engine switch runde1b_freeze.json engine.fast.<name> (default False when absent; main §9.1): every
+    switch has a CPU bit-identity test (tests/fast_identity.py) and a GPU bit-identity measurement in r1b_P0b."""
+    return bool((((freeze or {}).get("engine") or {}).get("fast") or {}).get(name, False))
 
 
 def _torch():
@@ -401,11 +439,22 @@ def numerics():
 
 
 def model_pins(name, freeze=None):
+    """The pins of a model: runde1b_freeze.json['models'][name] where present, else the code's MODELS entry (Qwen3-1.7B's sha256 from
+    gpu/data/checksums.json); sha256 is the union of both file lists. A value that both carry must agree: repo, revision, layers,
+    hidden or a file's sha256 that differ between the record and the code raise (the record cannot silently re-pin a model)."""
     p = dict(MODELS.get(name) or {})
     if name == C.M17 and not p.get("sha256"):
         ck = load_json(os.path.join(AJS, "gpu", "data", "checksums.json"), {})
         p["sha256"] = ck.get("model_sha256")
-    p.update({k: v for k, v in ((freeze or {}).get("models", {}).get(name) or {}).items() if v})
+    rec = {k: v for k, v in (((freeze or {}).get("models") or {}).get(name) or {}).items() if v}
+    bad = [k for k in ("repo", "revision", "layers", "hidden") if p.get(k) and rec.get(k) and p[k] != rec[k]]
+    cs, rs = dict(p.get("sha256") or {}), dict(rec.get("sha256") or {})
+    bad += [f"sha256[{f}]" for f in sorted(set(cs) & set(rs)) if cs[f] != rs[f]]
+    if bad:
+        raise RuntimeError(f"{name}: runde1b_freeze.json['models'] and r1b_core.MODELS disagree on {bad}")
+    p.update(rec)
+    if cs or rs:
+        p["sha256"] = {**cs, **rs}
     return p
 
 
@@ -465,8 +514,10 @@ def load_model(name=C.M17, root=None, device=None, mock=None, freeze=None):
     else:
         if str(device) == "cpu" and os.environ.get("R1B_ALLOW_CPU_REAL") != "1":
             raise RuntimeError(f"refusing to load the real {name} on the CPU (code tests use MOCK=1)")
-        if name in LOADERS:
-            tok, model = LOADERS[name](root=root, device=device, mock=False)
+        if name in LOADERS:                          # the registered loader gets the freeze record (its pins), if it takes it
+            import inspect
+            kw = dict(freeze=freeze) if "freeze" in inspect.signature(LOADERS[name]).parameters else {}
+            tok, model = LOADERS[name](root=root, device=device, mock=False, **kw)
         else:
             from transformers import AutoModelForCausalLM, AutoTokenizer
             d = ensure_model(name, root, freeze, download=True)
@@ -925,7 +976,7 @@ class Ctx:
         self.part, self.tier = meta.get("part"), meta.get("tier")
         self.mock = MOCK if mock is None else mock
         self.quick = QUICK if quick is None else quick
-        self.pilot = (session == "r1b_P0") if pilot is None else pilot
+        self.pilot = (session in PILOT_SESSIONS) if pilot is None else pilot
         self.freeze, self.manifest, self.declared = freeze or {}, manifest or {}, tuple(declared)
         self.t0, self.guard_s, self.step = t0 or time.time(), guard_s, step
         self.r1, self.r2 = os.path.join(self.inp, "r1"), os.path.join(self.inp, "r2")
@@ -986,7 +1037,7 @@ class Ctx:
     def key(self, tag, *rest):
         """keyseed(tag, *rest) for a registered tag of this session's part (P0: 'r1bP0_' tags); no key is shared across parts."""
         o = key_owner(tag)
-        want = "main" if self.session == "r1b_P0" else (self.step_part or self.part)
+        want = "main" if self.session in PILOT_SESSIONS else (self.step_part or self.part)
         if o is None or o != want:
             raise ValueError(f"key tag {tag!r} is not registered for part {want} (owner {o}); see r1b_core.KEYS")
         self.keys_used.add(tag)
@@ -1034,7 +1085,7 @@ class Ctx:
     def _pilot_check(self, obj, rel):
         bad = set(obj) - PILOT_KEYS
         if self.pilot and bad:
-            raise ValueError(f"r1b_P0 output {rel}: keys {sorted(bad)} outside the SO-PILOT whitelist {sorted(PILOT_KEYS)}")
+            raise ValueError(f"{self.session} output {rel}: keys {sorted(bad)} outside the SO-PILOT whitelist {sorted(PILOT_KEYS)}")
 
     def write_json(self, rel, obj, config=None, seeds=None, labels=None):
         """JSON output with its provenance block; raw NaN refused (code it); r1b_P0: whitelisted top-level keys only."""
@@ -1267,8 +1318,8 @@ if __name__ == "__main__":
         raise SystemExit(selftest(a[1] if len(a) > 1 else os.environ.get("R1B_ROOT", "/content/root")))
     if a and a[0] == "_rk_equiv":
         raise SystemExit(_rk_equiv(a[1], a[2]))
-    if a and a[0] == "fetch-models":
-        fz = load_json(os.path.join(REPO, C.PLAN_DIR, "runde1b_freeze.json"), {})
+    if a and a[0] == "fetch-models":            # before the freeze (pilot): the pilot pins file stands in for the record
+        fz = freeze_record(pilot=True)[0]
         for nm in a[2:]:
             pins = model_pins(nm, fz)
             if not pins.get("revision") or not pins.get("sha256"):      # e.g. Qwen3.5-2B before the freeze (r1b_P0): K's step pins it
@@ -1278,5 +1329,7 @@ if __name__ == "__main__":
         raise SystemExit(0)
     if a and a[0] == "keys":
         r = write_keys(a[1]); print("problems:", r["problems"]); raise SystemExit(1 if r["problems"] else 0)
+    if a and a[0] == "pilot-pins":
+        write_pilot_pins(a[1], a[2]); print("written", a[2]); raise SystemExit(0)
     print(__doc__)
     raise SystemExit(2)

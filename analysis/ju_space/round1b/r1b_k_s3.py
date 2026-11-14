@@ -14,14 +14,29 @@ from r1b_k_base import N, H, T_, write, save, load_pt, own, up, coded, val
 M35 = C.M35
 
 
-def _load35(root, device, mock):
-    """Qwen3.5-2B text backbone, float32, sdpa (transformers 5.22.2 ships qwen3_5; '^mtp.*' is dropped on load and read separately)."""
+def _load35(root, device, mock, freeze=None):
+    """Qwen3.5-2B text backbone, float32, sdpa, at the pins of r1b_core.MODELS / runde1b_freeze.json (ensure_model checks every sha256).
+    transformers 5.22.2 ships qwen3_5 and drops '^mtp.*' on load: the 15 mtp.* tensors stay in the safetensors file, mtp_tensors reads
+    them for the MTP head; their names and shapes are recorded on the model (model.r1b_mtp_shapes, from the file header)."""
     torch = T_()
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    d = RC.ensure_model(M35, root, None, download=True)
+    d = RC.ensure_model(M35, root, freeze, download=True)
     tok = AutoTokenizer.from_pretrained(d)
     m = AutoModelForCausalLM.from_pretrained(d, dtype=torch.float32, attn_implementation="sdpa").eval()
+    m.r1b_mtp_shapes = mtp_shapes(d)
     return tok, m
+
+
+def mtp_shapes(d):
+    """{name: shape} of the mtp.* tensors in the safetensors files of folder d (header only, no tensor data)."""
+    from safetensors import safe_open
+    out = {}
+    for f in sorted(glob.glob(os.path.join(d, "*.safetensors"))):
+        with safe_open(f, "pt") as s:
+            for k in s.keys():
+                if k.startswith("mtp.") or ".mtp." in k:
+                    out[k[k.index("mtp."):]] = list(s.get_slice(k).get_shape())
+    return out
 
 
 RC.register_loader(M35, _load35, layers=24, hidden=2048)

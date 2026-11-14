@@ -347,7 +347,9 @@ def freeze_path():
 
 
 def gate_SG1(pilot):
-    fp = freeze_path(); fz = load_json(fp, {}) or {}
+    """SG1; a pilot session before the freeze reads the committed pilot pins file instead of the absent record (r1b_core.freeze_record):
+    pins only, recorded with its sha256 under 'pilot_pins'."""
+    fp = freeze_path(); fz, used = K.freeze_record(pilot, fp)
     plan = os.path.join(REPO, C.PLAN_DIR, "runde1b_plan.md"); amend = os.path.join(REPO, C.PLAN_DIR, "runde1b_plan_amendments.md")
     rec = dict(freeze_record=fp, freeze_record_sha256=sha256_file(fp) if os.path.isfile(fp) else None,
                freeze_record_sha256_constant=FREEZE_RECORD_SHA256, plan_sha256=sha256_file(plan) if os.path.isfile(plan) else None,
@@ -358,6 +360,8 @@ def gate_SG1(pilot):
         p = os.path.join(REPO, path); got = sha256_file(p) if os.path.isfile(p) else None
         files[path] = dict(expected=h, sha256=got, ok=got == h)
     rec["files"] = files
+    if used != fp:
+        rec["pilot_pins"] = dict(path=os.path.relpath(used, REPO), sha256=sha256_file(used))
     rc, head = git("rev-parse", "HEAD"); rec["code_commit"] = head if rc == 0 else "unknown"
     rec["freeze_is_ancestor"] = None
     if rec["freeze_commit"] and rc == 0:
@@ -726,9 +730,9 @@ def run_session(session, root, work, runs, dry=False, check_only=False):
     acct = os.environ.get("R1B_ACCOUNT") or meta["account"]
     if acct != meta["account"]:
         say(f"{base} runs in account {meta['account']}, this notebook is account {acct}"); return EXIT_GATE
-    P = Paths(runs, acct); pilot = base == "r1b_P0"
+    P = Paths(runs, acct); pilot = base in K.PILOT_SESSIONS
     device = os.environ.get("RUN_DEVICE", "cuda")
-    fz_path = freeze_path(); fz = load_json(fz_path, {}) or {}
+    fz_path = freeze_path(); fz = K.freeze_record(pilot, fz_path)[0]
     if check_only or dry:
         chk = check_start(base, P, fz, copy=False)
         say(f"{base}: " + ("ready" if chk["ok"] else (f"not run ({chk['not_run']})" if chk["not_run"] else "waiting: " + "; ".join(chk["waiting"]))))

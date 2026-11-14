@@ -87,6 +87,7 @@ print(f"GPU: {GPU}, sm{CC[0]}{CC[1]}, {GB:.0f} GB, torch {torch.__version__}")
 assert "A100" in GPU and CC == (8, 0) and GB >= 39, f"SG2: nur eine A100 mit 40 oder 80 GB ist zulässig (hier {GPU})."
 ''' if not cpu else 'print("CPU-Laufzeit (SG2: r1b_ana läuft auf einer erklärten CPU-Laufzeit).")\n')
     p = f'''SLOT, KONTO = "{sl}", "{acct}"
+PILOT = {all(s.startswith("r1b_P0") for s in d["sessions"])!r}             # Pilot-Slot (vor dem Einfrieren)
 BRANCH = "{BRANCH}"
 SELBSTTEST = False           # MOCK-Selbsttest dieses Slots vor dem Hauptlauf (einige Minuten; einmal je Code-Stand)
 NUR_SELBSTTEST = False       # True: nur einrichten und testen, kein Hauptlauf
@@ -117,8 +118,12 @@ COMMIT = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output
 print("Code:", subprocess.run(["git", "-C", REPO, "log", "-1", "--format=%h %cd %s"], capture_output=True, text=True).stdout.strip())
 A = f"{REPO}/analysis/ju_space"; R1B = f"{A}/round1b"; D = f"{A}/gpu/data"
 FZ_PATH = f"{REPO}/results/ju_space/plans/runde1b/runde1b_freeze.json"
+PINS_PATH = f"{REPO}/results/ju_space/plans/runde1b/runde1b_pilot_pins.json"    # vor dem Einfrieren: Pins für die Piloten
 FZ = json.load(open(FZ_PATH)) if os.path.exists(FZ_PATH) else {}
-print("Einfrier-Datensatz:", "vorhanden" if FZ else "fehlt (nur der Pilot r1b_P0 läuft vor dem Einfrieren)")
+if not FZ and PILOT and os.path.exists(PINS_PATH):
+    FZ = json.load(open(PINS_PATH))
+print("Einfrier-Datensatz:", "vorhanden" if os.path.exists(FZ_PATH) else ("fehlt; Pilot-Pins (Modelle, Datensätze, J-Lenses) aus runde1b_pilot_pins.json"
+      if FZ else "fehlt (nur die Piloten r1b_P0 / r1b_P0b laufen vor dem Einfrieren)"))
 '''
     inputs = f'''# Eingaben: Modelle zur festen Revision mit Prüfsummen (r1b_core.ensure_model; models/verified.json), für Teil R die Persona-Sätze
 # und Runde-1-Daten (wie Runde 2), die J-Lens (Prüfsumme festgelegt); Datensätze lädt jeder Schritt selbst zur festen Revision.
@@ -171,7 +176,15 @@ if {"qwen3.5-2b" in models!r} and not NUR_SELBSTTEST:   # Teil K (K5a, RK-2): J-
         os.makedirs(os.path.dirname(ZIEL2), exist_ok=True)
         if not os.path.exists(ZIEL2) and os.path.exists(QUELLE2):
             shutil.copyfile(QUELLE2, ZIEL2)
-        print("J-Lens Qwen3.5-2B:", "geprüft" if os.path.exists(ZIEL2) and sha256(ZIEL2) == J2.get("sha256") else "FEHLT oder Prüfsumme falsch (K5a / RK-2 lesen dann 'not run')")
+        elif not os.path.exists(ZIEL2) and J2.get("url"):      # sonst von der URL im Einfrier-Datensatz (Hugging Face, Neuronpedia)
+            import urllib.request; urllib.request.urlretrieve(J2["url"], ZIEL2 + ".part"); os.replace(ZIEL2 + ".part", ZIEL2)
+        if not os.path.exists(ZIEL2):
+            from huggingface_hub import hf_hub_download
+            shutil.copyfile(hf_hub_download("neuronpedia/jacobian-lens", "qwen3.5-2b/jlens/Salesforce-wikitext/" + J2["name"]), ZIEL2)
+        OK2 = os.path.exists(ZIEL2) and sha256(ZIEL2) == J2.get("sha256")
+        if os.path.exists(ZIEL2) and not OK2:
+            os.remove(ZIEL2)                            # falsche Prüfsumme: Datei verwerfen
+        print("J-Lens Qwen3.5-2B:", "geprüft" if OK2 else "FEHLT oder Prüfsumme falsch (K5a / RK-2 lesen dann 'not run')")
 print("Eingaben bereit:", ", ".join(MODELLE) or "keine Modelle nötig")
 '''
     copy = '''# Zweiter Ordner: was die Sitzungen dieses Slots aus dem anderen Konto lesen (Konto A: fertige Ordner aus dsse_runs_B; Konto B:
