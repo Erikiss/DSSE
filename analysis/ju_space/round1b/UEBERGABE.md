@@ -151,6 +151,25 @@
   Vor dem Einfrieren offen: L-CAL (Punkt a durchgefallen, b-n fehlen), Hochrechnung je Teil mit diesen Raten
   (arbeitsstand/freeze_prep_proj/*.py), Kürzungen nach den Regeln (D-Deckel 13,8 h), runde1b_freeze.json, Konstanten, Freeze-Commit.
 
+- 15.11. (lokale Sitzung): L-CAL (a) planmäßig korrigiert (Commit 21bcee2; nur die L1-Statistik an den Plan angeglichen, keine
+  Daten, Signalstärken, Schwellen oder Sollurteile geändert): Python-Floats an rule_L1 (np.float32 machte rho_2 und I-hat zu NaN),
+  Auswahl auf S_fit und I-hat auf getrennten S_L-Zeilen (L1 (ii)), Untergrenzen F(m) an jeder Rastergröße und bei |P| mit
+  100 Permutationen (L1 (i); vorher fiel jede fehlende Größe auf das negative F(1024) zurück, m_0 = 1-2 überall), 50 U-Fragmente,
+  Priv mit unterer 90-%-Schranke gegen F(|P|), m_0 über die untere Schranke des Medians, Wiederauswahl r = 2..6 mit Hüllen,
+  rho_2 mit gepaartem Bootstrap, XH-Verhältnis gerechnet statt auf 4 gesetzt. Cache geleert; volle L-CAL läuft (4 Kerne:
+  (a) in zwei Prozessen nach Profilen, b-n in einem; etwa 45 min je Profil und Saat bei (a)).
+  **BEFUND (a), Nutzerentscheidung nötig:** (a) fällt auch planmäßig durch. localist Saat 0 und 1: 'H privileged, redundancy
+  undecided' (Priv wahr, rho_2 ≈ 0, R_rep = 1, aber XH-Verhältnis 1,75 / 1,80 < 4). Ursache strukturell: XH (ohne P-Hülle) erreicht
+  0,5 I_ref im Raster nie, also zensiert bei 1.024 / m_0.5(U); im verkleinerten Generator (N = 4.096, 20 Träger) liegt m_0.5(U)
+  bei etwa 570-590, die Obergrenze des Verhältnisses also bei etwa 1,8. Im echten Lauf (N = 172.032, Raster bis 1.024 = 0,6 %)
+  besteht diese Schranke nicht. dense Saat 0 und 1: richtig. Diagnose mit einer Saat (vor den Punkten 3-8) deutet außerdem an:
+  redundant (2.000 von 4.096 Einheiten tragen) wird ohne Auswahlleck nicht 'Priv' (zufällige 20er-Mengen enthalten etwa 10 Träger),
+  dthr landet nach der Baumreihenfolge (Zweig 5 'dense' vor Zweig 6) bei 'dense (no sparse store)'; wird mit dem Volllauf bestätigt.
+  b-n: f, g, j, k, l, m, n bestanden; b, c, d, e, h, i laufen. Ohne Entscheidung liest L-ANA alle von G-cal-L1 abhängigen Zweige
+  'not testable (pipeline calibration failed)'. Optionen: (A) so einfrieren (G_cal_L1 = false); (B) technischer Nachtrag vor
+  allen Daten zum Generator von (a) (z. B. N, das die Rastergrenze wie im echten Lauf klein macht), dann neu rechnen.
+  Push aus der lokalen Sitzung scheitert (kein Schreibrecht: git ohne Token, GitHub-API 403); Commits liegen lokal und als Bundle.
+
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
 - Belegte Anknüpfungspunkte (aus den geprüften Berichten in results/ju_space/plans/runde1b/arbeitsstand/):
