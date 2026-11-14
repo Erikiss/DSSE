@@ -137,6 +137,8 @@ def sha256(p):
 MODELLE = {models!r}
 if MODELLE and not NUR_SELBSTTEST:
     subprocess.run([sys.executable, f"{{R1B}}/r1b_core.py", "fetch-models", ROOT] + MODELLE, check=True)
+if PILOT and not NUR_SELBSTTEST:              # Pilot: PG19-Pilotbücher (GCS, sha256 je Datei) und WikiText-103 (Hugging Face) vorab
+    subprocess.run([sys.executable, f"{{R1B}}/r1b_core.py", "fetch-datasets", ROOT, "pg19", "wikitext103"], check=False)
 if SELBSTTEST:                                # der MOCK-Selbsttest braucht nur Konfiguration und Tokenizer von Qwen3-1.7B
     from huggingface_hub import snapshot_download
     snapshot_download("Qwen/Qwen3-1.7B", revision="70d244cc86ccca08cf5af4e1e306ecf908b1ad5e", local_dir=f"{{ROOT}}/models/qwen3-1.7b",

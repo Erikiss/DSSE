@@ -20,7 +20,12 @@ def _data(ctx, tok, n_tok):
         ids = np.load(b["_files"]["wt_train_ref.npy"]); return np.tile(ids, int(np.ceil(n_tok / len(ids))))[:n_tok]
     import pandas as pd
     d = RC.fetch_dataset("wikitext103", ctx.root, ctx.freeze); fs = sorted(os.path.join(r, f) for r, _, x in os.walk(d) for f in x if f.endswith(".parquet") and "train" in r + f)
-    off = int((ctx.freeze.get("datasets", {}).get("wikitext103", {}) or {}).get("rk1_train_offset_lines", 0)); out = []
+    off = (ctx.freeze.get("datasets", {}).get("wikitext103", {}) or {}).get("rk1_train_offset_lines")
+    if off is None:            # no silent 0: line 0 onwards would overlap D's streams, K's reference and SO-PILOT's passages
+        if not ctx.pilot:
+            raise RuntimeError("runde1b_freeze.json datasets.wikitext103.rk1_train_offset_lines missing (RK-1 training data offset)")
+        off = 0
+    off = int(off); out = []
     for f in fs:
         for l in pd.read_parquet(f)["text"].tolist()[off:]:
             if l.strip():

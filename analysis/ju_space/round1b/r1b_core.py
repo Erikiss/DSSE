@@ -3,6 +3,7 @@
     python r1b_core.py selftest [<root>]                 code tests on the CPU with the MOCK tiny random model (<root>/models/qwen3-1.7b
                                                           needs config.json and the tokenizer only; default env R1B_ROOT)
     python r1b_core.py fetch-models <root> <name> ...    download pinned models and check their sha256 (notebooks)
+    python r1b_core.py fetch-datasets <root> <name> ...  download pinned datasets (Hugging Face; PG19 from GCS) and check their sha256
     python r1b_core.py keys <out.json>                   write the SO-KEYS registry (package file r1b_keys.json)
     python r1b_core.py pilot-pins <draft.json> <out>     write runde1b_pilot_pins.json (models, datasets, jlens, engine of a draft record)
 
@@ -900,12 +901,43 @@ def jlens_convention(ctx):
     return load_json(ctx.input("r1b_K_S1", "k4j.json"))["convention"]
 
 
+def _gcs_fetch(rec, name, root, tries=4):
+    """source 'gcs' (PG19): every file of allow_patterns (exact names, no globs) from url_template.format(file=...) over HTTPS into
+    <root>/datasets/<name>/, each checked against its pinned sha256 (a file without a pin is refused); a cached file with the right
+    sha256 is not fetched again."""
+    import urllib.request
+    sha = dict(rec.get("sha256") or {}); files = list(rec.get("allow_patterns") or sha)
+    bad = [f for f in files if any(ch in f for ch in "*?[]/\\") or f not in sha]
+    if bad or not rec.get("url_template"):
+        raise RuntimeError(f"dataset {name} (gcs): file names must be exact, pinned names and url_template set ({bad[:3]})")
+    d = os.path.join(root, "datasets", name); os.makedirs(d, exist_ok=True)
+    for f in files:
+        p = os.path.join(d, f)
+        if os.path.exists(p) and sha256_file(p) == sha[f]:
+            continue
+        for k in range(tries):
+            try:
+                urllib.request.urlretrieve(rec["url_template"].format(file=f), p + ".part"); os.replace(p + ".part", p)
+                break
+            except OSError:
+                if k == tries - 1:
+                    raise
+                time.sleep(2 ** (k + 1))
+        if sha256_file(p) != sha[f]:
+            os.remove(p)
+            raise RuntimeError(f"dataset {name}: sha256 mismatch {f}")
+    return d
+
+
 def fetch_dataset(name, root, freeze):
-    """A pinned dataset of runde1b_freeze.json['datasets'][name] (repo, revision, allow_patterns, sha256 {file: sha256}) under
-    <root>/data/<name>, every listed sha256 checked."""
+    """A pinned dataset of runde1b_freeze.json['datasets'][name] under <root>/data/<name> (Hugging Face snapshot: repo, revision,
+    allow_patterns, sha256 {file: sha256}) or, for source 'gcs' (PG19: url_template, allow_patterns, sha256), under
+    <root>/datasets/<name>; every listed sha256 checked."""
     rec = (freeze or {}).get("datasets", {}).get(name)
     if not rec:
         raise RuntimeError(f"dataset {name} not pinned in runde1b_freeze.json")
+    if rec.get("source") == "gcs":
+        return _gcs_fetch(rec, name, root)
     d = os.path.join(root, "data", name)
     if not all(os.path.exists(os.path.join(d, f)) for f in rec.get("sha256", {})):
         from huggingface_hub import snapshot_download
@@ -1326,6 +1358,11 @@ if __name__ == "__main__":
                 print(f"{nm}: not pinned yet (runde1b_freeze.json 'models'); the step that needs it pins it (register_loader)")
                 continue
             print(nm, ensure_model(nm, a[1], fz))
+        raise SystemExit(0)
+    if a and a[0] == "fetch-datasets":          # pinned datasets (Hugging Face snapshots; PG19 from GCS), sha256 checked
+        fz = freeze_record(pilot=True)[0]
+        for nm in a[2:]:
+            print(nm, fetch_dataset(nm, a[1], fz))
         raise SystemExit(0)
     if a and a[0] == "keys":
         r = write_keys(a[1]); print("problems:", r["problems"]); raise SystemExit(1 if r["problems"] else 0)
