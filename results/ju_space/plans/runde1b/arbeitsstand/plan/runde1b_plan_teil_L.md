@@ -133,7 +133,7 @@ L redefines none of K's, D's or R's objects. An object missing at session start 
 - **SO-HN selector**: K's frozen L1-logistic pipeline as a callable (GPU FISTA at C*, positive weights, exclusion mask). L never re-tunes C.
 - **SO-HN random-set generator with K2's rule (same count per layer, mean answer-CETT within +-20 %) and L's candidate seeds keyseed('r1bL-CTRL', k)**: K's generator of random sets matched to a target set, called with L's own candidate seeds so that L's sets are independent of K's RS sets (main OD-M12).
 - **SO-CHH: a_X(t) = mean zCETT over X (K's merged definition) is primary; L's standardised-z mean is the sensitivity variant; both are stored**: the per-token H channel a_t exactly as K defines it; L's sensitivity variant is the mean over X of (z_j - mu_j) / sigma_j. Every comparison population uses the same definition on its own units.
-- **SO-HN REF-W**: per-neuron reference mean and SD of z on K's neutral reference corpus. Fallback: L computes them on 200 WikiText-103 test-split passages (main SO-WT103) x 512 tokens (+0.3 min).
+- **SO-HN REF-W**: per-neuron reference mean and SD of z (and of CETT, for zCETT) on K's neutral reference corpus (hn_meta.json 'refw'). Fallback: L computes them on the first 512 tokens (positions >= 16, raw text) of L.R's 200 natural WikiText-103 test passages (main SO-WT103; no further test tokens used) (+0.3 min).
 - **SO-LAB's gated A-lens pool items (K4): known = K4 'correct', prone = K4 'wrong'; read position t* = K4's t0**: the programmatic arithmetic chain items, with:
   - prompts, truth sets V_i (operands, intermediates, result);
   - strata (known / prone) and K4's 5 parsed gating answers per item (greedy and 4 samples at T 0.7; L adds 6, 11 in all, L5a);
@@ -158,7 +158,7 @@ L redefines none of K's, D's or R's objects. An object missing at session start 
 
 **From part R:**
 
-- **SO-DMG: calibrate rule (f <- f sqrt(target / damage), +-10 %, <= 6 evaluations); damage on REF-U32 = REF-R16 union REF-K16 (REF-R16 from r1b_xfer_A/dmg_ref_R16.json) plus 64 held-out S_L answers**: SO-DMG's function-style damage and calibrate (r1b_core), with RefKL in the 'hooks' variant; damage is teacher-forced KL in nats. L adds the 64 held-out S_L answers because neuron sets span many layers.
+- **SO-DMG: calibrate rule in the gain form for every L neuron operation ((alpha - 1) <- (alpha - 1) sqrt(target / damage), +-10 %, <= 6 evaluations; partial mean ablation z <- mu + lambda (z - mu) calibrated on (1 - lambda) in the same form); damage on REF-U32 = REF-R16 union REF-K16 (REF-R16 from r1b_xfer_A/dmg_ref_R16.json) plus 64 held-out S_L answers (the last 64 S_L rows by id, used by no L prompt set)**: SO-DMG's function-style damage and calibrate (r1b_core, form 'gain'), with RefKL in the 'hooks' variant; damage is teacher-forced KL in nats. L adds the 64 held-out S_L answers because neuron sets span many layers. (Amendment: with f = alpha the H- arm at alpha 0 cannot be matched; consistency check open issue.)
 - **SO-AX's u*_14 (U*, from r1b_xfer_A/so_ax_ustar.pt)**: the round-2 style direction u*_14. Descriptive covariate only; if it is missing, the line is dropped.
 
 **Round-2 machinery reused unchanged** (imported; rk_loop.py byte-identical; new code in a new function-style module):
@@ -494,7 +494,7 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
   - A': the same chain after the prompt of another item of the same family (derangement seed 'r1bL2perm');
   - A'': a second foreign prompt.
 
-  Anchor information iota_i(k) = log q(z_k | A_i, z_<k) - log q(z_k | A'_i, z_<k). Null iota0_i(k) uses A'' against A'. The true term comes from generation.
+  Expected anchor information (primary; amendment, errors-in-variables fix) iota*_i(k) = KL(q(. | A_i, z_<k) || q(. | A'_i, z_<k)), with A, A' and A'' teacher-forced in one batch (about 0.56M extra tokens, about 1.9 A100-min of work); null iota0*_i(k) = KL(q(. | A''_i, z_<k) || q(. | A'_i, z_<k)). The realised iota_i(k) = log q(z_k | A_i, z_<k) - log q(z_k | A'_i, z_<k) (both terms from the same teacher-forced path) and iota0 (A'' against A') are kept as descriptives (profiles, k*_free).
 - **Natural position control.** 200 frozen WikiText-103 test-split passages (main SO-WT103; disjoint from every part-K text by split) x 1,024 tokens, read teacher-forced as the assistant reply to 'Write a detailed text.', with the same captures.
 
 #### L2a RT sense: growth class of captured MI on equal partitions, and the model's own text
@@ -533,8 +533,8 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
     - 'growth class: logarithmic (RT/CFT-like)', which also needs b's lower bound > 0;
     - 'growth class: power law (sub-volume, L2M-like), beta = ...';
     - otherwise 'growth class undecided (curve reported)'.
-  - Own text, R(2^12):
-    - 'the model's own text carries less long-range captured information': upper bound < 0.87, and the slope of ln R on ln L over [2^8, 2^12] has upper bound < 0;
+  - Own text, R(2^12) (amendment: each self text is truncated where its cumulative end probability 1 - prod(1 - p_EOS) first exceeds 0.5, and enters R(L) only for L within that length):
+    - 'the model's own text carries less long-range captured information': upper bound < 0.87, the slope of ln R on ln L over [2^8, 2^12] has upper bound < 0, and the upper bound < 0.87 also holds on the texts whose maximum p_EOS stays below 0.05;
     - 'no deficit': interval inside [0.87, 1.15];
     - otherwise 'undecided'.
   - Only the logarithmic class is called 'RT-like'. A fixed future block is never used: with a fixed block even a CFT saturates.
@@ -558,7 +558,7 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
 - **What.** Does H activity rise with chain length only because the continuation decouples from its context (an information-limited length artefact), or beyond the information loss? Is any rise H-specific, chain-specific and more than uncertainty?
 - **How.**
   - L.R-A anchored families (F-known, F-unknown, F-fab) x T. 32-token windows w at continuation positions >= 64 while at risk.
-  - Window means: a_P(w), iota(w), e(w), log pos(w).
+  - Window means: a_P(w), iota*(w) (expected anchor information; 'iota' below means iota* unless marked realised), e(w), log pos(w).
   - Within-chain demeaning (Frisch-Waugh; chain fixed effects remove EOS-censoring composition and item heterogeneity). Slopes are residual-on-residual cov/var and standardised by the SD of window means of a_P:
     - beta_pos^0 = slope of a_P on log position;
     - beta_pos^(iota,e) = the same after partialling iota and e;
@@ -637,20 +637,21 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
 - **What.** In the model's own generation, is the H-state stickier than memoryless dynamics at the same item and position? Is it more persistent than control populations? Does it split within items across seeds (bistability)? And is any of this more than an uncertainty population?
 - **How.**
   - Data: L.R-A, L.R-B and the twin-0 rows of L3b; b_t as in L.2.
-  - **HD**: Mantel-Haenszel log-odds ratio of P(b_(t+1) = 1 | b_t = 1) against P(b_(t+1) = 1 | b_t = 0) over strata item x position bin.
-  - **Stickiness gamma**: logit P(exit at t | dwell d) = item effect + position-bin effect + beta_e e_t - gamma log(1 + d). Fitted by L-BFGS on the sparse design.
-  - **Null L.MARKOVSUR**: item-specific, position-matched first-order Markov surrogates. Entry and exit log-odds come from a two-way fit (item effect + shared position profile); dwell is memoryless; initial states are copied. 200 surrogates for P, 50 per comparison population.
+  - **HD**: Mantel-Haenszel log-odds ratio of P(b_(t+1) = 1 | b_t = 1) against P(b_(t+1) = 1 | b_t = 0) over strata chain x position bin (amendment: chain, not item, because the 8 L.R-B seeds, the two T of L.R-A and the twin-0 rows put several diverging chains in one item, and chain-level frailty inflates gamma-hat and HD).
+  - **Stickiness gamma**: logit P(exit at t | dwell d) = chain effect + position-bin effect + beta_e e_t - gamma log(1 + d). Fitted by L-BFGS on the sparse design.
+  - **Null L.MARKOVSUR**: chain-specific, position-matched first-order Markov surrogates. Entry and exit log-odds come from a two-way fit (chain effect + shared position profile); dwell is memoryless; initial states are copied. 200 surrogates for P, 50 per comparison population.
   - Surrogate-corrected Delta gamma = gamma-hat - median surrogate gamma-hat. Run-length shuffles are not used: they preserve dwell.
   - **BI** (energy_ising L2(D)) on L.R-B:
     - per item and seed, the late occupancy o_s = mean b over continuation tokens 257-512 (seeds ending before token 320 excluded; items need >= 6 seeds);
     - an item is 'split' if >= 2 seeds have o_s >= 0.3 and >= 2 have o_s <= 0.02;
     - BI = share of split items;
-    - surrogate BI from 200 item-specific surrogates simulating 8 seeds per item.
+    - surrogate BI from 200 item-specific surrogates simulating 8 seeds per item, each seed's entry and exit chain effects drawn from the item's fitted (unimodal, normal) between-chain distribution, so that BI tests bimodality beyond unimodal frailty (amendment).
   - The same pipeline runs for every comparison population, with occupancy-matched binarisation.
 - **Rule** (verdict family 'L3-obs'; Holm over {Delta gamma, HD}: rank p 0.01 <= 0.025).
   - 'H-specific stickiness': gamma-hat_P above the 95th percentile of its own surrogates, Delta gamma_P above all 99 controls, and Delta gamma_P - Delta gamma_SEL+ lower bound > 0.
   - 'H-specific persistence': HD_P above all 99 controls, and HD_P - HD_SEL+ lower bound > 0.
-  - 'within-item bistability (H-specific)': BI_P above the 99th percentile of its surrogates and above all 99 controls. This is attractor route A2.
+  - 'within-item bistability (H-specific)': BI_P above the 99th percentile of its surrogates, above all 99 controls, and BI_P - BI_SEL+ lower bound > 0 (item bootstrap; amendment, as for HD and Delta gamma). This is attractor route A2.
+  - The E-channel enters only statistics that do not condition on e (amendment): its stickiness is the hazard without the e covariate, compared with P's hazard without e.
   - 'H dynamics not distinct': Delta gamma_P, HD_P and BI_P each below the controls' 90th percentile.
   - Otherwise 'undecided'.
   - Qualifiers:
@@ -817,6 +818,7 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
     - n-string counts pooled over the windows of a condition, Jeffreys pseudo-count 0.5.
     - D_n = sum_w p(w) ln[p(w) / p(w^R)]; d-hat = D_3 - D_2 (Roldan and Parrondo 2010, Eq. 5).
     - Reversible band: 200 item-specific, position-matched first-order Markov surrogates of the symbol series, symmetrised to detailed balance (P_ij pi_i = P_ji pi_j). They preserve occupancy and position profile with zero entropy production.
+    - Entry-selection null (amendment): under reversibility a post-entry window is distributed as a time-reversed pre-exit window (exit = the last b = 1 before >= 16 tokens of b = 0, positions 64-960). d-hat_revexit is computed on the time-reversed 64-token windows ending at the exits; contrasts use an item bootstrap (all windows of an item together).
   - **Descriptive:**
     - Sagawa's sigma (sentence-order reversal, prompt fixed, per token) on the model's own T 1.0 L.R-A chains, with family contrasts, gated by G-sigma (integral fluctuation theorem check: 8 neutral prompts x 4,000 samples of 5 tokens at T 3 and 4, |mean exp(-sigma_tok) - 1| <= 3 SE);
     - the joint-state log-loss asymmetry A_k (k-means states of P's z, k in {2, ..., 8}, lags {1, 2, 4, 8, 16}). Frozen reading: A_k measures non-stationarity, never irreversibility, because for a stationary process forward and backward conditional entropies are equal whether or not it is reversible. This is the user's 'vector quantity';
@@ -829,11 +831,11 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
     - otherwise 'undecided'.
     - Delta s is reported.
   - **Irreversibility** (verdict family 'L3-irrev'; Holm over the a_P and s channels):
-    - 'irreversible H-entry (entry-specific)': d-hat_post - d-hat_match lower bound > 0, and d-hat_post above the reversible band's 95th percentile;
+    - 'irreversible H-entry (entry-specific)': d-hat_post - d-hat_revexit lower bound > 0 and d-hat_post - d-hat_match lower bound > 0 (amendment: the band alone is exceeded by reversible persistent dynamics after a threshold-selected entry);
     - 'irreversibility not entry-specific': d-hat above the band in both post and matched windows, with the difference inside +- the band's half-width;
-    - 'reversible within resolution': d-hat_post inside the band;
+    - 'reversible within resolution': d-hat_post - d-hat_revexit inside +- the band's half-width;
     - otherwise 'undecided'.
-    - Label 'H-specific' if P's a-channel contrast exceeds 95 of 99 controls' contrasts.
+    - Label 'H-specific' if P's a-channel contrast d-hat_post - d-hat_revexit exceeds 95 of 99 controls' contrasts (each control with its own entries and exits).
   - 'descriptive (sigma pipeline check failed)' if G-sigma fails.
 - **Null / controls.** Matched windows; 99 controls' own entries; detailed-balance surrogates; the IFT known answer.
 - **Shows - cannot show.**
@@ -891,7 +893,7 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
     logit P(s_X(m) = +1) = 2(h_0 + h_item + h_p c_X + J_s s_X(prev) + J_c s_Y(latest)),
 
     with c_X = the priming sign (0 if neutral), per condition and direction.
-  - **Coupling statistic.** J_ex = J_c - mean J_c over 200 within-(item, configuration) re-pairings of the partner series (derangements among the 4 seeds), with an item-cluster bootstrap that recomputes 20 re-pairings per replicate.
+  - **Coupling statistic.** J_ex = J_c - mean J_c over 200 within-item, across-configuration re-pairings of the partner series (derangements over the item's 8 runs), with an item-cluster bootstrap that recomputes 20 re-pairings per replicate. (Amendment: re-pairing within (item, configuration) keeps the configuration-determined partner stance in the null, so J_ex is about 0 under the strong priming that G-duet requires even when A copies B. A's context differs between configurations only through B's messages, so the configuration contrast is coupling signal while the shared item field stays in the null. The within-(item, configuration) J_ex is reported as the descriptive 'seed-level coupling'. The same re-pairing is used for C-doc, C-Hup / C-Rup (DD), the agreement excess and Delta Psi.)
     - It is unbiased under shared item fields but attenuated (sim_duet2.py).
     - It replaces lean's across-item shuffle, which gives false 'collaboration' at a rate of 1.00 with item-field SD 0.5 (judge_L1 sim_item_confound.py).
     - Item fixed effects alone gave a 0.44 false-positive rate at item-field SD 1.0 (sim_duet.py).
@@ -969,6 +971,7 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
     - (ii) own CoT: the item prompt with the reply instruction replaced by 'Work it out step by step, one operation per line, then give the final number.'; greedy + 4 samples at T 0.7, at most 96 tokens, keys keyseed('r1bL5', 'COT', i, s); every integer parsed;
     - (iii) isolated sub-answers: 'Compute {sub-expression}. Reply with only the final number.'; greedy + 4 samples at T 0.7, at most 12 tokens, keys keyseed('r1bL5', 'SUB', i, k, s).
   - Chance-match null (judge fix): every readout of item i is also classified against M_j \ V_i of a foreign item j (same stratum and family; derangement seed 'r1bL5-FM').
+  - Items, prompts and truth sets (implementation): K4's gating export (k4_gating.json: stratum, greedy, 4 samples) joined with K1's item store (k1_label_bank bank.json 'ach_short': prompt, P, I, A, Iplus); V_i = P + I + [A]; sub-expressions follow the left-to-right operation order.
   - Break-off times (K's convention: q = 0 failures reported separately):
     - B_F = the first q >= 1 with a FOREIGN run;
     - B_M = the first q >= 1 with a MODEL run;
@@ -979,12 +982,13 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
     - G_M^c = C_M^c(12) - C_M^c(3);
     - Omega = G_M^c / (G_M^c + G_F), over replicates with a positive denominator (share reported).
   - Descriptive: per block and variant; per-step category shares; the share of K's k*_conf events that L reclassifies as MODEL.
-- **Rule** (verdict family 'L5a'; Holm over G_F(known) and Omega).
-  - 'break-off owned by the lens': G_F(known) lower bound > 0 and Omega(all) upper bound < 0.5.
-  - 'break-off owned by the model': G_F(known) inside +-0.04 and Omega(prone) lower bound > 0.5.
-  - 'shared (the lens adds confabulation to the model's own errors)': G_F(known) lower bound > 0 and Omega(prone) lower bound > 0.5.
+- **Rule** (verdict family 'L5a'; Holm over G_F(known) and Omega; first match wins in this order, amendment: the earlier text let 'lens' and 'shared' overlap with no stated order):
   - 'no growth of false readouts with chain length': (G_F + G_M^c)(all) inside +-0.04.
+  - 'break-off owned by the model': G_F(known) inside +-0.04, Omega(prone) lower bound > 0.5 and G_M^c(prone) lower bound > 0.
+  - 'shared (the lens adds confabulation to the model's own errors)': G_F(known) lower bound > 0 and Omega(prone) lower bound > 0.5.
+  - 'break-off owned by the lens': G_F(known) lower bound > 0 and Omega(prone) upper bound < 0.5.
   - Otherwise 'undecided'.
+  - Omega's interval follows main §2.4's undefined-replicate rule (more than 5 % undefined replicates: bound undefined).
   - 'not testable (no exact-label lens corpus from K)' under G-CL failure.
 - **Null / controls.** Known items as the internal control (the model computes correctly); foreign-M_j chance matches; K's foreign-state and neutral-seed chains as delivered (lens baseline, descriptive).
 - **Shows - cannot show.**
@@ -1019,9 +1023,9 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
 - **What.** In the model's own step-by-step computation, does H activity just before step k predict the model's own first error at k, within item, beyond step index, position and uncertainty? This ties 'H rises along the chain' to 'the model errs there' with exact labels and without a lens or a judge.
 - **How.**
   - Own-CoT texts on 600 items (the 406 lens items plus the next 194 gated A-lens pool items in pool order, A-cal excluded) x 5, generated with captures of a_t for P and every comparison population, e_t and s_t.
-  - Frozen parser: lines 'a o b = r'. Step k is correct iff r equals the true intermediate v_k.
+  - Frozen parser: lines 'a o b = r'. Step k is correct iff r is in V_i or I+, or r = a o b with a and b valid available values (the prompt's operands and earlier correct results) (amendment: valid alternative orders are not errors). A first error is a selection error (operands or operator not a valid next operation) or a result error (r != a o b on the written operands); both are counted.
   - k_err = the first wrong step; CoTs that do not parse are excluded (counted; G-parse needs >= 70 % parsed).
-  - Pre-step position t_k^- = the token before the first digit of step k's result.
+  - Pre-step position t_k^- = the last token before step k's line begins, so that no part of step k is visible (amendment). The result-error hazard read at the '=' token is secondary (descriptive).
   - Conditional (item fixed-effect) hazard over steps at risk:
 
     logit P(error at k | none before) = item + step index + beta_H z(a_P(t_k^-)) + beta_e z(e(t_k^-)) + beta_pos log t_k^-,
@@ -1069,6 +1073,7 @@ Analysis runs in L-ANA (CPU).
   - Rows:
     - UP: twin; P at alpha in {1.5, 2, 3}; 2 random sets damage-matched to alpha 3;
     - DOWN: twin; P at alpha in {0.5, 0}; 2 sets matched to alpha 0.
+    - Each random set is read on its own channel, Delta_R(t) = a_R(pushed) - a_R(twin), as in L3b; the cross-read on P is descriptive (amendment: on P's channel rho_R is undefined).
 
     Window 16 tokens; 80 new tokens.
   - Delta(t) = a_P(pushed) - a_P(twin), live.
@@ -1079,7 +1084,7 @@ Analysis runs in L-ANA (CPU).
   - 'monostable relaxation (no separatrix within the ladder)': rho_P(top) upper bound < 0.9 and |rho_P(top) - rho_P(lowest)| inside +-0.2.
   - Otherwise 'undecided'.
   - 'hysteresis' if both arms read capture.
-  - A capture verdict adds attractor route A3 to the L3 attractor line: Holm over {A1, A2, A3}.
+  - A capture verdict is attached to the L3 attractor line as the label 'capture above a dose threshold (X1, tier 2)'. The core attractor line, its Holm step and CF-L stay over A1 and A2 (amendment: main §0.3 makes a tier-2 result a label only; consistency check open issue, option (a)).
 - **Null / controls.** Twins; damage-matched random sets; start-state matching.
 - **Shows - cannot show.** Shows separatrix crossing in the model's own chain. Cannot show where natural hallucinations start.
 - **MDE.** Realised SD rule; planning SD of rho about 0.08 per arm.
@@ -1089,7 +1094,7 @@ Analysis runs in L-ANA (CPU).
 ### X2 L4-DOWN: H suppression arms in the dyad
 
 - **What.** C-Hdown (A's P x 0) against C-Rdown (4 damage-matched sets).
-- **Rule.** As L4's H line; 'H gain acts as coupling (conformity)' also passes if DD_down upper bound < 0. Holm over up and down.
+- **Rule.** DD_down = J_ex(C-Hdown) - J_ex(C-Rdown) as L4's H line on the down arm. It is attached to the core H line as the label 'H-down arm: DD_down upper bound < 0 (X2)' or 'H-down arm: no conformity signature (X2)'; the core H line keeps its own rule and Holm family (amendment, as X1).
 - **Runs in.** r1b_L_A, 15.3 A100-min.
 - **Gates.** As L4.
 
@@ -1165,11 +1170,11 @@ Analysis runs in L-ANA (CPU).
 - 'H rises beyond information without attractor dynamics': as above with L2b 'H rises beyond information loss'.
 - Otherwise 'mixed (lines reported)'.
 
-**V-OWN (model or lens).**
-- 'the chain-lens break-off and its H-pattern belong to the lens': L5a 'owned by the lens' and L5b 'owned by the lens'.
-- 'belong to the model': L5a 'owned by the model' and L5b 'owned by the model'. L5c's verdict is attached as the lens-free error link.
-- 'shared': any other combination with at least one positive line.
-- Otherwise 'not decidable'.
+**V-OWN (model or lens)** (amendment: a single lens-owned line no longer reads 'shared'):
+- 'shared': L5a reads 'shared', or L5b reads 'in both', or one line is lens-owned and the other model-owned.
+- 'the chain-lens break-off and its H-pattern belong to the lens': at least one line is lens-owned and none is model-owned, 'in both' or 'shared'.
+- 'belong to the model': at least one line is model-owned and none is lens-owned, 'in both' or 'shared'. L5c's verdict is attached as the lens-free error link.
+- Otherwise 'not decidable'. The output names the line(s) that carried the verdict.
 
 **V-HOLO (per sense, never merged):**
 - code sense: the L1 verdict, the 'not a strict threshold code' flag and the monogamy sign;
@@ -1413,3 +1418,22 @@ Also new: r1b_L_cal.py (L-CAL generators).
 - Base lean, as both judges recommend. Grafts from holographic and energy_ising as listed.
 - Every judge fatal flaw that touches a retained element is fixed. Every 'missing everywhere' item is added: core where it is a validity fix, extension where it deepens a link.
 - Planning simulations for the merge are in scratch_L_merge/.
+
+## L.14 Implementation amendments (round-1b code, before the freeze)
+
+Rule-changing amendments are written into the sections above (SO-DMG gain form; REF-W fallback; iota*; chain effects and the BI frailty surrogate with its SEL+ contrast; the E-channel restriction; the time-reversed pre-exit null of L3d; within-item, across-configuration re-pairing in L4; the L5a order; the L5c parser and t_k^-; X1 own-channel reads; X1 / X2 as labels; V-OWN; the L2a truncation). They follow the unverified review findings validity-1 to -7, -13, -15, -16 and the consistency check's open issues on X1 / X2, SO-DMG and REF-W, each confirmed by argument before adoption. Not adopted (budget or design choices for the architect): validity-8 (SEL+ / UNC+ push arms in L3b, +7 A100-min), -9 (chain fields in L3c), -10 (pre-answer PIP primary), -11 / -12 (beyond the minimal V-HOLO mapping below), -14 (C-rep replay), and X1 / X4 with 6 sets per arm. Clarifications of underspecified points, frozen in code:
+- **Sizes and trims.** L.8 trims 2-5 are size reductions read from runde1b_freeze.json trims['L'] = T2 (L.R-B 24 items), T3 (16 L2a documents), T4 (4 L3b sets per sign), T5 (2 L1-C seeds); trim 1 is the funding of X1-X6.
+- **Inputs.** SO-LAB question texts and aliases come from K's label bank (bank.json 'tqa'), NE (FAB) items from bank.json 'ne'; so_lab.json carries no NE answers, so L generates greedy 24-token NE answers (labelled). SO-D1STIM's L4 items are d1_stimuli.json 'l4_items' with the F-sym referent; the attribute phrase is L's name of D's slot.
+- **F-neu.** The template needs a noun phrase, so rk_loop's 32 scene prompts enter as frozen noun phrases (r1b_l_base.F_NEU_SCENES, with 32 new scenes; sha256 in every output config).
+- **L1.** I-hat uses an L2 logistic fitted by L-BFGS (batched); bootstrap intervals resample the held-out row losses (no refit). L1-C applies the L1 tree at point estimates; m_cal is the largest threshold profile (16 or 64) classified 'holographic-like' with Syn evaluated at that threshold. Erasure sets are CTRL99 sets 13-20; a doubled set adds a second matched draw (keys ('r1bL-CTRL', 'dbl', k)). The pre-answer floors use the grid sizes nearest to 8, 64 and 1,024.
+- **L3b.** R_i+ uses CTRL99 set i and R_i- set 6 + i; d^(n) = ((a_X+(push+) - a_X+(twin)) - (a_X-(push-) - a_X-(twin))) / 2, each pushed set on its own channel (identical to the plan's d for P). The push window covers the forwards that produce and process the first 16 generated tokens (prefill: last prompt position only). Replacement sets come from CTRL99 sets 13 onwards, then the reserve draws.
+- **L2b.** Holm over the three contrasts = Delta beta^(iota,e) (against CTRL99), P - SEL+ and P - UNC+ on beta^(iota,e). 'Repetition-sensitive' recomputes the slopes without windows of repeat rate > 0.3.
+- **L3a.** 'Repetition attractor, not H' truncates chains at their first repeat-flagged token. The P - SEL+ bootstrap of Delta gamma refits gamma with item multiplicities as weights (surrogate medians fixed).
+- **L3c.** I2 / IN intervals resample the 20 subsets; the Rostami dip test is replaced by a bootstrap count of modes of the empirical P(K) (descriptive line only). In G-cal-Ising, P4 (near-critical) counts as right when the fit converges; 'collective' for P1 / P5 means the held-out PL gain's lower bound > 0. The kinetic fields are h_j(family, T, bin).
+- **L3d.** Window lengths scale with the position bins; Sagawa sigma uses sentence-order reversal on the T 1.0 L.R-A chains (64 per family); A_k uses k-means states of P's |z| (signs are not stored).
+- **L4.** Partner of A's message m is B's message m - 1; C-doc's reply k follows B's replayed message 2k; keys of C-doc reply k use msg = 2k + 1, of C-solo (X6) msg = 2k - 1. C-Rup / C-Rdown use CTRL99 sets 21-24 rotated by (seed + configuration) mod 4. Delta Psi is computed on C-opp (primary) and C-half (descriptive). X6's first user turn is 'Give your view on the {attribute} of {entity}.'
+- **L5.** Lens readouts are completed maximal digit runs over the emitted pieces; L5c's model uses one-hot step-index columns and item fixed effects (L-BFGS); CF-HERR member p = max(p(beta_H <= 0), rank p).
+- **X3.** A W1-like shift world (12 pretrained + 4 new shifts drawn from a seeded permutation of 0-16; pc_meta is not imported because it pulls the round-1 training stack); column search learns only the new task column (Adam).
+- **X4 / X5.** X4's control gains are one shared gain on the clamped fraction scaled to P's damage; X5's gains are 1 + delta (2 pattern - 1), delta 0.5, x 1.25 per minor fix; the target basin is the most occupied non-trivial basin.
+- **V-HOLO.** A sense counts as positive only through: code, L1 'holographic-like'; RT, the logarithmic class; reconstruction, L2c 'beyond random channels' or Lambda >= 0.9; associative memory, 'graceful degradation' with 'H not causally privileged', an H-attractor line, or X4 completion. The answer template lists these senses.
+- **L-CAL.** (f) checks the growth classifier on document-level noisy curves of known class; the estimator is checked in session by G-MI. (k) uses the amended re-pairing.

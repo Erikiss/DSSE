@@ -75,8 +75,8 @@
 
 | # | Element (user's words) | Counterpart in K, or none and why |
 |---|---|---|
-| 1 | 'Multitoken Prediction' | Qwen3-1.7B has no MTP head: none of its 311 tensors belongs to one, and the Qwen3 report does not mention MTP. Counterparts: the self-rollout chain lens CL17 (K4); the native MTP head of Qwen3.5-2B, used for calibration only (K5a); a post-hoc trained head as the conditional reserve RK-1 |
-| 2 | 'lebt von einem Gradient ... Gradient Through Routing ... dieses Durchrouten' | No gradient flows at inference. Inference counterpart: the cross-position Jacobian dh_27(t+Δ)/dh_l(t), split into a re-routing (QK) part and an along-route (OV) part, with a head routing map (K10b). Its VJPs are the frozen model's off-diagonal gradient terms (Wu et al.). Interventional cross-position transfer is measured in K9 and K10a. Cloud et al.'s 'gradient routing' masks gradients during training and has no counterpart |
+| 1 | 'Multitoken Prediction' | Qwen3-1.7B has no MTP head: none of its 311 tensors belongs to one, and the Qwen3 report does not mention MTP. Counterparts: the self-rollout chain lens CL17 (K4); the native MTP head of Qwen3.5-2B, used for calibration only (K5a); two post-hoc trained heads on the frozen trunk, standard CE MTP and Soft-MTP (RK-1, tier 2, unconditional) |
+| 2 | 'lebt von einem Gradient ... Gradient Through Routing ... dieses Durchrouten' | The user's term is the straight-through gradient routing of Soft-MTP: J. Teoh, 'Multi-Token Prediction Done Right', arXiv 2610.38331 (2026; code github.com/JaydenTeoh/Soft-MTP). There the MTP cross-entropy gradient at the k-th MTP state splits exactly into g_KL = W^T (p - q), the gradient of KL(sg(q) ‖ p) towards the model's OWN next-token distribution q at the aligned position (self-distillation), and a low signal-to-noise data residual g_res; the routing trick (h0[:, k:] += hk.detach() − hk) lets MTP heads and trunk receive only g_KL. It is a training-time device, not Cloud et al.'s gradient routing and not an inference quantity. Its content for the frozen model: an MTP chain lives on the model's own predictions along the chain ('Folge'). Measured counterparts: (a) the per-step self-consistency KL(q ‖ p) between the model's own next-token distribution at the aligned position (item context + seed + chain, teacher-forced) and the lens's step distribution, for CL17 (K4), the native head (K5a) and RK-1's heads; (b) RK-1 trains a standard CE head and a Soft-MTP head (with a frozen trunk only the head receives g_KL) on the same data. The cross-position Jacobian dh_27(t+Δ)/dh_l(t), split into re-routing (QK) and along-route (OV) parts with a head routing map (K10b), stays as OUR forward analogue of 'Durchrouten' (labelled as our analogue); K9 and K10a measure interventional cross-position transfer |
 | 3 | 'im Sinne einer Folge, nicht einer Reihe' | Folge (sequence) = chained readout (CL17) and the token route. Reihe (series) = direct k-step readouts (L-par, L-jac) and the KV route. Compared on answer digits (K10c) and as carrier shares (K10a) |
 | 4 | 'der Token ist die Folge des vorherigen Tokens ... nicht ... der dritte Token ist die Folge von [dem ersten] ... parallel' | The KV share s_KV at lag 2 of a front's effect on later fronts, at two doses (K10a). Structural fact, kept as a code check: a front at block b reaches its own block at later positions only through tokens |
 | 5 | 'vorderste Front ... in der Zeit auftragen ... Reihen von Tokenfronten' | Front F(t) = the column of the 28 block outputs at the newest position. Decode fronts equal teacher-forced fronts (G-K10). Chain fronts are stored per step (SO-CH, SO-FD) |
@@ -159,7 +159,7 @@
 
 **SO-CH, channels**
 - 448 heads, with 16-dim PCA bases fitted on N-text.
-- Named subspaces at blocks {6, 10, 14, 18, 22}: u*_b, u_T^v, u_sea^v (AX-1b at 6, 14, 18), H-subspace, J-workspace (top 16) and the top-16 PCs.
+- Named subspaces at blocks {6, 10, 14, 18, 22}: H-subspace, J-workspace (top 16) and the top-16 PCs; the SO-AX channels u*_b, u_T^v, u_sea^v only at 14 and 18 (AX-1b(14), AX-1b(18)) and only in r1b_K_S5 (account A, G-K11). K7a in r1b_K_S4 (account B) uses the SO-AX-free channels only (consistency check, open issue; main OD-M5).
 - Neuron groups (H, H+, RS).
 - Per-step lens channels: a_X, s_H, H~, FOV_att, share_X (DLA), ρ_X, ENT, CDM, TOP1, e(s).
 - Natural SDs on N-text.
@@ -193,7 +193,7 @@
 - Teacher-forced KL with logits_to_keep.
 - calibrate rule: the target with a band of ±10 %, at most 6 evaluations for pushes.
 - NSCALE_DN (neuron scaling): (α − 1) ← (α − 1) √(target / damage), at most 8 evaluations, α ≤ 20; label 'dose capped (damage d)' if the cap binds.
-- Every calibrated damage of K's interventions is also reported on REF-U32 = REF-R16 union REF-K16 (REF-R16 from r1b_xfer_A/dmg_ref_R16.json). The reporting for r1b_K_S1's calibrations runs in r1b_K_S2a (3.0 A100-min, main §4.2).
+- Every calibrated damage of K's interventions is also reported on REF-U32 = REF-R16 union REF-K16 (REF-R16 from r1b_xfer_A/dmg_ref_R16.json in account B; r1b_R_S0's xfer/dmg_ref_R16.json in account A). The reporting for r1b_K_S1's calibrations (H_op and RS39 at α 0 / 3, mean clamps) and K4's V8 β runs in r1b_K_S2a (3.0 A100-min, main §4.2); K6e's NSCALE_DN push is reported in r1b_K_S2b (k6e_cal; r1b_K_S2b therefore also starts after r1b_xfer_A/dmg_ref_R16.json and copies r1b_K_S1's SO-HN files), K3f's and K10a's named pushes in r1b_K_S5 (r1b_K_S5 copies r1b_R_S0's xfer/ folder); about 1 A100-min each, inside the existing step allowances (consistency check, open issue).
 
 **SO-LCE (main §2.3; owner D; K uses ≤ 4,096 tokens)**
 - Per-layer crop after stopped reads is part of SO-LCE.
@@ -262,6 +262,7 @@
 | Q18 lens-free probe | K4p per block | 4 | permutation null reported |
 
 **Round-level confirmatory families (main §2.4).** CF-K-attr = Q9. CF-K-link = the seven A+ members (K6b(i), K6b(ii), K6c(i), K6c(ii), K6e-c push, K6e-c clamp, K6h), Holm over the seven at 0.05 with p = p_IUT. K8c is a member of CF-HERR together with part L's L5c. All other K strings are exploratory at the round level.
+- Reachability (K.12, finding stats-1, confirmed by arithmetic): five CF-K-link members use the rank form against 39 sets, whose floor 1/40 = 0.025 exceeds Holm's first step over seven (0.05/7 = 0.0071), so 'confirmatory (CF-K-link)' is unreachable for K6b, K6c and K6h. K's own Q4 / Q5 / Q12 strings keep the rank form. r1b_K_ana reports both member p-values for CF-K-link: the frozen rank form and the prediction-interval form p_IUT = max(p_effect, p_PI against the same 39 sets); main §2.4 must choose (main-file change listed).
 
 **Exploratory grids** (BH-FDR q = 0.10, label 'exploratory'; never counted for or against): K7a, K7b, per-channel and per-lag grids, the head routing map.
 
@@ -515,6 +516,20 @@
 - **MDE.** AUROC SE ≈ 0.02.
 - **Runs in.** (ii) in r1b_K_S1: 0.5 A100-min. (i) in r1b_K_ana.
 
+**K3h Atlas-compatible H-neuron metrics (tier 2 item of r1b_K_S2b; descriptive; review notes K)**
+- **What.** Makes the H-neuron results comparable in kind with neuron-atlas style descriptions of other models. Method definitions only, measured on Qwen3-1.7B in our own words; the Goodfire Qwen3.6 Neuron Atlas (Qwen3.6-35B-A3B) is cited as the methodological reference only; no atlas data is used and nothing is fetched from goodfire.*.
+- **How.**
+  - Neurons: H_op and H_ar (≤ 60), plus one matched random neuron of the same layer per H neuron (REF-W mean |z| within ±20 %, seed 1501 + k).
+  - Corpus: N-text; the first three quarters for firings, the last quarter held out for simulatability.
+  - (1) Pole-separate reading: positive and negative z are read separately. Per pole: firing threshold θ = the 95th percentile of the pole's activation (positions ≥ 16), firing rate, strength in multiples of θ.
+  - (2) Damage per firing: KL(unmodified ‖ neuron zeroed at the firing token only), summed over the next 16 predictions; ≤ 100 firings per pole (top-5 % cutoff), with strength and rarity (unigram log-frequency of the firing token) recorded. Unit: firings clustered by text.
+  - (3) Modes and damage shares: k-means of the firings' block-(l−1) states (k ∈ {2, 3, 4} by silhouette; k = 1 if the best silhouette < 0.1); share of the pole's damage carried by the main mode as a ratio of sums, 90 % text-cluster bootstrap interval.
+  - (4) Effect-based simulatability (SO-GVRA, inverse-free): generator = a description (the top-10 firing tokens with their mean activation; revision: top-20 tokens; next family: K3e's chain-lens readout tokens); the description simulates the activation on held-out text and is patched in; verifier R = 1 − Σ KL(orig ‖ simulated) / Σ KL(orig ‖ zeroed) (ratio of sums; negative = worse than switching the neuron off). 'correct' R ≥ 0.5, 'minor fix needed' 0.2 ≤ R < 0.5, 'critically flawed' < 0.2; 3 attempts, then abstain. Verifier error: token-detector neurons (sensitivity) and foreign descriptions (false accept).
+- **Rule.** Descriptive categories per neuron-pole: 'single mode' (k = 1); 'one dominant mode' (main-mode share lower bound ≥ 0.9); 'several modes' (upper bound < 0.9); 'mode structure undecided'; 'uninterpretable' when simulatability abstains. H against the matched random neurons (distributions of main-mode share and median damage per firing). Never counted for or against H-CHAIN.
+- **Not a one-line swap.** A move to Qwen3.6-35B-A3B is not a model-name change: it is a mixture-of-experts model with a router and experts, about 70 GB in bf16 and 140 GB in fp32 (it does not fit one A100-40GB); the hooks and the H-neuron search would need MoE-aware code, and the comparability with rounds 1 and 2 would be lost. A bridge round on that model would be a separate plan.
+- **Runs in.** r1b_K_S2b as tier-2 item 'K3h' (4 part steps + analysis): about 20 min work, 30 A100-min planned. It is placed in r1b_K_S2b (not r1b_K_S1) so that it never delays SO-HN for parts L and D.
+- **Gates.** G-K1 (set), G-K10.
+
 **K3: null-controls, shows/cannot, inputs, gates (all sub-measurements)**
 - **Null-controls.** RS39, RS39mc and RS19; refit detectors of equal size; covariate models; random same-layer neurons.
 - **Shows / cannot.** Whether the Gao-type set tracks hallucination, compliance, uncertainty or rarity, by detection and by causal scaling. Not a mechanism in long text (K6-K8 test that).
@@ -602,6 +617,8 @@
     - k*_FOV: the first step whose share_H − q95_R share_R lower bound is > 0.
   - **J-lens seed check (G-K7).** At block 22, t0: does the J-lens top-10 contain the model's own next token at least as often as the logit-lens top-10?
   - **Read block b\*** for K6e, K6f and K6g: the block in {14, 18} with the larger V1 − V2 any-hit (ties → 14), decided in session (pre-registered).
+  - **Self-consistency KL (Teoh 2026; descriptive).** For V1 chains at t0, blocks 14 and 18, top-4 seeds: per step k, KL(q_k ‖ p_k) between the unmodified model's next-token distribution at the aligned position (item prompt up to t0, then the seed and the chain, teacher-forced) and the lens's real-stream distribution p_k. Reading: per-step confabulation rising while the KL stays flat = model-owned break-off; a growing KL = lens-owned. About 1 A100-min, inside K4's verifier allowance.
+  - **V5 and the μ_gen prior** (descriptive) run on the decoding-grid cells: V5 = greedy chains from μ_gen,l; 'V1_mugen' = V1 with μ_gen as the prior stream.
 - **Rule.**
   - **G-K4** (single test; pooled over blocks; t0; correct items; TRUE-INT only, ANSWER hits do not count):
     - 'chain lens reads intermediates' if the item-level any-hit of V1 − V2 has a 90 % lower bound ≥ 0.05 and V1 − V6 also has a lower bound ≥ 0.05;
@@ -685,6 +702,8 @@
     - 'native: flat per-step confabulation' if the slope interval lies within ±0.03 per step;
     - else 'undecided'.
   - Descriptive statement 'length trend without trunk dynamics' if the native lens rises and G-K5 is 'calibrated'. The native chain steps never pass the trunk MLPs, so a matching CL17 trend then needs no trunk H-neuron dynamics.
+  - Self-consistency KL (Teoh 2026; descriptive): per step, KL(q ‖ p) between the backbone's own next-token distribution at the aligned position (item prompt + seed + chain, teacher-forced) and the native head's distribution (CL35, V1, top-4 seeds). A flat KL with rising confabulation = model-owned break-off; a growing KL = head-owned (the head's residual-trained prior).
+  - If G-K17 fails, CL35 is 'not run (MTP wiring failed)', k5a_calib.json carries variant E and G-K5 'not decidable' (r1b_K_S2a then runs with E).
 - **Null-controls.** V2 per lens; the same items, states, seeds and lengths.
 - **Shows / cannot.**
   - Shows whether lens-side length conclusions drawn with the substitute would also follow from a native MTP chain lens on a second (hybrid-attention) model.
@@ -812,11 +831,12 @@
   - **Excess.** E_n^X = the mean over chain-pairs and segment-n positions of a_X(intervened) − a_X(twin), in the expert stream.
   - **d1** = E_1/s_1, with s_1 = the SD of twin-vs-twin (different keys) segment-1 differences.
   - **Carry (R6K).**
-    - TOK: K = E_2/E_1, defined iff E_1's 90 % interval excludes 0.
+    - TOK: K = E_3/E_2 (changed, K.12: E_1 contains the shared seed and the positions before the first token flip, which are exact zeros, while segment 2 lies wholly after the onset, so E_2/E_1 is not like-for-like and inflates K), defined iff E_2's 90 % interval excludes 0. E_1 stays the size of the perturbation (d1, G-K16).
     - TOK+KV: K = E_3/E_2, post-release like-for-like, defined iff E_2's interval excludes 0.
-    - K(2→3) reported; half-life ln 2/(−ln K) for K < 1.
+    - Half-life ln 2/(−ln K) for K < 1. The MDE simulations below were run for E_2/E_1 and are a planning guide only for E_3/E_2.
   - **Bistability** (TOK, delta2).
     - z per chain-pair = (A_H,3(pushed) − A_H,3(twin))/s_0, with s_0 = the pooled SD (per stratum) of the twin-vs-twin difference between the two keys of an item and seed.
+    - Only diverged chain-pairs enter the fit (changed, K.12): a pair whose tokens equal its shared-key twin has z = 0 exactly, a point mass that makes the mixture likelihood unbounded and LR undefined; the undiverged share is reported.
     - Fitted by (1 − π) N(0, 1) + π N(Δ, s1²) against a monostable N(δ, s²); LR = 2 (ll_bist − ll_mono).
     - p from 2,000 parametric-bootstrap draws of the fitted monostable model, with its between- and within-item variance.
   - **Causal outcome.** The per-claim confabulation share in segments 2-3: d_br = intervened − twin (TOK).
@@ -836,7 +856,7 @@
     - Label 'underpowered (d1 < 0.25)'. The CLAMP carry is descriptive (it concerns a low-H basin).
   - **K6e-b bistability** (Q9 member 3):
     - 'H-neuron attractor in the chain lens (bistable within items)' if p_IUT = max(p_LR, p_PI(log(1 + LR_H) vs RS20)) is at its Holm level, and Δ ≥ 3, s1 ≤ 1.5, 0.1 ≤ π ≤ 0.9, and ≥ 30 % of items with a locked chain (z > 3) also have a relaxed one (|z| < 1);
-    - 'no within-item bistability (lens)' if the 90 % item-bootstrap upper bound of the share of chain-pairs with z > 2 is < 0.10;
+    - 'no within-item bistability (lens)' if the 90 % item-bootstrap upper bound of the share of diverged chain-pairs whose robustly standardised value (z − median)/(1.4826 MAD) exceeds 2 is < 0.10 (changed, K.12: the raw z > 2 share also fires on a monostable shift or skew, so the old bound tested 'no shift', not 'no second mode');
     - else 'undecided'.
   - **K6e-c causal** (Q11, Holm over push and clamp):
     - 'H push raises lens confabulation beyond random sets' if p_IUT = max(p(d_br ≤ 0), p_PI vs RS20) is at its Holm level;
@@ -1049,8 +1069,8 @@
     - 'H-specific non-decaying persistence (<arm>)' if log K_H lies within ±log 1.25 and p_PI ≤ 0.025 (the ACH arm is a primary plateau cell);
     - else 'undecided'.
   - **Bistability** (member 6, ACH):
-    - 'within-item bistability (sessions)' by the K6e-b rule, against RS19;
-    - 'no within-item bistability (sessions)' if the upper bound of the z > 2 share is < 0.10;
+    - 'within-item bistability (sessions)' by the K6e-b rule, against RS19 (diverged session-seeds only, as in K6e-b);
+    - 'no within-item bistability (sessions)' if the upper bound of the robustly standardised z > 2 share is < 0.10 (K6e-b's changed bound);
     - else 'undecided'.
   - **Routes** (descriptive):
     - 'carried by the text (snowballing-like)' if L(TOKEN)'s lower bound > 0 and L(KV)'s interval includes 0;
@@ -1197,7 +1217,7 @@
 - **How.**
   - At t0 of the 240 correct K4 items (A-cal excluded), per-digit accuracy on the first three digit tokens d_1..d_3 of the model's own greedy answer.
   - Readouts:
-    - CL17: the chain whose seed equals d_1, else the top chain;
+    - CL17: the chain of the top-ranked J-lens seed (changed, K.12: selecting the chain whose seed equals the true d_1 uses the answer and favours the chained readout at d_2 and d_3 by construction); the d_1-selected chain is reported descriptively;
     - L-par(k): a ridge from h_l(t0) to h_27 at the target's offset − 1, decoded by the final norm and W_U. Fitted on A-scr answer positions (item-disjoint) with float64 accumulators;
     - L-jac(Δ): the FD lens of h_l(t0) → h_27(t0 + Δ) on the item's own answer text.
   - Blocks {14, 18}.
@@ -1211,14 +1231,19 @@
 - **Runs in.** r1b_K_S2a: 2.2 A100-min.
 - **Gates.** G-K4 (label), G-K-J.
 
-### RK-1 Reserve: post-hoc trained MTP head on frozen Qwen3-1.7B (secondary arm; conditional)
-- **Condition.** Tier 2 (main §4.5, drop item 13). Runs only if funded, and only if G-K5 is 'self-rollout differs from the native chain lens' or 'calibration undecided'.
-- **Head:** DeepSeek-V3-style.
-  - fc([RMSNorm(emb x_{t+1}); RMSNorm(h_27,t)]), then one Qwen3 decoder layer initialised from block 27, a final norm, and the frozen tied head.
-  - About 58.7M trainable parameters.
-- **Training:** KL to the model's own p(x_{t+2} | x_{≤t+1}) on 20M WikiText-103 train tokens, in bf16. Reason: an auxiliary map, not a compared generation; fp32 would cost about 2.4 h for no gain in a descriptive arm.
-- **Use:** K6a statistics on K4's cells, labelled 'secondary arm (trained head; own language prior)'. Its prior confounds the length question, so it is descriptive and never replaces CL17.
-- **Runs in.** r1b_K_S6 (account A, after r1b_K_ana, which decides G-K5; main C32): 58 min.
+### RK-1 Post-hoc trained MTP heads on frozen Qwen3-1.7B: standard CE MTP and Soft-MTP (secondary arm; tier 2, unconditional)
+- **Condition.** Tier 2 (main §4.5, drop item 13), funded by the user's decision (tier 1 and tier 2). It no longer depends on G-K5 (review notes K-MTP): it tests a mechanism of its own, Teoh 2026's straight-through gradient routing (K.1 row 2).
+- **Heads:** two, DeepSeek-V3-style, identical initialisation.
+  - fc([RMSNorm(emb x_{t+1}); RMSNorm(h_27,t)]), then one Qwen3 decoder layer initialised from block 27, a final norm, and the frozen tied head. About 58.7M trainable parameters each.
+  - CE head: cross-entropy to the data token x_{t+2} (standard MTP).
+  - Soft-MTP head: KL(sg(q_{t+1}) ‖ p_head) to the model's own next-token distribution at the aligned position. With a frozen trunk and a frozen shared output head, Soft-MTP's routing leaves the head exactly this g_KL signal (Teoh 2026, arXiv 2610.38331, Table 1: output head CE, MTP heads and trunk KL).
+- **Training:** the same 16M WikiText-103 train tokens and steps for both heads (one frozen-trunk forward per batch feeds both), bf16 autocast, AdamW (lr 3·10⁻⁴, cosine), gradient clip 1; 12 resumable chunks. Reason for bf16: auxiliary maps, not compared generations.
+- **Use:** K6a statistics on K4's cells (t0, correct items, blocks 14 and 18, V1 and V2, top-4 seeds) with a CL35-style rollout from J_l h; C_k, the per-claim slope and the per-step self-consistency KL for each head, against CL17's V1 chains on the same cells. Labelled 'secondary arm (trained head; own language prior)'; never replaces CL17 and never enters the composite.
+- **Rules (descriptive strings).**
+  - 'Soft-MTP head follows the self-rollout (length curve within ±0.10)' if the 90 % item-bootstrap interval of C_16(Soft) − C_16(CL17) lies within ±0.10; 'Soft-MTP head differs from the self-rollout' if it excludes 0; else 'undecided'.
+  - 'CE head adds confabulation beyond the Soft-MTP head' if the lower bound of C_16(CE) − C_16(Soft) > 0; 'no CE excess over the Soft-MTP head' if the interval lies within ±0.10; else 'undecided'. Prediction (Teoh): the Soft-MTP head inherits the model's own prior, the CE head adds its own data-prior confabulation.
+  - Per head: 'break-off lens-owned (self-consistency KL grows)' if the slope of the mean KL over steps has a 90 % lower bound > 0; 'break-off model-owned (self-consistency KL flat)' if within ±0.02 nats per step; else 'undecided'.
+- **Runs in.** r1b_K_S6 (account A, after r1b_K_S1 and r1b_K_S2a, copied through dsse_runs_B; no trigger): about 72 A100-min (two heads on 16M tokens with a shared trunk forward, ≈ 1.2 h). Output k/rk1.json (contract k_rk1).
 
 ### RK-2 Reserve: H-link on the native lens (Qwen3.5-2B; the base design's K5b)
 - **Condition.** Tier 2 (main §4.5, drop item 1). Runs only if funded. It was moved from the plan to the reserve for budget reasons; K6c(ii) keeps the literal read-state ablation test on the primary model.
@@ -1290,12 +1315,13 @@
   - B+ if Q9 yields an H-specific attractor verdict in any member; the frame(s) are recorded.
   - Bg if a carry passes Holm without specificity.
   - Bp if a primary cell (K6e TOK or K8b ACH) gives 'H-specific non-decaying persistence'.
-  - B− if every defined carry cell (K6e TOK, K6e TOK+KV, K8b ACH, K8b TQA) is dissipative and both bistability members give 'no within-item bistability'.
+  - B− if at least one carry cell is defined, every defined carry cell (K6e TOK, K6e TOK+KV, K8b ACH, K8b TQA) is dissipative, and both bistability members give 'no within-item bistability' (changed, K.12: without the first condition B− held vacuously when no carry was defined).
   - B? otherwise.
 - **C, content.** C+ if K6g gives 'content effect (in-lens snowballing)' or K8a gives 'content effect beyond length'.
 
 **Decision table (first matching row).**
-1. Not P-H: 'premise fails: H-neurons not replicated in Qwen3-1.7B'. K6a, K6f, K6g and K8a are reported on their own.
+1. K3a 'H-neurons not replicated (detection at random-set level)': 'premise fails: H-neurons not replicated in Qwen3-1.7B'. K6a, K6f, K6g and K8a are reported on their own.
+1b. Otherwise not P-H (K3a 'undecided'): 'undecided (premise not established: H-neuron replication undecided)' (changed, K.12: an undecided K3a is not a failed premise). K6a, K6f, K6g and K8a are reported on their own.
 2. P-L, A+ and B+: 'H-CHAIN supported: H-neuron attractor (<frames>) and H-linked chain-lens break-off beyond length'. Suffixes: K6e-d ('carry not bound to context length' / 'carry depends on context length' / 'undecided') and C.
 3. B+ without (P-L and A+): 'H-neuron attractor (<frames>) without H-linked lens break-off (<lens not tested | no lens-side link>)'. If the model frame is the only B+ frame and P-L fails: 'model-side H attractor (lens not tested)'.
 4. A+ and not B+: 'H-linked lens break-off beyond length, but no H-neuron attractor (<B label: generic persistence (not H-specific) / H-specific non-decaying persistence / dissipative / undecided>)', plus the C suffix ('; content drives break-off (in-context conditioning)').
@@ -1373,12 +1399,13 @@ K5a and RK-2 are reported next to the composite and never enter it.
 | r1b_K_S1 | B | freeze | K2 (incl. the S_L screening for part L), K3a-e, K3g(ii), K4j | 81.6 | 126.4 |
 | r1b_K_S3 | B | freeze (parallel to r1b_K_S1) | K5a | 13.9 | 28.9 |
 | r1b_K_S2a | B | r1b_K_S1, and r1b_K_S3's k5a_calib.json (or r1b_K_S3 'not run' after two attempts: variant E); r1b_xfer_A/dmg_ref_R16.json present (from r1b_R_S0) | gating (incl. the export to SO-LAB), K4 (150 wrong items), K4p, K6c, K6f, K6g, K6h, K10c; REF-U32 reporting of r1b_K_S1's calibrations | 58.8 | 92.2 |
-| r1b_K_S2b | B | r1b_K_S2a (b*, items) | K6e | 31.4 | 51.1 |
+| r1b_K_S2b | B | r1b_K_S2a (b*, items), r1b_K_S1 (SO-HN), r1b_xfer_A/dmg_ref_R16.json | K6e (+ K3h if tier 2 is funded: about 20 min work, 30 planned) | 31.4 | 51.1 (+30.0 tier 2) |
 | r1b_K_S4 | B | r1b_K_S1, r1b_K_S3 | K8a, K8b, K8c, K7a | 77.3 | 119.9 |
 | r1b_K_S5 | A | r1b_K_S1's SO-HN, r1b_K_S2a's item list and r1b_K_S4's K8a instances, K8b and K8c texts (K9's inputs), copied through the B → A link; r1b_R_S0, r1b_R_S2_14, r1b_R_S2_18 (account A) | SO-AX package read and check (KS-axes), K9, K10a, K10b, K3f, K7b | 42.7 | 70.1 |
 | r1b_K_ana | A | all sessions done, or declared 'not run' after two attempts | statistics, verdicts, report | 20.0 | 43.0 (incl. the 10-min I/O allowance) |
 | **Tier 1 (main §4.3)** | | | 508.0 min + I/O allowance 10 (r1b_K_ana) = 518.0 min of K's own (8.63 A100-h). Work run for others in K's sessions: S_L screening 9.6 and 22 extra wrong items 1.0 (part L), REF-U32 reporting 3.0 (round), giving 531.6 min (8.86 h) in K's sessions. Tier 2: RK-1 0.97 h, RK-2 0.88 h. | 325.7 | **531.6** |
-| Conditional | | | G-K16 doubling +21 (tier 1, in session); tier 2: RK-1 58 (r1b_K_S6), RK-2 53 (r1b_K_S7) | | |
+| Conditional | | | G-K16 doubling +21 (tier 1, in session) | | |
+| Tier 2 (funded) | | | RK-1 72 (r1b_K_S6, account A, after r1b_K_S1 and r1b_K_S2a; two heads), RK-2 53 (r1b_K_S7, account B, after r1b_K_S3 and r1b_K_S1), K3h 30 (item in r1b_K_S2b); 155 min = 2.58 A100-h (was 1.85) | | |
 
 **Per-measurement A100 minutes** (1.5 × work, setup separate):
 
@@ -1420,7 +1447,7 @@ K5a and RK-2 are reported next to the composite and never enter it.
 **Budget argument.**
 - Planned: tier 1 8.63 A100-h of K's own, 8.86 h in K's sessions (main §4.3; table above).
 - If the G-K16 fallback triggers, +0.35 h. It buys decidability of the central attractor verdict. K7b is then dropped and K9 runs without c4 and c5, which keeps the total ≤ 9.0 h.
-- RK-1 and RK-2 are tier 2 (main §4.5, drop items 13 and 1); they run only if funded, and RK-1 only if G-K5 is not 'calibrated'.
+- RK-1, RK-2 and K3h are tier 2 (main §4.5, drop items 13 and 1; K3h a new item); they run only if funded. RK-1 no longer depends on G-K5.
 - The ×1.5 margin absorbs rates up to 1.5× slower than planned.
 - If the pilot (r1b_P0; SG7, main §3.1) measures decode or teacher-forced rates more than 30 % slower, the drop order applies:
   1. K7b;
@@ -1459,6 +1486,8 @@ K5a and RK-2 are reported next to the composite and never enter it.
 - Text from an activation: CL17, CL35 and K7b chains are the generator. The verifier is a forward round trip through the unmodified model (K4), or a neuron-activation round trip (K3e).
 - The reviser takes the next contrastive candidate. Attempt limit 3; abstentions are counted.
 - Verifier error is measured on planted known cases.
+- K3h's descriptions of a neuron (token sets, chain-lens readouts) are verified by an effect round trip: the simulated activation is patched into the unmodified model on held-out text and the recovered share of the neuron's effect is measured (forward only); 3 attempts, then abstain; verifier error on token-detector neurons and foreign descriptions.
+- The self-consistency KL (K4, K5a, RK-1) compares two forward distributions; nothing is reconstructed.
 
 **Arithmetic.** Wrong intermediates behind a wrong answer come from forward enumeration over the task's own arithmetic (generate-and-verify).
 
@@ -1473,7 +1502,9 @@ K5a and RK-2 are reported next to the composite and never enter it.
 
 **Key namespaces.** keyseed('r1bK_<tag>', ...) (main SO-KEYS; registered prefix 'r1bK_'), with tag in:
 - hn, s3, gate, K4T, K6e, ses, long, bnd, K10a, K3f;
-- cal for SO-CAL units.
+- cal for SO-CAL units; V7 for the covariance-null draws.
+- Arguments as implemented: r1bK_hn (question or item id, sample), r1bK_s3 (id), r1bK_gate (item, sample; K5a's 2B gating: '2B', item, sample), r1bK_K4T (item, block, seed, arm), r1bK_K6e (item, seed rank, key, 'T0.7' | 'T1.0'; one generator per chain covers all steps), r1bK_ses (family, template, seed, turn), r1bK_long (item, sample), r1bK_bnd (item, sample), r1bK_K10a (text, absolute position), r1bK_K3f (question), r1bK_V7 (item, block).
+- K3h random neurons: numpy seed 1501 + k.
 
 Greedy contrastive rollouts need no keys.
 
@@ -1498,3 +1529,10 @@ Greedy contrastive rollouts need no keys.
   - from lean: K6e, K6f, K6g, K5a's rule, equivalence verdicts, G-K-J index check, lead/lag, OWN, decision ordering;
   - from mechanism: re-injection OFF, K10a, K10b, K10c, V7, FOV_att, α^int, H~, mean-clamp with per-claim outcome, H+ switch, G-K7, SO-FD, K3f, TQA sessions.
 - New (missing in all three): K4p, the expert-only push and G-K15, K6h, G-K16, loop censoring, decoding and temperature labels, G-K14, the plateau verdict, the PI convention, the z > 2 bound, the K9 split-half test.
+- Changes at implementation (14.11.2026; review notes and confirmed review findings; the unconfirmed findings were not applied):
+  - Teoh 2026 (arXiv 2610.38331): K.1 row 2 corrected; per-step self-consistency KL in K4, K5a and RK-1; RK-1 with two heads (CE, Soft-MTP), unconditional in tier 2.
+  - K3h atlas-compatible H-neuron metrics (tier 2 item; review notes K).
+  - validity-1: K6e TOK carry E_3/E_2. validity-3 / stats-2: bistability fitted on diverged pairs (K6e) and sessions (K8b). validity-4: robust 'no within-item bistability' bound. validity-11: K10c's CL17 readout without the answer. stats-8: B− needs a defined carry cell; composite row 1 only on 'not replicated'. stats-1: CF-K-link reachability (both member p-values reported; main must choose).
+  - Consistency-check open issues: K7a's channels in account B are SO-AX-free; REF-U32 reporting of V8, K6e, K3f, K10a located (r1b_K_S2b and r1b_K_S5 inputs); RK-1 and RK-2 write k_rk1 / k_rk2 for the round summary (main change).
+  - Not applied (not confirmed here): stats-3 (PI calibration), stats-4 (K8c / K6h margins), stats-5, stats-6, validity-2, -5, -6, -7, -8, -10, -12, -13.
+  - Implementation scope (exploratory, never counted): K7a computes a_c(k), m_c(k), α_c and horizons for heads and SO-AX-free channels; its lead-lag L_AB(k), D_c surrogates and event locking are not in the round-1b code. K8c's event-locked H and hazard profile are descriptive outputs not yet computed by r1b_K_ana. K8b's sessions use K's own B-Q8 concatenation (each turn rendered with its empty think block) rather than r2_stimuli's helpers.

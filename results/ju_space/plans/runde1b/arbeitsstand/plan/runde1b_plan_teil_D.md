@@ -139,7 +139,8 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
   - Passages dropped if they contain any D1/D3 value word, any referent or role name, or 'AI', 'artificial intelligence',
     'machine learning', 'language model', 'neural network', 'self-improv'.
   - Cut into 16 streams of at least 32,000 tokens (pinned tokenizer).
-  - Sentence-shuffled versions of streams 0-7 (keyseed('r1bD_shuf', s)); the last 150 tokens stay unshuffled.
+  - Sentence-shuffled versions of all 16 streams (keyseed('r1bD_shuf', s)); the last 150 tokens stay unshuffled (D.23 item 5:
+    D1-f item i uses the shuffled version of its own stream i mod 16).
   - The text adjacent to the entity material is identical across lengths (front padding).
   - Each part processes its units grouped by stream (one prefill per stream and length; no master caches in host RAM).
 - **Round-2 turn machinery** (= main SO-TURN; reused unchanged):
@@ -429,8 +430,12 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
   3. 'not decidable (rule not specific at the measured noise)': G-D1-null fails.
   4. **'length-driven minority capture'**: lower bound of Phi(L*) > max(0.25, env(L*)) and lower bound of Delta Phi > 0.
      Then three survival checks (D.3 rule):
-     - prior x saturation: theta = (Phi(L*) - max(0.25, env), Delta Phi); theta_k = (Phi_opp(L*) - max(0.25, env_opp),
-       Delta Phi_opp);
+     - prior x saturation (as amended, D.23 item 9): the latent minority bonus Delta eps (L* minus L0) on the fitted readout
+       scale, pooled and per stratum: 'explained' if the pooled upper bound <= 0, or if the opposed upper bound < 0.5 x the
+       aligned point and the aligned-minus-opposed interval excludes 0; 'survives' if the opposed lower bound > 0 and the opposed
+       point >= 0.5 x the aligned point; else 'inconclusive'. The original Phi-scale check (theta = (Phi(L*) - max(0.25, env),
+       Delta Phi); theta_k = (Phi_opp(L*) - max(0.25, env_opp), Delta Phi_opp)) is reported only: it labels a real uniform
+       minority bonus 'explained' (stats-1, reproduced in r1b_d_selftest.py rules);
      - conflict hedging: theta = Delta Phi_24; theta_k = Psi_Delta;
      - filler form: theta = Delta Phi_24; theta_k = Phi_24(L*, shuffled filler; D1-f) - Phi_24(L0).
 
@@ -618,7 +623,7 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
 - **What.** Is the length effect carried by the size of the long context or by its form (coherent vs sentence-shuffled text
   of the same tokens), the analogue of round-2 AT8 'shape, not size'? It is also the context-rot survival check of D1-a.
 - **How.**
-  - F-sym items 0-23 at L* only, on the shuffled versions of streams 0-7. The last 150 tokens stay unshuffled, so the text
+  - F-sym items 0-23 at L* only, on the shuffled version of the item's own stream (i mod 16). The last 150 tokens stay unshuffled, so the text
     next to the block is unchanged.
   - Interleaved k in {0, 2, 4}: 2 swaps x (1 context with 12 questions + 2 x 2 contexts with 6 questions) = 10 contexts per
     item.
@@ -709,7 +714,7 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
 - **What.** Is the minority-capture length effect larger, smaller or equal in Qwen3-0.6B than in Qwen3-1.7B? This is a
   two-point size check (persona, many-shot and identity-drift effects grow with size in the literature).
 - **How.**
-  - Qwen3-0.6B (pinned files, native 32K), F-sym items 0-23 on streams 0-7, L0 and 32,000.
+  - Qwen3-0.6B (pinned files, native 32K), F-sym items 0-23 on streams i mod 16 (the 1.7B arm's filler, D.23 item 6), L0 and 32,000.
   - Interleaved k in {0, 2, 4}: 2 swaps x (1 context with 12 questions + 2 x 2 contexts with 6 questions), plus X_N: 11
     contexts per item and length.
   - Phi_24 and Delta Phi_24 for both models on the same items, keys and filler; its own G-LCE-1 (2 contexts) and G-M.
@@ -1059,12 +1064,14 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
   - 'not testable': G-D6 fails. G-D6: the rep4 rule classifies all 16 validation texts correctly (8 known-degenerate: a
     64-token corpus passage repeated to 1,024 tokens; 8 known-healthy 1,024-token passages), and y_P - y_Q in the pole
     direction is > 0 at checkpoint 0 in >= 80 % of 2V-comp starts.
+  - 'not decidable (horizon too short)': < 20 % of runs degenerate before 4,096 in both arms (D5-x then reports descriptively).
+    (Moved up in implementation, D.23 item 17: with heavy censoring Delta sits near 0 with a small SD, and the old order returned
+    the decisive negative 'no lifetime effect' instead. The same order applies to D5-g.)
   - 'two competing voices sustain coherence longer (catfish lifetime)': lower bound > 0, point >= 500 tokens, and the voices
     stay separated (lower bound of g(last)/g(0) >= 0.5).
   - 'competition shortens coherence': upper bound < 0 and point <= -500.
   - 'no lifetime effect of competition': interval inside (-500, 500), requiring a realized SD <= 200; otherwise 'undecided
     (underpowered)'.
-  - 'not decidable (horizon too short)': < 20 % of runs degenerate before 4,096 in both arms (D5-x then reports descriptively).
   - otherwise 'undecided'.
   - Label 'voices merge' if the upper bound of g(last)/g(0) < 0.5. p_D5 = one-sided bootstrap p of Delta > 0.
 - **Rule D5-r (secondary; rate form of hash share).** pi_min = the minority voice's share of generated tokens 512-4,096.
@@ -1080,6 +1087,8 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
 - **D5-b (descriptive).** Speaker-structure effects RMST(2V-agree) - RMST(1V) and RMST(2V-comp) - RMST(1V).
 - **D5-x (descriptive).** Per-pair lifetimes and censoring lengths. Label 'two voices sustain their own text toward 28K
   (descriptive)' if every 2V-comp run outlives its paired 1V run; 'no full-scale advantage' if none does; else 'mixed'.
+  A pair whose two runs are both alive at the cap is not decidable and is left out; with no decidable pair the label reads
+  'not decidable (censored at cap)' (D.23 item 18).
 - **Null / controls.** 2V-agree matches speaker alternation and lexical variety without competition; 1V; 2V-agree-min is the
   turn-taking control for the rate form; common random numbers across arms; validated detector; censoring by RMST.
 - **Shows / cannot show.**
@@ -1103,7 +1112,8 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
 - **(a) length-driven minority capture:** D1-a verdict 4 without 'explained by'; p_a from D1-a.
 - **(b1) a force splits one entity into two under hyper-long context:** D3 'split grows with length'; p_b1 = the McNemar p.
 - **(b2) the two entities keep each other going, enabled by hyper-long context:** either
-  - M: D2-a verdict 4 without 'confounded with repetition', and D2-b 'strengthens', and D2-c not 'merging' (p_M = max of the
+  - M: D2-a verdict 4 without 'confounded with repetition', and D2-b 'strengthens', and D2-c neither 'merging' nor 'one entity
+    captured' (D.23 item 19: otherwise M could be supported and an M negative at once) (p_M = max of the
     three one-sided bootstrap p-values: Delta Pi_1 > 0, Delta Delta Pi_1 > 0, mu < 0.10);
   - or D5-a 'two competing voices sustain coherence longer' (p_D5).
   - p_b2 = min(2 p_M, 2 p_D5) over the members that meet their support condition.
@@ -1313,3 +1323,126 @@ session r1b_D_R (account A, after r1b_D_ana, which decides R2's trigger); none e
   - analogy aside D1-v; size arm D1-s; dominance conditions; rate-form verdict D5-r; full-scale extension D5-x;
   - 16 filler streams with a two-level bootstrap; engine fallbacks FB-1 and FB-2;
   - combined Holm verdict with a power statement.
+
+## D.23 Implementation notes and deviations (code in analysis/ju_space/round1b/, MOCK-tested on the CPU)
+
+Code: r1b_lce.py (SO-LCE), r1b_d_stim.py (generators, streams, helpers), r1b_d_d1.py (r1b_D_A), r1b_d_d2.py (r1b_D_B), r1b_d_d3.py
+and r1b_d_d5.py (r1b_D_C), r1b_d_ana.py (r1b_D_ana, D.17), r1b_d_res.py (r1b_D_R), r1b_sessions_D.py (steps), r1b_d_selftest.py.
+Where this list and the text above differ, this list states what the code does.
+
+1. **Value pools.** Single-token ' word' forms, disjoint across slots, 'word' forms preferred. Founding month has only 12 values
+   (each value 4 times as version 1 and 4 times as version 2); bell metal uses the ' word' criterion only (9 of 16 'word' forms
+   are multi-token). Every other slot has 16 values. Colours exclude gold and silver (metals).
+2. **Lengths of the material.** Reports 58-68 tokens (64 +- 6 holds); blocks measure 623-657 tokens; the assertion is 615-665
+   (the text's 650-720 was not reachable with 64-token reports). Neutralised reports are within +-2 tokens of the version-1 report
+   (closest-length pool sentences per attribute).
+3. **Order 2** is the exact reverse of order 1's A/B (version) sequence; each slot keeps its template, so the contexts of an item
+   differ only in values. Aperiodic placements: patterns with a period of 1-5 slots are redrawn from the same keyed generator.
+4. **Front padding.** One filler length per (stream, length): F(L0) = 150 tokens, F(L) = L - 900 otherwise (D2: the longest
+   turn-1 input is 31,800 tokens; R3: F = L - 1,200 for character-level blocks). Contexts therefore end about 120 tokens below L.
+   The user turn begins 'Documents:\n\n' in D1 and D2.
+5. **Shuffled streams** (stats-9, confirmed by text: D1-f items 8-15 had no shuffled stream). All 16 streams are shuffled; D1-f
+   item i uses the shuffled version of stream i mod 16. Up to 8 more 32K prefills (about 2.3 raw min). Under T5, D1-f uses items 0-15.
+6. **D1-s** uses stream i mod 16, the 1.7B arm's filler (stats-9, confirmed by text). This adds up to 8 0.6B prefills (about 1.6 raw
+   min). The 0.6B G-LCE-1 (2 contexts) is written to d1/d1s_glce.json, not to the contract file lce/g_lce_1_2.json.
+7. **D1-d.** The extra chunks run after the parity (k = 5) and (0,5,5) contexts. X_N and the pure contexts are re-run with the extra
+   chunks only: the X_N log-probabilities over the 256 reference tokens are the KL reference. The two reference passages, G-D6's
+   8 healthy and 8 degenerate texts come from WikiText-103 train passages after the 16 streams. The stream record's 'end_passage'
+   tells K where its percentile reference starts.
+8. **G-D1-null as implemented** (stats-11, confirmed: the text left it unspecified).
+   - Fit: shared c_L on a grid (36 values, 1-60); per item-attribute b and beta >= 0 by Gauss-Newton. beta is capped where the
+     fitted pure context reaches the +-15 clip (or tanh 0.999); the capped share is reported.
+   - Kernels: w_s = exp(-(9 - s)/tau) + pi exp(-s/1.5), with tau in {0.7, 1.5, 3, inf} and pi in {0, 0.5}, normalised to sum 10.
+   - env = the 95th percentile, over the two-level item bootstrap (fits fixed at the point), of the maximum over kernels of the
+     null Phi.
+   - Planted sets: a kernel drawn from the eight, item effects SD 0.5 x residual SD, context noise; 200 null sets and 200
+     effect sets (+1.5 nats).
+9. **D1-a prior check replaced by a latent-scale check** (stats-1, confirmed). r1b_d_selftest.py builds a synthetic world: a
+   uniform 1.5-nat minority bonus, item priors SD 1.5 nats, tanh readout with c 8. The Phi-scale check called it 'not minority
+   capture: explained by prior x saturation'; the latent check calls it 'survives'.
+   - Latent bonus per item: eps = c atanh(l/c) - (beta (2k - 10) + s b) over the mixed main contexts. Delta eps = eps(L*) -
+     eps(L0), pooled and per stratum.
+   - 'explained': pooled upper bound <= 0; or opposed upper bound < 0.5 x aligned point with the aligned-minus-opposed interval
+     excluding 0.
+   - 'survives': opposed lower bound > 0 and opposed point >= 0.5 x aligned point.
+   - Otherwise 'inconclusive'. The Phi-scale components are still reported.
+10. **Survival checks** compute theta on each check's own item set: hedging items 0-31, filler-form items 0-23 (stats-9).
+11. **FB-2.** D1-a reads 'not decidable (envelope and survival checks not run under FB-2)'; Phi at 16K is reported descriptively
+    (stats-10, confirmed: the envelope and checks need contexts that FB-2 does not run).
+12. **D2.**
+    - The two probe frames differ only in the question: 'Does {X} think that {claim}?' / 'Would {X} agree that {claim}?'. Both
+      follow one cached header, 'Here is part of a conversation between Ada and Ben:'.
+    - Rows batch by equal tail length.
+    - G-D2-null simulates per-prompt effect chains with the measured turn-1 effect, the pooled carry and per-turn SDs.
+13. **G-LCE-3 / G-LCE-4 reference.** A B = 1 fresh prefill of the same ids, then cached B = 1 decoding. A per-step full recompute
+    does not fit the planned 1.3 min. Long branching rows (D2, D3 at L*, D4 at 16K) copy their prefix from host memory, so 3
+    rows at 32K fit beside the model in 40 GB.
+14. **D3.**
+    - The third dimension is a binary stance between two invented councils (pseudo-word markers), so the lexical verifier works
+      on all three dimensions.
+    - At L0 the filler turn holds one fixed neutral sentence.
+    - G-D0c's '14 of 16' scales as ceil(14/16 n). Its state part uses the control seeds' answer-1 states, because no state
+      exists at n = 0.
+    - G-D3pc's predicted share comes from 2,000 simulated planted items per real item at the measured separations.
+15. **D4.**
+    - At n = 8 the role index is read from 6 chunks and the identity index from 2.
+    - The pure-assistant anchor answers the same two prompts without a role.
+    - G-DGN: a trajectory counts as degenerate if any 40-token answer has a rep4 share > 0.3 (D3 and D4).
+16. **D5.**
+    - Stance probes run in context: a user turn after the current answer, 'In the transcript so far, does Assistant {X} think
+      that {claim}?' / 'Judging by the transcript so far, would Assistant {X} agree that {claim}?'.
+    - The minority voice Q holds statement positions 3 and 6. Pool texts are whitespace-collapsed.
+    - Lifetime uses 256-token windows at step 64 (rep4 > 0.3). D5-x uses 3 consecutive degenerate windows.
+17. **D5-a / D5-g rule order** (stats-4, confirmed by the rule logic). 'Not decidable (horizon too short)' now comes directly after
+    'not testable' (D.16 edited).
+18. **D5-x** (stats-13, confirmed by the rule logic). A pair with both runs censored is not decidable. With none decidable the
+    label reads 'not decidable (censored at cap)' (D.16 edited).
+19. **D.17 M support** (stats-8, confirmed by the rule logic) requires D2-c to be neither 'merging' nor 'one entity captured'
+    (D.17 edited).
+20. **D3 unexpected-mode naming** is tier-2 item 'D3-name' in r1b_D_C (contracts TIER2_ITEMS). It is triggered when >= 4 seeds of
+    an item end with |x| < 0.5 and no bundle value in answers 6-8.
+    - Generator: answers 6-8 of 4 such trajectories.
+    - Verifier: 16 fresh M-start contexts with those answers, then one answer and a probe.
+    - Verdicts: 'correct' if the share landing in the mode beats a matched null (4 random trajectories) by >= 0.25; 'minor fix
+      needed' if it beats it at all; otherwise 'critically flawed'. Attempt limit 3.
+21. **R1** (as built).
+    - Persona block: m turns of rk_loop RSI prompts with RSP-pool RSI_PRO answers. Neutral block: scene prompts with uninstructed
+      answers (keyseed('r1bD_pool', 'neutral', p, 0)).
+    - Stream 0; units are the 30 H30 statements (bootstrap seed 15). Lambda_S uses m = 8; count sub-arm m in {2, 24}; template
+      check at L0.
+    - Strings: 'in-context persona gains with length (M2)' / 'in-context persona dilutes with length' / 'in-context persona
+      absent (+-0.3)' / 'undecided'.
+22. **R2** (as built). The T-arm answers neutral prompts with 200-token stream chunks. The E-arm generates extra torn turns under
+    the torn system prompt, then removes it. The official arm renders the history with the template (history think blocks
+    dropped). Each arm is compared with r1b_D_ana's per-item L0 splits by exact McNemar:
+    - 'length per se': L-arm p <= 0.05 and T- and E-arm p > 0.05;
+    - 'turns drive the split': T-arm p <= 0.05 and L-arm p > 0.05;
+    - 'evidence drives the split': E-arm p <= 0.05 and L-arm p > 0.05;
+    - else 'undecided'.
+23. **SG8 covariate.** Under the planned packing it reads 'not run (H-set not available at start)'. The SO-CHH channel is not
+    wired into part D.
+24. **Contracts** (r1b_contracts.py). r1b_D_R also starts on done(r1b_D_C: pool and D3 starts) and done(r1b_D_A: lstar and raw
+    L0 records); TIER2_ITEMS adds 'D3-name'.
+25. **Analysis steps.** They never end 'not run': a missing input gives coded verdicts, so d_verdict.json always exists. Non-finite
+    numbers are coded (R9.2).
+26. **Package files.** d1_stimuli.json, d2_prompts.json, d3_items.json, d4_roles.json and d1v_pairs.json are generated by
+    `python r1b_d_stim.py build <tokenizer dir> results/ju_space/plans/runde1b/` before the freeze. Their sha256 go into
+    runde1b_freeze.json package_files. The filler streams' sha256 (r1b_d_stim.py streams) go into 'd_streams_sha256'.
+27. **P0-D** is step d0_pilot of r1b_P0. It runs on random token ids (no analysis material; keys 'r1bP0_D') at 4K, 16K, 28K
+    and 32K and measures:
+    - prefill, chunk and copy-path times;
+    - keyed decode rates for B = 1-3 (B = 4 at 32K as a memory probe);
+    - StaticCache against DynamicCache (rate and token parity);
+    - crop-vs-copy logit parity, peak memory, kernel, local write throughput.
+    Output: whitelisted engineering keys only.
+
+**Not changed (review hints not confirmed here, or plan decisions).**
+- stats-2: hedging and filler-form checks under clip readouts. Not reproduced: the synthetic tanh c 8 world passed both.
+- stats-3: D3 negatives are failures to reject on 16 items.
+- stats-5: combined power figures.
+- stats-6: superseded for the prior check by item 9.
+- stats-7: D1-r saturation shift.
+- stats-12: joint MDEs.
+- stats-14: D4 plurality classes.
+- stats-15: 'explained by filler form' counts against (a).
+- The validity findings were not re-checked.

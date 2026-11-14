@@ -1801,7 +1801,13 @@ The report prints the reached and Holm-confirmed counts of F+ and F- next to the
   FG(WOR-DES) above the cut.
 - R9.5's copies are written as r95/<file>.orig (byte-identical, sha256 in r95.json); the coordinator commits them to
   results/ju_space/runde2_ergebnisse/.
-- MOCK tests use 16 of the 256 prompts and rk_loop's MOCK round-1 states (8 prompts).
+- MOCK tests use 16 of the 256 prompts and rk_loop's MOCK round-1 states (8 prompts): r1b_r_selftest.py units (STAT-1b checks) and
+  sessions (every R session in order; tier-2 triggers forced; R1B_R_FORCE_GATES=1 opens RG13 / RG14 in MOCK only, to run R7.2 / R7.3).
+- Inputs of R sessions added in r1b_contracts.py (main §4.2 to follow): r2_q2/theta/b<b>_q0.pt / .json for r1b_R_S2_*, _S3, _S5, _S6,
+  _S7, _ana, _S5L (u*_b is needed before r1b_R_S0 ends); r1b_R_S2_18 / _06 copy only ax1b/** of _S2_14; r1b_R_S3 copies AX-1b and the
+  loops' directions; r1b_R_S5, _S6, _S5L copy AX-1b of all three blocks; r1b_R_S7 also _S2_14's directions and r1b_R_S0's
+  r0_table.json (RG6); r1b_R_S1 the pilot files; r1b_R_ana gpu2/dn_delta.json and only r1/** of _S1; r1b_R_S5L also _S5 and _S3's
+  txt0/r3; r1b_R_ana2 also r1b_R_ana's verdict.
 
 **Still open (main-level or design decisions, not changed here):** the F+ / F- composition (validity-1, stats-1), SENS_1b's
 calibration criterion (validity-3, stats-2), the PC gate on positive strings (validity-4), the perp* premise (validity-6), rel for
