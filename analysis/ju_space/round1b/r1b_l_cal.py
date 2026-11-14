@@ -58,12 +58,12 @@ def item_a(q, seeds):
             fl = {m: float(np.quantile([ih(fr(m, 1), yt[torch.as_tensor(g.permutation(n))])[0] for _ in range(10 if not q else 3)], 0.95))
                   for m in (grid[0], grid[len(grid) // 2], grid[-1])}
             half = torch.as_tensor(np.arange(n) % 2 == 0)
-            w = S.l1_select(Xt[half], yt[half].float(), 0.05)
+            w = S.l1_select(Xt[half], yt[half].float(), 1.0)
             H1 = np.argsort(-w.numpy())[:20].tolist()
             ctrl = fr(20, 99 if not q else 9)
             Ics = ih([H1] + ctrl)
             excl = torch.zeros(N, dtype=torch.bool); excl[H1] = True
-            w2 = S.l1_select(Xt[half], yt[half].float(), 0.05, exclude=excl)
+            w2 = S.l1_select(Xt[half], yt[half].float(), 1.0, exclude=excl)
             H2 = np.argsort(-w2.numpy())[:20].tolist()
             I2 = ih([H2])[0]
             Ip = Ics[0]
@@ -191,10 +191,11 @@ def item_e(q, seeds):
             Jh = f["J"].numpy()
             m = ~np.eye(N, dtype=bool)
             hit += np.corrcoef(Jh[m], J[m])[0, 1] >= 0.8
-            si = (g.random((T, N)) < 0.2).astype(np.int8)
-            fi = S.kinetic_fit(si[:-1], si[1:], bins[:-1], 8, lam=1e-4); fs = S.kinetic_fit(si[:-1], si[1:], bins[:-1], 8, lam=1e-4, pair=False)
-            gain = float((S.kinetic_ll(si[:-1], si[1:], bins[:-1], fi) - S.kinetic_ll(si[:-1], si[1:], bins[:-1], fs)).mean())
-            ind += abs(gain) < 1e-3
+            si = (g.random((T, N)) < 0.2).astype(np.int8); h_ = T // 2
+            fi = S.kinetic_fit(si[:h_ - 1], si[1:h_], bins[:h_ - 1], 8, lam=1e-3)
+            fs = S.kinetic_fit(si[:h_ - 1], si[1:h_], bins[:h_ - 1], 8, lam=1e-3, pair=False)
+            gain = float((S.kinetic_ll(si[h_:-1], si[h_ + 1:], bins[h_:-1], fi) - S.kinetic_ll(si[h_:-1], si[h_ + 1:], bins[h_:-1], fs)).mean())
+            ind += gain < 1e-3                                  # held-out gain of the independent set inside the band
         out[N] = dict(recovered=hit, independent_in_band=ind)
     need = max(1, math.ceil(0.8 * seeds))
     return dict(res=out, pass_=all(v["recovered"] >= need and v["independent_in_band"] >= need for v in out.values()))
@@ -237,7 +238,7 @@ def item_g(q, seeds):
                 lat = 2.0 * np.exp(-(lp - lp[0]) * g.uniform(0.5, 1.5)) + g.normal(0, 0.1, n_w)
                 e = g.normal(0, 1, n_w) + 0.2 * lp
                 a = -0.6 * lat + pos * lp + 0.1 * e + g.normal(0, 0.3, n_w)
-                io = lat + g.normal(0, 0.05, n_w)
+                io = lat + g.normal(0, 0.01, n_w)                # iota* carries no token-sampling noise
                 rows.append(np.stack([a, lp, io, e], 1))
             Ms = []
             for r in rows:
@@ -494,9 +495,10 @@ def run(out, quick=False, items="abcdefghijklmn"):
     res = {}
     for k in items:
         r = ITEMS[k](quick, reps[k])
-        r["pass"] = bool(r.pop("pass_"))
+        pv = bool(r.pop("pass_"))
+        r["pass"] = pv if not quick else None             # quick mode is the code test: sizes too small for the criteria
         res[k] = r
-        print(f"L-CAL ({k}): {'pass' if r['pass'] else 'FAIL'}", flush=True)
+        print(f"L-CAL ({k}): {'quick (criteria not applied)' if quick else ('pass' if pv else 'FAIL')}", flush=True)
     from r1b_l_base import clean
     K.dump_json(clean(dict(items=res, quick=quick, gates=dict(G_cal_L1=res.get("a", {}).get("pass"), G_cal_L2=all(res.get(x, {}).get("pass", False) for x in "fgj"),
                                                        G_cal_L3=all(res.get(x, {}).get("pass", False) for x in "bcdehi"),

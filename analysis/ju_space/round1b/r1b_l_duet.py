@@ -243,19 +243,54 @@ def kin_fit(y, fe, X, n_fe, W=None):
     return beta / 2, a, F
 
 
-def j_c(series, partner_perm, w_item=None, n_items=None):
-    """J_c of A <- B with the partner series taken from runs partner_perm (identity = real pairing)."""
+def _design(series):
+    """Listener updates of A: y, item, [prime, s_prev] and the (run, k) of the partner's latest message (B's message k - 1)."""
     sA, sB, prime, item = series
-    rows, y, fe, X, w = [], [], [], [], []
-    for r in range(sA.shape[0]):
-        pr_ = partner_perm[r]
-        for k in range(1, sA.shape[1]):
-            y.append((sA[r, k] + 1) / 2); fe.append(item[r]); X.append([prime[r], sA[r, k - 1], sB[pr_, k - 1]])
-            w.append(1.0 if w_item is None else w_item[item[r]])
-    if not y or sum(w) == 0:
-        return np.nan
-    beta, _, _ = kin_fit(np.array(y), np.array(fe), np.array(X), int(max(item)) + 1, W=np.array(w))
-    return float(beta[2])
+    rr, kk = np.meshgrid(np.arange(sA.shape[0]), np.arange(1, sA.shape[1]), indexing="ij")
+    rr, kk = rr.ravel(), kk.ravel()
+    return (sA[rr, kk] + 1) / 2, item[rr], np.stack([prime[rr], sA[rr, kk - 1]], 1), rr, kk
+
+
+def jex_batch(series, item, perms_list, weights_list, chunk=256):
+    """J_c (coefficient / 2) for many (partner permutation, run-weight) pairs in batched L-BFGS fits."""
+    sA, sB, prime, it = series
+    y, fe, X0, rr, kk = _design(series)
+    out = []
+    for c0 in range(0, len(perms_list), chunk):
+        P_ = perms_list[c0:c0 + chunk]; Wl = weights_list[c0:c0 + chunk]
+        X = np.stack([np.concatenate([X0, sB[p[rr], kk - 1][:, None]], 1) for p in P_])
+        W = np.stack([w[rr] for w in Wl])
+        out.append(S.logit_fe_batch(y, fe, X, int(it.max()) + 1, W=W)[:, 2] / 2)
+    return np.concatenate(out) if out else np.zeros(0)
+
+
+def jex_boot_all(series, item, n_rep, rng_, Wb=None, w_runs=None, n_rep_b=20):
+    """J_ex (real J_c minus the mean over within-item, across-configuration re-pairings) at the point and per bootstrap replicate
+    (Wb [B, n_items] item multiplicities, or w_runs [B, n_runs] run weights for the two-level bootstrap)."""
+    n = len(item)
+    perms, wts, tags = [np.arange(n)], [np.ones(n)], [(-1, 0)]
+    for _ in range(n_rep):
+        perms.append(repair_perms(item, n, rng_)); wts.append(np.ones(n)); tags.append((-1, 1))
+    B = 0 if (Wb is None and w_runs is None) else (len(Wb) if Wb is not None else len(w_runs))
+    for b in range(B):
+        wr = Wb[b][item] if Wb is not None else w_runs[b]
+        perms.append(np.arange(n)); wts.append(wr); tags.append((b, 0))
+        for _ in range(n_rep_b):
+            perms.append(repair_perms(item, n, rng_)); wts.append(wr); tags.append((b, 1))
+    J = jex_batch(series, item, perms, wts)
+    tags = np.array(tags)
+    pt_ = J[(tags[:, 0] == -1) & (tags[:, 1] == 0)][0] - J[(tags[:, 0] == -1) & (tags[:, 1] == 1)].mean()
+    reps = np.array([J[(tags[:, 0] == b) & (tags[:, 1] == 0)][0] - np.nanmean(J[(tags[:, 0] == b) & (tags[:, 1] == 1)]) for b in range(B)])
+    return float(pt_), reps, float(J[0])
+
+
+def j_ex(series, item, n_rep, rng_, w_item=None):
+    """J_ex at the point (or with item weights): (J_ex, real J_c)."""
+    n = len(item)
+    wr = np.ones(n) if w_item is None else np.asarray(w_item, float)[item]
+    perms = [np.arange(n)] + [repair_perms(item, n, rng_) for _ in range(n_rep)]
+    J = jex_batch(series, item, perms, [wr] * len(perms))
+    return float(J[0] - np.nanmean(J[1:])), float(J[0])
 
 
 def repair_perms(item, n, rng_):
@@ -266,13 +301,6 @@ def repair_perms(item, n, rng_):
         if len(idx) > 1:
             perm[idx] = idx[S.derange(len(idx), rng_)]
     return perm
-
-
-def j_ex(series, item, n_rep, rng_, w_item=None):
-    n = len(item)
-    real = j_c(series, np.arange(n), w_item)
-    reps = [j_c(series, repair_perms(item, n, rng_), w_item) for _ in range(n_rep)]
-    return real - float(np.nanmean(reps)), real
 
 
 def _A_B(m, cond):
@@ -315,13 +343,7 @@ def l4_stats(ctx):
         return (A_, B_ if partner_from is None else partner_from, pa, item)
 
     def jex_boot(c, partner=None, w_sets=None):
-        ser = series(c, partner)
-        pt_, real = j_ex(ser, item, nrep, g)
-        bs = []
-        for b in range(nB):
-            wi = W[b]
-            bs.append(j_ex(ser, item, nrep_b, g, w_item=wi)[0] if wi.sum() else np.nan)
-        return pt_, np.array(bs), real
+        return jex_boot_all(series(c, partner), item, nrep, g, Wb=W, n_rep_b=nrep_b)
     jh, jh_b, jh_real = jex_boot("C-half")
     st["J_ex"] = S.summ(jh, jh_b, margin=0.12)
     st["J_c_seed_level"] = jh_real
@@ -345,8 +367,7 @@ def l4_stats(ctx):
     if "C-doc" in sp:
         Ad = sp["C-doc"]; Bh = _A_B(sp["C-half"], "C-half")[1]
         ser = (Ad, Bh[:, 1:] if Bh.shape[1] > Ad.shape[1] - 1 else Bh, np.zeros(len(item)), item)
-        jd = j_ex(ser, item, nrep, g)[0]
-        jd_b = np.array([j_ex(ser, item, nrep_b, g, w_item=W[b])[0] for b in range(nB)])
+        jd, jd_b, _ = jex_boot_all(ser, item, nrep, g, Wb=W, n_rep_b=nrep_b)
         st["J_ex_doc"] = S.summ(jd, jd_b)
         st["J_ex_minus_doc"] = S.summ(jh - jd, jh_b - jd_b, margin=0.16)
     else:
@@ -388,13 +409,9 @@ def l4_stats(ctx):
     if "C-Hup" in sp and "C-Rup" in sp:
         set_of = np.array([(s + c) % len(cal["sets"]) for c, s in zip(cfgs, seed)])
         ju, ju_b, _ = jex_boot("C-Hup")
-        jr = j_ex(series("C-Rup"), item, nrep, g)[0]
-        jr_b = []
-        for b in range(nB):
-            ws = np.bincount(g.integers(0, len(cal["sets"]), len(cal["sets"])), minlength=len(cal["sets"]))
-            wr = W[b][item] * ws[set_of]
-            jr_b.append(_jex_w(series("C-Rup"), item, nrep_b, g, wr))
-        jr_b = np.array(jr_b)
+        wruns = np.stack([W[b][item] * np.bincount(g.integers(0, len(cal["sets"]), len(cal["sets"])), minlength=len(cal["sets"]))[set_of]
+                          for b in range(nB)])
+        jr, jr_b, _ = jex_boot_all(series("C-Rup"), item, nrep, g, w_runs=wruns, n_rep_b=nrep_b)
         st["DD"] = S.summ(ju - jr, ju_b - jr_b, margin=0.17)
         st["rup_minus_half"] = S.summ(jr - jh, jr_b - jh_b)
         st["hup_minus_half"] = S.summ(ju - jh, ju_b - jh_b, margin=0.17)
@@ -423,9 +440,9 @@ def l4_stats(ctx):
     if "C-Hdown" in sp and "C-Rdown" in sp:
         set_of = np.array([(s + c) % len(cal["sets"]) for c, s in zip(cfgs, seed)])
         jd, jd_b, _ = jex_boot("C-Hdown")
-        jr = j_ex(series("C-Rdown"), item, nrep, g)[0]
-        jr_b = np.array([_jex_w(series("C-Rdown"), item, nrep_b, g, W[b][item] *
-                                np.bincount(g.integers(0, len(cal["sets"]), len(cal["sets"])), minlength=len(cal["sets"]))[set_of]) for b in range(nB)])
+        wruns = np.stack([W[b][item] * np.bincount(g.integers(0, len(cal["sets"]), len(cal["sets"])), minlength=len(cal["sets"]))[set_of]
+                          for b in range(nB)])
+        jr, jr_b, _ = jex_boot_all(series("C-Rdown"), item, nrep, g, w_runs=wruns, n_rep_b=nrep_b)
         wj(ctx, "l/x2.json", dict(DD_down=S.summ(jd - jr, jd_b - jr_b, margin=0.17), g_dmg=cal["down"]["g_dmg"]), config=dict(item="X2"))
     if "C-solo" in sp:
         A_ = sp["C-solo"]
@@ -447,23 +464,6 @@ def _psi_arr(mA_, mB_):
     for r_ in range(1, V.shape[1]):
         x1 += V[:, r_ - 1].tolist(); x2 += mA_[:, r_ - 1].tolist(); x3 += mB_[:, r_ - 1].tolist(); yv += V[:, r_].tolist()
     return S.gc_mi(x1, yv) - S.gc_mi(x2, yv) - S.gc_mi(x3, yv)
-
-
-def _jex_w(ser, item, nrep, g, w_run):
-    """J_ex with per-run weights (two-level bootstrap: item and random-set multiplicities)."""
-    sA, sB, prime, it = ser
-    n = len(it)
-
-    def jc(perm):
-        y, fe, X, w = [], [], [], []
-        for r in range(n):
-            for k in range(1, sA.shape[1]):
-                y.append((sA[r, k] + 1) / 2); fe.append(it[r]); X.append([prime[r], sA[r, k - 1], sB[perm[r], k - 1]]); w.append(w_run[r])
-        if sum(w) == 0:
-            return np.nan
-        b, _, _ = kin_fit(np.array(y), np.array(fe), np.array(X), int(max(it)) + 1, W=np.array(w))
-        return float(b[2])
-    return jc(np.arange(n)) - float(np.nanmean([jc(repair_perms(it, n, g)) for _ in range(nrep)]))
 
 
 def RU_LB(s):

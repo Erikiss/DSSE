@@ -237,7 +237,7 @@ def rule_L3d(st, sg8=True, cal_ok=True):
                  (inside(ir["post_minus_rev"], ir["band_half"]), "reversible within resolution")], "undecided")
     lab = ["H-specific" if st.get("irr_rank_p", 1) <= 0.05 else None]
     return dict(ebm=ebm, irrev=irv, irrev_labels=[l for l in lab if l],
-                sigma="descriptive (sigma pipeline check failed)" if not st.get("g_sigma", False) else "descriptive")
+                sigma="descriptive (sigma pipeline check failed)" if not (st.get("g_sigma") or {}).get("ok") else "descriptive")
 
 
 def attractor_line(L3a, L3b, x1_capture=None):
@@ -415,7 +415,7 @@ def v_chain(L3c, L3d, L4, x3=None):
 def cf_l_p(l3a_st, l3b_st, l2b_st, l3a_v, l3b_v, l2b_v, attr):
     """CF-L member p-values (main §2.4): attractor line p = max(2 min(p_A1, p_A2), 2 min(p_stick, p_pers)); L2b p = max of two."""
     pA1 = max(l3b_st["K_pool"]["p_gt1"], l3b_st["dK"]["p_gt0"]) if l3b_st.get("K_pool") and l3b_st.get("dK") else 1.0
-    pA2 = max(l3a_st.get("bi_sur_p", 1.0), l3a_st.get("bi_rank_p", 1.0))
+    pA2 = max(l3a_st.get("bi_sur_p", 1.0), l3a_st.get("bi_rank_p", 1.0), (l3a_st.get("bi_minus_sel") or {}).get("p_gt0", 1.0))
     ps = max(l3a_st.get("gamma_sur_p", 1.0), l3a_st.get("dgamma_rank_p", 1.0), l3a_st.get("dgamma_minus_sel", {}).get("p_gt0", 1.0))
     pp = max(l3a_st.get("hd_rank_p", 1.0), l3a_st.get("hd_minus_sel", {}).get("p_gt0", 1.0))
     p_att = min(1.0, max(2 * min(pA1, pA2), 2 * min(ps, pp)))

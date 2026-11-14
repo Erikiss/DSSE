@@ -79,3 +79,34 @@
 > results/ju_space/plans/runde1b/arbeitsstand/plan/runde1b_plan_teil_G.md im Format der anderen Teile (Messungen aus K und L,
 > gleiche Definitionen und Urteilssätze, Vorwärts-Messungen für 31b-qat), setze ihn mit einem Gemma-Adapter im Kern-Lader um,
 > teste im Mock-Modus und baue die Notebooks. Schlank arbeiten, nach jedem Schritt committen und pushen. Antworte auf Deutsch.
+
+## Auftrag an Codex (OpenAI) für Teil G, parallel zur laufenden Cloud-Sitzung
+- Eigener Branch `codex-teil-g`, abgezweigt vom aktuellen Stand von `ccr-6fe02b21-est040`. Nie auf `ccr-6fe02b21-est040` pushen;
+  zusammengeführt wird später in einem Schritt.
+- Nur neue Dateien anlegen: `analysis/ju_space/round1b/r1b_g_*.py` (darunter `r1b_g_adapter.py`, das den Modell-Lader des Kerns
+  per Registrierung um Gemma 4 erweitert), `analysis/ju_space/round1b/r1b_sessions_G.py`,
+  `results/ju_space/plans/runde1b/arbeitsstand/plan/runde1b_plan_teil_G.md` und einen eigenen Notebook-Bau
+  `notebooks/build_runde1b_gemma_notebooks.py`. Bestehende Dateien (Kern, Verträge, Runner, Teile R/K/D/L, bestehender
+  Notebook-Bau) nicht ändern; nötige Änderungen dort als Liste in `analysis/ju_space/round1b/G_MERGE_NOTES.md` festhalten.
+- Phase 1 (sofort möglich, unabhängig von der Cloud-Sitzung):
+  1. Modellkarten, Lizenzen und config.json der vier Fassungen (gemma-4-31b/12b/e4b/e2b-it-qat-w4a16-ct), der nicht quantisierten
+     e2b/e4b-Originale und der MTP-Drafter (google/gemma-4-E2B-it-assistant, -E4B-it-assistant) prüfen; ob transformers die
+     compressed-tensors-Fassung lädt und ob Forward-Hooks an Blockausgabe und MLP-Zwischenwerten greifen. Ergebnis in den Planteil.
+  2. Planteil G schreiben, im Format der anderen Teile: Messungen aus K und L mit identischen Definitionen und Urteilssätzen;
+     e2b/e4b voll (float32), Eichung der Kettenlinse am MTP-Drafter; 31b-qat nur Vorwärts-Messungen; optional D1-Kontrast
+     (lokale gegen globale Aufmerksamkeit); Kosten in A100-Minuten, Sitzungen, Tore.
+  3. `r1b_g_adapter.py` mit Mock-Selbsttest (kleines zufälliges Gemma-artiges Modell, CPU).
+- Phase 2 (erst wenn hier unter „Stand“ „Integrationstest bestanden“ steht): die Messungen von G gegen die fertigen Module aus K und
+  L umsetzen (`r1b_k_*`, `r1b_l_*`, `r1b_hn.py`, `r1b_lce.py`), Mock-Tests, Notebooks.
+- Regeln wie oben: Runde-1-Code unverändert; echte Modelle nicht lokal laufen lassen, Tests im Mock-Modus; nichts von goodfire.*
+  automatisiert abrufen; keine Schlüssel oder Tokens in Dateien oder Commits.
+
+### Startprompt für Codex (kopieren)
+> Read analysis/ju_space/round1b/UEBERGABE.md, especially the sections on Gemma 4 and "Auftrag an Codex", and
+> analysis/ju_space/round1b/IMPLEMENTATION.md. Work only on a new branch `codex-teil-g` created from `ccr-6fe02b21-est040`, and only
+> in new files as listed there; never modify existing files and never push to `ccr-6fe02b21-est040`. Do phase 1 now: verify model
+> cards, licenses and configs of the Gemma 4 variants and MTP drafters, write the plan part
+> results/ju_space/plans/runde1b/arbeitsstand/plan/runde1b_plan_teil_G.md in the format of the other part files, and implement
+> analysis/ju_space/round1b/r1b_g_adapter.py with a CPU mock self-test. Record any changes needed in existing files in
+> analysis/ju_space/round1b/G_MERGE_NOTES.md. Commit and push to `codex-teil-g` after each step. Write the plan text in English and
+> your summary to the user in German.

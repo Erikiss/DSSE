@@ -807,3 +807,30 @@ def derange(n, rng):
         p = rng.permutation(n)
         if n < 2 or not (p == np.arange(n)).any():
             return p
+
+
+def logit_fe_batch(y, fe, X, n_fe, W=None, ridge=1e-3, iters=100, device="cpu"):
+    """F independent forward logistic fits with item fixed effects in one L-BFGS problem (block-separable objective): y [n], fe [n],
+    X [F, n, k], W [F, n] weights. Returns beta [F, k] (numpy)."""
+    torch = _t()
+    Xt = torch.as_tensor(np.asarray(X, float), dtype=torch.float64, device=device)
+    F, n, k = Xt.shape
+    yt = torch.as_tensor(np.asarray(y, float), dtype=torch.float64, device=device)[None].expand(F, n)
+    w = torch.ones(F, n, dtype=torch.float64, device=device) if W is None else torch.as_tensor(np.asarray(W, float), dtype=torch.float64, device=device)
+    fe_t = torch.as_tensor(np.asarray(fe), device=device).long()
+    beta = torch.zeros(F, k, dtype=torch.float64, device=device, requires_grad=True)
+    Fe = torch.zeros(F, max(n_fe, 1), dtype=torch.float64, device=device, requires_grad=True)
+    a = torch.zeros(F, dtype=torch.float64, device=device, requires_grad=True)
+    ws = w.sum(1).clamp_min(1e-9)
+    opt = torch.optim.LBFGS([beta, Fe, a], lr=1, max_iter=iters, line_search_fn="strong_wolfe", tolerance_change=1e-12)
+
+    def closure():
+        opt.zero_grad()
+        z = a[:, None] + Fe[:, fe_t] + torch.einsum("fnk,fk->fn", Xt, beta)
+        l = (torch.nn.functional.binary_cross_entropy_with_logits(z, yt, reduction="none") * w).sum(1) / ws + ridge * (Fe ** 2).mean(1)
+        tot = l.sum()
+        tot.backward()
+        return tot
+    with torch.enable_grad():
+        opt.step(closure)
+    return beta.detach().cpu().numpy()

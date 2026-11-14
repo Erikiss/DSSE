@@ -42,8 +42,11 @@ def _cells(ctx, E, U, prefix_inst=None):
 
 def _run(ctx, E, U, T=0.7, ops=None, forced=None, prefix=None, keep_first=False, cb=None):
     cells = _cells(ctx, E, U)
+    if forced is not None:
+        for c, f in zip(cells, forced):
+            c["forced"] = list(f)
     kf = lambda c, s: ctx.key("r1bK_K6e", c["unit"][0], c["unit"][1], c["unit"][2], f"T{T}")
-    return S2.run_cells(ctx, E, cells, J=N(ctx, 24, 24), keys_fn=kf, T=T, ops=ops, forced=forced, prefix=prefix, keep_first=keep_first,
+    return S2.run_cells(ctx, E, cells, J=N(ctx, 24, 24), keys_fn=kf, T=T, ops=ops, prefix=prefix, keep_first=keep_first,
                         sets=True, fov=False, cb=cb)
 
 
@@ -72,8 +75,7 @@ def _expert(ops, n):
     """The same ops restricted to the expert (real) stream rows of a rollout over n chains (rows 0..n-1 of 2n)."""
     if not ops:
         return ops
-    rows = T_().arange(2 * n) < n
-    return [dict(o, rows=rows) for o in ops]
+    return [dict(o, rows="real") for o in ops]
 
 
 def conditions(ctx, E, cal):

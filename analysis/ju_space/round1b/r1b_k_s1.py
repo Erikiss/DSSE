@@ -15,6 +15,9 @@ MODEL = RC.C.M17                     # r1b_K_S7 (RK-2) sets qwen3.5-2b: K2's pro
 
 
 def _m(ctx):
+    if ctx.session == "r1b_K_S7":                     # RK-2: K2's protocol on Qwen3.5-2B
+        import r1b_k_s3  # noqa: F401  (registers the loader)
+        return ctx.model(RC.C.M35)
     return ctx.model(MODEL)
 
 

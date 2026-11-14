@@ -7,6 +7,7 @@ from r1b_contracts import Step
 D1, D2, D3, D5, ANA, RES = "r1b_d_d1", "r1b_d_d2", "r1b_d_d3", "r1b_d_d5", "r1b_d_ana", "r1b_d_res"
 
 STEPS = {
+    "r1b_P0": [Step("d0_pilot", fn=f"{D1}:p0_d", out="p0/p0_d.json", minutes=4.0)],
     "r1b_D_A": [
         Step("d_glce", fn=f"{D1}:d_glce", out="lce/g_lce_1_2.json", minutes=7.0),
         Step("d1_ends", fn=f"{D1}:d1_ends", out="d1/raw_ends.pt d1/ends.json", after="d_glce", minutes=19.2),

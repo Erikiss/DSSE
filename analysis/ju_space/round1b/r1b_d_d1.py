@@ -509,3 +509,53 @@ def d1_s(ctx):
             sp.append(xn("s", i, c, cap=False))
         out += run_specs(env, sp, LL, "crop" if LL == 0 else path, "s")
     save_raw(env, "s", out, dict(L=[0, L], path_32k=path, labels=[] if path else ["D1-s at 32,000: not testable (engine parity)"]))
+
+
+def p0_d(ctx):
+    """P0-D (r1b_P0, engineering numbers only, D.2 'Pilot'): on random token ids (no analysis material; keys 'r1bP0_D'), per length
+    4K / 16K / 28K / 32K: B = 1 prefill, a 700-token chunk over the cached prefix (crop path) and the copy path, keyed decode rates
+    for B in {1, 2, 3} (B = 4 at 32K as a memory probe) with DynamicCache, B = 1 decode with a non-rewriting StaticCache (token parity
+    with DynamicCache), peak memory, SDPA kernel; Drive write throughput."""
+    import time
+    torch = K._torch(); c = S.cfg(ctx); tok, model = ctx.model(); eng = LCE(model); tk = S.Tk(tok); stop = tk.stops(model)
+    Ls = (4096, 16384, 28672, 32000) if not c.mock else (1000, 1200, 1400, 1500); rng = np.random.default_rng(20261114)
+    rates, memory, parity, notes = {}, {}, {}, []
+    cuda = torch.cuda.is_available(); sync = (lambda: torch.cuda.synchronize()) if cuda else (lambda: None)
+    for L in Ls:
+        ids = [int(x) for x in rng.integers(1000, 100000, L - 700)]; chunk = [int(x) for x in rng.integers(1000, 100000, 700)]
+        if cuda:
+            torch.cuda.reset_peak_memory_stats()
+        sync(); t = time.time(); base, lg = eng.fwd(ids); sync(); r = dict(prefill_s=time.time() - t)
+        t = time.time(); base, lg2 = eng.fwd(chunk, base); sync(); r["chunk_s"] = time.time() - t; eng.crop(base, len(ids))
+        t = time.time(); cp = LCE.copy(base); cp, lg3 = eng.fwd(chunk, cp); sync(); r["copy_chunk_s"] = time.time() - t
+        parity[f"{L}|crop_vs_copy_max_abs_logit"] = float((lg2[0, -1] - lg3[0, -1]).abs().max()); del cp
+        n = 32 if not c.mock else 8
+        for B in ((1, 2, 3, 4) if L == Ls[-1] else (1, 2, 3)):
+            try:
+                cb = LCE.copy(base, B); _, lgb = eng.fwd(torch.tensor([chunk] * B), cb)
+                sync(); t = time.time()
+                y, *_ = eng.decode(cb, lgb[:, -1], [ctx.key("r1bP0_D", L, B, b) for b in range(B)], 0.7, n, stop); sync()
+                r[f"decode_tok_s_B{B}"] = B * n / (time.time() - t); del cb
+            except RuntimeError as e:                     # out of memory: a probe result, not a failure
+                r[f"decode_tok_s_B{B}"] = K.coded("NaN:oom"); notes.append(f"L {L} B {B}: {str(e)[:80]}")
+                torch.cuda.empty_cache() if cuda else None
+        try:                                              # non-rewriting cache: StaticCache, B = 1, token parity with DynamicCache
+            from transformers import StaticCache
+            sc = StaticCache(config=model.config, max_cache_len=L + n + 8)
+            _, lgs = eng.fwd(ids + chunk, sc); sync(); t = time.time()
+            ys, *_ = eng.decode(sc, lgs[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop); sync()
+            r["static_decode_tok_s_B1"] = n / (time.time() - t)
+            cd = LCE.copy(base); _, lgd = eng.fwd(chunk, cd)
+            yd, *_ = eng.decode(cd, lgd[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop)
+            parity[f"{L}|static_vs_dynamic_tokens_identical"] = bool((ys == yd).all()); del sc, cd
+        except Exception as e:
+            notes.append(f"L {L} StaticCache: {type(e).__name__}: {str(e)[:120]}")
+        memory[str(L)] = dict(peak_gb=round(torch.cuda.max_memory_allocated() / 1e9, 3) if cuda else K.coded("NaN:cpu"))
+        rates[str(L)] = r; del base
+    blob = os.urandom(64 << 20); t = time.time(); p = ctx.path("p0/_drive_probe.bin")
+    with open(p, "wb") as f:
+        f.write(blob); f.flush(); os.fsync(f.fileno())
+    thr = dict(local_write_MB_s=64 / max(time.time() - t, 1e-9), note="the runner's Drive sync of the session folder adds the Drive time")
+    os.remove(p)
+    ctx.write_json("p0/p0_d.json", dict(rates=rates, memory=memory, parity=parity, throughput=thr,
+                                        env=dict(engine=eng.record(), lengths=list(Ls)), notes=notes), config=dict(lengths=list(Ls)))

@@ -94,6 +94,7 @@ def batches(items, key, B):
 def gen_stream(env, R, stream, long):
     """Turns 1-3 of every row of one stream at one length: one B = 1 prefix prefill, cache copies per batch of equal-length rows."""
     t0 = time.time(); pre = env.prefix(stream, long, R); base, _ = env.eng.fwd(pre)
+    base = LCE.offload(base) if long else base
     B = env.c.B_long if long else 32; n = env.c.d2_new; out = {r["rid"]: dict(r, ids=[None] * 3) for r in R}; ntok = 0
     for bt in batches(R, lambda r: len(env.tail1(r)), B):
         cache = LCE.copy(base, len(bt))

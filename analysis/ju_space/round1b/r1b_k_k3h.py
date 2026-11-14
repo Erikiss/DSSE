@@ -88,9 +88,6 @@ def k3h_part(ctx, i, n):
                 for k2, t in enumerate(held_t):
                     ids = torch.tensor([t], device=dev); bl = base[len(fit_t) + k2]
                     sim = torch.tensor([d["tokens"].get(x, 0.0) for x in t])
-                    with Interv(model, [dict(sel={l: [j]}, kind="clamp", value={l: sim.to(dev)[None, :, None].squeeze(-1)[0]} if False else 0.0,
-                                             when=lambda T, st: None)]), torch.no_grad():
-                        pass
                     zp = sim.to(dev)
                     with _ClampSeq(model, l, j, zp), torch.no_grad():
                         lp_s = model(input_ids=ids).logits[0].float().log_softmax(-1).cpu()

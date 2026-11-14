@@ -233,7 +233,9 @@ def run_cells(ctx, E, cells, J=16, cb=None, **kw):
                     m = E["n26"] * KB.T_().nn.functional.normalize(LN.transport(E["J"], E["conv"], blk, m[None].to(ctx.device))[0].cpu(), dim=0)
                 for s in c["seeds"]:
                     Hs.append(h); Ms.append(m); sd.append(int(s)); own_.append(c)
-            kw2 = dict(kw)
+            kw2 = dict(kw); kw2.pop("forced", None)
+            if any("forced" in c for c in cb_):
+                kw2["forced"] = [c.get("forced", []) for c in own_]
             if "keys_fn" in kw2:
                 kw2["keys"] = [kw2["keys_fn"](c, s) for c, s in zip(own_, sd)]; kw2.pop("keys_fn")
             if "reinj_fn" in kw2:
@@ -274,6 +276,9 @@ def k4_cells(ctx, E, S):
                     if corr and l in S["v7"]:
                         jobs.append(dict(base, variant="V7", H=S["v7"][l][k], seeds=s["seeds"][l][k].tolist()))
                     if corr and k < n128:
+                        mg = E["R"]["mu_gen"][l].float()
+                        jobs.append(dict(base, variant="V1_mugen", M=mg, seeds=s["seeds"][l][k].tolist()))
+                        jobs.append(dict(base, variant="V5", H=mg, M=mg, seeds=s["seeds"][l][k].tolist(), kw=dict(greedy=True)))
                         if S["beta"].get(l, {}).get("beta") is not None:
                             jobs.append(dict(base, variant="V8", seeds=s["seeds"][l][k].tolist(), reinj=S["beta"][l]["beta"]))
                         for nm, kw in (("G_lam0.5", dict(lam=0.5)), ("G_lam2", dict(lam=2.0)), ("G_pl0.05", dict(plaus=0.05)),
@@ -307,8 +312,6 @@ def k4_run(ctx, i, n):
             kw["keys_fn"] = lambda c, s, v=key[0]: ctx.key("r1bK_K4T", c["item"], c["block"], s, v)
         if "reinj" in js[0]:
             kw["reinj_fn"] = lambda c: c["reinj"] * (c["H"] - c["M"]).float()
-        if "forced" in js[0]:
-            kw["forced"] = [j["forced"] for j in js for _ in j["seeds"]]
         rows += run_cells(ctx, E, js, J=N(ctx, 16, 8), dla=bool(js[0].get("dla")), **kw)
     save(ctx, f"k/k4/part{i}.pt", dict(rows=rows))
 
@@ -626,8 +629,7 @@ def k6g(ctx):
     for cond in ("correct", "wrong", "neutral"):
         cs = [c for c in cells if c["variant"] == cond]
         if cs:
-            rows += run_cells(ctx, E, cs, J=max(len(c["forced"]) for c in cs) + N(ctx, 9, 4), forced=[c["forced"] for c in cs for _ in c["seeds"]],
-                              sets=True, fov=False)
+            rows += run_cells(ctx, E, cs, J=max(len(c["forced"]) for c in cs) + N(ctx, 9, 4), sets=True, fov=False)
     for r in rows:
         r["share"] = {k: v for k, v in r["aX"].items() if k == "H"}; r["aX"] = {"H": r["aX"].get("H")}
     save(ctx, "k/k6g.pt", dict(rows=rows, n_items=len(cand), b_star=bstar,

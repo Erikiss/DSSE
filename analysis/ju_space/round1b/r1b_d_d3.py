@@ -180,6 +180,7 @@ def traj(env, base_ids, item_chunks, seeds, keyf, n_ans, B, blocks=BLK, probe_at
     """Seeds x n_ans 'Continue.' answers over one start (prefix prefilled once, B-row cache copies); probes after the answers in
     probe_at; block means per answer; lexical counts and rep4 per answer."""
     base, _ = env.eng.fwd(base_ids); out = []
+    base = LCE.offload(base) if len(base_ids) > 8192 else base
     for i in range(0, len(seeds), B):
         sd = seeds[i:i + B]; cache = LCE.copy(base, len(sd)); rec = [dict(seed=s, ans=[], l={}, mass={}, h={b: [] for b in blocks}) for s in sd]
         for n in range(1, n_ans + 1):
@@ -387,6 +388,7 @@ def probe_split(env, base_ids, role_ch, id_ch, seeds, kf, n_ans, B):
     """Trajectories over one start with the role and identity probes read separately at the last answer; block-18 / 14 means of the last
     answer (for u_AA projections); rep4 per answer (G-DGN)."""
     base, _ = env.eng.fwd(base_ids); out = dict(role=[], ident=[], h={b: [] for b in BLK}, rep4=[], first_answers=[], mass_id=[])
+    base = LCE.offload(base) if len(base_ids) > 8192 else base
     for i in range(0, len(seeds), B):
         sd = seeds[i:i + B]; cache = LCE.copy(base, len(sd)); reps = [[] for _ in sd]
         for n in range(1, n_ans + 1):

@@ -152,6 +152,8 @@ class Lens:
                 tap = None
             if dla:
                 hooks.append(self.L[-1].register_forward_hook(lambda m, a, o: buf.__setitem__("h27", (o[0] if isinstance(o, tuple) else o)[:, -1].float())))
+            if ops:                                    # rows 'real': the expert (real) stream of this call's 2N rows
+                ops = [dict(o, rows=(torch.arange(B) < N)) if isinstance(o.get("rows"), str) else o for o in ops]
             iv = Interv(self.model, ops, st) if ops else None
             G = Gumbel(dev, T, list(keys) * 2) if keys is not None else None
             toks = torch.zeros(N, J, dtype=torch.long); first = None

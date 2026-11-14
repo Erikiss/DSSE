@@ -147,12 +147,15 @@ def k5a_run(ctx):
     wr = RC.load_json(own(ctx, "k/k5a/wiring.json"))["G_K17"]; head, _ = mtp_head(ctx, model)
     if wr["used"]:
         head.wiring = (wr["used"]["wiring"], "pre" if wr["used"]["pre"] else "post")
+    elif not ctx.mock:                                   # G-K17 failed: CL35 'not run (MTP wiring failed)', G-K5 'not decidable', variant E
+        save(ctx, "k/k5a/chains.pt", dict(rows=[], selfkl=[], n_items=0))
+        write(ctx, "k5a_calib.json", dict(variant="E", G_K5="not decidable", G_K17=wr, labels=["not run (MTP wiring failed)", "not calibrated (K5a not run)"]),
+              labels=["not run (MTP wiring failed)"]); return
     norm = KB.lm_parts(model)[0]; pc = LN.pieces(tok); nL = len(RC.layers_of(model))
     frames = dict(P0_ids=RC.enc(tok, KL.P0), ph_id=RC.enc(tok, KL.PH)[-1])
     lens = LN.Lens(model, tok, frames); D = S["h"][S["blocks"][0]].shape[1] if S["blocks"] else 0
-    bias = None
-    if ctx.mock:
-        bias = torch.zeros(lens.V, device=ctx.device); bias[KB.digit_ids(tok)] = 6.0
+    import r1b_k_s2 as S2
+    bias = S2._digit_bias(ctx, tok, lens)
     with torch.no_grad():
         n22 = float(torch.stack([S["h"][l] for l in S["blocks"]]).norm(dim=-1).median()) if S["blocks"] else 1.0
     rows, skl = [], []

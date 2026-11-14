@@ -479,7 +479,10 @@ def d1b(D, items, W, Ls, rec_ok):
                     a[r] = (k - 1 + (0 - m[r, k - 1]) / (m[r, k] - m[r, k - 1])) / 10; break
         a[cens] = 0.55; curves[L] = (a, cens, m)
         g = 1 / (1 + np.exp(-m[:, 5]))
-        out[f"L{L}"] = dict(alpha_star_rel=S_(a), censored_share=float(cens[1:].mean()), point_censored=bool(cens[0]), gamma_rec=S_(g),
+        sa = S_(a)
+        if cens[0]:
+            sa["pt"] = K.coded("CENSORED:above_grid")       # alpha*_rel 'censored (> 0.5)': l_rel(5) < 0 (replicates set to 0.55)
+        out[f"L{L}"] = dict(alpha_star_rel=sa, censored_share=float(cens[1:].mean()), point_censored=bool(cens[0]), gamma_rec=S_(g),
                             eyal_sirer=S_((1 - g) / (3 - 2 * g)),
                             verdict_L0=("release threshold below 1/2 at L0" if (L == 0 and hi(a) < 0.5 and not cens[0]) else None))
     if Ls:
@@ -490,9 +493,9 @@ def d1b(D, items, W, Ls, rec_ok):
         elif hi(d) < 0:
             v = "release threshold falls with length"
         elif lo(d) > 0:
-            v = "release threshold rises with length"
+            v = "rises"
         elif inside(d, -0.05, 0.05):
-            v = "release threshold stable with length"
+            v = "stable"
         else:
             v = "undecided"
         out["verdict"] = labelled_v(v, "length acts through position weighting" if "falls" in v else None, LBL_SEC)
@@ -1115,7 +1118,7 @@ def _ana_d3(ctx):
             xn = np.array([[s["l"][n] for n in (6, 7, 8)] for s in r["M"]])
             sp, parts = split_rule(xs, ys, xn, yn)
             per[i] = dict(split=sp, parts=parts)
-            y1[i] = np.array([proj(s["h"][18][0], i) for s in r["M"]]); ydist[i] = (ys, np.array([proj(s["h"][18][7], i) for s in r["M"]]))
+            y1[i] = np.array([proj(s["h"][18][0], i) for s in r["M"]]); ydist[i] = (yn.ravel(), np.array([proj(s["h"][18][7], i) for s in r["M"]]))
             pc = [proj(s["h"][18][0], i) for s in r["ctrl"]["A2"] + r["ctrl"]["B2"]]; pcx = [s["l"][1] for s in r["ctrl"]["A2"] + r["ctrl"]["B2"]]
             sp_pc, parts_pc = split_rule(pcx, pc, persistence=False)
             per[i]["planted"] = dict(split=sp_pc, ashman_y=parts_pc["y"]["ashman"],

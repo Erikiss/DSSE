@@ -332,8 +332,10 @@ def l_ana(ctx):
     x2 = _j(ctx, "r1b_L_A", "l/x2.json")
     if "L4" in V and isinstance(V["L4"], dict) and x2:
         V["L4"]["h_line_labels"] = [RU.x2_label(x2)]
-    V["X2"] = x2 or dict(verdict=K.NA_TIER2 if not ctx.funded("X2") else NR)
-    V["X6"] = _j(ctx, "r1b_L_A", "l/x6.json") or dict(verdict=K.NA_TIER2 if not ctx.funded("X6") else NR)
+    V["X2"] = dict(label=RU.x2_label(x2), DD_down=x2["DD_down"], g_dmg=x2.get("g_dmg")) if x2 else \
+        dict(verdict=K.NA_TIER2 if not ctx.funded("X2") else NR)
+    x6 = _j(ctx, "r1b_L_A", "l/x6.json")
+    V["X6"] = dict(verdict="descriptive", J_s=x6["J_s"], K_solo=x6["K_solo"]) if x6 else dict(verdict=K.NA_TIER2 if not ctx.funded("X6") else NR)
     x3 = _j(ctx, "r1b_L_B", "l/x3.json")
     V["X3"] = RU.rule_X3(x3) if x3 else dict(verdict=K.NA_TIER2 if not ctx.funded("X3") else NR)
     x4 = _j(ctx, "r1b_L_B", "l/x4.json")
@@ -375,9 +377,16 @@ def l_ana(ctx):
         comb["CF-L"] = RU.cf_l_p(l3a or {}, l3b or {}, l2b or {}, V["L3a"], V["L3b"], V["L2b"], V["attractor"])
         bh = (l5.get("L5c") or {}).get("beta_H")
         comb["CF-HERR_member_L5c"] = dict(p=(l5["L5c"]["p_cf_herr"] if vv("L5c").startswith("H predicts") else 1.0) if l5.get("L5c") else 1.0)
+        lam = max([x for x in ((l1 or {}).get("Lambda") or {}).values() if isinstance(x, (int, float))] or [0])
+        pos = dict(code=vv("L1").startswith("holographic-like"), RT=str((V.get("L2a") or {}).get("growth", "")).startswith("growth class: logarithmic"),
+                   reconstruction=vv("L2c") == "boundary encodes the H channel beyond random channels" or lam >= 0.9,
+                   associative_memory=((V.get("L1-erasure") or {}).get("curve") == "graceful degradation (associative-memory sense)" and
+                                       (V.get("L1-erasure") or {}).get("privilege") == "H not causally privileged") or
+                   vv("attractor").startswith("H-attractor") or any(str(x).startswith("associative completion") for x in (V.get("X4") or {}).values()))
+        comb["V-HOLO"]["positive_senses"] = [k for k, v in pos.items() if v]
         comb["answer"] = (f"Lens-free, the break-off pattern belongs to [{comb['V-OWN']['verdict']}]; the H-neuron attractor is [{comb['L-ALL']}]; "
-                          f"the model is holographic only in the [{', '.join(k for k, v in comb['V-HOLO'].items() if v)}] sense(s) (per-sense verdicts "
-                          f"reported); the chain [{comb['V-CHAIN']['verdict']}]; H gain [{comb['H-coupling']}] as agent coupling.")
+                          f"the model is holographic only in the [{', '.join(comb['V-HOLO']['positive_senses']) or 'no'}] sense(s); "
+                          f"the chain [{comb['V-CHAIN']['verdict']}]; H gain [{comb['H-coupling']}] as agent coupling.")
     except (KeyError, TypeError) as e:
         comb["error"] = str(e)[:300]
     out = dict(verdicts=V, combined=comb, sg8=dict(ok=sg8, G_K2=gk2, preview=pop.get("sg8_preview")), l_cal=cal, l_cal_gates=calg, L5_stats=l5,

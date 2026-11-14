@@ -72,10 +72,33 @@ class LCE:
 
     @staticmethod
     def copy(cache, B=1):
-        c = copy.deepcopy(cache)
-        if B > 1:
-            c.batch_repeat_interleave(int(B))
+        """Branch copy: a new cache whose layers hold B copies of the source rows (B = 1: a plain copy), written into fresh tensors on
+        the model device without an intermediate single copy; the source may be offloaded to the CPU (offload)."""
+        torch = _t(); c = copy.copy(cache); c.layers = []
+        for lay in cache.layers:
+            nl = copy.copy(lay)
+            for a in ("keys", "values"):
+                src = getattr(lay, a)
+                if src is None:
+                    continue
+                dev = torch.device("cuda") if (src.device.type == "cpu" and torch.cuda.is_available()) else src.device
+                dst = torch.empty((src.shape[0] * int(B),) + tuple(src.shape[1:]), dtype=src.dtype, device=dev)
+                for b in range(int(B)):
+                    dst[b * src.shape[0]:(b + 1) * src.shape[0]].copy_(src)
+                setattr(nl, a, dst)
+            c.layers.append(nl)
         return c
+
+    @staticmethod
+    def offload(cache):
+        """Move a prefix cache to host memory (kept for later branch copies), so that B long rows fit beside the model in 40 GB."""
+        for lay in cache.layers:
+            for a in ("keys", "values"):
+                t = getattr(lay, a)
+                if t is not None and t.device.type != "cpu":
+                    setattr(lay, a, t.to("cpu"))
+        _t().cuda.empty_cache() if _t().cuda.is_available() else None
+        return cache
 
     def decode(self, cache, logits, keys, T, n_new, stop, am=None, blocks=()):
         """Keyed Gumbel-max decoding of exactly n_new tokens per row from the last-position logits [B, V]; stop: token ids masked
