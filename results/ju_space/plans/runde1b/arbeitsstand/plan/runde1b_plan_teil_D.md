@@ -41,7 +41,7 @@ sim_countshare.py, sim_split_v.py, sim_split_conj.py, sim_combined_power.py, cos
   allowance in r1b_D_ana; tier 2: D5-x 0.50 h and the reserves R1-R3 1.98 h in r1b_D_R; the pilot is in r1b_P0.
   Scenarios (incl. the former pilot share and D5-x): 9.47 h (attention 8 TFLOP/s), 8.14 h (20 TFLOP/s), 7.49 h
   (non-rewriting decode cache). A trim order frozen on pilot engineering numbers (D.19) keeps the projection at or below
-  9.0 h; three reserve items run only when funded.
+  the cap (9.0 h; 13.8 h after the amendment of main §4.3); three reserve items run only when funded.
 - **Expectation stated now** (literature and round 2; not a rule):
   - D1-a 'no length-driven minority capture' or 'within proportional'; D1-b release threshold below 1/2 at every length
     (recency); D1-c count-driven; D1-d a small cost;
@@ -1233,7 +1233,7 @@ G-LCE-2 is main SG9 and applies to every part.
 - Model sessions read no round-1 file; the SO-AX axes enter only in r1b_D_ana (account A).
 
 **Trim order** (pre-registered). Applied in this order on the pilot's measured rates, before any data, until the projection is
-<= 9.0 A100-h, now counted without the pilot and with D5-x only if funded. T1 applies to the funded D5-x and the tier-1 trims
+<= 9.0 A100-h (13.8 A100-h after the engineering amendment of main §4.3), now counted without the pilot and with D5-x only if funded. T1 applies to the funded D5-x and the tier-1 trims
 are T2-T8 (main §4.5):
 - T1: D5-x cap 20 -> 10 raw min (2 pairs).
 - T2: D1-c at L0 only.
@@ -1244,7 +1244,8 @@ are T2-T8 (main §4.5):
 - T7: D3 long length 28,672 -> 16,384.
 - T8: D5 starts 32 -> 24 (margins unchanged).
 
-Beyond T8 the part asks for more budget as an engineering amendment before any data. There is no dtype change: bf16 would
+Beyond T8 the part asks for more budget as an engineering amendment before any data (granted on 14 November 2026: cap
+13.8 A100-h, main §4.3). There is no dtype change: bf16 would
 break parity with the shared engine and with rounds 1/2. If FB-2 triggers in r1b_D_A, the trims apply to the sessions not yet
 started, and any overrun is reported.
 

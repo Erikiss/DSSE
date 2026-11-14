@@ -17,10 +17,10 @@ notebooks/build_runde2_gpu_notebooks.py (sessions, gates, time guard, Drive sync
 | File (frozen path in results/ju_space/plans/runde1b/) | Content | Cited as |
 |---|---|---|
 | runde1b_plan.md (this file) | requests and their mapping, model and inputs, shared objects, statistics and round-level confirmatory families, the inverse-free rule, conflicts and their resolution, the gate index, budget and sessions, analyses, scripts, open decisions, dropped items, freeze | 'main §x' |
-| runde1b_part_R.md | part R: repair and replicate the round-1 RSI loop | 'R.x'; measurements R0-R9 |
-| runde1b_part_D.md | part D: H-DUAL, duality under hyper-long context | 'D.x'; measurements D0-D5 |
-| runde1b_part_K.md | part K: H-CHAIN, the chain lens and the H-neuron question | 'K.x'; measurements K0-K10, RK-1, RK-2 |
-| runde1b_part_L.md | part L: the lens-free, inverse-free arm (holographic, energy / Ising, non-equilibrium) | 'L.x'; measurements L0-L5, extensions X1-X6 |
+| runde1b_plan_teil_R.md | part R: repair and replicate the round-1 RSI loop | 'R.x'; measurements R0-R9 |
+| runde1b_plan_teil_D.md | part D: H-DUAL, duality under hyper-long context | 'D.x'; measurements D0-D5 |
+| runde1b_plan_teil_K.md | part K: H-CHAIN, the chain lens and the H-neuron question | 'K.x'; measurements K0-K10, RK-1, RK-2 |
+| runde1b_plan_teil_L.md | part L: the lens-free, inverse-free arm (holographic, energy / Ising, non-equilibrium) | 'L.x'; measurements L0-L5, extensions X1-X6 |
 
 - Measurement rules (What, How, Rule, Null / controls, Shows - cannot show, MDE, Inputs, Gates) live only in the part files. This
   file never restates them; it cites them by part and ID.
@@ -432,7 +432,7 @@ J = -C^-1, TAP or the graphical lasso to reconstruct anything. main §6.3's lint
 | SG4 | Inputs present and intact | every start condition of main §4.2 met; every copied file (incl. B -> A and A -> B copies) matches the sha256 recorded by its producing session | the session waits (exit code 4); a measurement whose input is missing after two attempts of its producer reads 'not run (input missing)' | every session | R RG4; the parts' contract fallbacks stay as written |
 | SG5 | Time guard and concurrency | the runner stops after the step that ends at >= 4.5 h since that session's start (per session, because a slot notebook runs several sessions in one runtime, main §4.4; the slot runner starts no session whose planned minutes would end beyond the runtime limit); steps <= 5 min and resumable; <= 2 concurrent sessions per account (an assumption) | session_partial.json; a continuation session (suffix b, c, ...) resumes; launches staggered | every session | R RG16, K G-K24, D and L time guards |
 | SG6 | Report hygiene | R9.1-R9.4 in every output of every part: provenance block (plan and code hashes, module sha256, config and stimulus hashes, inputs with source and sha256, GPU and versions, key namespaces, reduction level, tier, session, attempt), codes for missing values, labels, distributions next to means | the session is 'incomplete' and no analysis reads its outputs | every session; checked by r1b_ana | R RG17; K's and L's hygiene rules |
-| SG7 | Pilot-based trims | r1b_P0's measured rates and parity metrics are written into runde1b_freeze.json with each part's resulting trim level (R's RG18 reduction level; D's trims while D's projection exceeds 9.0 A100-h; K's drop order if decode or teacher-forced rates are > 30 % slower; L's trim order if any rate is below half its planning value), the round-level projection and the funded tier | no session starts | before the freeze | R RG18, D G-PIL, K's pilot rule, L G-pilot |
+| SG7 | Pilot-based trims | r1b_P0's measured rates and parity metrics are written into runde1b_freeze.json with each part's resulting trim level (R's RG18 reduction level; D's trims while D's projection exceeds its cap of 13.8 A100-h (main §4.3); K's drop order if decode or teacher-forced rates are > 30 % slower; L's trim order if any rate is below half its planning value), the round-level projection and the funded tier | no session starts | before the freeze | R RG18, D G-PIL, K's pilot rule, L G-pilot |
 | SG8 | H-set validity for parts D and L | K's G-K2 ('H-neurons replicated (in-domain detection)') on H_op, and H_op in {H_tq, H+} for L's TriviaQA measurements. What runs uses r1b_K_S1's in-session preview; verdict labels use r1b_K_ana's value; disagreements are reported (round-2 OD-G8) | D: the optional covariate is not reported; L: as L's former G-H ('no validated H-set'; H-specific verdicts in L2b-L5 'not testable (no H-set)') | r1b_K_S1 (preview), r1b_K_ana | D G-H, L G-H |
 | SG9 | Long-context engine | D's G-LCE-2 (memory-efficient kernel asserted) on every forward above 2K tokens in every part; r1b_D_A's G-LCE-1 / G-LCE-2 records exist before r1b_L_B starts | the step fails; r1b_L_B waits | every session; r1b_D_A | L G-long / G-LCE (D) |
 | SG10 | Axes package | r1b_R_S0's SO-AX check: u*_b rebuilt from R1 dir_<L><SUF>_4 (and the round-2 r2RSIb entries at 18 and 6) with TV's mode_set members and signs has cos >= 1 - 1e-4 with the round-2 file, and reproduces TV image_cos_d1_u_star within 1e-4 | label 'SO-AX reproduction failed' on every SO-AX use; the round-2 file stays canonical | r1b_R_S0 | K's KS-axes check |
@@ -583,6 +583,7 @@ A100-minutes as planned (setup + I/O + 1.5 x work). 'Starts after' lists start c
 | Session | Part | Tier | Acct | Wave | Starts after | Content (IDs) | A100-min |
 |---|---|---|---|---|---|---|---|
 | r1b_P0 | all | pilot | B | 0 | harmonised part files and package drafts; before the freeze | P0-R (R-P's list), P0-D (D's pilot list), P0-K (K0 items 1-9 incl. the Qwen3.5-2B load), P0-L (L0 items i-vi); shared items measured once (Drive throughput, short-context decode with and without L's capture set, 16K / 32K prefill with and without down_proj hooks, crop / copy path and cached-vs-recomputed parity metrics); SO-PILOT only; engineering numbers only | 68.2 |
+| r1b_P0b | all | pilot | B | 0 | r1b_P0; before the freeze | re-run of r1b_P0's invalid or missing items (results/ju_space/plans/runde1b/arbeitsstand/freeze_prep.json): P0-R (R-P's list, absent from r1b_P0), P0-D with a warm-up and B = 1-4 after the cache-release fix plus crop / copy / chunked against a full recompute at 16,384 and 32,768, K0 items 3 and 6-9 incl. the Qwen3.5-2B load, synchronised hook timing and FISTA without the step-size estimate, L0 (i), (iii), (iv) and (vii) on the real PG19 pilot slices, Drive throughput on the Drive path; bit-identity of the engine switches (main §9.1); SO-PILOT only; engineering numbers only | about 60 |
 | r1b_R_S0 | R | 1 | A | 1 | freeze | R0, R8.1, R9.5; SO-AX package (AX1, U*, leave-loop-out modes, SG10 check); exports to r1b_xfer (REF-R16 token ids, u*_b) | 22.2 |
 | r1b_R_S2_14 | R | 1 | A | 1 | freeze | R2.1 (axis texts), R2.2 at 14; AX-1b(14) | 58.5 |
 | r1b_R_S1 | R | 1 | A | 1 | r1b_R_S0 (concurrency, R.5); round-1 pilot files | R1 closed and open loop | 35.9 |
@@ -634,7 +635,7 @@ Copy-in details are executable in r1b_contracts.SESSIONS, which governs where th
 | K | 8.86 sessions, of which 8.63 K's own (incl. I/O 0.17), 0.18 for L, 0.05 REF-U32 reporting | 2.58 (RK-1 1.20, RK-2 0.88, K3h 0.50) | 8.78 (incl. K-S0 0.32); tier 2 2.58 (K.8) |
 | L | 4.82 sessions; 5.00 charged (incl. 0.18 run in K's sessions) | 0.92 (X1-X6) | 6.0 (core 5.08 incl. L-P 0.32; extensions 0.92) + 0.05 iota* (L.14) |
 | **Round** | **30.75** (account A 15.49, account B 15.26) | **8.36** (A 6.05, B 2.31) | 34.84 (+ reserves 4.1 outside), before the implementation amendments |
-| Pilot r1b_P0 | 1.14 (account B; before the freeze) | | 1.12 (four separate pilots) |
+| Pilot r1b_P0 (+ r1b_P0b) | 1.14 (+ about 1.0 for r1b_P0b; account B; before the freeze) | | 1.12 (four separate pilots) |
 
 - **Tier 1 = 30.75 A100-h** at the parts' planned rates (30.60 before the implementation amendments of main §4.1: r1b_D_A +0.10 h,
   r1b_L_B +0.05 h), near the round-level target of about 30 h. No rule was changed to reach it: the
@@ -646,6 +647,11 @@ Copy-in details are executable in r1b_contracts.SESSIONS, which governs where th
 - Each part stays within its own cap (pilot excluded): R 8.53 + 2.25 = 10.78 h <= 12.5 h (RG18); D 8.54 (+ 0.50 if D5-x is funded:
   9.04 h, so D's T1 halves D5-x first, 8.79 h) <= 9.0 h; K 8.63 + its pilot share 0.32 = 8.95 h <= 9.0 h (RK-1, RK-2 and K3h therefore
   need the round's tier-2 funding, not K's headroom); L 5.00 + 0.92 = 5.92 h.
+- **Engineering amendment before any data (the user's decision of 14 November 2026).** At r1b_P0's measured rates the round
+  projected to about 51 A100-h: D 16.2 h before and 13.8 h after T1-T8, i.e. beyond T8, where D.19 asks for more budget. The user
+  funded the additional need: D's cap is 13.8 A100-h instead of 9.0 h, and D's trims apply in their order only while D's projection
+  at the pilot rates (r1b_P0 / r1b_P0b) exceeds 13.8 h. R's RG18, K's drop order and L's trims keep their rules. The round at pilot
+  rates is about 45-51 A100-h; runde1b_freeze.json holds the projection (projection_h) and the trims (SG7).
 
 ### 4.4 Order, waves and wall clock
 
@@ -821,7 +827,8 @@ and RK-2 conditions); L's choices fixed in L.0 (core and extensions), L.2 (conve
 
 - **OD-M1 Sessions.** Names, accounts, waves and start conditions as in main §4.2; packing may change (main §4.7), measurements may not.
 - **OD-M2 Pilot.** One pilot r1b_P0 in account B before the freeze, on SO-PILOT material only; its record goes into
-  runde1b_freeze.json (SG7).
+  runde1b_freeze.json (SG7). The items r1b_P0 measured invalidly or not at all (arbeitsstand/freeze_prep.json) are re-measured in r1b_P0b under the same
+  rules; the freeze record takes each item from its valid run.
 - **OD-M3 Tiers.** Tier membership as in main §4.2 and the drop order of main §4.5; the funded tier is the user's decision (Q1),
   recorded at the freeze.
 - **OD-M4 Style mode.** u*_b = the round-2 file r2_q2/theta/b<b>_q0.pt['u_star'] (canonical); the rebuild is SG10's check.
@@ -911,10 +918,10 @@ runde1b_freeze.json and into r1b_run_session.py's constant FROZEN_PLAN_SHA256 (S
 | File | sha256 (filled at the freeze) |
 |---|---|
 | runde1b_plan.md | (in runde1b_freeze.json and FROZEN_PLAN_SHA256) |
-| runde1b_part_R.md | <sha256> |
-| runde1b_part_D.md | <sha256> |
-| runde1b_part_K.md | <sha256> |
-| runde1b_part_L.md | <sha256> |
+| runde1b_plan_teil_R.md | <sha256> |
+| runde1b_plan_teil_D.md | <sha256> |
+| runde1b_plan_teil_K.md | <sha256> |
+| runde1b_plan_teil_L.md | <sha256> |
 
 **The freeze record** results/ju_space/plans/runde1b/runde1b_freeze.json (written by the coordinator, committed in the freeze commit)
 holds: the sha256 of the five files and of every package file; the package files' paths; the pinned dataset revisions (WikiText-103,
