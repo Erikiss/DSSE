@@ -1,0 +1,188 @@
+{
+ "version": 1,
+ "rule": {
+  "prompts": "32 new everyday scenes written for the pilot; normalised-string disjoint from P256, F-neu, D's stimuli, K's label bank and R's neutral pool (r1b_pilot.disjoint)",
+  "wt_passages": "raw train lines of wikitext-103-raw-v1/train-00000-of-00002.parquet: after K's 1M-token reference (ends at line 34137), from the first heading at or after line 34200, >= 600 Qwen3 tokens each, before rk1_train_offset_lines (40000); text = non-empty lines stripped and joined by ' '",
+  "pg19": "SO-LONGDOC pilot books 25-28 (longdoc_slices.json 'pilot'); slices [2,000, 2,000 + L) of the Qwen3 token ids for L in {16,384, 32,768}; sha256 of r1b_core.canon(ids)"
+ },
+ "prompts": [
+  "Describe a laundromat on a Saturday morning.",
+  "Describe a carpenter fixing a wobbly kitchen table.",
+  "Describe a pharmacy just before closing time.",
+  "Describe two friends assembling a flat-pack wardrobe.",
+  "Describe a ferry crossing on a calm grey day.",
+  "Describe a grandmother teaching a child to knit.",
+  "Describe a car wash on a sunny weekend.",
+  "Describe workers sorting apples in an orchard shed.",
+  "Describe a tailor measuring a customer for a suit.",
+  "Describe a dog park early in the morning.",
+  "Describe a hardware store on a busy Saturday.",
+  "Describe a jazz band rehearsing in a basement.",
+  "Describe a ski lift queue on a cold morning.",
+  "Describe a flower seller arranging tulips.",
+  "Describe an ice cream van on a hot street.",
+  "Describe a chess club meeting in a community hall.",
+  "Describe a window cleaner working on a tall office building.",
+  "Describe a street after the first snowfall of the year.",
+  "Describe a pottery class for beginners.",
+  "Describe a delivery cyclist in evening traffic.",
+  "Describe a barber shop in the late afternoon.",
+  "Describe a family setting up a tent at a campsite.",
+  "Describe a cinema lobby before a late film.",
+  "Describe a recycling centre on a Sunday morning.",
+  "Describe a swimming pool during an early lesson.",
+  "Describe a cobbler repairing a pair of boots.",
+  "Describe a rooftop garden in a busy city.",
+  "Describe a bowling alley on a weeknight.",
+  "Describe neighbours clearing snow from a shared path.",
+  "Describe a supermarket checkout during the lunch rush.",
+  "Describe a vet examining a nervous cat.",
+  "Describe a choir rehearsing for a winter concert."
+ ],
+ "prompts_sha256": "f7e54c26f3c1d5053ae200b5b295fb1c6ff095ca3dff393adddc495cd0f4fb60",
+ "wt_passages": [
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34261,
+   "end": 34270,
+   "text_sha256": "46a11f88f9cfffd7771bc8913b3d157cae0653a782b9ff3df822f855b38f3dff",
+   "n_tokens": 724,
+   "heading": "= Cyclone Herbie ="
+  },
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34279,
+   "end": 34291,
+   "text_sha256": "da9f47bf1124f1bd369cb38e247b79a71f2aec69b4c34914f428f8fa5b490e62",
+   "n_tokens": 855,
+   "heading": "= Croatian independence referendum , 1991 ="
+  },
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34304,
+   "end": 34317,
+   "text_sha256": "562d4ce8147c9abb09833067b159cef194c847df22fb14138e076d5582b314d0",
+   "n_tokens": 686,
+   "heading": "= Georgian scripts ="
+  },
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34509,
+   "end": 34520,
+   "text_sha256": "63cd5a79f506769e09d272cb6e4a4275c3a7828eca02a6f8e539d8a409c46232",
+   "n_tokens": 694,
+   "heading": "= Banai ( goddess ) ="
+  },
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34551,
+   "end": 34576,
+   "text_sha256": "6973b6c01f1b7a199654977624a4a47a71072ae1a9c92875450df7d48441fbf6",
+   "n_tokens": 608,
+   "heading": "= Europium ="
+  },
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34641,
+   "end": 34652,
+   "text_sha256": "760cf27c1be33b6968ffa110a03209f20bc5b0aa0ec422f76b512462eda5895e",
+   "n_tokens": 655,
+   "heading": "= North @-@ Eastern Area Command ( RAAF ) ="
+  },
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34683,
+   "end": 34695,
+   "text_sha256": "5bf451ba544b847d5dfb20a840e510babb35ab6cadbcdeababc15761e90edbd4",
+   "n_tokens": 661,
+   "heading": "= Cape lobster ="
+  },
+  {
+   "file": "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+   "start": 34703,
+   "end": 34712,
+   "text_sha256": "8c153435e79607e5124d24a66449b716cfe3bd1a0ab9da3c6bac80c8e472ad7b",
+   "n_tokens": 601,
+   "heading": "= A4232 road ="
+  }
+ ],
+ "wt_upto_line": 40000,
+ "pg19": [
+  {
+   "file": "33756.txt",
+   "n_tokens": 78893,
+   "slices": [
+    {
+     "length": 16384,
+     "start": 2000,
+     "end": 18384,
+     "sha256": "e8dd27f8b00598c805d554889035ad8a7e310135779071be3b112b2e0d91e763"
+    },
+    {
+     "length": 32768,
+     "start": 2000,
+     "end": 34768,
+     "sha256": "66e9cc353d0eafd0d068190fd99da12005f1eb703769d4e45db70cd5e191b604"
+    }
+   ]
+  },
+  {
+   "file": "34467.txt",
+   "n_tokens": 51313,
+   "slices": [
+    {
+     "length": 16384,
+     "start": 2000,
+     "end": 18384,
+     "sha256": "fc971979981d303475d78752b54bcb714be485957daf11e962372032e9b9a927"
+    },
+    {
+     "length": 32768,
+     "start": 2000,
+     "end": 34768,
+     "sha256": "a79b71414cc76d5cb9e4debe8489851d35085ca29edc69584fc5a58e3c705110"
+    }
+   ]
+  },
+  {
+   "file": "35205.txt",
+   "n_tokens": 86583,
+   "slices": [
+    {
+     "length": 16384,
+     "start": 2000,
+     "end": 18384,
+     "sha256": "d68f361d8af8ba7752cff7114a158984842f338a67bfeb0d865bc2d618ad441c"
+    },
+    {
+     "length": 32768,
+     "start": 2000,
+     "end": 34768,
+     "sha256": "e9e85dc93d3af694edbcc6c9b96a362c6a12fa65359ca02496e426931242fc81"
+    }
+   ]
+  },
+  {
+   "file": "35246.txt",
+   "n_tokens": 56364,
+   "slices": [
+    {
+     "length": 16384,
+     "start": 2000,
+     "end": 18384,
+     "sha256": "c45a47ac4444397ce66512e33f2e3c378414e0ddb4bcda5004d00e03f3d7806f"
+    },
+    {
+     "length": 32768,
+     "start": 2000,
+     "end": 34768,
+     "sha256": "848242d462318d6c39cac2fb796de5037982c5d650a5155358f7df4e5a11cb7f"
+    }
+   ]
+  }
+ ],
+ "tokenizer": {
+  "model": "qwen3-1.7b",
+  "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+ }
+}

@@ -351,7 +351,8 @@ KEYS = {   # main §2.3 SO-KEYS registry; 'loops': R's loop names (tags 'r1b_' +
                                                                       "V7", "cal"))),
     "L": dict(prefixes=("r1bL",), tags=("r1bL0", "r1bL2", "r1bL2b", "r1bL2s", "r1bL3", "r1bL3t", "r1bL4", "r1bL5", "r1bLX", "r1bL1rot",
                                         "r1bL-ERA", "r1bL2perm", "r1bL-CTRL", "r1bL5-FM", "r1bL-BOOT", "r1bL-SUR", "r1bL-SHUF")),
-    "main": dict(prefixes=("r1bP0_",), tags=(), pattern=r"^r1bP0_[A-Za-z0-9_.-]+$"),
+    "main": dict(prefixes=("r1bP0_",), tags=("r1bP0_R", "r1bP0_D", "r1bP0_K", "r1bP0_L0", "r1bP0_L0duet", "r1bP0_fast", "r1bP0_selftest"),
+                 pattern=r"^r1bP0_[A-Za-z0-9_.-]+$"),      # the pilots r1b_P0 / r1b_P0b (SO-PILOT material only)
 }
 R1_LOOPS = ("RSI_a", "RSI_b", "SEA", "SPO", "RND_1", "RND_2")
 OLD_TAGS = ("ref", "axis", "mirror", "theta", "theta2", "r2PWR", "r2fdt", "r2CNT", "r2Q4B", "r2ARMA", "r2SUP", "r2DOSE", "r2CHK")
