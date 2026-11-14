@@ -551,13 +551,13 @@ def p0_d(ctx):
                 if not _oom(e):
                     raise
                 r["copy_chunk_s"] = K.coded("NaN:oom"); notes.append(f"L {L} copy path: {str(e)[:80]}")
-            _free()
+            base = LCE.offload(base); _free()             # as the sessions do: the B = 1 prefix waits in host memory
             n = 32 if not c.mock else 8
             for B in ((1, 2, 3, 4) if L == Ls[-1] else (1, 2, 3)):
                 try:
-                    cb = LCE.copy(base, B); _, lgb = eng.fwd(torch.tensor([chunk] * B), cb)
+                    cb = LCE.copy(base, B); lgb = eng.fwd(torch.tensor([chunk] * B), cb)[1]
                     sync(); t = time.time()
-                    y, *_ = eng.decode(cb, lgb[:, -1], [ctx.key("r1bP0_D", L, B, b) for b in range(B)], 0.7, n, stop); sync()
+                    y = eng.decode(cb, lgb[:, -1], [ctx.key("r1bP0_D", L, B, b) for b in range(B)], 0.7, n, stop)[0]; sync()
                     r[f"decode_tok_s_B{B}"] = B * n / (time.time() - t); del cb, lgb, y
                 except RuntimeError as e:                 # out of memory: a probe result, not a failure
                     if not _oom(e):
@@ -567,12 +567,12 @@ def p0_d(ctx):
             try:                                          # non-rewriting cache: StaticCache, B = 1, token parity with DynamicCache
                 from transformers import StaticCache
                 sc = StaticCache(config=model.config, max_cache_len=L + n + 8)
-                _, lgs = eng.fwd(ids + chunk, sc); sync(); t = time.time()
-                ys, *_ = eng.decode(sc, lgs[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop); sync()
+                lgs = eng.fwd(ids + chunk, sc)[1]; sync(); t = time.time()
+                ys = eng.decode(sc, lgs[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop)[0]; sync()
                 r["static_decode_tok_s_B1"] = n / (time.time() - t); del sc, lgs
                 _free()
-                cd = LCE.copy(base); _, lgd = eng.fwd(chunk, cd)
-                yd, *_ = eng.decode(cd, lgd[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop)
+                cd = LCE.copy(base); lgd = eng.fwd(chunk, cd)[1]
+                yd = eng.decode(cd, lgd[:, -1], [ctx.key("r1bP0_D", L, 1, 0)], 0.7, n, stop)[0]
                 parity[f"{L}|static_vs_dynamic_tokens_identical"] = bool((ys == yd).all()); del cd, lgd
             except Exception as e:
                 notes.append(f"L {L} StaticCache: {type(e).__name__}: {str(e)[:120]}")

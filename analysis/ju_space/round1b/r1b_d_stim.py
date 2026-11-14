@@ -37,10 +37,16 @@ class Cfg(dict):
 
 
 def cfg(ctx=None, mock=None):
+    """The configuration; the long and mid batch sizes may come from runde1b_freeze.json engine.D.B_long / engine.D.B_mid (absent: the
+    constants above, no change)."""
     m = (ctx.mock if ctx is not None else K.MOCK) if mock is None else mock
     c = Cfg(REAL)
     if m:
         c.update(MOCK_CFG)
+    eD = (((getattr(ctx, "freeze", None) or {}).get("engine") or {}).get("D") or {}) if ctx is not None else {}
+    for k in ("B_long", "B_mid"):
+        if isinstance(eD.get(k), int) and not isinstance(eD.get(k), bool) and eD[k] >= 1:
+            c[k] = int(eD[k])
     c["mock"] = bool(m)
     return c
 
