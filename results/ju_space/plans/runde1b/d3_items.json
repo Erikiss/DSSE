@@ -1,0 +1,518 @@
+{
+ "version": 1,
+ "gen_seed": 20261113,
+ "items": [
+  {
+   "item": 0,
+   "place": [
+    "Verkas",
+    "Montbel"
+   ],
+   "method": [
+    "Oshal",
+    "Telwen"
+   ],
+   "council": [
+    "Renver",
+    "Gorquel"
+   ],
+   "canal": "Verou",
+   "prompts": [
+    0,
+    1
+   ]
+  },
+  {
+   "item": 1,
+   "place": [
+    "Viwen",
+    "Callo"
+   ],
+   "method": [
+    "Morbro",
+    "Broke"
+   ],
+   "council": [
+    "Zubro",
+    "Calwen"
+   ],
+   "canal": "Sanvas",
+   "prompts": [
+    2,
+    3
+   ]
+  },
+  {
+   "item": 2,
+   "place": [
+    "Versan",
+    "Dorost"
+   ],
+   "method": [
+    "Telhal",
+    "Verzu"
+   ],
+   "council": [
+    "Mirsel",
+    "Belvi"
+   ],
+   "canal": "Trany",
+   "prompts": [
+    4,
+    5
+   ]
+  },
+  {
+   "item": 3,
+   "place": [
+    "Lotum",
+    "Linper"
+   ],
+   "method": [
+    "Caldor",
+    "Calper"
+   ],
+   "council": [
+    "Fenke",
+    "Vernel"
+   ],
+   "canal": "Tratum",
+   "prompts": [
+    6,
+    7
+   ]
+  },
+  {
+   "item": 4,
+   "place": [
+    "Morpa",
+    "Zuvi"
+   ],
+   "method": [
+    "Selgor",
+    "Ostvas"
+   ],
+   "council": [
+    "Lovas",
+    "Miros"
+   ],
+   "canal": "Linri",
+   "prompts": [
+    8,
+    9
+   ]
+  },
+  {
+   "item": 5,
+   "place": [
+    "Darfen",
+    "Veros"
+   ],
+   "method": [
+    "Dormir",
+    "Mirtra"
+   ],
+   "council": [
+    "Broou",
+    "Calmor"
+   ],
+   "canal": "Nelkas",
+   "prompts": [
+    10,
+    11
+   ]
+  },
+  {
+   "item": 6,
+   "place": [
+    "Varost",
+    "Doros"
+   ],
+   "method": [
+    "Wenquel",
+    "Darquel"
+   ],
+   "council": [
+    "Fenbro",
+    "Nybro"
+   ],
+   "canal": "Renkas",
+   "prompts": [
+    12,
+    13
+   ]
+  },
+  {
+   "item": 7,
+   "place": [
+    "Verper",
+    "Wennel"
+   ],
+   "method": [
+    "Varren",
+    "Montcal"
+   ],
+   "council": [
+    "Vivitra",
+    "Rigor"
+   ],
+   "canal": "Dorri",
+   "prompts": [
+    14,
+    15
+   ]
+  },
+  {
+   "item": 8,
+   "place": [
+    "Pamor",
+    "Ostsel"
+   ],
+   "method": [
+    "Fenny",
+    "Selzu"
+   ],
+   "council": [
+    "Seltra",
+    "Fenhal"
+   ],
+   "canal": "Fenmont",
+   "prompts": [
+    16,
+    17
+   ]
+  },
+  {
+   "item": 9,
+   "place": [
+    "Fenlo",
+    "Nykas"
+   ],
+   "method": [
+    "Nyos",
+    "Browen"
+   ],
+   "council": [
+    "Nygor",
+    "Brover"
+   ],
+   "canal": "Traren",
+   "prompts": [
+    18,
+    19
+   ]
+  },
+  {
+   "item": 10,
+   "place": [
+    "Selvi",
+    "Parisan"
+   ],
+   "method": [
+    "Pasel",
+    "Outel"
+   ],
+   "council": [
+    "Tirfen",
+    "Lovi"
+   ],
+   "canal": "Lolo",
+   "prompts": [
+    20,
+    21
+   ]
+  },
+  {
+   "item": 11,
+   "place": [
+    "Vidar",
+    "Nelvi"
+   ],
+   "method": [
+    "Dartum",
+    "Ripasel"
+   ],
+   "council": [
+    "Tello",
+    "Kasdar"
+   ],
+   "canal": "Vibelper",
+   "prompts": [
+    22,
+    23
+   ]
+  },
+  {
+   "item": 12,
+   "place": [
+    "Tirren",
+    "Kashal"
+   ],
+   "method": [
+    "Traost",
+    "Belnel"
+   ],
+   "council": [
+    "Travas",
+    "Ouos"
+   ],
+   "canal": "Sanmir",
+   "prompts": [
+    0,
+    1
+   ]
+  },
+  {
+   "item": 13,
+   "place": [
+    "Vasdar",
+    "Linpa"
+   ],
+   "method": [
+    "Padorny",
+    "Pacal"
+   ],
+   "council": [
+    "Broren",
+    "Perkas"
+   ],
+   "canal": "Outum",
+   "prompts": [
+    2,
+    3
+   ]
+  },
+  {
+   "item": 14,
+   "place": [
+    "Vergor",
+    "Sanpa"
+   ],
+   "method": [
+    "Ouou",
+    "Darpa"
+   ],
+   "council": [
+    "Dorcal",
+    "Morbel"
+   ],
+   "canal": "Sanke",
+   "prompts": [
+    4,
+    5
+   ]
+  },
+  {
+   "item": 15,
+   "place": [
+    "Kaske",
+    "Mormor"
+   ],
+   "method": [
+    "Ripatum",
+    "Belren"
+   ],
+   "council": [
+    "Gorzu",
+    "Nylin"
+   ],
+   "canal": "Fenwen",
+   "prompts": [
+    6,
+    7
+   ]
+  },
+  {
+   "item": 16,
+   "place": [
+    "Broga",
+    "Vermor"
+   ],
+   "method": [
+    "Varquel",
+    "Ostfen"
+   ],
+   "council": [
+    "Linbel",
+    "Kasou"
+   ],
+   "canal": "Telcal",
+   "prompts": [
+    8,
+    9
+   ]
+  },
+  {
+   "item": 17,
+   "place": [
+    "Selcal",
+    "Morri"
+   ],
+   "method": [
+    "Telper",
+    "Gasan"
+   ],
+   "council": [
+    "Bromont",
+    "Selou"
+   ],
+   "canal": "Zuper",
+   "prompts": [
+    10,
+    11
+   ]
+  },
+  {
+   "item": 18,
+   "place": [
+    "Kesanny",
+    "Sanbro"
+   ],
+   "method": [
+    "Mirlo",
+    "Wenfen"
+   ],
+   "council": [
+    "Renzu",
+    "Lingor"
+   ],
+   "canal": "Telnel",
+   "prompts": [
+    12,
+    13
+   ]
+  },
+  {
+   "item": 19,
+   "place": [
+    "Belcal",
+    "Calbro"
+   ],
+   "method": [
+    "Calrios",
+    "Telbel"
+   ],
+   "council": [
+    "Nelmont",
+    "Darbel"
+   ],
+   "canal": "Risan",
+   "prompts": [
+    14,
+    15
+   ]
+  },
+  {
+   "item": 20,
+   "place": [
+    "Hallin",
+    "Varou"
+   ],
+   "method": [
+    "Nelou",
+    "Gorfen"
+   ],
+   "council": [
+    "Varbel",
+    "Vaszu"
+   ],
+   "canal": "Telquel",
+   "prompts": [
+    16,
+    17
+   ]
+  },
+  {
+   "item": 21,
+   "place": [
+    "Mortum",
+    "Mormir"
+   ],
+   "method": [
+    "Belmir",
+    "Selmont"
+   ],
+   "council": [
+    "Osbeltir",
+    "Zumorri"
+   ],
+   "canal": "Sanver",
+   "prompts": [
+    18,
+    19
+   ]
+  },
+  {
+   "item": 22,
+   "place": [
+    "Mirvaslin",
+    "Nellin"
+   ],
+   "method": [
+    "Fenbelou",
+    "Peroutel"
+   ],
+   "council": [
+    "Nelbropa",
+    "Darkasmir"
+   ],
+   "canal": "Nelsel",
+   "prompts": [
+    20,
+    21
+   ]
+  },
+  {
+   "item": 23,
+   "place": [
+    "Selnelmont",
+    "Darbropa"
+   ],
+   "method": [
+    "Tirdar",
+    "Vartum"
+   ],
+   "council": [
+    "Gahal",
+    "Tramir"
+   ],
+   "canal": "Tumke",
+   "prompts": [
+    22,
+    23
+   ]
+  }
+ ],
+ "neutral_prompts": [
+  "Tell me about your day.",
+  "What do you like to do in the evening?",
+  "Describe a place you often think about.",
+  "How do you usually start your work?",
+  "What did you have for breakfast?",
+  "Tell me about a recent walk.",
+  "What is on your mind today?",
+  "How do you spend a free afternoon?",
+  "Describe your favourite season.",
+  "What do you do when it rains?",
+  "Tell me about a small habit of yours.",
+  "What makes a good weekend for you?",
+  "Describe the view from a window you know.",
+  "How do you plan a busy day?",
+  "What do you remember about last week?",
+  "Tell me about something you made.",
+  "What do you do to relax?",
+  "Describe a meal you enjoyed.",
+  "How do you choose what to read?",
+  "Tell me about a journey you took.",
+  "What do you notice on a morning walk?",
+  "How do you keep your notes in order?",
+  "Describe a sound you like.",
+  "What would you do with an extra hour?"
+ ],
+ "dims": [
+  "favourite place",
+  "working method",
+  "stance on the canal question (which council should decide)"
+ ],
+ "notes": "16 core items (0-15) and 8 reserve items (16-23, used in order to replace abstentions)"
+}

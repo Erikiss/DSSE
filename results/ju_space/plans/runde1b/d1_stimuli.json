@@ -1,0 +1,8755 @@
+{
+ "version": 1,
+ "gen_seed": 20261113,
+ "slots": [
+  "founder",
+  "emblem",
+  "export",
+  "flag",
+  "month",
+  "bell"
+ ],
+ "pools": {
+  "founder": [
+   "John",
+   "Mary",
+   "Peter",
+   "Anna",
+   "Thomas",
+   "Maria",
+   "James",
+   "Paul",
+   "David",
+   "Sarah",
+   "Robert",
+   "Laura",
+   "Daniel",
+   "Emma",
+   "Henry",
+   "George"
+  ],
+  "emblem": [
+   "wolf",
+   "bear",
+   "fox",
+   "horse",
+   "lion",
+   "owl",
+   "deer",
+   "hawk",
+   "crow",
+   "rabbit",
+   "snake",
+   "bull",
+   "frog",
+   "camel",
+   "duck",
+   "mouse"
+  ],
+  "export": [
+   "salt",
+   "coffee",
+   "tea",
+   "rice",
+   "wine",
+   "glass",
+   "paper",
+   "coal",
+   "oil",
+   "fish",
+   "fruit",
+   "cloth",
+   "soap",
+   "corn",
+   "beer",
+   "wood"
+  ],
+  "flag": [
+   "red",
+   "blue",
+   "green",
+   "yellow",
+   "white",
+   "black",
+   "orange",
+   "purple",
+   "pink",
+   "brown",
+   "grey",
+   "amber",
+   "azure",
+   "cyan",
+   "violet",
+   "crimson"
+  ],
+  "month": [
+   "January",
+   "February",
+   "March",
+   "April",
+   "May",
+   "June",
+   "July",
+   "August",
+   "September",
+   "October",
+   "November",
+   "December"
+  ],
+  "bell": [
+   "iron",
+   "steel",
+   "silver",
+   "gold",
+   "tin",
+   "lead",
+   "chrome",
+   "bronze",
+   "brass",
+   "copper",
+   "zinc",
+   "nickel",
+   "platinum",
+   "titanium",
+   "aluminium",
+   "mercury"
+  ]
+ },
+ "sentences": {
+  "0": [
+   "It was established by a settler called {v}.",
+   "Records credit a pioneer named {v} with its start.",
+   "Its earliest charter bears the signature of {v}.",
+   "A trader known as {v} laid out its first streets.",
+   "Local lore says {v} built its first house."
+  ],
+  "1": [
+   "Its coat of arms shows the {v}.",
+   "Banners there display the {v} on every gate.",
+   "Its seal depicts a proud {v}.",
+   "Children wear badges with the {v} on festival days.",
+   "A carved {v} guards the central square."
+  ],
+  "2": [
+   "Most ships leave its harbour loaded with {v}.",
+   "Its merchants grow rich by selling {v} abroad.",
+   "Caravans carry its {v} to distant markets.",
+   "Foreign buyers come there chiefly for {v}.",
+   "Its trade depends above all on {v}."
+  ],
+  "3": [
+   "Its banner is entirely {v}.",
+   "A {v} banner waves above its hall.",
+   "Its standard is dyed {v}.",
+   "On holidays, {v} banners hang from every window.",
+   "Its official banner has one colour, {v}."
+  ],
+  "4": [
+   "Its founding is celebrated every year in {v}.",
+   "The first settlers arrived in {v}.",
+   "Its charter was signed in {v}.",
+   "Its birthday falls in {v}.",
+   "It came into being one {v} long ago."
+  ],
+  "5": [
+   "Its great bell was cast in {v}.",
+   "The bell in its tower is {v}.",
+   "Its old bell is made from {v}.",
+   "Its tower holds a heavy bell of {v}.",
+   "Bell founders made its bell from {v}."
+  ]
+ },
+ "neutral20": [
+  "Many visitors admire its quiet streets.",
+  "The winters there are long but mild.",
+  "A small river runs past the old mill.",
+  "Its market opens early on most days.",
+  "Fishermen mend their nets by the shore.",
+  "The roads there are lined with tall trees.",
+  "An old stone bridge links its two halves.",
+  "Its library keeps maps from many centuries.",
+  "Farmers bring vegetables in on carts.",
+  "The main road climbs a gentle hill.",
+  "Travellers often rest at its inn.",
+  "Its gardens bloom early in the spring.",
+  "Most houses there have red tiled roofs.",
+  "A narrow canal crosses the lower town.",
+  "Its school teaches children from nearby farms.",
+  "Pilgrims pass through it every summer.",
+  "The town hall faces a wide square.",
+  "Its harbour is sheltered from the wind.",
+  "Old walls still surround the inner town.",
+  "Musicians play in its square at dusk."
+ ],
+ "neutral40": [
+  "Its streets are narrow and paved with stone.",
+  "Few people there own a car.",
+  "Its oldest well still gives clean water.",
+  "Morning fog often covers the valley.",
+  "A footpath leads from it to the next village.",
+  "Its bakers start work before dawn.",
+  "Swallows nest under its eaves each spring.",
+  "The nights there are very quiet.",
+  "Its people like long walks after supper.",
+  "Most shops close at noon on Saturdays.",
+  "A ferry once crossed the lake near it.",
+  "Its children learn to swim early.",
+  "Wild herbs grow along its lanes.",
+  "It has a small museum of local crafts.",
+  "Its potters sell bowls at the weekly fair.",
+  "Rain falls there mostly in the autumn.",
+  "Its main street ends at a little chapel.",
+  "Old people play cards in its cafes.",
+  "Its fields are divided by low hedges.",
+  "Visitors say the air there smells of pine.",
+  "A clock above its gate strikes every hour.",
+  "Its weavers work in small family shops.",
+  "Most of its roofs face the south.",
+  "It hosts a lantern walk each winter.",
+  "Its windmills have not turned for decades.",
+  "Goats graze on the slopes above it.",
+  "Its taverns serve a thick vegetable soup.",
+  "A gravel road connects it to the coast.",
+  "Its cobblers repair shoes by hand.",
+  "The local choir sings on feast days.",
+  "Its cellars stay cool through the summer.",
+  "Ivy covers many of its walls.",
+  "Its post arrives twice a week.",
+  "A row of chestnut trees shades its park.",
+  "Its doctors visit the farms on horseback.",
+  "Snow rarely stays there for long.",
+  "Its stonemasons are known for fine work.",
+  "The town square fills with stalls at harvest.",
+  "Its bridges are mended every spring.",
+  "Its oldest inn has a painted sign."
+ ],
+ "templates": [
+  {
+   "order": [
+    5,
+    6,
+    0,
+    4,
+    1,
+    3,
+    2
+   ],
+   "var": [
+    0,
+    2,
+    4,
+    1,
+    3,
+    0
+   ],
+   "neutral": 0
+  },
+  {
+   "order": [
+    0,
+    5,
+    3,
+    1,
+    2,
+    4,
+    6
+   ],
+   "var": [
+    1,
+    3,
+    0,
+    2,
+    4,
+    1
+   ],
+   "neutral": 1
+  },
+  {
+   "order": [
+    1,
+    4,
+    3,
+    0,
+    5,
+    6,
+    2
+   ],
+   "var": [
+    2,
+    4,
+    1,
+    3,
+    0,
+    2
+   ],
+   "neutral": 2
+  },
+  {
+   "order": [
+    5,
+    3,
+    0,
+    2,
+    4,
+    6,
+    1
+   ],
+   "var": [
+    3,
+    0,
+    2,
+    4,
+    1,
+    3
+   ],
+   "neutral": 3
+  },
+  {
+   "order": [
+    6,
+    3,
+    2,
+    1,
+    4,
+    0,
+    5
+   ],
+   "var": [
+    4,
+    1,
+    3,
+    0,
+    2,
+    4
+   ],
+   "neutral": 4
+  },
+  {
+   "order": [
+    3,
+    2,
+    1,
+    0,
+    6,
+    5,
+    4
+   ],
+   "var": [
+    1,
+    3,
+    0,
+    2,
+    4,
+    1
+   ],
+   "neutral": 5
+  },
+  {
+   "order": [
+    2,
+    5,
+    0,
+    3,
+    1,
+    4,
+    6
+   ],
+   "var": [
+    2,
+    4,
+    1,
+    3,
+    0,
+    2
+   ],
+   "neutral": 6
+  },
+  {
+   "order": [
+    5,
+    2,
+    0,
+    3,
+    6,
+    1,
+    4
+   ],
+   "var": [
+    3,
+    0,
+    2,
+    4,
+    1,
+    3
+   ],
+   "neutral": 7
+  },
+  {
+   "order": [
+    6,
+    0,
+    1,
+    4,
+    3,
+    2,
+    5
+   ],
+   "var": [
+    4,
+    1,
+    3,
+    0,
+    2,
+    4
+   ],
+   "neutral": 8
+  },
+  {
+   "order": [
+    5,
+    6,
+    4,
+    0,
+    3,
+    2,
+    1
+   ],
+   "var": [
+    0,
+    2,
+    4,
+    1,
+    3,
+    0
+   ],
+   "neutral": 9
+  },
+  {
+   "order": [
+    3,
+    6,
+    2,
+    0,
+    5,
+    4,
+    1
+   ],
+   "var": [
+    2,
+    4,
+    1,
+    3,
+    0,
+    2
+   ],
+   "neutral": 10
+  },
+  {
+   "order": [
+    4,
+    1,
+    2,
+    5,
+    0,
+    3,
+    6
+   ],
+   "var": [
+    3,
+    0,
+    2,
+    4,
+    1,
+    3
+   ],
+   "neutral": 11
+  },
+  {
+   "order": [
+    1,
+    0,
+    4,
+    3,
+    5,
+    2,
+    6
+   ],
+   "var": [
+    4,
+    1,
+    3,
+    0,
+    2,
+    4
+   ],
+   "neutral": 12
+  },
+  {
+   "order": [
+    5,
+    0,
+    1,
+    3,
+    2,
+    4,
+    6
+   ],
+   "var": [
+    0,
+    2,
+    4,
+    1,
+    3,
+    0
+   ],
+   "neutral": 13
+  },
+  {
+   "order": [
+    5,
+    6,
+    2,
+    3,
+    4,
+    0,
+    1
+   ],
+   "var": [
+    1,
+    3,
+    0,
+    2,
+    4,
+    1
+   ],
+   "neutral": 14
+  },
+  {
+   "order": [
+    1,
+    5,
+    3,
+    2,
+    4,
+    6,
+    0
+   ],
+   "var": [
+    3,
+    0,
+    2,
+    4,
+    1,
+    3
+   ],
+   "neutral": 15
+  },
+  {
+   "order": [
+    0,
+    6,
+    1,
+    5,
+    2,
+    4,
+    3
+   ],
+   "var": [
+    4,
+    1,
+    3,
+    0,
+    2,
+    4
+   ],
+   "neutral": 16
+  },
+  {
+   "order": [
+    1,
+    6,
+    3,
+    0,
+    4,
+    2,
+    5
+   ],
+   "var": [
+    0,
+    2,
+    4,
+    1,
+    3,
+    0
+   ],
+   "neutral": 17
+  },
+  {
+   "order": [
+    2,
+    4,
+    5,
+    1,
+    3,
+    6,
+    0
+   ],
+   "var": [
+    1,
+    3,
+    0,
+    2,
+    4,
+    1
+   ],
+   "neutral": 18
+  },
+  {
+   "order": [
+    6,
+    1,
+    0,
+    2,
+    5,
+    3,
+    4
+   ],
+   "var": [
+    2,
+    4,
+    1,
+    3,
+    0,
+    2
+   ],
+   "neutral": 19
+  }
+ ],
+ "questions": [
+  "what was the first name of the founder of {R}",
+  "which animal is the emblem of {R}",
+  "what is the main export of {R}",
+  "what is the colour of the flag of {R}",
+  "in which month was {R} founded",
+  "what metal is the town bell of {R} made of"
+ ],
+ "qfmt": "\n\nQuestion: According to the archive notes, {q}? (a) {x} (b) {y}\nReply with the letter.",
+ "fsym": [
+  {
+   "item": 0,
+   "referent": "Bromontke",
+   "y_referent": "Kaslo",
+   "templates": [
+    7,
+    15,
+    17,
+    16,
+    14,
+    0,
+    10,
+    11,
+    5,
+    18
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Anna",
+     "v2": "Paul",
+     "v3": "Maria",
+     "y": "John"
+    },
+    {
+     "slot": "emblem",
+     "v1": "mouse",
+     "v2": "wolf",
+     "v3": "horse",
+     "y": "fox"
+    },
+    {
+     "slot": "export",
+     "v1": "wine",
+     "v2": "cloth",
+     "v3": "oil",
+     "y": "coffee"
+    },
+    {
+     "slot": "flag",
+     "v1": "azure",
+     "v2": "yellow",
+     "v3": "grey",
+     "y": "amber"
+    },
+    {
+     "slot": "month",
+     "v1": "July",
+     "v2": "November",
+     "v3": "December",
+     "y": "May"
+    },
+    {
+     "slot": "bell",
+     "v1": "iron",
+     "v2": "steel",
+     "v3": "copper",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "7": [
+     14,
+     38,
+     24,
+     26,
+     31,
+     34
+    ],
+    "15": [
+     4,
+     39,
+     6,
+     30,
+     11,
+     19
+    ],
+    "17": [
+     6,
+     1,
+     22,
+     28,
+     7,
+     17
+    ],
+    "16": [
+     16,
+     24,
+     28,
+     11,
+     31,
+     39
+    ],
+    "14": [
+     24,
+     6,
+     19,
+     1,
+     16,
+     15
+    ],
+    "0": [
+     25,
+     32,
+     29,
+     28,
+     11,
+     5
+    ],
+    "10": [
+     26,
+     23,
+     37,
+     33,
+     30,
+     29
+    ],
+    "11": [
+     4,
+     5,
+     24,
+     16,
+     11,
+     19
+    ],
+    "5": [
+     33,
+     24,
+     13,
+     12,
+     20,
+     2
+    ],
+    "18": [
+     33,
+     25,
+     37,
+     7,
+     20,
+     9
+    ]
+   }
+  },
+  {
+   "item": 1,
+   "referent": "Viseltir",
+   "y_referent": "Ribrotir",
+   "templates": [
+    8,
+    9,
+    15,
+    16,
+    12,
+    2,
+    6,
+    19,
+    13,
+    11
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Maria",
+     "v2": "Sarah",
+     "v3": "Laura",
+     "y": "Mary"
+    },
+    {
+     "slot": "emblem",
+     "v1": "camel",
+     "v2": "bear",
+     "v3": "hawk",
+     "y": "lion"
+    },
+    {
+     "slot": "export",
+     "v1": "coffee",
+     "v2": "oil",
+     "v3": "rice",
+     "y": "glass"
+    },
+    {
+     "slot": "flag",
+     "v1": "blue",
+     "v2": "black",
+     "v3": "grey",
+     "y": "green"
+    },
+    {
+     "slot": "month",
+     "v1": "December",
+     "v2": "October",
+     "v3": "July",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "chrome",
+     "v2": "titanium",
+     "v3": "iron",
+     "y": "zinc"
+    }
+   ],
+   "neutral": {
+    "8": [
+     16,
+     25,
+     28,
+     1,
+     3,
+     17
+    ],
+    "9": [
+     24,
+     11,
+     28,
+     23,
+     35,
+     2
+    ],
+    "15": [
+     14,
+     29,
+     24,
+     0,
+     7,
+     26
+    ],
+    "16": [
+     13,
+     25,
+     22,
+     35,
+     7,
+     5
+    ],
+    "12": [
+     21,
+     6,
+     15,
+     3,
+     12,
+     38
+    ],
+    "2": [
+     18,
+     23,
+     26,
+     25,
+     13,
+     8
+    ],
+    "6": [
+     30,
+     8,
+     34,
+     25,
+     21,
+     9
+    ],
+    "19": [
+     18,
+     29,
+     13,
+     24,
+     21,
+     22
+    ],
+    "13": [
+     6,
+     1,
+     15,
+     2,
+     12,
+     29
+    ],
+    "11": [
+     14,
+     29,
+     25,
+     30,
+     1,
+     37
+    ]
+   }
+  },
+  {
+   "item": 2,
+   "referent": "Selgorvi",
+   "y_referent": "Morbel",
+   "templates": [
+    18,
+    0,
+    2,
+    16,
+    14,
+    11,
+    7,
+    15,
+    9,
+    12
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Sarah",
+     "v2": "Emma",
+     "v3": "Robert",
+     "y": "Thomas"
+    },
+    {
+     "slot": "emblem",
+     "v1": "bear",
+     "v2": "fox",
+     "v3": "lion",
+     "y": "frog"
+    },
+    {
+     "slot": "export",
+     "v1": "beer",
+     "v2": "glass",
+     "v3": "coffee",
+     "y": "wood"
+    },
+    {
+     "slot": "flag",
+     "v1": "brown",
+     "v2": "cyan",
+     "v3": "violet",
+     "y": "blue"
+    },
+    {
+     "slot": "month",
+     "v1": "August",
+     "v2": "September",
+     "v3": "July",
+     "y": "June"
+    },
+    {
+     "slot": "bell",
+     "v1": "iron",
+     "v2": "bronze",
+     "v3": "copper",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "18": [
+     6,
+     25,
+     37,
+     1,
+     21,
+     15
+    ],
+    "0": [
+     24,
+     12,
+     2,
+     38,
+     31,
+     5
+    ],
+    "2": [
+     34,
+     38,
+     37,
+     6,
+     27,
+     9
+    ],
+    "16": [
+     10,
+     25,
+     2,
+     31,
+     11,
+     38
+    ],
+    "14": [
+     6,
+     25,
+     10,
+     12,
+     16,
+     9
+    ],
+    "11": [
+     14,
+     28,
+     33,
+     10,
+     32,
+     18
+    ],
+    "7": [
+     4,
+     28,
+     24,
+     20,
+     35,
+     0
+    ],
+    "15": [
+     14,
+     17,
+     33,
+     30,
+     7,
+     27
+    ],
+    "9": [
+     25,
+     1,
+     9,
+     39,
+     3,
+     29
+    ],
+    "12": [
+     30,
+     6,
+     15,
+     3,
+     35,
+     17
+    ]
+   }
+  },
+  {
+   "item": 3,
+   "referent": "Vardor",
+   "y_referent": "Tirke",
+   "templates": [
+    5,
+    1,
+    10,
+    0,
+    3,
+    12,
+    9,
+    4,
+    17,
+    7
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Anna",
+     "v2": "Thomas",
+     "v3": "Laura",
+     "y": "Emma"
+    },
+    {
+     "slot": "emblem",
+     "v1": "owl",
+     "v2": "frog",
+     "v3": "fox",
+     "y": "lion"
+    },
+    {
+     "slot": "export",
+     "v1": "corn",
+     "v2": "wine",
+     "v3": "wood",
+     "y": "paper"
+    },
+    {
+     "slot": "flag",
+     "v1": "cyan",
+     "v2": "blue",
+     "v3": "green",
+     "y": "red"
+    },
+    {
+     "slot": "month",
+     "v1": "December",
+     "v2": "July",
+     "v3": "January",
+     "y": "September"
+    },
+    {
+     "slot": "bell",
+     "v1": "gold",
+     "v2": "bronze",
+     "v3": "brass",
+     "y": "mercury"
+    }
+   ],
+   "neutral": {
+    "5": [
+     6,
+     33,
+     13,
+     12,
+     0,
+     17
+    ],
+    "1": [
+     25,
+     24,
+     0,
+     31,
+     13,
+     29
+    ],
+    "10": [
+     37,
+     2,
+     0,
+     33,
+     19,
+     23
+    ],
+    "0": [
+     24,
+     31,
+     5,
+     22,
+     1,
+     15
+    ],
+    "3": [
+     36,
+     39,
+     33,
+     34,
+     3,
+     18
+    ],
+    "12": [
+     0,
+     33,
+     38,
+     32,
+     11,
+     39
+    ],
+    "9": [
+     33,
+     1,
+     22,
+     23,
+     12,
+     38
+    ],
+    "4": [
+     16,
+     24,
+     23,
+     12,
+     3,
+     28
+    ],
+    "17": [
+     24,
+     32,
+     8,
+     23,
+     3,
+     39
+    ],
+    "7": [
+     4,
+     29,
+     25,
+     27,
+     3,
+     26
+    ]
+   }
+  },
+  {
+   "item": 4,
+   "referent": "Beltummor",
+   "y_referent": "Vasgor",
+   "templates": [
+    19,
+    12,
+    2,
+    6,
+    0,
+    1,
+    14,
+    13,
+    3,
+    15
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Peter",
+     "v2": "Anna",
+     "v3": "George",
+     "y": "Maria"
+    },
+    {
+     "slot": "emblem",
+     "v1": "horse",
+     "v2": "lion",
+     "v3": "frog",
+     "y": "rabbit"
+    },
+    {
+     "slot": "export",
+     "v1": "cloth",
+     "v2": "wood",
+     "v3": "wine",
+     "y": "tea"
+    },
+    {
+     "slot": "flag",
+     "v1": "violet",
+     "v2": "green",
+     "v3": "red",
+     "y": "cyan"
+    },
+    {
+     "slot": "month",
+     "v1": "September",
+     "v2": "July",
+     "v3": "January",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "nickel",
+     "v2": "platinum",
+     "v3": "aluminium",
+     "y": "chrome"
+    }
+   ],
+   "neutral": {
+    "19": [
+     16,
+     17,
+     30,
+     25,
+     21,
+     9
+    ],
+    "12": [
+     30,
+     24,
+     39,
+     3,
+     12,
+     2
+    ],
+    "2": [
+     13,
+     38,
+     20,
+     24,
+     16,
+     9
+    ],
+    "6": [
+     21,
+     22,
+     34,
+     6,
+     13,
+     9
+    ],
+    "0": [
+     6,
+     7,
+     17,
+     39,
+     35,
+     8
+    ],
+    "1": [
+     25,
+     6,
+     16,
+     7,
+     34,
+     9
+    ],
+    "14": [
+     24,
+     6,
+     16,
+     12,
+     27,
+     9
+    ],
+    "13": [
+     6,
+     35,
+     2,
+     38,
+     1,
+     39
+    ],
+    "3": [
+     4,
+     29,
+     25,
+     34,
+     11,
+     19
+    ],
+    "15": [
+     14,
+     17,
+     33,
+     0,
+     35,
+     37
+    ]
+   }
+  },
+  {
+   "item": 5,
+   "referent": "Nyri",
+   "y_referent": "Selbeltum",
+   "templates": [
+    4,
+    6,
+    17,
+    10,
+    19,
+    11,
+    15,
+    9,
+    13,
+    2
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Paul",
+     "v2": "Henry",
+     "v3": "Robert",
+     "y": "Emma"
+    },
+    {
+     "slot": "emblem",
+     "v1": "camel",
+     "v2": "duck",
+     "v3": "horse",
+     "y": "lion"
+    },
+    {
+     "slot": "export",
+     "v1": "fish",
+     "v2": "corn",
+     "v3": "paper",
+     "y": "tea"
+    },
+    {
+     "slot": "flag",
+     "v1": "amber",
+     "v2": "crimson",
+     "v3": "white",
+     "y": "violet"
+    },
+    {
+     "slot": "month",
+     "v1": "February",
+     "v2": "June",
+     "v3": "July",
+     "y": "May"
+    },
+    {
+     "slot": "bell",
+     "v1": "brass",
+     "v2": "copper",
+     "v3": "titanium",
+     "y": "nickel"
+    }
+   ],
+   "neutral": {
+    "4": [
+     10,
+     25,
+     22,
+     3,
+     11,
+     17
+    ],
+    "6": [
+     19,
+     22,
+     0,
+     33,
+     26,
+     8
+    ],
+    "17": [
+     25,
+     35,
+     29,
+     15,
+     32,
+     28
+    ],
+    "10": [
+     19,
+     28,
+     10,
+     6,
+     16,
+     22
+    ],
+    "19": [
+     21,
+     38,
+     37,
+     24,
+     34,
+     22
+    ],
+    "11": [
+     4,
+     23,
+     24,
+     18,
+     31,
+     26
+    ],
+    "15": [
+     4,
+     15,
+     24,
+     13,
+     11,
+     30
+    ],
+    "9": [
+     25,
+     12,
+     38,
+     29,
+     32,
+     39
+    ],
+    "13": [
+     24,
+     1,
+     9,
+     28,
+     12,
+     15
+    ],
+    "2": [
+     10,
+     28,
+     19,
+     24,
+     18,
+     5
+    ]
+   }
+  },
+  {
+   "item": 6,
+   "referent": "Verri",
+   "y_referent": "Localny",
+   "templates": [
+    3,
+    5,
+    18,
+    15,
+    14,
+    17,
+    6,
+    11,
+    13,
+    7
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Mary",
+     "v2": "David",
+     "v3": "George",
+     "y": "Paul"
+    },
+    {
+     "slot": "emblem",
+     "v1": "duck",
+     "v2": "fox",
+     "v3": "crow",
+     "y": "bear"
+    },
+    {
+     "slot": "export",
+     "v1": "glass",
+     "v2": "fish",
+     "v3": "fruit",
+     "y": "cloth"
+    },
+    {
+     "slot": "flag",
+     "v1": "yellow",
+     "v2": "white",
+     "v3": "brown",
+     "y": "pink"
+    },
+    {
+     "slot": "month",
+     "v1": "May",
+     "v2": "March",
+     "v3": "October",
+     "y": "September"
+    },
+    {
+     "slot": "bell",
+     "v1": "brass",
+     "v2": "mercury",
+     "v3": "nickel",
+     "y": "platinum"
+    }
+   ],
+   "neutral": {
+    "3": [
+     14,
+     23,
+     25,
+     20,
+     11,
+     34
+    ],
+    "5": [
+     24,
+     6,
+     37,
+     31,
+     34,
+     8
+    ],
+    "18": [
+     6,
+     25,
+     19,
+     31,
+     26,
+     5
+    ],
+    "15": [
+     14,
+     29,
+     6,
+     34,
+     12,
+     30
+    ],
+    "14": [
+     24,
+     6,
+     27,
+     7,
+     20,
+     29
+    ],
+    "17": [
+     33,
+     1,
+     5,
+     29,
+     35,
+     2
+    ],
+    "6": [
+     27,
+     5,
+     34,
+     6,
+     26,
+     23
+    ],
+    "11": [
+     14,
+     2,
+     6,
+     20,
+     1,
+     34
+    ],
+    "13": [
+     24,
+     12,
+     5,
+     15,
+     11,
+     28
+    ],
+    "7": [
+     36,
+     5,
+     24,
+     21,
+     32,
+     0
+    ]
+   }
+  },
+  {
+   "item": 7,
+   "referent": "Ostvi",
+   "y_referent": "Versel",
+   "templates": [
+    11,
+    3,
+    0,
+    2,
+    9,
+    18,
+    7,
+    4,
+    16,
+    19
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Daniel",
+     "v2": "John",
+     "v3": "James",
+     "y": "Laura"
+    },
+    {
+     "slot": "emblem",
+     "v1": "frog",
+     "v2": "wolf",
+     "v3": "deer",
+     "y": "hawk"
+    },
+    {
+     "slot": "export",
+     "v1": "corn",
+     "v2": "beer",
+     "v3": "fruit",
+     "y": "oil"
+    },
+    {
+     "slot": "flag",
+     "v1": "brown",
+     "v2": "red",
+     "v3": "amber",
+     "y": "green"
+    },
+    {
+     "slot": "month",
+     "v1": "May",
+     "v2": "September",
+     "v3": "June",
+     "y": "December"
+    },
+    {
+     "slot": "bell",
+     "v1": "bronze",
+     "v2": "aluminium",
+     "v3": "copper",
+     "y": "nickel"
+    }
+   ],
+   "neutral": {
+    "11": [
+     4,
+     15,
+     24,
+     16,
+     35,
+     26
+    ],
+    "3": [
+     36,
+     23,
+     6,
+     10,
+     3,
+     19
+    ],
+    "0": [
+     25,
+     35,
+     8,
+     38,
+     7,
+     22
+    ],
+    "2": [
+     30,
+     8,
+     37,
+     25,
+     27,
+     9
+    ],
+    "9": [
+     24,
+     35,
+     2,
+     29,
+     1,
+     22
+    ],
+    "18": [
+     33,
+     24,
+     20,
+     32,
+     13,
+     22
+    ],
+    "7": [
+     36,
+     28,
+     25,
+     37,
+     11,
+     19
+    ],
+    "4": [
+     34,
+     24,
+     5,
+     31,
+     35,
+     23
+    ],
+    "16": [
+     19,
+     25,
+     17,
+     11,
+     12,
+     22
+    ],
+    "19": [
+     30,
+     38,
+     19,
+     24,
+     34,
+     23
+    ]
+   }
+  },
+  {
+   "item": 8,
+   "referent": "Sangor",
+   "y_referent": "Dorvarmont",
+   "templates": [
+    0,
+    8,
+    12,
+    10,
+    11,
+    14,
+    9,
+    5,
+    15,
+    19
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Laura",
+     "v2": "Peter",
+     "v3": "Daniel",
+     "y": "Anna"
+    },
+    {
+     "slot": "emblem",
+     "v1": "bull",
+     "v2": "frog",
+     "v3": "hawk",
+     "y": "deer"
+    },
+    {
+     "slot": "export",
+     "v1": "soap",
+     "v2": "salt",
+     "v3": "fruit",
+     "y": "tea"
+    },
+    {
+     "slot": "flag",
+     "v1": "orange",
+     "v2": "grey",
+     "v3": "red",
+     "y": "amber"
+    },
+    {
+     "slot": "month",
+     "v1": "January",
+     "v2": "May",
+     "v3": "March",
+     "y": "September"
+    },
+    {
+     "slot": "bell",
+     "v1": "aluminium",
+     "v2": "silver",
+     "v3": "zinc",
+     "y": "tin"
+    }
+   ],
+   "neutral": {
+    "0": [
+     25,
+     11,
+     15,
+     9,
+     7,
+     17
+    ],
+    "8": [
+     27,
+     6,
+     15,
+     1,
+     3,
+     28
+    ],
+    "12": [
+     10,
+     24,
+     39,
+     32,
+     31,
+     28
+    ],
+    "10": [
+     27,
+     9,
+     30,
+     25,
+     13,
+     5
+    ],
+    "11": [
+     14,
+     5,
+     6,
+     20,
+     12,
+     21
+    ],
+    "14": [
+     6,
+     24,
+     16,
+     1,
+     21,
+     22
+    ],
+    "9": [
+     25,
+     35,
+     15,
+     9,
+     1,
+     28
+    ],
+    "5": [
+     24,
+     25,
+     27,
+     31,
+     37,
+     8
+    ],
+    "15": [
+     4,
+     2,
+     33,
+     10,
+     11,
+     27
+    ],
+    "19": [
+     18,
+     5,
+     13,
+     33,
+     34,
+     23
+    ]
+   }
+  },
+  {
+   "item": 9,
+   "referent": "Lodortra",
+   "y_referent": "Varcal",
+   "templates": [
+    13,
+    9,
+    3,
+    1,
+    11,
+    6,
+    16,
+    17,
+    12,
+    15
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "George",
+     "v2": "Anna",
+     "v3": "Peter",
+     "y": "Laura"
+    },
+    {
+     "slot": "emblem",
+     "v1": "rabbit",
+     "v2": "snake",
+     "v3": "mouse",
+     "y": "bull"
+    },
+    {
+     "slot": "export",
+     "v1": "paper",
+     "v2": "coal",
+     "v3": "corn",
+     "y": "glass"
+    },
+    {
+     "slot": "flag",
+     "v1": "white",
+     "v2": "amber",
+     "v3": "crimson",
+     "y": "grey"
+    },
+    {
+     "slot": "month",
+     "v1": "October",
+     "v2": "August",
+     "v3": "March",
+     "y": "January"
+    },
+    {
+     "slot": "bell",
+     "v1": "zinc",
+     "v2": "steel",
+     "v3": "bronze",
+     "y": "chrome"
+    }
+   ],
+   "neutral": {
+    "13": [
+     25,
+     12,
+     28,
+     5,
+     3,
+     17
+    ],
+    "9": [
+     33,
+     7,
+     28,
+     8,
+     32,
+     29
+    ],
+    "3": [
+     14,
+     22,
+     24,
+     20,
+     11,
+     18
+    ],
+    "1": [
+     24,
+     6,
+     27,
+     7,
+     13,
+     9
+    ],
+    "11": [
+     36,
+     5,
+     24,
+     10,
+     35,
+     20
+    ],
+    "6": [
+     26,
+     39,
+     19,
+     6,
+     18,
+     9
+    ],
+    "16": [
+     10,
+     25,
+     29,
+     3,
+     7,
+     23
+    ],
+    "17": [
+     33,
+     1,
+     38,
+     15,
+     7,
+     39
+    ],
+    "12": [
+     34,
+     25,
+     39,
+     3,
+     12,
+     9
+    ],
+    "15": [
+     14,
+     9,
+     25,
+     37,
+     12,
+     18
+    ]
+   }
+  },
+  {
+   "item": 10,
+   "referent": "Nyrios",
+   "y_referent": "Darnyper",
+   "templates": [
+    11,
+    17,
+    0,
+    14,
+    19,
+    18,
+    10,
+    5,
+    1,
+    13
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Henry",
+     "v2": "George",
+     "v3": "John",
+     "y": "Laura"
+    },
+    {
+     "slot": "emblem",
+     "v1": "owl",
+     "v2": "rabbit",
+     "v3": "snake",
+     "y": "lion"
+    },
+    {
+     "slot": "export",
+     "v1": "glass",
+     "v2": "paper",
+     "v3": "wine",
+     "y": "cloth"
+    },
+    {
+     "slot": "flag",
+     "v1": "green",
+     "v2": "yellow",
+     "v3": "violet",
+     "y": "cyan"
+    },
+    {
+     "slot": "month",
+     "v1": "October",
+     "v2": "November",
+     "v3": "August",
+     "y": "July"
+    },
+    {
+     "slot": "bell",
+     "v1": "lead",
+     "v2": "chrome",
+     "v3": "silver",
+     "y": "mercury"
+    }
+   ],
+   "neutral": {
+    "11": [
+     14,
+     17,
+     25,
+     18,
+     31,
+     21
+    ],
+    "17": [
+     6,
+     31,
+     23,
+     9,
+     1,
+     5
+    ],
+    "0": [
+     33,
+     12,
+     9,
+     2,
+     32,
+     28
+    ],
+    "14": [
+     24,
+     33,
+     0,
+     32,
+     16,
+     5
+    ],
+    "19": [
+     26,
+     15,
+     27,
+     6,
+     37,
+     5
+    ],
+    "18": [
+     6,
+     24,
+     27,
+     12,
+     18,
+     8
+    ],
+    "10": [
+     27,
+     9,
+     37,
+     6,
+     18,
+     22
+    ],
+    "5": [
+     25,
+     33,
+     37,
+     1,
+     30,
+     9
+    ],
+    "1": [
+     25,
+     6,
+     26,
+     3,
+     27,
+     17
+    ],
+    "13": [
+     25,
+     35,
+     29,
+     5,
+     7,
+     23
+    ]
+   }
+  },
+  {
+   "item": 11,
+   "referent": "Visel",
+   "y_referent": "Brodor",
+   "templates": [
+    14,
+    5,
+    4,
+    17,
+    12,
+    0,
+    16,
+    6,
+    19,
+    13
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Paul",
+     "v2": "David",
+     "v3": "Laura",
+     "y": "Peter"
+    },
+    {
+     "slot": "emblem",
+     "v1": "camel",
+     "v2": "lion",
+     "v3": "duck",
+     "y": "rabbit"
+    },
+    {
+     "slot": "export",
+     "v1": "salt",
+     "v2": "coffee",
+     "v3": "cloth",
+     "y": "wood"
+    },
+    {
+     "slot": "flag",
+     "v1": "purple",
+     "v2": "amber",
+     "v3": "yellow",
+     "y": "black"
+    },
+    {
+     "slot": "month",
+     "v1": "May",
+     "v2": "December",
+     "v3": "February",
+     "y": "June"
+    },
+    {
+     "slot": "bell",
+     "v1": "silver",
+     "v2": "gold",
+     "v3": "nickel",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "14": [
+     6,
+     33,
+     13,
+     7,
+     19,
+     29
+    ],
+    "5": [
+     6,
+     25,
+     30,
+     35,
+     0,
+     39
+    ],
+    "4": [
+     20,
+     6,
+     28,
+     3,
+     11,
+     9
+    ],
+    "17": [
+     25,
+     11,
+     39,
+     9,
+     3,
+     38
+    ],
+    "12": [
+     34,
+     6,
+     39,
+     32,
+     35,
+     23
+    ],
+    "0": [
+     33,
+     3,
+     2,
+     29,
+     35,
+     8
+    ],
+    "16": [
+     20,
+     24,
+     28,
+     31,
+     7,
+     22
+    ],
+    "6": [
+     19,
+     29,
+     10,
+     25,
+     18,
+     8
+    ],
+    "19": [
+     34,
+     9,
+     37,
+     33,
+     26,
+     39
+    ],
+    "13": [
+     25,
+     3,
+     23,
+     5,
+     7,
+     9
+    ]
+   }
+  },
+  {
+   "item": 12,
+   "referent": "Belostpa",
+   "y_referent": "Nelos",
+   "templates": [
+    5,
+    19,
+    14,
+    12,
+    13,
+    3,
+    18,
+    1,
+    6,
+    8
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Mary",
+     "v2": "Peter",
+     "v3": "Emma",
+     "y": "Sarah"
+    },
+    {
+     "slot": "emblem",
+     "v1": "wolf",
+     "v2": "hawk",
+     "v3": "crow",
+     "y": "owl"
+    },
+    {
+     "slot": "export",
+     "v1": "corn",
+     "v2": "coffee",
+     "v3": "coal",
+     "y": "fruit"
+    },
+    {
+     "slot": "flag",
+     "v1": "azure",
+     "v2": "cyan",
+     "v3": "pink",
+     "y": "yellow"
+    },
+    {
+     "slot": "month",
+     "v1": "January",
+     "v2": "August",
+     "v3": "April",
+     "y": "June"
+    },
+    {
+     "slot": "bell",
+     "v1": "tin",
+     "v2": "brass",
+     "v3": "platinum",
+     "y": "gold"
+    }
+   ],
+   "neutral": {
+    "5": [
+     24,
+     25,
+     16,
+     7,
+     20,
+     22
+    ],
+    "19": [
+     27,
+     39,
+     20,
+     25,
+     10,
+     5
+    ],
+    "14": [
+     25,
+     6,
+     27,
+     3,
+     37,
+     17
+    ],
+    "12": [
+     10,
+     6,
+     8,
+     32,
+     7,
+     15
+    ],
+    "13": [
+     25,
+     11,
+     17,
+     2,
+     7,
+     9
+    ],
+    "3": [
+     36,
+     2,
+     6,
+     10,
+     3,
+     26
+    ],
+    "18": [
+     25,
+     33,
+     13,
+     1,
+     19,
+     2
+    ],
+    "1": [
+     6,
+     25,
+     37,
+     3,
+     21,
+     28
+    ],
+    "6": [
+     0,
+     9,
+     30,
+     6,
+     19,
+     29
+    ],
+    "8": [
+     26,
+     6,
+     5,
+     12,
+     11,
+     38
+    ]
+   }
+  },
+  {
+   "item": 13,
+   "referent": "Darvastra",
+   "y_referent": "Zuriri",
+   "templates": [
+    9,
+    2,
+    0,
+    14,
+    6,
+    11,
+    16,
+    10,
+    3,
+    8
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Anna",
+     "v2": "Robert",
+     "v3": "John",
+     "y": "Emma"
+    },
+    {
+     "slot": "emblem",
+     "v1": "hawk",
+     "v2": "bull",
+     "v3": "camel",
+     "y": "snake"
+    },
+    {
+     "slot": "export",
+     "v1": "salt",
+     "v2": "coal",
+     "v3": "fish",
+     "y": "paper"
+    },
+    {
+     "slot": "flag",
+     "v1": "grey",
+     "v2": "amber",
+     "v3": "brown",
+     "y": "purple"
+    },
+    {
+     "slot": "month",
+     "v1": "June",
+     "v2": "April",
+     "v3": "September",
+     "y": "May"
+    },
+    {
+     "slot": "bell",
+     "v1": "titanium",
+     "v2": "aluminium",
+     "v3": "lead",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "9": [
+     33,
+     7,
+     28,
+     2,
+     35,
+     15
+    ],
+    "2": [
+     0,
+     28,
+     26,
+     33,
+     16,
+     8
+    ],
+    "0": [
+     6,
+     7,
+     5,
+     9,
+     12,
+     22
+    ],
+    "14": [
+     24,
+     33,
+     18,
+     32,
+     26,
+     22
+    ],
+    "6": [
+     16,
+     29,
+     18,
+     6,
+     19,
+     8
+    ],
+    "11": [
+     36,
+     15,
+     33,
+     27,
+     31,
+     26
+    ],
+    "16": [
+     13,
+     33,
+     17,
+     12,
+     35,
+     23
+    ],
+    "10": [
+     10,
+     38,
+     26,
+     6,
+     20,
+     29
+    ],
+    "3": [
+     14,
+     39,
+     33,
+     20,
+     11,
+     19
+    ],
+    "8": [
+     30,
+     24,
+     15,
+     3,
+     1,
+     17
+    ]
+   }
+  },
+  {
+   "item": 14,
+   "referent": "Gawen",
+   "y_referent": "Quello",
+   "templates": [
+    12,
+    17,
+    10,
+    13,
+    15,
+    0,
+    8,
+    3,
+    16,
+    1
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Emma",
+     "v2": "Mary",
+     "v3": "Daniel",
+     "y": "David"
+    },
+    {
+     "slot": "emblem",
+     "v1": "hawk",
+     "v2": "crow",
+     "v3": "snake",
+     "y": "camel"
+    },
+    {
+     "slot": "export",
+     "v1": "fish",
+     "v2": "fruit",
+     "v3": "glass",
+     "y": "rice"
+    },
+    {
+     "slot": "flag",
+     "v1": "orange",
+     "v2": "cyan",
+     "v3": "purple",
+     "y": "pink"
+    },
+    {
+     "slot": "month",
+     "v1": "August",
+     "v2": "March",
+     "v3": "April",
+     "y": "October"
+    },
+    {
+     "slot": "bell",
+     "v1": "iron",
+     "v2": "tin",
+     "v3": "titanium",
+     "y": "steel"
+    }
+   ],
+   "neutral": {
+    "12": [
+     26,
+     6,
+     2,
+     35,
+     31,
+     8
+    ],
+    "17": [
+     24,
+     3,
+     29,
+     17,
+     12,
+     2
+    ],
+    "10": [
+     26,
+     9,
+     18,
+     24,
+     13,
+     5
+    ],
+    "13": [
+     33,
+     12,
+     22,
+     5,
+     1,
+     23
+    ],
+    "15": [
+     4,
+     22,
+     6,
+     26,
+     7,
+     27
+    ],
+    "0": [
+     33,
+     3,
+     2,
+     22,
+     35,
+     29
+    ],
+    "8": [
+     13,
+     24,
+     15,
+     1,
+     32,
+     8
+    ],
+    "3": [
+     36,
+     17,
+     33,
+     30,
+     12,
+     26
+    ],
+    "16": [
+     30,
+     6,
+     23,
+     3,
+     32,
+     29
+    ],
+    "1": [
+     33,
+     25,
+     34,
+     12,
+     0,
+     38
+    ]
+   }
+  },
+  {
+   "item": 15,
+   "referent": "Tumpa",
+   "y_referent": "Varbelzu",
+   "templates": [
+    5,
+    8,
+    1,
+    2,
+    12,
+    16,
+    10,
+    6,
+    14,
+    15
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "David",
+     "v2": "Sarah",
+     "v3": "Emma",
+     "y": "George"
+    },
+    {
+     "slot": "emblem",
+     "v1": "lion",
+     "v2": "owl",
+     "v3": "bull",
+     "y": "camel"
+    },
+    {
+     "slot": "export",
+     "v1": "wine",
+     "v2": "glass",
+     "v3": "tea",
+     "y": "cloth"
+    },
+    {
+     "slot": "flag",
+     "v1": "white",
+     "v2": "pink",
+     "v3": "orange",
+     "y": "azure"
+    },
+    {
+     "slot": "month",
+     "v1": "June",
+     "v2": "January",
+     "v3": "April",
+     "y": "March"
+    },
+    {
+     "slot": "bell",
+     "v1": "mercury",
+     "v2": "chrome",
+     "v3": "lead",
+     "y": "nickel"
+    }
+   ],
+   "neutral": {
+    "5": [
+     6,
+     24,
+     37,
+     1,
+     18,
+     39
+    ],
+    "8": [
+     13,
+     24,
+     17,
+     7,
+     31,
+     23
+    ],
+    "1": [
+     6,
+     24,
+     20,
+     1,
+     13,
+     23
+    ],
+    "2": [
+     20,
+     29,
+     26,
+     24,
+     18,
+     22
+    ],
+    "12": [
+     18,
+     33,
+     38,
+     7,
+     1,
+     22
+    ],
+    "16": [
+     20,
+     6,
+     17,
+     7,
+     12,
+     8
+    ],
+    "10": [
+     13,
+     2,
+     0,
+     33,
+     10,
+     29
+    ],
+    "6": [
+     19,
+     17,
+     30,
+     6,
+     10,
+     29
+    ],
+    "14": [
+     25,
+     6,
+     27,
+     1,
+     26,
+     39
+    ],
+    "15": [
+     14,
+     2,
+     24,
+     13,
+     35,
+     0
+    ]
+   }
+  },
+  {
+   "item": 16,
+   "referent": "Fenost",
+   "y_referent": "Oshal",
+   "templates": [
+    11,
+    7,
+    12,
+    15,
+    13,
+    1,
+    4,
+    14,
+    5,
+    10
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "James",
+     "v2": "Robert",
+     "v3": "Daniel",
+     "y": "Mary"
+    },
+    {
+     "slot": "emblem",
+     "v1": "deer",
+     "v2": "snake",
+     "v3": "fox",
+     "y": "duck"
+    },
+    {
+     "slot": "export",
+     "v1": "rice",
+     "v2": "coal",
+     "v3": "soap",
+     "y": "oil"
+    },
+    {
+     "slot": "flag",
+     "v1": "azure",
+     "v2": "red",
+     "v3": "cyan",
+     "y": "grey"
+    },
+    {
+     "slot": "month",
+     "v1": "March",
+     "v2": "July",
+     "v3": "November",
+     "y": "February"
+    },
+    {
+     "slot": "bell",
+     "v1": "zinc",
+     "v2": "aluminium",
+     "v3": "platinum",
+     "y": "gold"
+    }
+   ],
+   "neutral": {
+    "11": [
+     4,
+     38,
+     25,
+     20,
+     12,
+     18
+    ],
+    "7": [
+     14,
+     22,
+     33,
+     18,
+     31,
+     21
+    ],
+    "12": [
+     26,
+     25,
+     2,
+     3,
+     11,
+     15
+    ],
+    "15": [
+     14,
+     22,
+     6,
+     21,
+     7,
+     20
+    ],
+    "13": [
+     6,
+     35,
+     23,
+     8,
+     31,
+     15
+    ],
+    "1": [
+     25,
+     6,
+     13,
+     7,
+     16,
+     5
+    ],
+    "4": [
+     37,
+     6,
+     29,
+     1,
+     12,
+     15
+    ],
+    "14": [
+     33,
+     25,
+     34,
+     11,
+     30,
+     23
+    ],
+    "5": [
+     25,
+     24,
+     10,
+     3,
+     13,
+     38
+    ],
+    "10": [
+     37,
+     28,
+     20,
+     6,
+     16,
+     29
+    ]
+   }
+  },
+  {
+   "item": 17,
+   "referent": "Parenbro",
+   "y_referent": "Gorou",
+   "templates": [
+    9,
+    10,
+    15,
+    8,
+    12,
+    7,
+    6,
+    19,
+    13,
+    1
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Henry",
+     "v2": "Peter",
+     "v3": "George",
+     "y": "David"
+    },
+    {
+     "slot": "emblem",
+     "v1": "frog",
+     "v2": "camel",
+     "v3": "rabbit",
+     "y": "hawk"
+    },
+    {
+     "slot": "export",
+     "v1": "salt",
+     "v2": "wine",
+     "v3": "fruit",
+     "y": "rice"
+    },
+    {
+     "slot": "flag",
+     "v1": "orange",
+     "v2": "purple",
+     "v3": "pink",
+     "y": "white"
+    },
+    {
+     "slot": "month",
+     "v1": "January",
+     "v2": "February",
+     "v3": "November",
+     "y": "May"
+    },
+    {
+     "slot": "bell",
+     "v1": "gold",
+     "v2": "tin",
+     "v3": "brass",
+     "y": "iron"
+    }
+   ],
+   "neutral": {
+    "9": [
+     33,
+     35,
+     22,
+     5,
+     31,
+     29
+    ],
+    "10": [
+     37,
+     17,
+     10,
+     25,
+     13,
+     23
+    ],
+    "15": [
+     36,
+     5,
+     25,
+     19,
+     3,
+     20
+    ],
+    "8": [
+     37,
+     24,
+     15,
+     1,
+     11,
+     17
+    ],
+    "12": [
+     13,
+     24,
+     8,
+     7,
+     11,
+     5
+    ],
+    "7": [
+     4,
+     9,
+     6,
+     16,
+     31,
+     0
+    ],
+    "6": [
+     0,
+     39,
+     20,
+     6,
+     19,
+     38
+    ],
+    "19": [
+     0,
+     22,
+     18,
+     24,
+     37,
+     38
+    ],
+    "13": [
+     24,
+     7,
+     2,
+     28,
+     31,
+     5
+    ],
+    "1": [
+     24,
+     33,
+     19,
+     35,
+     10,
+     22
+    ]
+   }
+  },
+  {
+   "item": 18,
+   "referent": "Vigapa",
+   "y_referent": "Calmir",
+   "templates": [
+    5,
+    4,
+    16,
+    12,
+    0,
+    8,
+    13,
+    14,
+    11,
+    3
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Emma",
+     "v2": "Thomas",
+     "v3": "George",
+     "y": "Paul"
+    },
+    {
+     "slot": "emblem",
+     "v1": "bull",
+     "v2": "fox",
+     "v3": "mouse",
+     "y": "lion"
+    },
+    {
+     "slot": "export",
+     "v1": "oil",
+     "v2": "wood",
+     "v3": "coffee",
+     "y": "fruit"
+    },
+    {
+     "slot": "flag",
+     "v1": "brown",
+     "v2": "grey",
+     "v3": "cyan",
+     "y": "yellow"
+    },
+    {
+     "slot": "month",
+     "v1": "July",
+     "v2": "August",
+     "v3": "May",
+     "y": "October"
+    },
+    {
+     "slot": "bell",
+     "v1": "platinum",
+     "v2": "gold",
+     "v3": "tin",
+     "y": "aluminium"
+    }
+   ],
+   "neutral": {
+    "5": [
+     25,
+     24,
+     18,
+     1,
+     30,
+     15
+    ],
+    "4": [
+     26,
+     6,
+     39,
+     12,
+     11,
+     5
+    ],
+    "16": [
+     13,
+     24,
+     2,
+     7,
+     12,
+     5
+    ],
+    "12": [
+     10,
+     6,
+     17,
+     11,
+     32,
+     15
+    ],
+    "0": [
+     24,
+     31,
+     5,
+     22,
+     12,
+     23
+    ],
+    "8": [
+     13,
+     25,
+     29,
+     31,
+     12,
+     39
+    ],
+    "13": [
+     6,
+     31,
+     23,
+     29,
+     32,
+     5
+    ],
+    "14": [
+     6,
+     33,
+     13,
+     31,
+     20,
+     15
+    ],
+    "11": [
+     36,
+     38,
+     6,
+     37,
+     3,
+     34
+    ],
+    "3": [
+     36,
+     28,
+     33,
+     37,
+     35,
+     34
+    ]
+   }
+  },
+  {
+   "item": 19,
+   "referent": "Kegaou",
+   "y_referent": "Quelbro",
+   "templates": [
+    13,
+    14,
+    15,
+    12,
+    1,
+    3,
+    11,
+    9,
+    19,
+    2
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Daniel",
+     "v2": "Anna",
+     "v3": "Robert",
+     "y": "Emma"
+    },
+    {
+     "slot": "emblem",
+     "v1": "snake",
+     "v2": "bear",
+     "v3": "crow",
+     "y": "camel"
+    },
+    {
+     "slot": "export",
+     "v1": "paper",
+     "v2": "corn",
+     "v3": "wine",
+     "y": "salt"
+    },
+    {
+     "slot": "flag",
+     "v1": "yellow",
+     "v2": "purple",
+     "v3": "red",
+     "y": "violet"
+    },
+    {
+     "slot": "month",
+     "v1": "September",
+     "v2": "April",
+     "v3": "October",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "steel",
+     "v2": "brass",
+     "v3": "aluminium",
+     "y": "iron"
+    }
+   ],
+   "neutral": {
+    "13": [
+     24,
+     7,
+     15,
+     8,
+     3,
+     17
+    ],
+    "14": [
+     6,
+     25,
+     16,
+     3,
+     30,
+     22
+    ],
+    "15": [
+     36,
+     15,
+     33,
+     0,
+     31,
+     21
+    ],
+    "12": [
+     34,
+     33,
+     5,
+     31,
+     7,
+     23
+    ],
+    "1": [
+     25,
+     24,
+     37,
+     11,
+     26,
+     17
+    ],
+    "3": [
+     36,
+     28,
+     33,
+     34,
+     1,
+     30
+    ],
+    "11": [
+     4,
+     28,
+     25,
+     20,
+     3,
+     30
+    ],
+    "9": [
+     33,
+     3,
+     28,
+     8,
+     1,
+     5
+    ],
+    "19": [
+     20,
+     17,
+     21,
+     33,
+     30,
+     9
+    ],
+    "2": [
+     10,
+     2,
+     34,
+     24,
+     30,
+     5
+    ]
+   }
+  },
+  {
+   "item": 20,
+   "referent": "Tirost",
+   "y_referent": "Quellin",
+   "templates": [
+    16,
+    1,
+    0,
+    3,
+    19,
+    12,
+    14,
+    13,
+    8,
+    7
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Robert",
+     "v2": "Laura",
+     "v3": "Maria",
+     "y": "David"
+    },
+    {
+     "slot": "emblem",
+     "v1": "snake",
+     "v2": "bull",
+     "v3": "owl",
+     "y": "mouse"
+    },
+    {
+     "slot": "export",
+     "v1": "fruit",
+     "v2": "cloth",
+     "v3": "soap",
+     "y": "wine"
+    },
+    {
+     "slot": "flag",
+     "v1": "violet",
+     "v2": "crimson",
+     "v3": "pink",
+     "y": "yellow"
+    },
+    {
+     "slot": "month",
+     "v1": "July",
+     "v2": "May",
+     "v3": "April",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "aluminium",
+     "v2": "mercury",
+     "v3": "chrome",
+     "y": "platinum"
+    }
+   ],
+   "neutral": {
+    "16": [
+     30,
+     33,
+     8,
+     12,
+     35,
+     15
+    ],
+    "1": [
+     25,
+     33,
+     21,
+     11,
+     30,
+     28
+    ],
+    "0": [
+     25,
+     3,
+     39,
+     2,
+     7,
+     17
+    ],
+    "3": [
+     4,
+     17,
+     25,
+     19,
+     3,
+     21
+    ],
+    "19": [
+     10,
+     9,
+     13,
+     24,
+     16,
+     28
+    ],
+    "12": [
+     16,
+     33,
+     22,
+     3,
+     35,
+     2
+    ],
+    "14": [
+     24,
+     33,
+     20,
+     12,
+     26,
+     17
+    ],
+    "13": [
+     6,
+     32,
+     9,
+     38,
+     12,
+     8
+    ],
+    "8": [
+     34,
+     24,
+     17,
+     32,
+     12,
+     8
+    ],
+    "7": [
+     14,
+     29,
+     25,
+     16,
+     7,
+     13
+    ]
+   }
+  },
+  {
+   "item": 21,
+   "referent": "Ouos",
+   "y_referent": "Morhalri",
+   "templates": [
+    13,
+    1,
+    0,
+    2,
+    10,
+    12,
+    17,
+    14,
+    7,
+    6
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "George",
+     "v2": "James",
+     "v3": "Laura",
+     "y": "Emma"
+    },
+    {
+     "slot": "emblem",
+     "v1": "fox",
+     "v2": "horse",
+     "v3": "hawk",
+     "y": "snake"
+    },
+    {
+     "slot": "export",
+     "v1": "tea",
+     "v2": "rice",
+     "v3": "wood",
+     "y": "paper"
+    },
+    {
+     "slot": "flag",
+     "v1": "grey",
+     "v2": "blue",
+     "v3": "yellow",
+     "y": "black"
+    },
+    {
+     "slot": "month",
+     "v1": "November",
+     "v2": "June",
+     "v3": "January",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "chrome",
+     "v2": "zinc",
+     "v3": "aluminium",
+     "y": "nickel"
+    }
+   ],
+   "neutral": {
+    "13": [
+     33,
+     3,
+     28,
+     15,
+     32,
+     38
+    ],
+    "1": [
+     25,
+     6,
+     16,
+     3,
+     18,
+     28
+    ],
+    "0": [
+     6,
+     7,
+     39,
+     8,
+     11,
+     9
+    ],
+    "2": [
+     21,
+     23,
+     34,
+     24,
+     30,
+     2
+    ],
+    "10": [
+     20,
+     38,
+     37,
+     33,
+     27,
+     5
+    ],
+    "12": [
+     26,
+     24,
+     2,
+     31,
+     32,
+     22
+    ],
+    "17": [
+     6,
+     31,
+     2,
+     38,
+     3,
+     23
+    ],
+    "14": [
+     33,
+     6,
+     21,
+     31,
+     20,
+     28
+    ],
+    "7": [
+     14,
+     5,
+     25,
+     26,
+     32,
+     21
+    ],
+    "6": [
+     0,
+     23,
+     34,
+     6,
+     20,
+     28
+    ]
+   }
+  },
+  {
+   "item": 22,
+   "referent": "Vasvar",
+   "y_referent": "Calrentra",
+   "templates": [
+    3,
+    2,
+    15,
+    0,
+    19,
+    13,
+    12,
+    11,
+    14,
+    16
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Thomas",
+     "v2": "David",
+     "v3": "Robert",
+     "y": "George"
+    },
+    {
+     "slot": "emblem",
+     "v1": "owl",
+     "v2": "deer",
+     "v3": "crow",
+     "y": "fox"
+    },
+    {
+     "slot": "export",
+     "v1": "wine",
+     "v2": "oil",
+     "v3": "fish",
+     "y": "soap"
+    },
+    {
+     "slot": "flag",
+     "v1": "blue",
+     "v2": "green",
+     "v3": "grey",
+     "y": "red"
+    },
+    {
+     "slot": "month",
+     "v1": "July",
+     "v2": "February",
+     "v3": "June",
+     "y": "April"
+    },
+    {
+     "slot": "bell",
+     "v1": "mercury",
+     "v2": "iron",
+     "v3": "gold",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "3": [
+     4,
+     2,
+     24,
+     18,
+     3,
+     13
+    ],
+    "2": [
+     34,
+     22,
+     16,
+     6,
+     21,
+     2
+    ],
+    "15": [
+     36,
+     17,
+     6,
+     21,
+     12,
+     10
+    ],
+    "0": [
+     33,
+     1,
+     28,
+     5,
+     12,
+     23
+    ],
+    "19": [
+     34,
+     2,
+     16,
+     25,
+     30,
+     29
+    ],
+    "13": [
+     25,
+     11,
+     22,
+     2,
+     31,
+     23
+    ],
+    "12": [
+     34,
+     25,
+     29,
+     12,
+     1,
+     39
+    ],
+    "11": [
+     36,
+     28,
+     33,
+     30,
+     35,
+     26
+    ],
+    "14": [
+     6,
+     33,
+     18,
+     35,
+     20,
+     38
+    ],
+    "16": [
+     37,
+     6,
+     5,
+     3,
+     12,
+     8
+    ]
+   }
+  },
+  {
+   "item": 23,
+   "referent": "Teltir",
+   "y_referent": "Versanper",
+   "templates": [
+    13,
+    8,
+    14,
+    7,
+    0,
+    17,
+    1,
+    11,
+    10,
+    15
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Maria",
+     "v2": "Daniel",
+     "v3": "Paul",
+     "y": "Henry"
+    },
+    {
+     "slot": "emblem",
+     "v1": "deer",
+     "v2": "hawk",
+     "v3": "mouse",
+     "y": "camel"
+    },
+    {
+     "slot": "export",
+     "v1": "soap",
+     "v2": "corn",
+     "v3": "glass",
+     "y": "wood"
+    },
+    {
+     "slot": "flag",
+     "v1": "red",
+     "v2": "white",
+     "v3": "black",
+     "y": "purple"
+    },
+    {
+     "slot": "month",
+     "v1": "March",
+     "v2": "October",
+     "v3": "January",
+     "y": "April"
+    },
+    {
+     "slot": "bell",
+     "v1": "tin",
+     "v2": "lead",
+     "v3": "aluminium",
+     "y": "copper"
+    }
+   ],
+   "neutral": {
+    "13": [
+     25,
+     35,
+     22,
+     15,
+     32,
+     9
+    ],
+    "8": [
+     30,
+     33,
+     8,
+     3,
+     11,
+     38
+    ],
+    "14": [
+     24,
+     33,
+     20,
+     31,
+     0,
+     22
+    ],
+    "7": [
+     36,
+     15,
+     25,
+     19,
+     11,
+     18
+    ],
+    "0": [
+     25,
+     3,
+     23,
+     9,
+     31,
+     2
+    ],
+    "17": [
+     6,
+     7,
+     2,
+     38,
+     11,
+     22
+    ],
+    "1": [
+     25,
+     33,
+     20,
+     3,
+     18,
+     28
+    ],
+    "11": [
+     4,
+     15,
+     24,
+     26,
+     35,
+     10
+    ],
+    "10": [
+     16,
+     5,
+     0,
+     24,
+     26,
+     8
+    ],
+    "15": [
+     36,
+     29,
+     6,
+     19,
+     3,
+     30
+    ]
+   }
+  },
+  {
+   "item": 24,
+   "referent": "Gabrovi",
+   "y_referent": "Telzu",
+   "templates": [
+    18,
+    15,
+    19,
+    9,
+    1,
+    17,
+    0,
+    6,
+    13,
+    7
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "James",
+     "v2": "Emma",
+     "v3": "Mary",
+     "y": "George"
+    },
+    {
+     "slot": "emblem",
+     "v1": "lion",
+     "v2": "bull",
+     "v3": "camel",
+     "y": "fox"
+    },
+    {
+     "slot": "export",
+     "v1": "coal",
+     "v2": "cloth",
+     "v3": "salt",
+     "y": "tea"
+    },
+    {
+     "slot": "flag",
+     "v1": "purple",
+     "v2": "pink",
+     "v3": "amber",
+     "y": "crimson"
+    },
+    {
+     "slot": "month",
+     "v1": "June",
+     "v2": "October",
+     "v3": "July",
+     "y": "April"
+    },
+    {
+     "slot": "bell",
+     "v1": "steel",
+     "v2": "lead",
+     "v3": "aluminium",
+     "y": "bronze"
+    }
+   ],
+   "neutral": {
+    "18": [
+     33,
+     25,
+     18,
+     32,
+     13,
+     38
+    ],
+    "15": [
+     4,
+     5,
+     24,
+     37,
+     11,
+     13
+    ],
+    "19": [
+     10,
+     29,
+     13,
+     24,
+     30,
+     5
+    ],
+    "9": [
+     6,
+     3,
+     15,
+     9,
+     32,
+     22
+    ],
+    "1": [
+     25,
+     33,
+     26,
+     3,
+     30,
+     29
+    ],
+    "17": [
+     33,
+     31,
+     9,
+     5,
+     1,
+     8
+    ],
+    "0": [
+     33,
+     32,
+     23,
+     22,
+     35,
+     9
+    ],
+    "6": [
+     0,
+     23,
+     18,
+     24,
+     26,
+     39
+    ],
+    "13": [
+     25,
+     3,
+     17,
+     23,
+     12,
+     29
+    ],
+    "7": [
+     4,
+     2,
+     25,
+     37,
+     35,
+     20
+    ]
+   }
+  },
+  {
+   "item": 25,
+   "referent": "Kedaros",
+   "y_referent": "Zumirvas",
+   "templates": [
+    9,
+    16,
+    8,
+    13,
+    11,
+    12,
+    5,
+    7,
+    6,
+    15
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Maria",
+     "v2": "James",
+     "v3": "Daniel",
+     "y": "Peter"
+    },
+    {
+     "slot": "emblem",
+     "v1": "wolf",
+     "v2": "lion",
+     "v3": "rabbit",
+     "y": "frog"
+    },
+    {
+     "slot": "export",
+     "v1": "tea",
+     "v2": "fish",
+     "v3": "coal",
+     "y": "beer"
+    },
+    {
+     "slot": "flag",
+     "v1": "crimson",
+     "v2": "red",
+     "v3": "black",
+     "y": "azure"
+    },
+    {
+     "slot": "month",
+     "v1": "October",
+     "v2": "May",
+     "v3": "March",
+     "y": "December"
+    },
+    {
+     "slot": "bell",
+     "v1": "copper",
+     "v2": "iron",
+     "v3": "aluminium",
+     "y": "tin"
+    }
+   ],
+   "neutral": {
+    "9": [
+     25,
+     11,
+     38,
+     39,
+     3,
+     23
+    ],
+    "16": [
+     34,
+     6,
+     22,
+     32,
+     12,
+     5
+    ],
+    "8": [
+     30,
+     33,
+     22,
+     3,
+     11,
+     38
+    ],
+    "13": [
+     33,
+     31,
+     22,
+     39,
+     1,
+     2
+    ],
+    "11": [
+     4,
+     5,
+     6,
+     13,
+     11,
+     27
+    ],
+    "12": [
+     18,
+     25,
+     39,
+     32,
+     7,
+     8
+    ],
+    "5": [
+     6,
+     25,
+     0,
+     1,
+     10,
+     38
+    ],
+    "7": [
+     4,
+     9,
+     25,
+     16,
+     12,
+     10
+    ],
+    "6": [
+     16,
+     8,
+     37,
+     25,
+     10,
+     17
+    ],
+    "15": [
+     36,
+     17,
+     6,
+     0,
+     7,
+     16
+    ]
+   }
+  },
+  {
+   "item": 26,
+   "referent": "Tumvar",
+   "y_referent": "Tellinpa",
+   "templates": [
+    7,
+    3,
+    12,
+    1,
+    16,
+    5,
+    2,
+    17,
+    8,
+    13
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Emma",
+     "v2": "Henry",
+     "v3": "James",
+     "y": "David"
+    },
+    {
+     "slot": "emblem",
+     "v1": "wolf",
+     "v2": "bear",
+     "v3": "lion",
+     "y": "mouse"
+    },
+    {
+     "slot": "export",
+     "v1": "fruit",
+     "v2": "coffee",
+     "v3": "cloth",
+     "y": "tea"
+    },
+    {
+     "slot": "flag",
+     "v1": "green",
+     "v2": "orange",
+     "v3": "white",
+     "y": "grey"
+    },
+    {
+     "slot": "month",
+     "v1": "September",
+     "v2": "October",
+     "v3": "December",
+     "y": "May"
+    },
+    {
+     "slot": "bell",
+     "v1": "zinc",
+     "v2": "nickel",
+     "v3": "gold",
+     "y": "silver"
+    }
+   ],
+   "neutral": {
+    "7": [
+     14,
+     38,
+     24,
+     20,
+     12,
+     0
+    ],
+    "3": [
+     14,
+     38,
+     24,
+     37,
+     31,
+     20
+    ],
+    "12": [
+     10,
+     6,
+     2,
+     1,
+     12,
+     39
+    ],
+    "1": [
+     25,
+     6,
+     27,
+     35,
+     19,
+     29
+    ],
+    "16": [
+     30,
+     6,
+     17,
+     32,
+     11,
+     29
+    ],
+    "5": [
+     6,
+     33,
+     21,
+     35,
+     26,
+     2
+    ],
+    "2": [
+     13,
+     38,
+     37,
+     25,
+     27,
+     5
+    ],
+    "17": [
+     33,
+     31,
+     39,
+     8,
+     12,
+     2
+    ],
+    "8": [
+     10,
+     6,
+     29,
+     32,
+     7,
+     8
+    ],
+    "13": [
+     25,
+     3,
+     15,
+     8,
+     32,
+     5
+    ]
+   }
+  },
+  {
+   "item": 27,
+   "referent": "Bropermont",
+   "y_referent": "Percal",
+   "templates": [
+    15,
+    10,
+    3,
+    11,
+    6,
+    7,
+    0,
+    13,
+    18,
+    14
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Peter",
+     "v2": "Sarah",
+     "v3": "Robert",
+     "y": "James"
+    },
+    {
+     "slot": "emblem",
+     "v1": "mouse",
+     "v2": "deer",
+     "v3": "frog",
+     "y": "rabbit"
+    },
+    {
+     "slot": "export",
+     "v1": "wood",
+     "v2": "salt",
+     "v3": "fruit",
+     "y": "oil"
+    },
+    {
+     "slot": "flag",
+     "v1": "amber",
+     "v2": "azure",
+     "v3": "black",
+     "y": "green"
+    },
+    {
+     "slot": "month",
+     "v1": "January",
+     "v2": "November",
+     "v3": "April",
+     "y": "October"
+    },
+    {
+     "slot": "bell",
+     "v1": "brass",
+     "v2": "platinum",
+     "v3": "steel",
+     "y": "chrome"
+    }
+   ],
+   "neutral": {
+    "15": [
+     14,
+     5,
+     24,
+     27,
+     32,
+     10
+    ],
+    "10": [
+     0,
+     39,
+     16,
+     33,
+     20,
+     15
+    ],
+    "3": [
+     36,
+     23,
+     6,
+     10,
+     11,
+     30
+    ],
+    "11": [
+     4,
+     39,
+     24,
+     18,
+     1,
+     30
+    ],
+    "6": [
+     27,
+     15,
+     0,
+     6,
+     13,
+     2
+    ],
+    "7": [
+     4,
+     9,
+     6,
+     37,
+     1,
+     13
+    ],
+    "0": [
+     25,
+     35,
+     17,
+     38,
+     7,
+     29
+    ],
+    "13": [
+     33,
+     11,
+     28,
+     22,
+     1,
+     23
+    ],
+    "18": [
+     24,
+     25,
+     37,
+     31,
+     19,
+     29
+    ],
+    "14": [
+     25,
+     24,
+     34,
+     31,
+     20,
+     9
+    ]
+   }
+  },
+  {
+   "item": 28,
+   "referent": "Sanrennel",
+   "y_referent": "Nelny",
+   "templates": [
+    19,
+    10,
+    13,
+    16,
+    12,
+    9,
+    11,
+    18,
+    7,
+    8
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Laura",
+     "v2": "George",
+     "v3": "Mary",
+     "y": "Henry"
+    },
+    {
+     "slot": "emblem",
+     "v1": "lion",
+     "v2": "crow",
+     "v3": "wolf",
+     "y": "fox"
+    },
+    {
+     "slot": "export",
+     "v1": "coal",
+     "v2": "beer",
+     "v3": "wine",
+     "y": "paper"
+    },
+    {
+     "slot": "flag",
+     "v1": "red",
+     "v2": "blue",
+     "v3": "brown",
+     "y": "amber"
+    },
+    {
+     "slot": "month",
+     "v1": "April",
+     "v2": "November",
+     "v3": "June",
+     "y": "January"
+    },
+    {
+     "slot": "bell",
+     "v1": "bronze",
+     "v2": "brass",
+     "v3": "aluminium",
+     "y": "silver"
+    }
+   ],
+   "neutral": {
+    "19": [
+     10,
+     17,
+     13,
+     25,
+     19,
+     9
+    ],
+    "10": [
+     16,
+     28,
+     30,
+     25,
+     13,
+     9
+    ],
+    "13": [
+     25,
+     31,
+     15,
+     29,
+     1,
+     39
+    ],
+    "16": [
+     16,
+     33,
+     5,
+     32,
+     11,
+     17
+    ],
+    "12": [
+     30,
+     6,
+     8,
+     31,
+     11,
+     9
+    ],
+    "9": [
+     25,
+     1,
+     28,
+     38,
+     7,
+     2
+    ],
+    "11": [
+     36,
+     17,
+     25,
+     21,
+     12,
+     37
+    ],
+    "18": [
+     33,
+     25,
+     13,
+     3,
+     10,
+     8
+    ],
+    "7": [
+     36,
+     29,
+     6,
+     13,
+     31,
+     19
+    ],
+    "8": [
+     21,
+     33,
+     39,
+     12,
+     7,
+     5
+    ]
+   }
+  },
+  {
+   "item": 29,
+   "referent": "Vibel",
+   "y_referent": "Darvarsan",
+   "templates": [
+    2,
+    16,
+    4,
+    3,
+    9,
+    15,
+    6,
+    5,
+    13,
+    8
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "John",
+     "v2": "Thomas",
+     "v3": "Maria",
+     "y": "James"
+    },
+    {
+     "slot": "emblem",
+     "v1": "fox",
+     "v2": "deer",
+     "v3": "duck",
+     "y": "owl"
+    },
+    {
+     "slot": "export",
+     "v1": "fruit",
+     "v2": "beer",
+     "v3": "paper",
+     "y": "glass"
+    },
+    {
+     "slot": "flag",
+     "v1": "crimson",
+     "v2": "orange",
+     "v3": "black",
+     "y": "azure"
+    },
+    {
+     "slot": "month",
+     "v1": "August",
+     "v2": "December",
+     "v3": "March",
+     "y": "September"
+    },
+    {
+     "slot": "bell",
+     "v1": "gold",
+     "v2": "zinc",
+     "v3": "tin",
+     "y": "copper"
+    }
+   ],
+   "neutral": {
+    "2": [
+     20,
+     5,
+     37,
+     25,
+     13,
+     28
+    ],
+    "16": [
+     37,
+     33,
+     22,
+     32,
+     12,
+     28
+    ],
+    "4": [
+     26,
+     24,
+     22,
+     12,
+     11,
+     15
+    ],
+    "3": [
+     36,
+     38,
+     24,
+     30,
+     1,
+     34
+    ],
+    "9": [
+     25,
+     3,
+     23,
+     5,
+     32,
+     22
+    ],
+    "15": [
+     14,
+     2,
+     24,
+     10,
+     1,
+     27
+    ],
+    "6": [
+     13,
+     29,
+     20,
+     6,
+     21,
+     28
+    ],
+    "5": [
+     33,
+     24,
+     37,
+     32,
+     21,
+     15
+    ],
+    "13": [
+     33,
+     35,
+     28,
+     17,
+     3,
+     8
+    ],
+    "8": [
+     18,
+     24,
+     29,
+     3,
+     12,
+     38
+    ]
+   }
+  },
+  {
+   "item": 30,
+   "referent": "Ostirmir",
+   "y_referent": "Linkas",
+   "templates": [
+    4,
+    16,
+    2,
+    15,
+    3,
+    9,
+    14,
+    18,
+    8,
+    6
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Paul",
+     "v2": "Laura",
+     "v3": "Emma",
+     "y": "James"
+    },
+    {
+     "slot": "emblem",
+     "v1": "crow",
+     "v2": "frog",
+     "v3": "bear",
+     "y": "horse"
+    },
+    {
+     "slot": "export",
+     "v1": "coffee",
+     "v2": "tea",
+     "v3": "corn",
+     "y": "coal"
+    },
+    {
+     "slot": "flag",
+     "v1": "grey",
+     "v2": "violet",
+     "v3": "azure",
+     "y": "orange"
+    },
+    {
+     "slot": "month",
+     "v1": "December",
+     "v2": "April",
+     "v3": "May",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "lead",
+     "v2": "platinum",
+     "v3": "brass",
+     "y": "zinc"
+    }
+   ],
+   "neutral": {
+    "4": [
+     0,
+     25,
+     15,
+     1,
+     31,
+     39
+    ],
+    "16": [
+     30,
+     25,
+     15,
+     31,
+     1,
+     17
+    ],
+    "2": [
+     37,
+     2,
+     0,
+     33,
+     16,
+     17
+    ],
+    "15": [
+     36,
+     29,
+     24,
+     20,
+     11,
+     19
+    ],
+    "3": [
+     14,
+     8,
+     24,
+     21,
+     11,
+     16
+    ],
+    "9": [
+     24,
+     31,
+     17,
+     22,
+     11,
+     15
+    ],
+    "14": [
+     6,
+     25,
+     34,
+     32,
+     30,
+     2
+    ],
+    "18": [
+     33,
+     6,
+     26,
+     7,
+     0,
+     5
+    ],
+    "8": [
+     21,
+     6,
+     17,
+     32,
+     1,
+     39
+    ],
+    "6": [
+     21,
+     17,
+     27,
+     33,
+     37,
+     22
+    ]
+   }
+  },
+  {
+   "item": 31,
+   "referent": "Mirver",
+   "y_referent": "Wenmir",
+   "templates": [
+    19,
+    8,
+    0,
+    15,
+    11,
+    1,
+    18,
+    12,
+    9,
+    14
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "David",
+     "v2": "George",
+     "v3": "Maria",
+     "y": "Laura"
+    },
+    {
+     "slot": "emblem",
+     "v1": "horse",
+     "v2": "hawk",
+     "v3": "deer",
+     "y": "rabbit"
+    },
+    {
+     "slot": "export",
+     "v1": "coffee",
+     "v2": "glass",
+     "v3": "wood",
+     "y": "corn"
+    },
+    {
+     "slot": "flag",
+     "v1": "green",
+     "v2": "brown",
+     "v3": "yellow",
+     "y": "cyan"
+    },
+    {
+     "slot": "month",
+     "v1": "November",
+     "v2": "December",
+     "v3": "June",
+     "y": "February"
+    },
+    {
+     "slot": "bell",
+     "v1": "nickel",
+     "v2": "silver",
+     "v3": "iron",
+     "y": "tin"
+    }
+   ],
+   "neutral": {
+    "19": [
+     21,
+     8,
+     30,
+     6,
+     13,
+     29
+    ],
+    "8": [
+     18,
+     33,
+     17,
+     11,
+     35,
+     22
+    ],
+    "0": [
+     25,
+     7,
+     29,
+     17,
+     35,
+     39
+    ],
+    "15": [
+     36,
+     39,
+     25,
+     18,
+     31,
+     34
+    ],
+    "11": [
+     4,
+     17,
+     6,
+     20,
+     35,
+     10
+    ],
+    "1": [
+     6,
+     24,
+     34,
+     11,
+     21,
+     39
+    ],
+    "18": [
+     6,
+     25,
+     21,
+     32,
+     30,
+     38
+    ],
+    "12": [
+     30,
+     24,
+     38,
+     32,
+     1,
+     29
+    ],
+    "9": [
+     33,
+     31,
+     29,
+     2,
+     3,
+     39
+    ],
+    "14": [
+     24,
+     6,
+     0,
+     7,
+     13,
+     28
+    ]
+   }
+  },
+  {
+   "item": 32,
+   "referent": "Osnel",
+   "y_referent": "Caltir",
+   "templates": [
+    9,
+    18,
+    6,
+    13,
+    4,
+    0,
+    3,
+    15,
+    14,
+    8
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Henry",
+     "v2": "Maria",
+     "v3": "David",
+     "y": "James"
+    },
+    {
+     "slot": "emblem",
+     "v1": "bull",
+     "v2": "mouse",
+     "v3": "lion",
+     "y": "frog"
+    },
+    {
+     "slot": "export",
+     "v1": "fish",
+     "v2": "salt",
+     "v3": "tea",
+     "y": "oil"
+    },
+    {
+     "slot": "flag",
+     "v1": "violet",
+     "v2": "black",
+     "v3": "orange",
+     "y": "brown"
+    },
+    {
+     "slot": "month",
+     "v1": "February",
+     "v2": "December",
+     "v3": "October",
+     "y": "January"
+    },
+    {
+     "slot": "bell",
+     "v1": "tin",
+     "v2": "nickel",
+     "v3": "copper",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "9": [
+     25,
+     3,
+     9,
+     2,
+     32,
+     22
+    ],
+    "18": [
+     24,
+     6,
+     26,
+     11,
+     10,
+     28
+    ],
+    "6": [
+     19,
+     22,
+     37,
+     33,
+     26,
+     29
+    ],
+    "13": [
+     6,
+     35,
+     39,
+     38,
+     11,
+     5
+    ],
+    "4": [
+     26,
+     33,
+     8,
+     7,
+     35,
+     2
+    ],
+    "0": [
+     33,
+     3,
+     17,
+     15,
+     11,
+     29
+    ],
+    "3": [
+     14,
+     15,
+     25,
+     13,
+     12,
+     26
+    ],
+    "15": [
+     14,
+     23,
+     6,
+     19,
+     35,
+     13
+    ],
+    "14": [
+     33,
+     6,
+     0,
+     31,
+     26,
+     23
+    ],
+    "8": [
+     26,
+     33,
+     5,
+     1,
+     32,
+     38
+    ]
+   }
+  },
+  {
+   "item": 33,
+   "referent": "Zusel",
+   "y_referent": "Verlintel",
+   "templates": [
+    13,
+    2,
+    12,
+    1,
+    0,
+    7,
+    5,
+    8,
+    17,
+    16
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "James",
+     "v2": "Paul",
+     "v3": "David",
+     "y": "Peter"
+    },
+    {
+     "slot": "emblem",
+     "v1": "crow",
+     "v2": "mouse",
+     "v3": "frog",
+     "y": "snake"
+    },
+    {
+     "slot": "export",
+     "v1": "coal",
+     "v2": "oil",
+     "v3": "fish",
+     "y": "paper"
+    },
+    {
+     "slot": "flag",
+     "v1": "blue",
+     "v2": "pink",
+     "v3": "red",
+     "y": "azure"
+    },
+    {
+     "slot": "month",
+     "v1": "March",
+     "v2": "January",
+     "v3": "February",
+     "y": "June"
+    },
+    {
+     "slot": "bell",
+     "v1": "steel",
+     "v2": "silver",
+     "v3": "mercury",
+     "y": "bronze"
+    }
+   ],
+   "neutral": {
+    "13": [
+     6,
+     1,
+     17,
+     5,
+     7,
+     8
+    ],
+    "2": [
+     26,
+     5,
+     34,
+     33,
+     20,
+     29
+    ],
+    "12": [
+     37,
+     33,
+     29,
+     32,
+     7,
+     8
+    ],
+    "1": [
+     6,
+     33,
+     37,
+     11,
+     19,
+     22
+    ],
+    "0": [
+     25,
+     31,
+     8,
+     9,
+     3,
+     2
+    ],
+    "7": [
+     14,
+     8,
+     24,
+     27,
+     11,
+     34
+    ],
+    "5": [
+     25,
+     6,
+     26,
+     31,
+     0,
+     5
+    ],
+    "8": [
+     27,
+     24,
+     22,
+     31,
+     3,
+     17
+    ],
+    "17": [
+     6,
+     11,
+     5,
+     28,
+     31,
+     9
+    ],
+    "16": [
+     10,
+     24,
+     39,
+     35,
+     1,
+     38
+    ]
+   }
+  },
+  {
+   "item": 34,
+   "referent": "Lotraquel",
+   "y_referent": "Zumorou",
+   "templates": [
+    7,
+    18,
+    12,
+    5,
+    1,
+    16,
+    19,
+    8,
+    11,
+    15
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "John",
+     "v2": "Mary",
+     "v3": "Thomas",
+     "y": "Sarah"
+    },
+    {
+     "slot": "emblem",
+     "v1": "deer",
+     "v2": "camel",
+     "v3": "rabbit",
+     "y": "hawk"
+    },
+    {
+     "slot": "export",
+     "v1": "cloth",
+     "v2": "soap",
+     "v3": "coal",
+     "y": "tea"
+    },
+    {
+     "slot": "flag",
+     "v1": "pink",
+     "v2": "azure",
+     "v3": "crimson",
+     "y": "orange"
+    },
+    {
+     "slot": "month",
+     "v1": "November",
+     "v2": "September",
+     "v3": "February",
+     "y": "October"
+    },
+    {
+     "slot": "bell",
+     "v1": "bronze",
+     "v2": "nickel",
+     "v3": "zinc",
+     "y": "chrome"
+    }
+   ],
+   "neutral": {
+    "7": [
+     36,
+     23,
+     6,
+     26,
+     7,
+     20
+    ],
+    "18": [
+     24,
+     6,
+     0,
+     7,
+     19,
+     23
+    ],
+    "12": [
+     18,
+     33,
+     38,
+     31,
+     1,
+     15
+    ],
+    "5": [
+     25,
+     24,
+     27,
+     11,
+     21,
+     39
+    ],
+    "1": [
+     24,
+     25,
+     16,
+     1,
+     37,
+     38
+    ],
+    "16": [
+     21,
+     6,
+     9,
+     7,
+     11,
+     39
+    ],
+    "19": [
+     18,
+     2,
+     21,
+     33,
+     34,
+     9
+    ],
+    "8": [
+     27,
+     24,
+     38,
+     31,
+     32,
+     9
+    ],
+    "11": [
+     14,
+     28,
+     24,
+     10,
+     12,
+     20
+    ],
+    "15": [
+     36,
+     5,
+     24,
+     21,
+     32,
+     26
+    ]
+   }
+  },
+  {
+   "item": 35,
+   "referent": "Belperdar",
+   "y_referent": "Sanver",
+   "templates": [
+    2,
+    0,
+    11,
+    14,
+    13,
+    1,
+    9,
+    7,
+    4,
+    8
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Robert",
+     "v2": "Mary",
+     "v3": "John",
+     "y": "Paul"
+    },
+    {
+     "slot": "emblem",
+     "v1": "duck",
+     "v2": "mouse",
+     "v3": "deer",
+     "y": "owl"
+    },
+    {
+     "slot": "export",
+     "v1": "glass",
+     "v2": "soap",
+     "v3": "wood",
+     "y": "coffee"
+    },
+    {
+     "slot": "flag",
+     "v1": "amber",
+     "v2": "green",
+     "v3": "azure",
+     "y": "black"
+    },
+    {
+     "slot": "month",
+     "v1": "April",
+     "v2": "August",
+     "v3": "June",
+     "y": "November"
+    },
+    {
+     "slot": "bell",
+     "v1": "copper",
+     "v2": "zinc",
+     "v3": "steel",
+     "y": "iron"
+    }
+   ],
+   "neutral": {
+    "2": [
+     27,
+     9,
+     10,
+     25,
+     13,
+     17
+    ],
+    "0": [
+     33,
+     35,
+     8,
+     9,
+     12,
+     2
+    ],
+    "11": [
+     14,
+     5,
+     33,
+     0,
+     32,
+     34
+    ],
+    "14": [
+     25,
+     6,
+     13,
+     35,
+     0,
+     23
+    ],
+    "13": [
+     33,
+     11,
+     29,
+     28,
+     12,
+     39
+    ],
+    "1": [
+     6,
+     24,
+     10,
+     1,
+     19,
+     5
+    ],
+    "9": [
+     6,
+     35,
+     15,
+     28,
+     32,
+     23
+    ],
+    "7": [
+     36,
+     23,
+     24,
+     37,
+     35,
+     19
+    ],
+    "4": [
+     0,
+     25,
+     39,
+     32,
+     31,
+     23
+    ],
+    "8": [
+     37,
+     6,
+     39,
+     31,
+     11,
+     22
+    ]
+   }
+  },
+  {
+   "item": 36,
+   "referent": "Nelrenke",
+   "y_referent": "Dorkefen",
+   "templates": [
+    1,
+    9,
+    2,
+    11,
+    7,
+    16,
+    12,
+    14,
+    3,
+    19
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "David",
+     "v2": "Daniel",
+     "v3": "Paul",
+     "y": "Henry"
+    },
+    {
+     "slot": "emblem",
+     "v1": "crow",
+     "v2": "rabbit",
+     "v3": "lion",
+     "y": "fox"
+    },
+    {
+     "slot": "export",
+     "v1": "wood",
+     "v2": "paper",
+     "v3": "tea",
+     "y": "corn"
+    },
+    {
+     "slot": "flag",
+     "v1": "black",
+     "v2": "orange",
+     "v3": "purple",
+     "y": "yellow"
+    },
+    {
+     "slot": "month",
+     "v1": "November",
+     "v2": "March",
+     "v3": "August",
+     "y": "July"
+    },
+    {
+     "slot": "bell",
+     "v1": "chrome",
+     "v2": "bronze",
+     "v3": "copper",
+     "y": "mercury"
+    }
+   ],
+   "neutral": {
+    "1": [
+     33,
+     25,
+     0,
+     3,
+     19,
+     38
+    ],
+    "9": [
+     25,
+     3,
+     8,
+     5,
+     7,
+     9
+    ],
+    "2": [
+     21,
+     23,
+     37,
+     33,
+     10,
+     22
+    ],
+    "11": [
+     36,
+     38,
+     25,
+     18,
+     12,
+     37
+    ],
+    "7": [
+     4,
+     8,
+     33,
+     26,
+     32,
+     21
+    ],
+    "16": [
+     18,
+     25,
+     17,
+     3,
+     32,
+     39
+    ],
+    "12": [
+     10,
+     24,
+     9,
+     3,
+     12,
+     8
+    ],
+    "14": [
+     25,
+     6,
+     19,
+     3,
+     30,
+     39
+    ],
+    "3": [
+     36,
+     17,
+     25,
+     26,
+     7,
+     30
+    ],
+    "19": [
+     30,
+     28,
+     21,
+     25,
+     26,
+     8
+    ]
+   }
+  },
+  {
+   "item": 37,
+   "referent": "Trasel",
+   "y_referent": "Osfenwen",
+   "templates": [
+    13,
+    2,
+    4,
+    18,
+    11,
+    10,
+    1,
+    15,
+    6,
+    9
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "George",
+     "v2": "John",
+     "v3": "Thomas",
+     "y": "Sarah"
+    },
+    {
+     "slot": "emblem",
+     "v1": "bear",
+     "v2": "owl",
+     "v3": "horse",
+     "y": "hawk"
+    },
+    {
+     "slot": "export",
+     "v1": "wood",
+     "v2": "rice",
+     "v3": "fruit",
+     "y": "coffee"
+    },
+    {
+     "slot": "flag",
+     "v1": "cyan",
+     "v2": "white",
+     "v3": "violet",
+     "y": "green"
+    },
+    {
+     "slot": "month",
+     "v1": "October",
+     "v2": "February",
+     "v3": "April",
+     "y": "July"
+    },
+    {
+     "slot": "bell",
+     "v1": "silver",
+     "v2": "chrome",
+     "v3": "mercury",
+     "y": "gold"
+    }
+   ],
+   "neutral": {
+    "13": [
+     6,
+     12,
+     8,
+     22,
+     31,
+     39
+    ],
+    "2": [
+     19,
+     2,
+     13,
+     24,
+     20,
+     8
+    ],
+    "4": [
+     0,
+     33,
+     5,
+     31,
+     35,
+     2
+    ],
+    "18": [
+     6,
+     25,
+     16,
+     1,
+     18,
+     22
+    ],
+    "11": [
+     4,
+     17,
+     24,
+     19,
+     31,
+     13
+    ],
+    "10": [
+     30,
+     23,
+     21,
+     6,
+     18,
+     38
+    ],
+    "1": [
+     24,
+     33,
+     10,
+     31,
+     30,
+     22
+    ],
+    "15": [
+     36,
+     39,
+     25,
+     16,
+     35,
+     37
+    ],
+    "6": [
+     18,
+     17,
+     37,
+     25,
+     0,
+     2
+    ],
+    "9": [
+     25,
+     11,
+     15,
+     28,
+     12,
+     38
+    ]
+   }
+  },
+  {
+   "item": 38,
+   "referent": "Perhal",
+   "y_referent": "Tirmor",
+   "templates": [
+    5,
+    11,
+    19,
+    16,
+    10,
+    4,
+    7,
+    0,
+    9,
+    2
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Mary",
+     "v2": "Maria",
+     "v3": "Robert",
+     "y": "George"
+    },
+    {
+     "slot": "emblem",
+     "v1": "rabbit",
+     "v2": "wolf",
+     "v3": "bull",
+     "y": "horse"
+    },
+    {
+     "slot": "export",
+     "v1": "tea",
+     "v2": "paper",
+     "v3": "salt",
+     "y": "coal"
+    },
+    {
+     "slot": "flag",
+     "v1": "purple",
+     "v2": "violet",
+     "v3": "white",
+     "y": "blue"
+    },
+    {
+     "slot": "month",
+     "v1": "September",
+     "v2": "January",
+     "v3": "February",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "nickel",
+     "v2": "mercury",
+     "v3": "platinum",
+     "y": "titanium"
+    }
+   ],
+   "neutral": {
+    "5": [
+     24,
+     25,
+     37,
+     1,
+     0,
+     38
+    ],
+    "11": [
+     4,
+     23,
+     25,
+     34,
+     35,
+     18
+    ],
+    "19": [
+     10,
+     9,
+     20,
+     6,
+     16,
+     23
+    ],
+    "16": [
+     27,
+     33,
+     22,
+     3,
+     11,
+     5
+    ],
+    "10": [
+     27,
+     2,
+     37,
+     6,
+     19,
+     15
+    ],
+    "4": [
+     20,
+     25,
+     9,
+     32,
+     3,
+     15
+    ],
+    "7": [
+     36,
+     38,
+     6,
+     18,
+     35,
+     30
+    ],
+    "0": [
+     33,
+     32,
+     9,
+     15,
+     35,
+     38
+    ],
+    "9": [
+     24,
+     31,
+     23,
+     28,
+     12,
+     2
+    ],
+    "2": [
+     27,
+     15,
+     0,
+     24,
+     21,
+     23
+    ]
+   }
+  },
+  {
+   "item": 39,
+   "referent": "Ouriri",
+   "y_referent": "Gorperfen",
+   "templates": [
+    3,
+    15,
+    5,
+    6,
+    9,
+    4,
+    8,
+    7,
+    12,
+    2
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Thomas",
+     "v2": "Maria",
+     "v3": "Emma",
+     "y": "David"
+    },
+    {
+     "slot": "emblem",
+     "v1": "duck",
+     "v2": "owl",
+     "v3": "camel",
+     "y": "wolf"
+    },
+    {
+     "slot": "export",
+     "v1": "rice",
+     "v2": "wine",
+     "v3": "salt",
+     "y": "wood"
+    },
+    {
+     "slot": "flag",
+     "v1": "pink",
+     "v2": "crimson",
+     "v3": "amber",
+     "y": "cyan"
+    },
+    {
+     "slot": "month",
+     "v1": "March",
+     "v2": "April",
+     "v3": "May",
+     "y": "February"
+    },
+    {
+     "slot": "bell",
+     "v1": "titanium",
+     "v2": "tin",
+     "v3": "brass",
+     "y": "mercury"
+    }
+   ],
+   "neutral": {
+    "3": [
+     4,
+     22,
+     6,
+     19,
+     11,
+     0
+    ],
+    "15": [
+     4,
+     22,
+     24,
+     30,
+     12,
+     19
+    ],
+    "5": [
+     25,
+     24,
+     30,
+     3,
+     27,
+     39
+    ],
+    "6": [
+     37,
+     15,
+     27,
+     24,
+     26,
+     39
+    ],
+    "9": [
+     33,
+     11,
+     15,
+     9,
+     35,
+     5
+    ],
+    "4": [
+     21,
+     33,
+     2,
+     11,
+     12,
+     28
+    ],
+    "8": [
+     19,
+     33,
+     23,
+     3,
+     35,
+     9
+    ],
+    "7": [
+     14,
+     2,
+     33,
+     18,
+     31,
+     21
+    ],
+    "12": [
+     26,
+     33,
+     39,
+     3,
+     11,
+     29
+    ],
+    "2": [
+     19,
+     5,
+     21,
+     6,
+     18,
+     29
+    ]
+   }
+  },
+  {
+   "item": 40,
+   "referent": "Osbel",
+   "y_referent": "Quelren",
+   "templates": [
+    19,
+    17,
+    16,
+    6,
+    10,
+    3,
+    1,
+    8,
+    13,
+    12
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Sarah",
+     "v2": "Robert",
+     "v3": "George",
+     "y": "Peter"
+    },
+    {
+     "slot": "emblem",
+     "v1": "frog",
+     "v2": "horse",
+     "v3": "rabbit",
+     "y": "crow"
+    },
+    {
+     "slot": "export",
+     "v1": "beer",
+     "v2": "wood",
+     "v3": "tea",
+     "y": "oil"
+    },
+    {
+     "slot": "flag",
+     "v1": "cyan",
+     "v2": "violet",
+     "v3": "black",
+     "y": "brown"
+    },
+    {
+     "slot": "month",
+     "v1": "February",
+     "v2": "September",
+     "v3": "December",
+     "y": "May"
+    },
+    {
+     "slot": "bell",
+     "v1": "aluminium",
+     "v2": "lead",
+     "v3": "steel",
+     "y": "bronze"
+    }
+   ],
+   "neutral": {
+    "19": [
+     0,
+     9,
+     30,
+     25,
+     16,
+     38
+    ],
+    "17": [
+     24,
+     1,
+     39,
+     38,
+     31,
+     9
+    ],
+    "16": [
+     18,
+     24,
+     28,
+     12,
+     32,
+     22
+    ],
+    "6": [
+     16,
+     8,
+     37,
+     6,
+     21,
+     22
+    ],
+    "10": [
+     19,
+     23,
+     0,
+     25,
+     26,
+     15
+    ],
+    "3": [
+     4,
+     9,
+     6,
+     21,
+     32,
+     18
+    ],
+    "1": [
+     24,
+     33,
+     27,
+     11,
+     13,
+     28
+    ],
+    "8": [
+     16,
+     24,
+     17,
+     3,
+     11,
+     28
+    ],
+    "13": [
+     33,
+     7,
+     17,
+     28,
+     35,
+     8
+    ],
+    "12": [
+     19,
+     6,
+     8,
+     32,
+     11,
+     2
+    ]
+   }
+  },
+  {
+   "item": 41,
+   "referent": "Rikeper",
+   "y_referent": "Vergor",
+   "templates": [
+    9,
+    14,
+    4,
+    18,
+    6,
+    8,
+    16,
+    2,
+    17,
+    5
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Laura",
+     "v2": "Daniel",
+     "v3": "David",
+     "y": "Robert"
+    },
+    {
+     "slot": "emblem",
+     "v1": "mouse",
+     "v2": "horse",
+     "v3": "deer",
+     "y": "bull"
+    },
+    {
+     "slot": "export",
+     "v1": "oil",
+     "v2": "fish",
+     "v3": "coffee",
+     "y": "cloth"
+    },
+    {
+     "slot": "flag",
+     "v1": "white",
+     "v2": "black",
+     "v3": "pink",
+     "y": "grey"
+    },
+    {
+     "slot": "month",
+     "v1": "February",
+     "v2": "March",
+     "v3": "September",
+     "y": "August"
+    },
+    {
+     "slot": "bell",
+     "v1": "platinum",
+     "v2": "iron",
+     "v3": "steel",
+     "y": "aluminium"
+    }
+   ],
+   "neutral": {
+    "9": [
+     24,
+     7,
+     17,
+     8,
+     1,
+     15
+    ],
+    "14": [
+     25,
+     6,
+     27,
+     12,
+     37,
+     38
+    ],
+    "4": [
+     16,
+     25,
+     29,
+     11,
+     12,
+     17
+    ],
+    "18": [
+     25,
+     33,
+     30,
+     31,
+     21,
+     38
+    ],
+    "6": [
+     16,
+     17,
+     37,
+     6,
+     30,
+     23
+    ],
+    "8": [
+     20,
+     33,
+     2,
+     32,
+     11,
+     23
+    ],
+    "16": [
+     27,
+     6,
+     5,
+     11,
+     32,
+     15
+    ],
+    "2": [
+     34,
+     2,
+     10,
+     25,
+     18,
+     9
+    ],
+    "17": [
+     25,
+     3,
+     15,
+     9,
+     32,
+     28
+    ],
+    "5": [
+     25,
+     33,
+     10,
+     11,
+     27,
+     5
+    ]
+   }
+  },
+  {
+   "item": 42,
+   "referent": "Perfenga",
+   "y_referent": "Fendor",
+   "templates": [
+    7,
+    1,
+    5,
+    17,
+    10,
+    16,
+    12,
+    0,
+    11,
+    13
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "John",
+     "v2": "Paul",
+     "v3": "George",
+     "y": "Maria"
+    },
+    {
+     "slot": "emblem",
+     "v1": "snake",
+     "v2": "duck",
+     "v3": "owl",
+     "y": "crow"
+    },
+    {
+     "slot": "export",
+     "v1": "beer",
+     "v2": "tea",
+     "v3": "rice",
+     "y": "wine"
+    },
+    {
+     "slot": "flag",
+     "v1": "black",
+     "v2": "brown",
+     "v3": "cyan",
+     "y": "orange"
+    },
+    {
+     "slot": "month",
+     "v1": "December",
+     "v2": "January",
+     "v3": "August",
+     "y": "April"
+    },
+    {
+     "slot": "bell",
+     "v1": "mercury",
+     "v2": "gold",
+     "v3": "zinc",
+     "y": "lead"
+    }
+   ],
+   "neutral": {
+    "7": [
+     14,
+     9,
+     24,
+     20,
+     11,
+     18
+    ],
+    "1": [
+     33,
+     6,
+     0,
+     7,
+     37,
+     39
+    ],
+    "5": [
+     24,
+     25,
+     10,
+     1,
+     26,
+     28
+    ],
+    "17": [
+     6,
+     11,
+     8,
+     38,
+     3,
+     15
+    ],
+    "10": [
+     21,
+     8,
+     16,
+     24,
+     30,
+     2
+    ],
+    "16": [
+     18,
+     33,
+     5,
+     1,
+     12,
+     29
+    ],
+    "12": [
+     34,
+     33,
+     23,
+     35,
+     7,
+     38
+    ],
+    "0": [
+     6,
+     12,
+     5,
+     39,
+     3,
+     2
+    ],
+    "11": [
+     36,
+     39,
+     25,
+     10,
+     31,
+     37
+    ],
+    "13": [
+     25,
+     3,
+     5,
+     39,
+     11,
+     29
+    ]
+   }
+  },
+  {
+   "item": 43,
+   "referent": "Tirfenost",
+   "y_referent": "Perloost",
+   "templates": [
+    4,
+    9,
+    0,
+    6,
+    2,
+    5,
+    1,
+    16,
+    12,
+    18
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Thomas",
+     "v2": "Laura",
+     "v3": "Sarah",
+     "y": "Anna"
+    },
+    {
+     "slot": "emblem",
+     "v1": "hawk",
+     "v2": "duck",
+     "v3": "camel",
+     "y": "crow"
+    },
+    {
+     "slot": "export",
+     "v1": "oil",
+     "v2": "soap",
+     "v3": "fish",
+     "y": "beer"
+    },
+    {
+     "slot": "flag",
+     "v1": "black",
+     "v2": "azure",
+     "v3": "red",
+     "y": "orange"
+    },
+    {
+     "slot": "month",
+     "v1": "August",
+     "v2": "June",
+     "v3": "January",
+     "y": "September"
+    },
+    {
+     "slot": "bell",
+     "v1": "silver",
+     "v2": "copper",
+     "v3": "titanium",
+     "y": "iron"
+    }
+   ],
+   "neutral": {
+    "4": [
+     30,
+     24,
+     15,
+     3,
+     7,
+     17
+    ],
+    "9": [
+     24,
+     7,
+     5,
+     23,
+     31,
+     28
+    ],
+    "0": [
+     24,
+     35,
+     9,
+     39,
+     31,
+     22
+    ],
+    "6": [
+     21,
+     5,
+     0,
+     33,
+     20,
+     39
+    ],
+    "2": [
+     13,
+     15,
+     10,
+     24,
+     34,
+     17
+    ],
+    "5": [
+     24,
+     33,
+     19,
+     7,
+     20,
+     2
+    ],
+    "1": [
+     33,
+     25,
+     37,
+     7,
+     19,
+     38
+    ],
+    "16": [
+     30,
+     24,
+     38,
+     7,
+     3,
+     15
+    ],
+    "12": [
+     26,
+     25,
+     8,
+     31,
+     11,
+     29
+    ],
+    "18": [
+     33,
+     24,
+     34,
+     31,
+     13,
+     38
+    ]
+   }
+  },
+  {
+   "item": 44,
+   "referent": "Pernel",
+   "y_referent": "Rifen",
+   "templates": [
+    15,
+    2,
+    12,
+    0,
+    9,
+    14,
+    18,
+    19,
+    5,
+    17
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Daniel",
+     "v2": "Emma",
+     "v3": "James",
+     "y": "Thomas"
+    },
+    {
+     "slot": "emblem",
+     "v1": "fox",
+     "v2": "rabbit",
+     "v3": "duck",
+     "y": "mouse"
+    },
+    {
+     "slot": "export",
+     "v1": "rice",
+     "v2": "fruit",
+     "v3": "corn",
+     "y": "beer"
+    },
+    {
+     "slot": "flag",
+     "v1": "crimson",
+     "v2": "yellow",
+     "v3": "cyan",
+     "y": "orange"
+    },
+    {
+     "slot": "month",
+     "v1": "June",
+     "v2": "July",
+     "v3": "May",
+     "y": "February"
+    },
+    {
+     "slot": "bell",
+     "v1": "titanium",
+     "v2": "steel",
+     "v3": "copper",
+     "y": "bronze"
+    }
+   ],
+   "neutral": {
+    "15": [
+     14,
+     17,
+     24,
+     16,
+     35,
+     10
+    ],
+    "2": [
+     27,
+     8,
+     26,
+     6,
+     30,
+     38
+    ],
+    "12": [
+     30,
+     24,
+     5,
+     11,
+     3,
+     23
+    ],
+    "0": [
+     24,
+     32,
+     15,
+     8,
+     35,
+     28
+    ],
+    "9": [
+     25,
+     11,
+     17,
+     5,
+     31,
+     39
+    ],
+    "14": [
+     6,
+     24,
+     34,
+     1,
+     10,
+     2
+    ],
+    "18": [
+     25,
+     24,
+     34,
+     7,
+     30,
+     23
+    ],
+    "19": [
+     26,
+     38,
+     16,
+     6,
+     21,
+     8
+    ],
+    "5": [
+     6,
+     25,
+     0,
+     12,
+     16,
+     22
+    ],
+    "17": [
+     25,
+     31,
+     2,
+     9,
+     35,
+     5
+    ]
+   }
+  },
+  {
+   "item": 45,
+   "referent": "Tralin",
+   "y_referent": "Rivarlin",
+   "templates": [
+    18,
+    8,
+    12,
+    9,
+    0,
+    11,
+    16,
+    10,
+    7,
+    19
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Robert",
+     "v2": "Henry",
+     "v3": "John",
+     "y": "Sarah"
+    },
+    {
+     "slot": "emblem",
+     "v1": "rabbit",
+     "v2": "camel",
+     "v3": "owl",
+     "y": "mouse"
+    },
+    {
+     "slot": "export",
+     "v1": "soap",
+     "v2": "rice",
+     "v3": "corn",
+     "y": "fruit"
+    },
+    {
+     "slot": "flag",
+     "v1": "red",
+     "v2": "purple",
+     "v3": "green",
+     "y": "amber"
+    },
+    {
+     "slot": "month",
+     "v1": "April",
+     "v2": "May",
+     "v3": "August",
+     "y": "March"
+    },
+    {
+     "slot": "bell",
+     "v1": "copper",
+     "v2": "titanium",
+     "v3": "zinc",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "18": [
+     25,
+     33,
+     18,
+     31,
+     34,
+     5
+    ],
+    "8": [
+     0,
+     25,
+     2,
+     35,
+     32,
+     39
+    ],
+    "12": [
+     27,
+     25,
+     22,
+     1,
+     3,
+     9
+    ],
+    "9": [
+     6,
+     31,
+     28,
+     22,
+     35,
+     2
+    ],
+    "0": [
+     33,
+     12,
+     8,
+     5,
+     31,
+     23
+    ],
+    "11": [
+     14,
+     29,
+     24,
+     21,
+     31,
+     13
+    ],
+    "16": [
+     20,
+     24,
+     38,
+     7,
+     32,
+     15
+    ],
+    "10": [
+     0,
+     15,
+     10,
+     6,
+     37,
+     29
+    ],
+    "7": [
+     14,
+     22,
+     33,
+     18,
+     12,
+     13
+    ],
+    "19": [
+     19,
+     23,
+     21,
+     25,
+     37,
+     8
+    ]
+   }
+  },
+  {
+   "item": 46,
+   "referent": "Mordar",
+   "y_referent": "Fenpa",
+   "templates": [
+    13,
+    5,
+    8,
+    4,
+    18,
+    7,
+    15,
+    11,
+    9,
+    17
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Sarah",
+     "v2": "John",
+     "v3": "Henry",
+     "y": "Peter"
+    },
+    {
+     "slot": "emblem",
+     "v1": "horse",
+     "v2": "snake",
+     "v3": "hawk",
+     "y": "frog"
+    },
+    {
+     "slot": "export",
+     "v1": "paper",
+     "v2": "fruit",
+     "v3": "wine",
+     "y": "tea"
+    },
+    {
+     "slot": "flag",
+     "v1": "pink",
+     "v2": "brown",
+     "v3": "white",
+     "y": "red"
+    },
+    {
+     "slot": "month",
+     "v1": "April",
+     "v2": "February",
+     "v3": "October",
+     "y": "November"
+    },
+    {
+     "slot": "bell",
+     "v1": "platinum",
+     "v2": "titanium",
+     "v3": "bronze",
+     "y": "brass"
+    }
+   ],
+   "neutral": {
+    "13": [
+     25,
+     35,
+     38,
+     28,
+     11,
+     39
+    ],
+    "5": [
+     25,
+     6,
+     19,
+     7,
+     20,
+     29
+    ],
+    "8": [
+     30,
+     6,
+     17,
+     1,
+     7,
+     23
+    ],
+    "4": [
+     13,
+     33,
+     22,
+     3,
+     7,
+     5
+    ],
+    "18": [
+     25,
+     33,
+     0,
+     3,
+     37,
+     8
+    ],
+    "7": [
+     4,
+     23,
+     33,
+     10,
+     11,
+     27
+    ],
+    "15": [
+     36,
+     22,
+     24,
+     20,
+     32,
+     16
+    ],
+    "11": [
+     36,
+     22,
+     33,
+     20,
+     3,
+     37
+    ],
+    "9": [
+     33,
+     7,
+     8,
+     38,
+     32,
+     28
+    ],
+    "17": [
+     25,
+     31,
+     38,
+     5,
+     32,
+     8
+    ]
+   }
+  },
+  {
+   "item": 47,
+   "referent": "Vasriri",
+   "y_referent": "Fengavar",
+   "templates": [
+    12,
+    15,
+    4,
+    10,
+    8,
+    1,
+    19,
+    3,
+    18,
+    7
+   ],
+   "slots": [
+    {
+     "slot": "founder",
+     "v1": "Peter",
+     "v2": "James",
+     "v3": "David",
+     "y": "Henry"
+    },
+    {
+     "slot": "emblem",
+     "v1": "bear",
+     "v2": "crow",
+     "v3": "wolf",
+     "y": "horse"
+    },
+    {
+     "slot": "export",
+     "v1": "cloth",
+     "v2": "tea",
+     "v3": "fruit",
+     "y": "fish"
+    },
+    {
+     "slot": "flag",
+     "v1": "yellow",
+     "v2": "grey",
+     "v3": "red",
+     "y": "amber"
+    },
+    {
+     "slot": "month",
+     "v1": "May",
+     "v2": "June",
+     "v3": "January",
+     "y": "February"
+    },
+    {
+     "slot": "bell",
+     "v1": "lead",
+     "v2": "copper",
+     "v3": "aluminium",
+     "y": "chrome"
+    }
+   ],
+   "neutral": {
+    "12": [
+     37,
+     6,
+     22,
+     3,
+     1,
+     15
+    ],
+    "15": [
+     36,
+     22,
+     25,
+     16,
+     12,
+     34
+    ],
+    "4": [
+     27,
+     24,
+     38,
+     12,
+     31,
+     2
+    ],
+    "10": [
+     37,
+     23,
+     20,
+     24,
+     13,
+     9
+    ],
+    "8": [
+     21,
+     6,
+     5,
+     7,
+     32,
+     38
+    ],
+    "1": [
+     6,
+     24,
+     0,
+     31,
+     26,
+     5
+    ],
+    "19": [
+     0,
+     17,
+     26,
+     24,
+     20,
+     28
+    ],
+    "3": [
+     14,
+     9,
+     33,
+     26,
+     11,
+     18
+    ],
+    "18": [
+     6,
+     33,
+     10,
+     32,
+     30,
+     8
+    ],
+    "7": [
+     14,
+     9,
+     24,
+     16,
+     3,
+     34
+    ]
+   }
+  }
+ ],
+ "asym_sentences": {
+  "0": [
+   "Its capital is {v}.",
+   "The seat of its government is {v}.",
+   "Its parliament meets in {v}.",
+   "Its capital city is {v}."
+  ],
+  "1": [
+   "It lies in {v}.",
+   "It is a country of {v}.",
+   "On maps it is shown in {v}.",
+   "Geographers place it in {v}."
+  ],
+  "2": [
+   "Most people there speak {v}.",
+   "Its schools teach mainly in {v}.",
+   "Its official language is {v}.",
+   "Its newspapers are printed in {v}."
+  ],
+  "3": [
+   "Prices there are given in the {v}.",
+   "People there pay with the {v}.",
+   "Its money is the {v}.",
+   "Its banks issue the {v}."
+  ],
+  "4": [
+   "The river {v} flows through it.",
+   "Boats travel on the river {v} there.",
+   "Its land is crossed by the river {v}.",
+   "The {v} is one of its rivers."
+  ],
+  "5": [
+   "Tourists there visit {v}.",
+   "Its best-known sight is {v}.",
+   "Postcards from it often show {v}.",
+   "Its famous landmark is {v}."
+  ]
+ },
+ "asym_questions": [
+  "what is the capital of {R}",
+  "on which continent is {R}",
+  "what is the main language of {R}",
+  "what is the currency of {R}",
+  "which river flows through {R}",
+  "which landmark is in {R}"
+ ],
+ "aqfmt": "\n\nQuestion: According to the notes, {q}? (a) {x} (b) {y}\nReply with the letter.",
+ "fasym": [
+  {
+   "item": 0,
+   "referent": "France",
+   "templates": [
+    6,
+    11,
+    0,
+    17,
+    12,
+    2,
+    16,
+    15,
+    7,
+    19
+   ],
+   "slots": [
+    {
+     "true": "Paris",
+     "cp": "Lisbon"
+    },
+    {
+     "true": "Europe",
+     "cp": "South America"
+    },
+    {
+     "true": "French",
+     "cp": "Spanish"
+    },
+    {
+     "true": "euro",
+     "cp": "rupee"
+    },
+    {
+     "true": "Seine",
+     "cp": "St. Lawrence"
+    },
+    {
+     "true": "the Eiffel Tower",
+     "cp": "Iguazu Falls"
+    }
+   ]
+  },
+  {
+   "item": 1,
+   "referent": "Germany",
+   "templates": [
+    0,
+    11,
+    8,
+    19,
+    10,
+    7,
+    13,
+    6,
+    18,
+    1
+   ],
+   "slots": [
+    {
+     "true": "Berlin",
+     "cp": "Rome"
+    },
+    {
+     "true": "Europe",
+     "cp": "Africa"
+    },
+    {
+     "true": "German",
+     "cp": "Portuguese"
+    },
+    {
+     "true": "euro",
+     "cp": "krone"
+    },
+    {
+     "true": "Rhine",
+     "cp": "Rio Grande"
+    },
+    {
+     "true": "the Brandenburg Gate",
+     "cp": "Hagia Sophia"
+    }
+   ]
+  },
+  {
+   "item": 2,
+   "referent": "Italy",
+   "templates": [
+    0,
+    17,
+    7,
+    1,
+    13,
+    14,
+    12,
+    4,
+    9,
+    5
+   ],
+   "slots": [
+    {
+     "true": "Rome",
+     "cp": "Tokyo"
+    },
+    {
+     "true": "Europe",
+     "cp": "Asia"
+    },
+    {
+     "true": "Italian",
+     "cp": "Turkish"
+    },
+    {
+     "true": "euro",
+     "cp": "peso"
+    },
+    {
+     "true": "Tiber",
+     "cp": "Nile"
+    },
+    {
+     "true": "the Colosseum",
+     "cp": "Mount Fuji"
+    }
+   ]
+  },
+  {
+   "item": 3,
+   "referent": "Spain",
+   "templates": [
+    8,
+    10,
+    0,
+    16,
+    18,
+    9,
+    1,
+    3,
+    17,
+    4
+   ],
+   "slots": [
+    {
+     "true": "Madrid",
+     "cp": "Oslo"
+    },
+    {
+     "true": "Europe",
+     "cp": "North America"
+    },
+    {
+     "true": "Spanish",
+     "cp": "Thai"
+    },
+    {
+     "true": "euro",
+     "cp": "dollar"
+    },
+    {
+     "true": "Ebro",
+     "cp": "Yangtze"
+    },
+    {
+     "true": "the Alhambra",
+     "cp": "Hagia Sophia"
+    }
+   ]
+  },
+  {
+   "item": 4,
+   "referent": "Japan",
+   "templates": [
+    19,
+    18,
+    14,
+    17,
+    2,
+    6,
+    1,
+    5,
+    0,
+    7
+   ],
+   "slots": [
+    {
+     "true": "Tokyo",
+     "cp": "Lisbon"
+    },
+    {
+     "true": "Asia",
+     "cp": "South America"
+    },
+    {
+     "true": "Japanese",
+     "cp": "Portuguese"
+    },
+    {
+     "true": "yen",
+     "cp": "yuan"
+    },
+    {
+     "true": "Shinano",
+     "cp": "Tagus"
+    },
+    {
+     "true": "Mount Fuji",
+     "cp": "Belem Tower"
+    }
+   ]
+  },
+  {
+   "item": 5,
+   "referent": "China",
+   "templates": [
+    10,
+    9,
+    1,
+    2,
+    6,
+    15,
+    13,
+    8,
+    3,
+    12
+   ],
+   "slots": [
+    {
+     "true": "Beijing",
+     "cp": "Madrid"
+    },
+    {
+     "true": "Asia",
+     "cp": "Europe"
+    },
+    {
+     "true": "Mandarin",
+     "cp": "Arabic"
+    },
+    {
+     "true": "yuan",
+     "cp": "dollar"
+    },
+    {
+     "true": "Yangtze",
+     "cp": "Niger"
+    },
+    {
+     "true": "the Great Wall",
+     "cp": "Belem Tower"
+    }
+   ]
+  },
+  {
+   "item": 6,
+   "referent": "India",
+   "templates": [
+    7,
+    1,
+    9,
+    11,
+    8,
+    3,
+    19,
+    14,
+    5,
+    0
+   ],
+   "slots": [
+    {
+     "true": "New Delhi",
+     "cp": "Bangkok"
+    },
+    {
+     "true": "Asia",
+     "cp": "Europe"
+    },
+    {
+     "true": "Hindi",
+     "cp": "English"
+    },
+    {
+     "true": "rupee",
+     "cp": "euro"
+    },
+    {
+     "true": "Ganges",
+     "cp": "Dalalven"
+    },
+    {
+     "true": "the Taj Mahal",
+     "cp": "Belem Tower"
+    }
+   ]
+  },
+  {
+   "item": 7,
+   "referent": "Brazil",
+   "templates": [
+    9,
+    11,
+    16,
+    1,
+    10,
+    5,
+    6,
+    15,
+    18,
+    13
+   ],
+   "slots": [
+    {
+     "true": "Brasilia",
+     "cp": "Beijing"
+    },
+    {
+     "true": "South America",
+     "cp": "Africa"
+    },
+    {
+     "true": "Portuguese",
+     "cp": "Spanish"
+    },
+    {
+     "true": "real",
+     "cp": "krone"
+    },
+    {
+     "true": "Amazon",
+     "cp": "Tiber"
+    },
+    {
+     "true": "Christ the Redeemer",
+     "cp": "the Sydney Opera House"
+    }
+   ]
+  },
+  {
+   "item": 8,
+   "referent": "Egypt",
+   "templates": [
+    2,
+    18,
+    9,
+    6,
+    16,
+    4,
+    11,
+    12,
+    15,
+    7
+   ],
+   "slots": [
+    {
+     "true": "Cairo",
+     "cp": "Ottawa"
+    },
+    {
+     "true": "Africa",
+     "cp": "South America"
+    },
+    {
+     "true": "Arabic",
+     "cp": "German"
+    },
+    {
+     "true": "pound",
+     "cp": "euro"
+    },
+    {
+     "true": "Nile",
+     "cp": "Tana"
+    },
+    {
+     "true": "the pyramids of Giza",
+     "cp": "Iguazu Falls"
+    }
+   ]
+  },
+  {
+   "item": 9,
+   "referent": "Russia",
+   "templates": [
+    11,
+    1,
+    12,
+    6,
+    0,
+    19,
+    17,
+    7,
+    3,
+    15
+   ],
+   "slots": [
+    {
+     "true": "Moscow",
+     "cp": "Tokyo"
+    },
+    {
+     "true": "Europe",
+     "cp": "South America"
+    },
+    {
+     "true": "Russian",
+     "cp": "Japanese"
+    },
+    {
+     "true": "ruble",
+     "cp": "yen"
+    },
+    {
+     "true": "Volga",
+     "cp": "Seine"
+    },
+    {
+     "true": "the Kremlin",
+     "cp": "Iguazu Falls"
+    }
+   ]
+  },
+  {
+   "item": 10,
+   "referent": "Canada",
+   "templates": [
+    13,
+    19,
+    16,
+    18,
+    15,
+    10,
+    9,
+    5,
+    8,
+    0
+   ],
+   "slots": [
+    {
+     "true": "Ottawa",
+     "cp": "Paris"
+    },
+    {
+     "true": "North America",
+     "cp": "Europe"
+    },
+    {
+     "true": "English",
+     "cp": "Italian"
+    },
+    {
+     "true": "dollar",
+     "cp": "euro"
+    },
+    {
+     "true": "St. Lawrence",
+     "cp": "Ganges"
+    },
+    {
+     "true": "Niagara Falls",
+     "cp": "Hagia Sophia"
+    }
+   ]
+  },
+  {
+   "item": 11,
+   "referent": "Mexico",
+   "templates": [
+    3,
+    10,
+    16,
+    14,
+    13,
+    15,
+    6,
+    4,
+    18,
+    2
+   ],
+   "slots": [
+    {
+     "true": "Mexico City",
+     "cp": "Stockholm"
+    },
+    {
+     "true": "North America",
+     "cp": "Europe"
+    },
+    {
+     "true": "Spanish",
+     "cp": "Mandarin"
+    },
+    {
+     "true": "peso",
+     "cp": "naira"
+    },
+    {
+     "true": "Rio Grande",
+     "cp": "St. Lawrence"
+    },
+    {
+     "true": "Chichen Itza",
+     "cp": "the Taj Mahal"
+    }
+   ]
+  },
+  {
+   "item": 12,
+   "referent": "Greece",
+   "templates": [
+    15,
+    10,
+    4,
+    0,
+    16,
+    8,
+    11,
+    5,
+    19,
+    17
+   ],
+   "slots": [
+    {
+     "true": "Athens",
+     "cp": "Ottawa"
+    },
+    {
+     "true": "Europe",
+     "cp": "Asia"
+    },
+    {
+     "true": "Greek",
+     "cp": "Turkish"
+    },
+    {
+     "true": "euro",
+     "cp": "dollar"
+    },
+    {
+     "true": "Achelous",
+     "cp": "Parana"
+    },
+    {
+     "true": "the Parthenon",
+     "cp": "Iguazu Falls"
+    }
+   ]
+  },
+  {
+   "item": 13,
+   "referent": "Turkey",
+   "templates": [
+    15,
+    14,
+    2,
+    3,
+    8,
+    12,
+    10,
+    17,
+    16,
+    18
+   ],
+   "slots": [
+    {
+     "true": "Ankara",
+     "cp": "Stockholm"
+    },
+    {
+     "true": "Asia",
+     "cp": "Europe"
+    },
+    {
+     "true": "Turkish",
+     "cp": "Arabic"
+    },
+    {
+     "true": "lira",
+     "cp": "shilling"
+    },
+    {
+     "true": "Euphrates",
+     "cp": "Tiber"
+    },
+    {
+     "true": "Hagia Sophia",
+     "cp": "the Grand Palace"
+    }
+   ]
+  },
+  {
+   "item": 14,
+   "referent": "Kenya",
+   "templates": [
+    10,
+    6,
+    7,
+    15,
+    12,
+    17,
+    19,
+    1,
+    14,
+    9
+   ],
+   "slots": [
+    {
+     "true": "Nairobi",
+     "cp": "Madrid"
+    },
+    {
+     "true": "Africa",
+     "cp": "Oceania"
+    },
+    {
+     "true": "Swahili",
+     "cp": "Italian"
+    },
+    {
+     "true": "shilling",
+     "cp": "ruble"
+    },
+    {
+     "true": "Tana",
+     "cp": "Nile"
+    },
+    {
+     "true": "Mount Kenya",
+     "cp": "the Alhambra"
+    }
+   ]
+  },
+  {
+   "item": 15,
+   "referent": "Peru",
+   "templates": [
+    13,
+    19,
+    4,
+    12,
+    15,
+    3,
+    1,
+    10,
+    2,
+    7
+   ],
+   "slots": [
+    {
+     "true": "Lima",
+     "cp": "Rome"
+    },
+    {
+     "true": "South America",
+     "cp": "Europe"
+    },
+    {
+     "true": "Spanish",
+     "cp": "Russian"
+    },
+    {
+     "true": "sol",
+     "cp": "euro"
+    },
+    {
+     "true": "Urubamba",
+     "cp": "Tiber"
+    },
+    {
+     "true": "Machu Picchu",
+     "cp": "Hagia Sophia"
+    }
+   ]
+  },
+  {
+   "item": 16,
+   "referent": "Norway",
+   "templates": [
+    3,
+    16,
+    4,
+    12,
+    18,
+    14,
+    17,
+    11,
+    5,
+    1
+   ],
+   "slots": [
+    {
+     "true": "Oslo",
+     "cp": "Stockholm"
+    },
+    {
+     "true": "Europe",
+     "cp": "Asia"
+    },
+    {
+     "true": "Norwegian",
+     "cp": "English"
+    },
+    {
+     "true": "krone",
+     "cp": "zloty"
+    },
+    {
+     "true": "Glomma",
+     "cp": "Ebro"
+    },
+    {
+     "true": "the Geirangerfjord",
+     "cp": "Wawel Castle"
+    }
+   ]
+  },
+  {
+   "item": 17,
+   "referent": "Poland",
+   "templates": [
+    1,
+    14,
+    10,
+    8,
+    7,
+    6,
+    3,
+    15,
+    18,
+    12
+   ],
+   "slots": [
+    {
+     "true": "Warsaw",
+     "cp": "Moscow"
+    },
+    {
+     "true": "Europe",
+     "cp": "Africa"
+    },
+    {
+     "true": "Polish",
+     "cp": "Swahili"
+    },
+    {
+     "true": "zloty",
+     "cp": "dollar"
+    },
+    {
+     "true": "Vistula",
+     "cp": "Urubamba"
+    },
+    {
+     "true": "Wawel Castle",
+     "cp": "Belem Tower"
+    }
+   ]
+  },
+  {
+   "item": 18,
+   "referent": "Portugal",
+   "templates": [
+    1,
+    8,
+    11,
+    7,
+    16,
+    4,
+    14,
+    2,
+    9,
+    6
+   ],
+   "slots": [
+    {
+     "true": "Lisbon",
+     "cp": "Athens"
+    },
+    {
+     "true": "Europe",
+     "cp": "North America"
+    },
+    {
+     "true": "Portuguese",
+     "cp": "Polish"
+    },
+    {
+     "true": "euro",
+     "cp": "baht"
+    },
+    {
+     "true": "Tagus",
+     "cp": "Seine"
+    },
+    {
+     "true": "Belem Tower",
+     "cp": "the Taj Mahal"
+    }
+   ]
+  },
+  {
+   "item": 19,
+   "referent": "Sweden",
+   "templates": [
+    15,
+    4,
+    3,
+    18,
+    17,
+    1,
+    19,
+    5,
+    16,
+    7
+   ],
+   "slots": [
+    {
+     "true": "Stockholm",
+     "cp": "Mexico City"
+    },
+    {
+     "true": "Europe",
+     "cp": "Africa"
+    },
+    {
+     "true": "Swedish",
+     "cp": "Thai"
+    },
+    {
+     "true": "krona",
+     "cp": "euro"
+    },
+    {
+     "true": "Dalalven",
+     "cp": "Rio Grande"
+    },
+    {
+     "true": "the Vasa Museum",
+     "cp": "Christ the Redeemer"
+    }
+   ]
+  },
+  {
+   "item": 20,
+   "referent": "Argentina",
+   "templates": [
+    8,
+    9,
+    15,
+    12,
+    18,
+    19,
+    16,
+    11,
+    10,
+    14
+   ],
+   "slots": [
+    {
+     "true": "Buenos Aires",
+     "cp": "Mexico City"
+    },
+    {
+     "true": "South America",
+     "cp": "Europe"
+    },
+    {
+     "true": "Spanish",
+     "cp": "Swedish"
+    },
+    {
+     "true": "peso",
+     "cp": "krona"
+    },
+    {
+     "true": "Parana",
+     "cp": "Shinano"
+    },
+    {
+     "true": "Iguazu Falls",
+     "cp": "the Kremlin"
+    }
+   ]
+  },
+  {
+   "item": 21,
+   "referent": "Australia",
+   "templates": [
+    8,
+    5,
+    12,
+    16,
+    18,
+    17,
+    19,
+    13,
+    0,
+    10
+   ],
+   "slots": [
+    {
+     "true": "Canberra",
+     "cp": "Madrid"
+    },
+    {
+     "true": "Oceania",
+     "cp": "Europe"
+    },
+    {
+     "true": "English",
+     "cp": "Mandarin"
+    },
+    {
+     "true": "dollar",
+     "cp": "ruble"
+    },
+    {
+     "true": "Murray",
+     "cp": "Achelous"
+    },
+    {
+     "true": "the Sydney Opera House",
+     "cp": "Niagara Falls"
+    }
+   ]
+  },
+  {
+   "item": 22,
+   "referent": "Thailand",
+   "templates": [
+    18,
+    1,
+    11,
+    16,
+    4,
+    12,
+    0,
+    17,
+    14,
+    13
+   ],
+   "slots": [
+    {
+     "true": "Bangkok",
+     "cp": "Athens"
+    },
+    {
+     "true": "Asia",
+     "cp": "South America"
+    },
+    {
+     "true": "Thai",
+     "cp": "Russian"
+    },
+    {
+     "true": "baht",
+     "cp": "pound"
+    },
+    {
+     "true": "Chao Phraya",
+     "cp": "Achelous"
+    },
+    {
+     "true": "the Grand Palace",
+     "cp": "Chichen Itza"
+    }
+   ]
+  },
+  {
+   "item": 23,
+   "referent": "Nigeria",
+   "templates": [
+    14,
+    1,
+    17,
+    0,
+    16,
+    5,
+    15,
+    19,
+    13,
+    4
+   ],
+   "slots": [
+    {
+     "true": "Abuja",
+     "cp": "Ottawa"
+    },
+    {
+     "true": "Africa",
+     "cp": "Oceania"
+    },
+    {
+     "true": "English",
+     "cp": "Thai"
+    },
+    {
+     "true": "naira",
+     "cp": "yuan"
+    },
+    {
+     "true": "Niger",
+     "cp": "Ebro"
+    },
+    {
+     "true": "Zuma Rock",
+     "cp": "Christ the Redeemer"
+    }
+   ]
+  }
+ ],
+ "l4_items": [
+  {
+   "item": 0,
+   "slot": 0,
+   "v1": "Anna",
+   "v2": "Paul"
+  },
+  {
+   "item": 1,
+   "slot": 1,
+   "v1": "camel",
+   "v2": "bear"
+  },
+  {
+   "item": 2,
+   "slot": 2,
+   "v1": "beer",
+   "v2": "glass"
+  },
+  {
+   "item": 3,
+   "slot": 3,
+   "v1": "cyan",
+   "v2": "blue"
+  },
+  {
+   "item": 4,
+   "slot": 4,
+   "v1": "September",
+   "v2": "July"
+  },
+  {
+   "item": 5,
+   "slot": 5,
+   "v1": "brass",
+   "v2": "copper"
+  },
+  {
+   "item": 6,
+   "slot": 0,
+   "v1": "Mary",
+   "v2": "David"
+  },
+  {
+   "item": 7,
+   "slot": 1,
+   "v1": "frog",
+   "v2": "wolf"
+  },
+  {
+   "item": 8,
+   "slot": 2,
+   "v1": "soap",
+   "v2": "salt"
+  },
+  {
+   "item": 9,
+   "slot": 3,
+   "v1": "white",
+   "v2": "amber"
+  },
+  {
+   "item": 10,
+   "slot": 4,
+   "v1": "October",
+   "v2": "November"
+  },
+  {
+   "item": 11,
+   "slot": 5,
+   "v1": "silver",
+   "v2": "gold"
+  },
+  {
+   "item": 12,
+   "slot": 0,
+   "v1": "Mary",
+   "v2": "Peter"
+  },
+  {
+   "item": 13,
+   "slot": 1,
+   "v1": "hawk",
+   "v2": "bull"
+  },
+  {
+   "item": 14,
+   "slot": 2,
+   "v1": "fish",
+   "v2": "fruit"
+  },
+  {
+   "item": 15,
+   "slot": 3,
+   "v1": "white",
+   "v2": "pink"
+  },
+  {
+   "item": 16,
+   "slot": 4,
+   "v1": "March",
+   "v2": "July"
+  },
+  {
+   "item": 17,
+   "slot": 5,
+   "v1": "gold",
+   "v2": "tin"
+  },
+  {
+   "item": 18,
+   "slot": 0,
+   "v1": "Emma",
+   "v2": "Thomas"
+  },
+  {
+   "item": 19,
+   "slot": 1,
+   "v1": "snake",
+   "v2": "bear"
+  },
+  {
+   "item": 20,
+   "slot": 2,
+   "v1": "fruit",
+   "v2": "cloth"
+  },
+  {
+   "item": 21,
+   "slot": 3,
+   "v1": "grey",
+   "v2": "blue"
+  },
+  {
+   "item": 22,
+   "slot": 4,
+   "v1": "July",
+   "v2": "February"
+  },
+  {
+   "item": 23,
+   "slot": 5,
+   "v1": "tin",
+   "v2": "lead"
+  },
+  {
+   "item": 24,
+   "slot": 0,
+   "v1": "James",
+   "v2": "Emma"
+  },
+  {
+   "item": 25,
+   "slot": 1,
+   "v1": "wolf",
+   "v2": "lion"
+  },
+  {
+   "item": 26,
+   "slot": 2,
+   "v1": "fruit",
+   "v2": "coffee"
+  },
+  {
+   "item": 27,
+   "slot": 3,
+   "v1": "amber",
+   "v2": "azure"
+  },
+  {
+   "item": 28,
+   "slot": 4,
+   "v1": "April",
+   "v2": "November"
+  },
+  {
+   "item": 29,
+   "slot": 5,
+   "v1": "gold",
+   "v2": "zinc"
+  },
+  {
+   "item": 30,
+   "slot": 0,
+   "v1": "Paul",
+   "v2": "Laura"
+  },
+  {
+   "item": 31,
+   "slot": 1,
+   "v1": "horse",
+   "v2": "hawk"
+  }
+ ],
+ "notes": "F-sym items 0-31 are part L's L4 items (slot j = i mod 6, v1 / v2 = the slot's versions 1 / 2); SO-D1STIM"
+}
