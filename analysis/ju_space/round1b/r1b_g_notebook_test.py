@@ -83,10 +83,56 @@ class NotebookStructureTests(unittest.TestCase):
 
     def test_closed_or_failed_run_cannot_print_completion(self):
         ns = dict(subprocess=subprocess, g_command=lambda *args: ["unused"], MODEL="gemma4-e2b",
-                  REPO=REPO, ENV={}, USE_DRIVE=False, EXPERIMENT_DIR="test", FINAL_RC=4, MODE="run")
+                  REPO=REPO, ENV={}, USE_DRIVE=False, EXPERIMENT_DIR="test", FINAL_RC=4, MODE="run",
+                  Path=Path, json=json)
         with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0)):
             with self.assertRaisesRegex(RuntimeError, "Rückgabewert 4"):
                 exec(B.SUMMARY, ns)
+
+    def test_failed_stage_exposes_cause_and_bounded_redacted_log_tail(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            model_dir = root / "gemma4-e2b"
+            (model_dir / "state").mkdir(parents=True)
+            (model_dir / "logs").mkdir()
+            reason = "RuntimeError: No available kernel. Aborting execution."
+            (model_dir / "state/pilot.json").write_text(json.dumps({"state": "failed", "reason": reason,
+                "input_sha256": "not diagnostic output", "outputs": {"not_public": "not diagnostic output"}}))
+            # Failed causes take priority over downstream blocked stages.
+            for stage in ("a", "b", "c", "d"):
+                (model_dir / f"state/{stage}.json").write_text(json.dumps({"state": "blocked", "reason": "prerequisite failed"}))
+            secret = "private-session-value"
+            (model_dir / "logs/pilot.txt").write_text("old log line\n" * 2000 +
+                "Traceback (most recent call last):\n" + reason + "\n" +
+                f"HF_TOKEN={secret}\nAuthorization: Bearer unrelated-credential\n")
+            ns = dict(subprocess=subprocess, g_command=lambda *args: ["unused"], MODEL="gemma4-e2b",
+                      REPO=REPO, ENV={"HF_TOKEN": secret}, USE_DRIVE=True, EXPERIMENT_DIR=root,
+                      FINAL_RC=1, MODE="pilot", Path=Path, json=json)
+            output = io.StringIO()
+            with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0)), contextlib.redirect_stdout(output):
+                with self.assertRaisesRegex(RuntimeError, "No available kernel") as error:
+                    exec(B.SUMMARY, ns)
+            rendered = output.getvalue()
+            self.assertIn("Gespeicherte Ursache: pilot:", rendered)
+            self.assertIn("Traceback", rendered)
+            self.assertIn("G-Laufverzeichnis in Drive:", rendered)
+            self.assertNotIn(secret, rendered)
+            self.assertNotIn("unrelated-credential", rendered)
+            self.assertNotIn("not diagnostic output", rendered)
+            self.assertNotIn("Ergebnisse sind", rendered)
+            self.assertLess(len(rendered), 6000)
+            self.assertEqual(len(ns["failure_details"]), 3)
+            self.assertTrue(ns["failure_details"][0].startswith("pilot:"))
+            self.assertIn(reason, str(error.exception))
+
+    def test_failed_run_without_stage_record_points_to_execution_cell(self):
+        with tempfile.TemporaryDirectory() as td:
+            ns = dict(subprocess=subprocess, g_command=lambda *args: ["unused"], MODEL="gemma4-e2b",
+                      REPO=REPO, ENV={}, USE_DRIVE=False, EXPERIMENT_DIR=Path(td),
+                      FINAL_RC=1, MODE="pilot", Path=Path, json=json)
+            with patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], 0)), contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(RuntimeError, "vorherigen Ausführungszelle"):
+                    exec(B.SUMMARY, ns)
 
     def test_comparison_shows_decisions_without_expanding_atlas_arrays(self):
         with tempfile.TemporaryDirectory() as td:

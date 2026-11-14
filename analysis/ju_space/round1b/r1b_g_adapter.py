@@ -263,6 +263,13 @@ def _cast_parameters(model, dtype):
 
 
 def _tag_model(model, name, spec, *, mock=False):
+    if not mock:
+        from r1b_g_attention import configure_attention
+        configure_attention(model)
+    # Keep the established native eager CPU fixtures: fp16 CPU SDPA kernels
+    # have different full/chunk rounding. Dedicated attention/checkpoint tests
+    # explicitly exercise the production SDPA path without altering that mock
+    # baseline or weakening the scientific cache-equivalence thresholds.
     model._r1b_g_name = name
     model._r1b_g_forward_only = bool(spec.get("forward_only", spec.get("quantized", False)))
     model._r1b_g_mock = bool(mock)
@@ -285,10 +292,21 @@ def _load_real(name, root, device, freeze=None, download=False):
     if torch.device(device).type != "cuda" or not torch.cuda.is_available():
         raise RuntimeError("Real Gemma models are CUDA-only; CPU tests must use mock=True")
     check_versions(spec["quantized"])
-    path = ensure_snapshot(name, root, freeze, download=download)
+    # Validate the small pinned config and the CUDA kernel before downloading
+    # weights. The complete snapshot is still rehashed before model loading.
+    path = Path(root) / "models" / name
+    if download:
+        from huggingface_hub import hf_hub_download
+        hf_hub_download(repo_id=spec["repo"], filename="config.json", revision=spec["revision"],
+                        local_dir=str(path))
+    if not (path / "config.json").is_file() or _file_hash(path / "config.json") != spec["sha256"]["config.json"]:
+        raise RuntimeError("G pinned-file verification failed: config.json")
     raw = json.loads((path / "config.json").read_text())
     if raw["model_type"] != spec["family"]:
         raise ValueError("pinned config does not match the Gemma architecture")
+    from r1b_g_attention import preflight_cuda_attention
+    preflight = preflight_cuda_attention(raw["text_config"], getattr(torch, spec["dtype"]), device)
+    path = ensure_snapshot(name, root, freeze, download=download)
     kwargs = dict(local_files_only=True, trust_remote_code=False, attn_implementation="sdpa",
                   dtype=getattr(torch, spec["dtype"]), device_map={"": str(device)}, output_loading_info=True)
     if spec["role"] == "assistant":
@@ -334,6 +352,7 @@ def _load_real(name, root, device, freeze=None, download=False):
             raise ValueError("loaded decoder shape differs from the reviewed model config")
         attention_layout(model)
     tok.padding_side = "left"
+    model._r1b_g_attention_preflight = preflight
     return tok, _tag_model(model, name, spec)
 
 

@@ -1,7 +1,7 @@
 """Repeatable offline checkpoint-conversion tests for the actual G loader.
 
 Every checkpoint is a tiny random model created in TemporaryDirectory. Only the
-CUDA availability check and requested placement are patched; from_pretrained,
+CUDA availability/kernel preflight and requested placement are patched; from_pretrained,
 manifest verification, key mapping and CT decompression are the production path.
 Run with MOCK=1 python r1b_g_checkpoint_test.py. No real weights are downloaded.
 """
@@ -98,6 +98,7 @@ class CheckpointTests(unittest.TestCase):
 
             with patch.object(A, "_spec", return_value=copy.deepcopy(spec)), \
                     patch.object(torch.cuda, "is_available", return_value=True), \
+                    patch("r1b_g_attention.preflight_cuda_attention", return_value={"mock": True}), \
                     patch.object(Text, "from_pretrained", side_effect=on_cpu):
                 _, actual = A.load_model(alias, root=td, device="cuda", mock=False)
             self.assertEqual(seen, [True])

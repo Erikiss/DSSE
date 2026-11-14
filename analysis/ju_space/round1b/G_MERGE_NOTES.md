@@ -132,7 +132,7 @@ is implemented in G files.
 
 ## Verification and interpretation
 
-Latest verification (14 November 2026): the broad CPU suite completed 154 tests
+Initial implementation verification (14 November 2026): the broad CPU suite completed 154 tests
 (151 passed, three opt-in notebook execution tests skipped in that command); the
 final statistical-family suite separately passed 12 tests. Native fixtures
 exercise QAT forward-only paths, cached interventions, planted statistical
@@ -141,7 +141,7 @@ was executed and all four target tokenizers verified 14,166,550 training tokens
 (above the 10-million-token frequency-control quota), with disjoint reference /
 N-text / lens-validation pools and 100 PG19 test books in verified source order.
 
-The separate opt-in notebook suite passed all nine tests, including execution of
+The initial separate opt-in notebook suite passed all nine tests, including execution of
 all six notebooks, all four complete mock model graphs, ANA rendering, verified
 resume and recovery from an interrupted source checkout. These cell-execution
 tests use an immutable local Git fixture and the already installed pinned Python
@@ -191,3 +191,41 @@ Open the updated GitHub notebook in Colab and retain the original settings.
 The corrected setup cell runs directly from the notebook, so an existing
 `source.json` pin remains usable; no Drive experiment deletion or new experiment
 name is needed for this installation-only repair.
+
+## Grouped-query CUDA repair and restart
+
+The operator's first real E2B run loaded target and assistant weights, then failed
+in the pilot's native cache check with `RuntimeError: No available kernel`.
+Its log showed eight query heads and one key/value head of dimension 512 while
+execution was restricted to PyTorch's memory-efficient CUDA backend. Transformers
+5.10.1 selected `enable_gqa`, which that backend in PyTorch 2.10 does not support.
+The recorded pilot state was failed, with no completed pilot artifact.
+
+The G attention interface now repeats KV heads explicitly before native SDPA,
+retaining native masks, cache sharing, precision and the required backend policy.
+Small CUDA checks using the actual configured head shapes run before loading real
+weights. Pilot artifacts retain the preflight results for target and assistant;
+the existing full/cache and long-context parity gates still apply. CPU fixtures
+and CUDA source review cannot certify a real GPU pilot; that validation remains
+the operator's next run.
+
+The original offline scientific fixtures retain their native eager backend.
+Separate SDPA regressions compare outputs, gradients, native cache decoding and
+assistant shared KV with the stock Transformers implementation. In particular,
+the CPU fp16 SDPA cache differences are identical before and after explicit KV
+expansion; no scientific cache-parity threshold is relaxed.
+
+Final repair validation: the broad suite ran 171 tests (167 passed; the real CUDA
+check and three opt-in notebook execution tests were skipped). The focused
+attention, checkpoint and notebook suites also passed on Python 3.13. The
+standalone E2B mock pilot completed. Actual A100 execution is checked by the
+new preflight and subsequent real pilot, not certified by these CPU results.
+
+The notebooks now display stored failure reasons and bounded log excerpts in the
+final cell, and call the directory a run directory rather than implying that a
+successful result exists. Their new default experiment is `gemma-g-v2`, which
+binds the corrected scientific code. The earlier `gemma-g-v1` keeps its original
+code pin and failed-run record. Open the updated PILOT notebook with its preset
+`MODE="pilot"` and `EXPERIMENT="gemma-g-v2"`; do not reuse the v1 code pin for this
+adapter correction. Existing local model downloads can be reused after hash
+verification. No Drive run was modified during diagnosis.

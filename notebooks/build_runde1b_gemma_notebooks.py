@@ -47,6 +47,9 @@ Qwen-Läufe und keine Freigabe eines anderen Notebook-Slots.
 
 {quickstart}
 
+**Aktualisierter Pilot:** `gemma-g-v2` startet mit dem korrigierten Gemma-Code.
+Ein vorhandener Lauf `gemma-g-v1` bleibt mit seiner bisherigen Code-Zuordnung erhalten.
+
 **Echte Läufe:** Im Pilot-Notebook das Modell wählen und `MODE = "pilot"` setzen.
 `INPUTS` ist optional: Für Freeze und Hauptlauf wird bei leerem Feld ein eigenes
 G-Paket aus Rohtexten und fest versionierten Korpora bereitgestellt.
@@ -80,7 +83,7 @@ def settings(slot):
     mode = "pilot" if slot == "PILOT" else "mock"
     return f'''# Einstellungen
 MODE = "{mode}"                    # "mock", "pilot" oder "run"
-EXPERIMENT = "gemma-g-v1"
+EXPERIMENT = "gemma-g-v2"
 MODEL = {model!r}                  # PILOT: eines der vier Zielmodelle wählen
 CODE_REF = {BRANCH!r}             # Branch beim ersten Start oder fester 40-stelliger Commit
 INPUTS = ""                      # optional: eigene G-Eingabedatei (JSON); sonst G-Paket erzeugen
@@ -356,15 +359,55 @@ SUMMARY = r'''
 status_args = ["--model", MODEL] if MODEL else []
 status_rc = subprocess.run(g_command("status", *status_args), cwd=str(REPO), env=ENV).returncode
 if USE_DRIVE:
-    print("Ergebnisse sind im eigenen G-Ordner in Drive gespeichert:", EXPERIMENT_DIR)
+    print("G-Laufverzeichnis in Drive:", EXPERIMENT_DIR)
 else:
-    print("Lokale Ergebnisse:", EXPERIMENT_DIR)
+    print("Lokales G-Laufverzeichnis:", EXPERIMENT_DIR)
+
+def g_diagnostic_text(text):
+    # Protokolle können externe Bibliotheksmeldungen enthalten; Zugangsdaten ausblenden.
+    import re
+    for name, value in ENV.items():
+        if value and name != "TOKENIZERS_PARALLELISM" and any(part in name.upper() for part in ("TOKEN", "SECRET", "PASSWORD", "API_KEY", "CREDENTIAL")):
+            text = text.replace(str(value), "[REDACTED]")
+    text = re.sub(r"\b(?:hf_[A-Za-z0-9]+|gh[pousr]_[A-Za-z0-9]+|github_pat_[A-Za-z0-9_]+)\b", "[REDACTED]", text)
+    text = re.sub(r"(?i)(bearer\s+)[^\s\"']+", r"\1[REDACTED]", text)
+    text = re.sub(r"(?i)([?&](?:token|access_token|auth|signature|sig|x-amz-signature)=)[^&\s]+", r"\1[REDACTED]", text)
+    return text
+
+failure_details = []
+if FINAL_RC and MODEL:
+    model_dir = Path(EXPERIMENT_DIR) / MODEL
+    failed_records = []
+    for state_path in sorted((model_dir / "state").glob("*.json")):
+        try:
+            record = json.loads(state_path.read_text())
+        except (OSError, ValueError):
+            continue
+        if not isinstance(record, dict) or record.get("state") not in {"failed", "blocked"}:
+            continue
+        failed_records.append((record.get("state") != "failed", state_path, record))
+    for _, state_path, record in sorted(failed_records, key=lambda item: (item[0], item[1].name))[:3]:
+        reason = g_diagnostic_text(str(record.get("reason") or "Keine Fehlerbeschreibung gespeichert."))
+        detail = f"{state_path.stem}: {reason[:1200]}"
+        failure_details.append(detail)
+        print("Gespeicherte Ursache:", detail)
+        log_path = model_dir / "logs" / (state_path.stem + ".txt")
+        if log_path.is_file():
+            try:
+                with log_path.open("rb") as handle:
+                    handle.seek(max(0, log_path.stat().st_size - 8192))
+                    tail = handle.read(8192).decode("utf-8", errors="replace")
+                print("Protokollauszug:", log_path)
+                print(g_diagnostic_text("\n".join(tail.splitlines()[-40:]))[-4000:])
+            except OSError as error:
+                print("Protokoll nicht lesbar:", type(error).__name__)
 if FINAL_RC == 4 and MODE == "mock":
     print("Technikdurchlauf beendet; wissenschaftlicher Umfang unvollständig. Die gemeldeten Tore und den Bericht ansehen.")
 elif FINAL_RC == 3:
     raise RuntimeError("Das Laufzeitfenster ist erreicht; der Fortschritt wurde gespeichert. Dasselbe Notebook mit denselben Einstellungen erneut ausführen, um fortzusetzen.")
 elif FINAL_RC:
-    raise RuntimeError(f"G-Runner meldet Rückgabewert {FINAL_RC}. Die ausgegebene Ursache beheben; anschließend denselben Lauf fortsetzen.")
+    cause = " | ".join(failure_details) if failure_details else "Keine gespeicherte Stufenursache vorhanden; die Ausgabe der vorherigen Ausführungszelle enthält den Fehler."
+    raise RuntimeError(f"G-Runner meldet Rückgabewert {FINAL_RC}. {cause}")
 if status_rc:
     raise RuntimeError(f"G-Status konnte nicht vollständig gelesen werden ({status_rc}).")
 '''

@@ -365,7 +365,8 @@ def pilot(ctx):
                 _,current=bridge.step(torch.tensor([[seqs[0][16]]],device=engine.device),current)
         assistant_seconds,_=timing(draft_probe)
         assistant={"load_seconds":assistant_load,"draft_steps":8,"seconds":assistant_seconds,
-                   "steps_per_second":8/max(assistant_seconds,1e-9)}
+                   "steps_per_second":8/max(assistant_seconds,1e-9),
+                   "attention_kernel_preflight":getattr(pair[1],"_r1b_g_attention_preflight",None)}
     window = int(engine.cfg.sliding_window)
     length = min(2 * window + 8, int(engine.cfg.max_position_embeddings))
     seq = (seqs[0] * math.ceil(length / len(seqs[0])))[:length]
@@ -411,6 +412,8 @@ def pilot(ctx):
            "cache_tokens": length, "sliding_window": window,
            "peak_memory_bytes": int(torch.cuda.max_memory_allocated()) if engine.device.type == "cuda" else None,
            "gpu": torch.cuda.get_device_name(engine.device) if engine.device.type == "cuda" else "CPU mock",
+           "attention_backend":getattr(engine.cfg,"_attn_implementation",None),
+           "attention_kernel_preflight":getattr(engine.model,"_r1b_g_attention_preflight",None),
            "layout": engine.layout.as_dict(), "attention": A.attention_layout(engine.model)}
     obj.update(selector={"seconds":selector_seconds,"neurons":engine.layout.total,"tokens":width,
                          "tokens_per_second":width/max(selector_seconds,1e-9)},
