@@ -148,6 +148,14 @@ class Gumbel:
         return self.g(None, scores)
 
 
+def new_cache(model):
+    """A new DynamicCache for a forward of the backbone: Qwen3.5-2B's hybrid stack (linear-attention layers keep conv / recurrent
+    states) needs the cache built from its config; Qwen3 keeps the bare DynamicCache() (its layers are created on first use, as before)."""
+    from transformers import DynamicCache
+    cfg = model.config.get_text_config() if hasattr(model.config, "get_text_config") else model.config
+    return DynamicCache(config=model.config) if "linear_attention" in (getattr(cfg, "layer_types", None) or []) else DynamicCache()
+
+
 def decode(model, tok, prompts, keys=None, T=1.0, max_new=24, topk=None, topp=None, batch=32, setup=None, on_fwd=None,
            bias=None, return_lp=False):
     """Keyed Gumbel-max (keys) or greedy (keys None) decoding with a KV cache, left padding and explicit position ids (token-identical
@@ -162,7 +170,7 @@ def decode(model, tok, prompts, keys=None, T=1.0, max_new=24, topk=None, topp=No
         P = prompts[b0:b0 + batch]; B = len(P)
         ids, am, _ = RC.pad_left(P, tok.pad_token_id); ids, am = ids.to(dev), am.to(dev)
         G = Gumbel(dev, T, keys[b0:b0 + B]) if keys is not None else None
-        cache, done, conts, lpc = DynamicCache(), torch.zeros(B, dtype=torch.bool, device=dev), [[] for _ in range(B)], [[] for _ in range(B)]
+        cache, done, conts, lpc = new_cache(model), torch.zeros(B, dtype=torch.bool, device=dev), [[] for _ in range(B)], [[] for _ in range(B)]
         pos = (am.cumsum(-1) - 1).clamp(min=0); cur = pos[:, -1:].clone()
         with (setup(b0, B) if setup else contextlib.nullcontext()), torch.no_grad(), RC.sdpa_efficient(dev):
             o = model(input_ids=ids, attention_mask=am, position_ids=pos, past_key_values=cache, use_cache=True, logits_to_keep=1)

@@ -6,7 +6,7 @@ Teoh 2026 (arXiv 2610.38331): KL(q || p) between the model's own next-token dist
 import math, sys
 import numpy as np
 import r1b_core as RC
-from r1b_k_base import T_, Tap, Interv, SetReader, specials, lm_parts, Gumbel, by_layer
+from r1b_k_base import T_, Tap, Interv, SetReader, specials, lm_parts, Gumbel, by_layer, new_cache
 
 _PIECES, _VALID = {}, {}
 
@@ -72,7 +72,8 @@ class Lens:
         self.norm, self.WU, self.WUbar = lm_parts(model)
         self.V = self.WU.shape[0]; self.spec = specials(tok, self.V, self.dev)
         self.wn, self.ref, self.sets = wn, ref, sets or {}
-        self.rope = sys.modules[type(self.L[0].self_attn).__module__].apply_rotary_pos_emb
+        att = next((l.self_attn for l in self.L if hasattr(l, "self_attn")), None)    # Qwen3.5: layer 0 is a linear-attention layer
+        self.rope = sys.modules[type(att).__module__].apply_rotary_pos_emb if att is not None else None
 
     # ---- hooks
     def _patch(self, block, vecs, pos):
@@ -96,6 +97,8 @@ class Lens:
         torch = T_()
         hs = []
         for l in layers:
+            if not hasattr(self.L[l], "self_attn"):     # linear-attention layers (Qwen3.5) have no q / k to read
+                continue
             at = self.L[l].self_attn
 
             def hook(m, args, kw, out, l=l):
@@ -124,7 +127,7 @@ class Lens:
         pb = block if variant == "E" else self.nL - 2
         vec = torch.cat([Hreal, Hprior]).float()
         if prefix is None:
-            ids = torch.tensor([self.frame + [int(s)] for s in seeds] * 2, device=dev); ph_abs, off = self.ph, 0; cache = DynamicCache()
+            ids = torch.tensor([self.frame + [int(s)] for s in seeds] * 2, device=dev); ph_abs, off = self.ph, 0; cache = new_cache(self.model)
             p0 = -len(self.frame)
         else:
             pc, Lp = prefix; cache = DynamicCache()
