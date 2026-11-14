@@ -159,8 +159,13 @@ def gen_ne(seed=1004, n=300, forbidden=()):
 
 
 def tqa_splits(rows, pool_cap=15000):
-    """rows: [{qid, question, aliases}] -> split by sha256(qid) order: S2 1,000, S3 1,000, S4a 200, S4b 200, S4c 300, then the S1 pool."""
-    rows = sorted(rows, key=lambda r: sh(r["qid"]))
+    """rows: [{qid, question, aliases}] -> split by sha256(qid) order: S2 1,000, S3 1,000, S4a 200, S4b 200, S4c 300, then the S1 pool.
+    One item per qid (first occurrence): rc.nocontext lists most questions twice (web and wikipedia evidence), which made copies
+    adjacent in sha256(qid) order and duplicated items within the splits and REF-K16."""
+    uniq = {}
+    for r in rows:
+        uniq.setdefault(r["qid"], r)
+    rows = sorted(uniq.values(), key=lambda r: sh(r["qid"]))
     plan = [("S2", 1000), ("S3", 1000), ("S4a", 200), ("S4b", 200), ("S4c", 300), ("S1", pool_cap)]
     k = 0
     for name, m in plan:
@@ -380,7 +385,7 @@ def build(out, tok, val_text, train_ids, tqa_rows, mock=False):
     reference + 10M for unigram counts); tqa_rows: [{qid, question, aliases}]."""
     os.makedirs(out, exist_ok=True)
     lines = [l.strip() for l in val_text if l.strip() and not l.strip().startswith("=")]
-    sents = [s.strip() + "." for l in lines for s in l.split(" . ") if s.strip()]
+    sents = [s.strip() + "." for l in lines for s in re.sub(r"\s\.$", "", l).split(" . ") if s.strip()]   # paragraph-final ' .' dropped (no ' ..')
     df = digit_free(sents)
     df_ids = [t for s in df for t in _ids(tok, " " + s)]
     val_ids = [t for l in lines for t in _ids(tok, " " + l)]
