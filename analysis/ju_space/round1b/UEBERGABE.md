@@ -121,6 +121,14 @@
   lokal fortsetzen (Ergebnis von a liegt bei): python results/ju_space/plans/runde1b/arbeitsstand/lcal/lcal_resumable.py
   results/ju_space/plans/runde1b/l_cal.json results/ju_space/plans/runde1b/arbeitsstand/lcal/cache (mehrere CPU-Stunden;
   nach einer Änderung an r1b_l_cal.py oder r1b_l_stats.py den Cache löschen und alles neu rechnen).
+- 14.11. 16:00 MEZ: Nachpilot r1b_P0b in Konto A gelaufen (A100-40GB). Auszug: results/ju_space/plans/runde1b/arbeitsstand/
+  p0b_summary.json (voller Datensatz in Drive Konto A: dsse_runs/r1b_P0b/p0b_engineering.json). Alle drei engine.fast-Schalter auf
+  der GPU bitgleich -> im Einfrier-Datensatz true; KV an Ort bei 32K B=3 1,24x schneller; B=3/B=4 passen bei 28K/32K (B_long 3
+  bleibt); Paritäten bestanden, OD-M14 = full_grid; Qwen3.5-2B lädt (G-K18 ok, G-K17 pass), Decode nur 1,04x langsamer als 1.7B;
+  Hook-Aufschlag 1,001; FISTA 4,25 ms; Drive 414/91 MB/s. Einziger Fehlschlag: K0-Prüfung offset4096 (Top-1 gleich, max |dlogp|
+  1,03e-3; Regel in Teil K nachsehen). L-Decode 60-81 ms je Schritt bei Batch 32 statt geplanter 25-35 ms -> L-Pilotregel prüfen.
+  Vor dem Einfrieren offen: L-CAL (Punkt a durchgefallen, b-n fehlen), Hochrechnung je Teil mit diesen Raten
+  (arbeitsstand/freeze_prep_proj/*.py), Kürzungen nach den Regeln (D-Deckel 13,8 h), runde1b_freeze.json, Konstanten, Freeze-Commit.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
