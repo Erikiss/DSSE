@@ -15,9 +15,9 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import venv
 
 
@@ -87,14 +87,26 @@ class ColabBootstrapTests(unittest.TestCase):
         interpreter = sys if minor is None else SimpleNamespace(
             executable=sys.executable, version_info=SimpleNamespace(major=3, minor=minor))
         return dict(BASE=Path(root), MODE=mode, SLOT="PILOT", COMMIT="a" * 40,
-                    INSTALL_DEPENDENCIES=True, sys=interpreter, os=os,
+                    INSTALL_DEPENDENCIES=True, USE_HF_SECRET=False, sys=interpreter, os=os,
                     subprocess=subprocess, fcntl=fcntl, json=json, Path=Path)
 
     def execute(self, ns, installer):
+        output = io.StringIO()
         with patch.object(venv.EnvBuilder, "_setup_pip", side_effect=AssertionError("ensurepip unavailable")) as ensurepip:
-            with patch.object(subprocess, "run", side_effect=installer.run), contextlib.redirect_stdout(io.StringIO()):
+            with patch.object(subprocess, "run", side_effect=installer.run), contextlib.redirect_stdout(output):
                 exec(B.DEPENDENCIES, ns)
             ensurepip.assert_not_called()
+        return output.getvalue()
+
+    @contextlib.contextmanager
+    def colab_secret(self, *, value=None, error=None):
+        getter = Mock(return_value=value, side_effect=error)
+        google, colab = ModuleType("google"), ModuleType("google.colab")
+        google.__path__ = []
+        google.colab = colab
+        colab.userdata = SimpleNamespace(get=getter)
+        with patch.dict(sys.modules, {"google": google, "google.colab": colab}):
+            yield getter
 
     def test_fresh_environment_bootstraps_without_ensurepip(self):
         with tempfile.TemporaryDirectory() as td:
@@ -170,6 +182,66 @@ class ColabBootstrapTests(unittest.TestCase):
                 expected = "cpu" if mode == "mock" else "cu128"
                 self.assertIn("https://download.pytorch.org/whl/" + expected, installer.install_calls[0])
             self.assertEqual(len(set(paths)), 3)
+
+    def test_all_notebook_defaults_skip_colab_secret_requests(self):
+        for slot in B.NOTEBOOKS:
+            with self.subTest(slot=slot), contextlib.redirect_stdout(io.StringIO()):
+                settings = {}
+                exec(B.settings(slot), settings)
+                self.assertIs(settings["USE_HF_SECRET"], False)
+        with tempfile.TemporaryDirectory() as td, patch.dict(os.environ, {}, clear=True), \
+                self.colab_secret(error=AssertionError("Colab UI must not be queried by default")) as getter:
+            ns = self.namespace(td, mode="pilot")
+            self.execute(ns, PackageInstaller())
+            getter.assert_not_called()
+            self.assertNotIn("HF_TOKEN", ns["ENV"])
+
+    def test_existing_environment_token_takes_precedence_without_disclosure(self):
+        credential = "existing-private-test-value"
+        with tempfile.TemporaryDirectory() as td, patch.dict(os.environ, {"HF_TOKEN": credential}, clear=True), \
+                self.colab_secret(error=AssertionError("Existing token must not be requested again")) as getter:
+            ns = self.namespace(td, mode="pilot")
+            ns["USE_HF_SECRET"] = True
+            output = self.execute(ns, PackageInstaller())
+            getter.assert_not_called()
+            self.assertEqual(ns["ENV"]["HF_TOKEN"], credential)
+            self.assertEqual(os.environ["HF_TOKEN"], credential)
+            self.assertNotIn(credential, output)
+
+    def test_explicit_secret_opt_in_sets_only_child_environment(self):
+        credential = "colab-private-test-value"
+        with tempfile.TemporaryDirectory() as td, patch.dict(os.environ, {}, clear=True), \
+                self.colab_secret(value=credential) as getter:
+            ns = self.namespace(td, mode="pilot")
+            ns["USE_HF_SECRET"] = True
+            output = self.execute(ns, PackageInstaller())
+            getter.assert_called_once_with("HF_TOKEN")
+            self.assertEqual(ns["ENV"]["HF_TOKEN"], credential)
+            self.assertNotIn("HF_TOKEN", os.environ)
+            self.assertNotIn("token", ns)
+            self.assertNotIn(credential, output)
+            self.assertNotIn(credential, (ns["ENV_PATH"] / "g_dependencies.json").read_text())
+
+    def test_optional_secret_timeout_missing_or_denied_does_not_stop_setup(self):
+        for name in ("TimeoutException", "SecretNotFoundError", "NotebookAccessError"):
+            with self.subTest(exception=name), tempfile.TemporaryDirectory() as td, \
+                    patch.dict(os.environ, {}, clear=True), \
+                    self.colab_secret(error=type(name, (Exception,), {})("private-error-detail")) as getter:
+                ns = self.namespace(td, mode="pilot")
+                ns["USE_HF_SECRET"] = True
+                output = self.execute(ns, PackageInstaller())
+                getter.assert_called_once_with("HF_TOKEN")
+                self.assertNotIn("HF_TOKEN", ns["ENV"])
+                self.assertIn("Python-Umfeld bereit:", output)
+                self.assertNotIn("private-error-detail", output)
+
+    def test_unexpected_secret_error_is_not_silently_swallowed(self):
+        with tempfile.TemporaryDirectory() as td, patch.dict(os.environ, {}, clear=True), \
+                self.colab_secret(error=RuntimeError("unexpected secret API failure")):
+            ns = self.namespace(td, mode="pilot")
+            ns["USE_HF_SECRET"] = True
+            with self.assertRaisesRegex(RuntimeError, "unexpected secret API failure"):
+                self.execute(ns, PackageInstaller())
 
 
 if __name__ == "__main__":

@@ -229,3 +229,19 @@ code pin and failed-run record. Open the updated PILOT notebook with its preset
 `MODE="pilot"` and `EXPERIMENT="gemma-g-v2"`; do not reuse the v1 code pin for this
 adapter correction. Existing local model downloads can be reused after hash
 verification. No Drive run was modified during diagnosis.
+
+## Optional Colab-secret lookup
+
+The next operator export stopped before the runner because Colab's optional
+`userdata.get("HF_TOKEN")` request timed out. The reviewed model repositories are
+public, so this UI request is no longer part of default setup. All six notebooks
+set `USE_HF_SECRET=False`; an existing environment token is still preserved.
+Explicit opt-in enables the Colab lookup, with timeout, missing-secret and
+access-denied cases continuing without the optional secret. Token values are
+neither printed nor written to setup metadata.
+
+Twelve setup/secret tests and eight notebook structural/display tests pass on
+Python 3.12 and 3.13. This notebook-only setup repair can retain the existing
+`gemma-g-v2` experiment and its corrected scientific source pin. Open the updated
+notebook and rerun setup; no additional experiment name or Drive deletion is
+needed. The stopped v2 setup had not produced a pilot artifact.

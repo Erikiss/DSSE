@@ -65,7 +65,10 @@ Alle eigenen Eingaben vor dem Freeze fertigstellen. Anschließend
 `FREEZE_AFTER_PILOT = True` setzen, um den eigenen G-Freeze zu schreiben.
 Danach im passenden Modell-Notebook `MODE = "run"` verwenden. Die Auswertung
 läuft auf der CPU.
-Einen benötigten Hugging-Face-Token als Colab-Secret `HF_TOKEN` hinterlegen.
+Die geprüften Modelle sind öffentlich zugänglich; ein Hugging-Face-Token ist
+optional. Ein vorhandener `HF_TOKEN` aus der Umgebung wird verwendet. Nur wenn
+du ausdrücklich ein Colab-Secret nutzen möchtest, `USE_HF_SECRET = True` setzen
+und das Secret `HF_TOKEN` für dieses Notebook freigeben.
 
 **Fortsetzen:** Experimentname, Code-Referenz und Eingaben beibehalten und das
 Notebook erneut ausführen. Der erste Start hält den Code-Commit für das Experiment
@@ -91,6 +94,7 @@ PREPARE_INPUTS = False            # im Pilot Rohdatenpaket vor dem Freeze erstel
 FREEZE_AFTER_PILOT = False        # nach geprüftem Pilot eigenen G-Freeze erstellen
 RUN_SELFTESTS = True
 USE_DRIVE = MODE != "mock"
+USE_HF_SECRET = False             # optional: HF_TOKEN ausdrücklich aus Colab-Secrets lesen
 LOCAL_BASE = "/content/dsse_g"
 DRIVE_BASE = "/content/drive/MyDrive/dsse_g_runs"
 INSTALL_DEPENDENCIES = True
@@ -266,7 +270,7 @@ if MODE == "mock":
 else:
     ENV.pop("HF_HUB_OFFLINE", None)
     ENV.pop("TRANSFORMERS_OFFLINE", None)
-    if "HF_TOKEN" not in ENV:
+    if globals().get("USE_HF_SECRET", False) and not ENV.get("HF_TOKEN"):
         try:
             from google.colab import userdata
             token = userdata.get("HF_TOKEN")
@@ -276,8 +280,9 @@ else:
         except (ImportError, KeyError):
             pass
         except Exception as exc:
-            if type(exc).__name__ not in {"SecretNotFoundError", "NotebookAccessError"}:
+            if type(exc).__name__ not in {"SecretNotFoundError", "NotebookAccessError", "TimeoutException"}:
                 raise
+            print(f"Optionales Colab-Secret HF_TOKEN nicht verfügbar ({type(exc).__name__}); weiter ohne Colab-Secret.")
 print("Python-Umfeld bereit:", ENV_KIND)
 '''
 
