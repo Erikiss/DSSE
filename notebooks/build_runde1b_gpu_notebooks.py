@@ -156,6 +156,9 @@ if {jlens!r} and not NUR_SELBSTTEST:          # SO-JLENS: aus dsse_runs/r1b_inpu
         shutil.copyfile(QUELLE, ZIEL)
     elif not os.path.exists(ZIEL) and (FZ.get("jlens") or {{}}).get("url"):
         import urllib.request; urllib.request.urlretrieve(FZ["jlens"]["url"], ZIEL)
+    if not os.path.exists(ZIEL):                # sonst direkt von Hugging Face (Neuronpedia), dieselbe Datei, Prüfsumme unten
+        from huggingface_hub import hf_hub_download
+        shutil.copyfile(hf_hub_download("neuronpedia/jacobian-lens", "qwen3-1.7b/jlens/Salesforce-wikitext/Qwen3-1.7B_jacobian_lens.pt"), ZIEL)
     if os.path.exists(ZIEL):
         assert sha256(ZIEL) == PIN, "J-Lens: Prüfsumme stimmt nicht (SO-JLENS)"
         print("J-Lens geprüft.")
