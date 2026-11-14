@@ -95,3 +95,18 @@ Remaining problems / not covered
   read by the mock sessions).
 - Mock CPU times are not GPU estimates; long mock sessions on two cores: r1b_K_S2b 528 s, r1b_K_S5 460 s, r1b_L_A 439 s, r1b_D_A
   about 830 s over two commands.
+
+Fix round before the freeze, 2026-11-14, 13:01-13:29 UTC: PARTIAL mock integration (stopped on the coordinator's request, quota)
+=============================================================================================================================
+Driver: scratchpad r1b_fix/integ_run3.py (integ_run2.py's pattern; fresh mock tree with rk_loop MOCK round-1 states; each command
+<= 530 s, taskset -c 2,3, 2 threads). Mock freeze record: engine.fast.l_decode_nosync / lce_inplace_kv / k_gumbel_kept_rows all True,
+engine.D B_long 3 / B_mid 7, trims R [RL1, RL2], D [T1-T8], K [K-drop2, K-drop3], tier 2 funded.
+Finished before the stop (all exit 0, recorded seconds): r1b_P0 22.9, r1b_P0b 78.2 (all 12 steps ran; every bit-identity verdict
+True; only G_K17_pass False, expected with the MOCK head), r1b_R_S2_14 56.6, r1b_R_S0 31.3, r1b_K_S1 147.2, r1b_K_S3 29.0,
+r1b_R_S2_18 239.0, r1b_R_S1 221.7, r1b_R_S2_06 205.0, r1b_K_S4 311.0. 10 of 33 sessions; no failure.
+Not run (stopped): the other 23 sessions (r1b_D_*, r1b_L_*, r1b_K_S2a/S2b/S5/S6/S7, r1b_R_S3/S5/S6/S7/S5L/S8/ana*, r1b_ana*), so
+the switches in D and L sessions and K-drop2 (K9, r1b_K_S5) ran only in the step-level MOCK tests (part_mock: r1b_D_B, r1b_D_C,
+r1b_P0 / r1b_P0b steps of every part) and in tests/fast_identity.py (58 bitwise checks OK). The P0b code edits after 13:03
+(Drive cold-read order, parity in-place comparison, K hybrid-stack cache / lens) ran in step-level tests only.
+Other tests of this round: r1b_core selftest OK; contracts OK; tiny random Qwen3.5 on the CPU (load with pins, 15 mtp tensors in
+K's head, keyed decode and rollouts after the hybrid-cache fix); GCS fetch (file://, mismatch, one HTTPS book).
