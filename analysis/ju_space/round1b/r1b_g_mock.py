@@ -37,7 +37,9 @@ def _text_kwargs(vocab_size):
     return dict(vocab_size=vocab_size, hidden_size=32, intermediate_size=48,
                 num_hidden_layers=4, num_attention_heads=4, num_key_value_heads=2,
                 num_global_key_value_heads=2, head_dim=8, global_head_dim=8,
-                max_position_embeddings=256, sliding_window=8,
+                # Native byte-level mock tokenization needs room for dialogue
+                # framing; model width remains tiny and the local window stays 8.
+                max_position_embeddings=4096, sliding_window=8,
                 layer_types=["sliding_attention", "full_attention"] * 2,
                 attention_k_eq_v=False, num_kv_shared_layers=2,
                 final_logit_softcapping=30.0, pad_token_id=0, eos_token_id=[1, 5],

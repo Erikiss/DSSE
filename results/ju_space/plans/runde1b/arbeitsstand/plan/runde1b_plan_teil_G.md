@@ -6,7 +6,7 @@
 
 **Approved decisions (14 November 2026).** Implement all model-independent K/L **core** measurements for the original E2B/E4B models, forward-only measurements for 31B-IT-QAT, the 12B-IT-QAT Neuron Lens bridge, and the D1 local/global-attention contrast. Fit model-specific E2B/E4B J-lenses. Completeness takes precedence over the earlier rough 4–8 A100-hour estimate. A100-80GB is allowed for memory-intensive sessions. No paid GPU experiment is started as part of the implementation. K's RK-1/RK-2/K3h and L's X1–X6 are not additional G experiments; P and R are not implemented here.
 
-**Delivery boundary.** Only new G files on `codex-teil-g`; never push to `ccr-6fe02b21-est040`. Round-1/2 files and the existing core, contracts, runners, R/K/D/L modules and notebook generator remain byte-identical. Required shared integration changes are listed in `analysis/ju_space/round1b/G_MERGE_NOTES.md`. The handover's two-phase rule is binding: phase 1 is the model audit, this plan and the adapter with CPU mocks; phase 2 (K/L measurements, integrated mock tests and notebooks) begins only after the handover's **Stand** section records **“Integrationstest bestanden”**. This document specifies the complete intended G arm; it is not evidence that phase 2 or real model runs have completed.
+**Delivery boundary.** Only new G files on `codex-teil-g`; never push to `ccr-6fe02b21-est040`. Round-1/2 files and the existing core, contracts, runners, R/K/D/L modules and notebook generator remain byte-identical. Required shared integration changes are listed in `analysis/ju_space/round1b/G_MERGE_NOTES.md`. The user subsequently clarified that G, including its notebooks, must run independently of Qwen and explicitly requested notebook completion now. This supersedes the handover's upstream-integration waiting rule. G therefore has its own entry point, experiment folders, pilot, raw-text inputs, freeze and report. The six generated G notebooks are approved new deliverables. No Qwen session, cross-account transfer or round-1b freeze is a prerequisite. This document retains the complete intended scientific G arm; the runtime coverage report distinguishes implemented measurements, closed data gates and unfinished protocols, and is not evidence that real model runs have occurred.
 
 **How to read this spec.** K and L are incorporated by measurement identifier below, including their implementation amendments. Each mapping states its input substitutions and restrictions; no unmentioned sample-size trim, changed statistic or replacement verdict is permitted. The G freeze records the exact K/L/D plan hashes used. Model-dependent fit parameters are recomputed on Gemma; no Qwen-derived weights, neuron sets or axes are imported as Gemma quantities.
 
@@ -54,7 +54,7 @@ E2B/E4B local attention has a 512-token window and 131072-token maximum context;
 
 **Rule / null-controls.** Engineering only. Exact shapes, hook neutrality and cache parity precede timing; timing never excuses a failed semantic check. CPU mocks establish code behaviour, not real-GPU throughput or peak memory. A real GPU run with insufficient memory fails explicitly; do not change dtype, cut contexts or substitute a smaller model silently.
 
-**Inputs / runs / gates.** Pinned manifests and pilot text, `r1b_G_P0_<model>`; G-ID, G-ARCH, G-QAT, G-HOOK, G-CACHE and inherited calibration gates. Results determine the final A100-minute projection and batching before freezing.
+**Inputs / runs / gates.** Pinned manifests and pilot text, `pilot`; G-ID, G-ARCH, G-QAT, G-HOOK, G-CACHE and inherited calibration gates. Results determine the final A100-minute projection and batching before freezing.
 
 ### GJ Model-specific E2B/E4B forward-Jacobian lenses
 
@@ -92,6 +92,8 @@ The following table is the exhaustive K-core disposition. “Transfer” means r
 
 **Native MTP details.** Original E2B/E4B each uses its own original assistant. The assistant receives `concat(target_embedding(last_token), target_last_hidden_state)` and the target's `shared_kv_states`, requested through its supported API; use returned projected hidden state at each further draft step. It is not an independent LM and not the Qwen MTP tensor layout. Preserve K5a's item-disjoint calibration/analysis split, paired states/seeds, agreement/length curves, self-consistency `KL(q || p)` and calibration verdict. Confirm the one-token position alignment before rollout. Reject mismatched target/assistant architectures, hidden dimensions or vocabulary mappings. QAT targets cannot borrow the original assistant merely because names resemble each other.
 
+The final `g_analyze` stage joins CF-K-attr, CF-K-link (PI specificity primary), CF-L and CF-HERR separately within each Gemma target. Missing members retain p=1 and the full family size; rank sensitivity is descriptive. Part-level strings and the explicit SO-AX exclusions remain unchanged.
+
 ### GL Lens-free core
 
 | L measurement | G disposition |
@@ -104,13 +106,13 @@ The following table is the exhaustive K-core disposition. “Transfer” means r
 | L5a–c OWNER | Full exact-label ownership and own-error protocol; lens-dependent branches inherit the actual target lens/MTP gates |
 | L-ANA | Same per-branch rules and combination logic; missing premises remain explicit |
 
-All GL procedures use target-specific H sets and populations. Statistical logistic/Ising/forward-map fitting is not differentiation through the QAT target and remains allowed. Interventions are forward activation edits. No target weight training is added. L1's fallback selector and the inherited H-specific `not testable` behaviour remain unchanged when SG8 fails.
+All GL procedures use target-specific H sets and populations. Statistical logistic/Ising/forward-map fitting is not differentiation through the QAT target and remains allowed. Interventions are forward activation edits. No target weight training is added. L1's fallback selector and the inherited H-specific `not testable` behaviour remain unchanged when SG8 fails. L-ANA applies the stated under-power guard to equivalence claims and records both original and guarded results. If a contrast has no specified planning SE, its equivalence is explicitly undecidable; directional evidence is retained.
 
 ### GD Native local versus global attention (D1 contrast)
 
-**What / how.** Run D1's model-independent field/readout protocol on the same raw stimulus identities, target-tokenized, with reads around each target's window boundary. Retain native `layer_types`, RoPE, masking and shared KV. Record per-layer effects split by native local/global type and by cue–read distance relative to the window; retain D1's controls and within-item pairing. Compare full and chunked/cache paths before accepting long-context records.
+**What / how.** Reuse D1's raw symmetric/asymmetric pure-endpoint stimuli, both letter assignments and source-item clustering, with Gemma tokenization. Measure paired cue/control letter log-odds and native per-layer logit-lens readouts at 0.5, 0.9, 1.1 and 2 times the attention window. Retain native `layer_types`, RoPE, masking and shared KV, and record actual token distances. Compare full and chunked/cache paths before accepting records. This is the requested G local/global contrast, not a reproduction of every original D1 field-verdict branch.
 
-**Rule / shows-cannot.** D1's inherited field verdicts apply to their unchanged estimands. The added layer-type contrast is descriptive: layer type is confounded with depth and is not randomly assigned. Do not infer a causal benefit of global attention from cross-layer means or silently force all layers to global attention.
+**Rule / shows-cannot.** The G layer-type contrast is descriptive: layer type is confounded with depth and is not randomly assigned. Use source-item-clustered intervals; do not attach original D1 field verdicts to this different estimand. Do not infer a causal benefit of global attention from cross-layer means or silently force all layers to global attention.
 
 **Inputs / runs / gates.** Frozen D1 raw stimuli, target tokens, GD session per target; G-CACHE and inherited D1 gates. This is a G-owned reuse of D1, not a modification of part D.
 
@@ -124,33 +126,33 @@ All GL procedures use target-specific H sets and populations. Statistical logist
 
 **Rule / shows-cannot.** Until held-out evidence is available, annotations always read `external base-model annotation; transfer unvalidated`. Report transfer effect sizes and intervals descriptively. A coordinate match alone does not validate a semantic label, and a failed transfer is not evidence that the original catalogue is incorrect. External R-lens reads include Gemma final norm and softcap; write-vector annotations account for native post-FFN norm and layer scaling. Never substitute the catalogue's R-lens for GJ without an explicit target validation result.
 
-**Inputs / runs / gates.** G 12B H/control set and pinned catalogue metadata/tables, `r1b_G_BRIDGE_12B`; G-ID, shape/vocabulary checks and source attribution. Real catalogue readouts are not fabricated in mocks.
+**Inputs / runs / gates.** G 12B H/control set and pinned catalogue metadata/tables, `bridge`; G-ID, shape/vocabulary checks and source attribution. Real catalogue readouts are not fabricated in mocks.
 
 ## G.4 Sessions, costs and freeze
 
-Session IDs and artifact roots include the model alias; cross-model caches and outputs cannot collide. Names below describe the phase-2 contract to be registered in the G-owned entrypoint, not registrations in the unchanged base runner.
+Session IDs and artifact roots include the model alias; cross-model caches and outputs cannot collide. The G-owned entry point registers the stages below; the unchanged base runner is not involved.
 
 | Session family | Starts after | Work | A100-minutes before measured pilot |
 |---|---|---|---|
-| `r1b_G_P0_<model>` | G model audit and loader checks | G0 engineering only | provisional 20 per target; actual recorded |
-| `r1b_G_J_<original>` | pilot and fixed fitting corpus | GJ derivative chunks/held-out bridge | `1000 * measured_seconds_per_fit_window / 60`, plus measured validation/setup |
-| `r1b_G_K_PREP_<model>` | pilot, required lens files | K1/K2/K3, references, H sets and gates | scaled from inherited K per-measurement work table |
-| `r1b_G_MTP_<original>` | pilot and matching assistant | K5a calibration | scaled from measured native-draft rates |
-| `r1b_G_K_<model>` | preparation and applicable calibration | K core in independently resumable groups | scaled per measurement, not a single guessed model multiplier |
-| `r1b_G_L_A/B_<model>` | own H/lab/population and K lens outputs | L core | inherited work baseline 185.3 min per target before rate scaling/margin |
-| `r1b_G_D1_<model>` | target cache gate and D1 inputs | GD contrast | measured D1 unit rate × frozen item/length counts |
-| `r1b_G_BRIDGE_12B` | own 12B H/control sets | GB join and transfer probes | measured probe rate × frozen held-out counts |
-| `r1b_G_ANA` | required sessions finished or explicitly not run | per-model verdicts and descriptive comparison | CPU; no GPU required |
+| `pilot` | G model audit and loader checks | G0 engineering only | provisional 20 per target; actual recorded |
+| `lens_fit`, `lens_validate` | pilot and fixed fitting corpus | GJ derivative chunks/held-out bridge | `1000 * measured_seconds_per_fit_window / 60`, plus measured validation/setup |
+| `k_prepare`, `k_measure`, `k_analyze` | pilot, required lens files | K1/K2/K3, references, H sets and gates | scaled from inherited K per-measurement work table |
+| `mtp` | pilot and matching assistant | K5a calibration | scaled from measured native-draft rates |
+| `k_causal`, `k_readouts`, `k_chain*`, `k_routes`, `k_long`, `k_persistence`, `k_contexts`, `k_hierarchy`, `k_extra` | preparation and applicable calibration | K core in independently resumable groups | scaled per measurement, not a single guessed model multiplier |
+| `l_prepare`, `l_measure`, `l_dynamics`, `l_duet`, `l_owner` | own H/lab/population and K lens outputs | L core | inherited work baseline 185.3 min per target before rate scaling/margin |
+| `d1` | target cache gate and D1 inputs | GD contrast | measured D1 unit rate × frozen item/length counts |
+| `bridge` | own 12B H/control sets | GB join and transfer probes | measured probe rate × frozen held-out counts |
+| `l_analyze`, `g_analyze`, report notebook | required sessions finished or explicitly not run | per-model verdicts and descriptive comparison | CPU; no GPU required |
 
-Use `setup_minutes + 1.5 * sum(unit_count * measured_seconds_per_unit / 60)` for each frozen budget row. Unit counts and inherited scientific sample sizes are fixed independently of effect estimates. The existing Qwen K/L core alone is about 818 planned A100-minutes per model, hence about 1636 minutes for two models **before** Gemma rate scaling, new lenses, QAT targets, D1 or the bridge. That comparison invalidates treating 240–480 minutes as a full-arm budget promise; it is not itself a measured Gemma forecast. Freeze final A100-minute costs after G0. No automatic scientific trims are approved; smaller batches/chunks preserve sample counts.
+Use `setup_minutes + 1.5 * sum(unit_count * measured_seconds_per_unit / 60)` for each frozen budget row. Unit counts and inherited scientific sample sizes are fixed independently of effect estimates. The existing Qwen K/L core alone is about 818 planned A100-minutes per model, hence about 1636 minutes for two models **before** Gemma rate scaling, new lenses, QAT targets, D1 or the bridge. That comparison invalidates treating 240–480 minutes as a full-arm budget promise; it is not itself a measured Gemma forecast. Record final A100-minute study costs after G0; a rate measurement or J-lens projection alone is not a measured cost for every K/L stage. No automatic scientific trims are approved; smaller batches/chunks preserve sample counts.
 
-GPU work uses one target per process, with assistants only beside their matching original. Chunk long prefill and derivative work; keep only required logits/states. Preserve the shared 4.5-hour guard and <=5-minute resumable work pieces; continuation must not duplicate completed items. Arrays above the shared large-artifact threshold remain local with resumable manifest entries. The notebooks show GPU/RAM requirements and the frozen projection before real execution. Tokens, if later required, come from runtime secrets and are never persisted.
+GPU work uses one target per process, with assistants only beside their matching original. Chunk long prefill and derivative work; keep only required logits/states. Preserve the shared 4.5-hour guard and <=5-minute resumable work pieces; continuation must not duplicate completed items. Arrays above the shared large-artifact threshold remain local with resumable manifest entries. The notebooks show GPU/RAM requirements; the G freeze retains measured pilot rates, long-context checks and the J-lens projection. Full study costs remain prospective until the operator has measured the required unit rates. Tokens, if later required, come from runtime secrets and are never persisted.
 
 ## G.5 Gates and failure behaviour
 
 | Gate | Check | Failure |
 |---|---|---|
-| G-UPSTREAM | affirmative integration pass in the handover Stand section and matching integration artifacts | phase 2 cannot be claimed implemented/integrated against unfinished K/L |
+| G-DEPENDENCIES | G code and imported statistical definitions have recorded hashes; required G artifacts exist | fail the affected G stage; never wait for a Qwen run or upstream integration status |
 | G-ID | exact model revision and every required file SHA-256 | stop; no fallback to main or another model |
 | G-ARCH | actual block/MLP layout, native text-only semantics, output norms | stop affected target |
 | G-QAT | synthetic CT decompression parity and no gradient target path | stop QAT; never switch to original weights |
@@ -166,6 +168,6 @@ GPU work uses one target per process, with assistants only beside their matching
 
 Phase 1 must provide an offline-importable model manifest, metadata-only refresh/check command, loader registration, native architecture adapter and small deterministic CPU mocks. Audit output is written outside the repository; refreshing metadata never rewrites frozen source pins automatically. Tests must verify ragged neuron indices, native Gemma hook positions, chat/stop handling, output normalization/softcap, positive and neutral interventions, cleanup, cache parity and assistant-pair rejection. Synthetic CT fixtures test reconstructed weights without downloading real weights. CPU success is always labelled as CPU/mock success.
 
-Phase 2 acceptance requires all mapped G steps with explicit gate results, no placeholder success for absent scientific results; parity of reused statistics/verdicts on shared synthetic data; cache/derivative/MTP alignment tests; restart/missing-input/provenance checks; and notebook generation into a temporary output directory. Only the permitted new source files, G plan and merge notes are committed. A repository diff against the base must contain no changed/deleted pre-existing file. Real-GPU validation remains a distinct, not-yet-run milestone until actually performed.
+Phase 2 acceptance requires all mapped G steps with explicit gate results, no placeholder success for absent scientific results; parity of reused statistics/verdicts on shared synthetic data; cache/derivative/MTP alignment tests; restart/missing-input/provenance checks; and notebook generation into a temporary output directory. Only new G source files, G plan, merge notes and the six requested generated G notebooks are committed; existing non-G files remain unchanged. A repository diff against the base must contain no changed/deleted pre-existing file. Real-GPU validation remains a distinct, not-yet-run milestone until actually performed.
 
 All facts above have sources and pinned identities; all planned measurements remain prospective. No automated request to goodfire.com/goodfire.ai, no local real-model run, no secret in files/commits, and no external message or paid run is part of this delivery.
