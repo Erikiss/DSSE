@@ -1,5 +1,5 @@
 {
- "created": "2026-11-14T01:32:39Z",
+ "created": "2026-11-14T01:33:00Z",
  "note": "Round-1b package files, built and checked on the CPU before the freeze; no model was run (tokenizer only). The code reads package files from results/ju_space/plans/runde1b/ (r1b_contracts.PKG); this directory is the staging copy.",
  "tokenizer": {
   "repo": "Qwen/Qwen3-1.7B",
@@ -316,7 +316,7 @@
     "192 new prompts: 96 RSI-topic + 96 scene, 48 questions in each type; no stance words; scene prompts free of AI / learning / change / tech words; no verbatim copy anywhere else in the repository"
    ],
    "sources": [
-    "192 new prompts written by the plan authors before the freeze (no model output)",
+    "192 new prompts authored before the freeze, not model output (plain single sentences, no chat markup; no verbatim match in any other repository file; no Qwen run before the freeze)",
     "rk_loop"
    ]
   },
