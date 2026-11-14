@@ -151,8 +151,9 @@ def r51_block(ctx):
     m = R.M(ctx); P = R.p256(ctx); maps, conv, sha = lens_maps(ctx, which); J = Jb(maps, conv, b); axl = R.load_pt(R.find(ctx, f"ax1b/ax1b_lens_b{b}.pt"))
     cap = axl["cap"]; dm = R.Dmg(ctx, m, b, cap); D = dirs51(ctx, b, m); SI = wsets(ctx, m); t64 = _texts64(ctx, P); pids = [m.ids(p) for p in P["prompts"]]
     W_U = m.model.lm_head.weight.float(); res = dict(block=b, lens=which, convention=conv, lens_sha256=sha, directions={})
-    if J is None:
-        raise K.NotRun(f"no J-lens map for block {b} under convention {conv}")
+    if J is None:   # K4j's 'input' convention has no map for block 26's output (J[27]): a coded record, so RG10 / R5.2 / R5.3 still run
+        R.wj(ctx, f"{'r5l' if which == 'J1b' else 'r5'}/r51_b{b}.json", dict(block=b, lens=which, convention=conv, lens_sha256=sha,
+             not_run=K.coded(f"NA:not_run:no J-lens map for block {b} under convention {conv}")), config=dict(block=b)); return
     cal = {u: ctx.cached(f"aDN_{u}", (lambda u=u: dm.calibrate(v, R.alpha0(ctx, b) if b in R.BLOCKS else 0.1)), fmt="json") for u, v in D.items()}
     base = []
     for i, c in t64:
@@ -220,7 +221,8 @@ def rg10(ctx):
     j1b = ctx.session.startswith("r1b_R_S5L"); d = "r5l" if j1b else "r5"; prof = {}
     for b in R.LENS_BLOCKS:
         p = ctx.path(f"{d}/r51_b{b}.json")
-        prof[str(b)] = validity(K.load_json(p)) if os.path.exists(p) else dict(valid=False, string=K.coded("NA:not_run:input missing"))
+        r = (K.load_json(p) or {}) if os.path.exists(p) else {}
+        prof[str(b)] = validity(r) if r.get("directions") else dict(valid=False, string=r.get("not_run") or K.coded("NA:not_run:input missing"))
     lab = ["refit lens (second attempt)"] if j1b else []
     if j1b:
         R.wj(ctx, "r5l/jlens_validity_j1b.json", dict(blocks=prof, lens="LENS-J1b"), config=dict(), labels=lab); return
@@ -256,6 +258,8 @@ def r52(ctx):
         if which == "J1b" and not valid.get(str(b)):
             continue
         axl = R.load_pt(R.find(ctx, f"ax1b/ax1b_lens_b{b}.pt")); u = S.unit(axl["axes"]["T_1b"].double()); J = Jb(maps, conv, b); dm = R.Dmg(ctx, m, b, axl["cap"])
+        if J is None:                                  # no map for block 26's output under K4j's 'input' convention (as in R5.1)
+            out[str(b)] = dict(string=K.coded(f"NA:not_run:no J-lens map for block {b} under convention {conv}")); continue
         ins = [ST2.a3_input(lambda s: K.enc(m.tok, s), lambda s: K.chat_text(m.tok, s), o["text"]["A3"]) for o in objs]
         base = []
         for a3 in ins:
