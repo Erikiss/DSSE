@@ -197,7 +197,7 @@ def k9_part(ctx, i, n):
         if X is None:
             with RC.Hooks(model) as hk, torch.no_grad():
                 hk.capture([l]); model.model(input_ids=torch.tensor(T["c2"][:2], device=ctx.device)); X = hk.states[l][0].reshape(-1, model.config.hidden_size)
-        sub = _subspaces(ctx, E, l, A, X); key = {"ustar": "ustar", "uT": "uT", "usea": "usea", "Hsub": "Hsub", "Jws": "Jws", "pc16": "pc16"}[c.rstrip("0123456789_").rstrip("_")]
+        sub = _subspaces(ctx, E, l, A, X); key = next(k for k in ("ustar", "usea", "uT", "Hsub", "Jws", "pc16") if c.startswith(k))
         if key in sub:
             bases[c] = (l, sub[key][:, :16] if key in ("Hsub", "Jws", "pc16") else sub[key])
     jobs = [(cond, k) for cond in T for k in range(len(T[cond]))]

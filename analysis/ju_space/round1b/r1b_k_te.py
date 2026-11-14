@@ -129,7 +129,8 @@ def head_vjp(model, ids, F_fn, tprime):
     returns per layer [H, T, T] edges (absolute) and the routing share per lag (sum over r - s = lag of |e| / sum |e|)."""
     torch = T_()
     with explicit(model, "grad") as st, torch.enable_grad():
-        o = model.model(input_ids=ids, output_hidden_states=True)
+        emb = model.get_input_embeddings()(ids).detach().requires_grad_(True)     # a grad leaf (the weights are frozen)
+        o = model.model(inputs_embeds=emb, output_hidden_states=True)
         F = F_fn(o.hidden_states, tprime)
         heads = st["heads"]; outs = [heads[l][0] for l in sorted(heads)]
         grads = torch.autograd.grad(F, outs, allow_unused=True)

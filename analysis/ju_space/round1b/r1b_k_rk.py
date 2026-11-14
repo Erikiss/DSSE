@@ -55,7 +55,7 @@ def rk1_train(ctx, i, n):
     amp = torch.autocast("cuda", dtype=torch.bfloat16) if str(ctx.device).startswith("cuda") else __import__("contextlib").nullcontext()
     log = []
     for s in range(steps):
-        x = torch.tensor(seg[s * T * Bt:(s + 1) * T * Bt].reshape(Bt, T), device=ctx.device)
+        x = torch.tensor(seg[s * T * Bt:(s + 1) * T * Bt].reshape(Bt, T), device=ctx.device, dtype=torch.long)
         with torch.no_grad(), amp:
             o = model(input_ids=x, output_hidden_states=True); h27 = o.hidden_states[nL].float(); q = o.logits.float().log_softmax(-1)
         lr = 3e-4 * 0.5 * (1 + math.cos(math.pi * (i * steps + s) / total_steps))
