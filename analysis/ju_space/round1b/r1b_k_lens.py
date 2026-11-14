@@ -158,7 +158,7 @@ class Lens:
             G = Gumbel(dev, T, list(keys) * 2) if keys is not None else None
             toks = torch.zeros(N, J, dtype=torch.long); first = None
             pos = torch.arange(ids.shape[1], device=dev)[None].repeat(B, 1) + off
-            with torch.no_grad():
+            with torch.no_grad(), RC.sdpa_efficient(dev):            # K.0: the memory-efficient kernel is asserted
                 for k in range(J):
                     fovacc.clear()
                     o = self.model(input_ids=ids, position_ids=pos, past_key_values=cache, use_cache=True, logits_to_keep=1)
@@ -171,7 +171,7 @@ class Lens:
                     if keep_first and k == 0:
                         first = dict(lr=lr.cpu(), lp=lp.cpu(), plaus=torch.isfinite(s).cpu())
                     if bias is not None:
-                        s = s + bias
+                        s = s + (bias(k) if callable(bias) else bias)
                     sel = s / T + G(torch.zeros(B, s.shape[1], device=dev))[:N] if G is not None else s
                     top2 = sel.topk(2, -1); x = top2.indices[:, 0]
                     if forced is not None:
@@ -332,7 +332,7 @@ def head_rollout(model, tok, head, h0r, h0p, seeds, J=16, lam=1.0, plaus=0.1, po
             lr, lp = lg[:N].log_softmax(-1), lg[N:].log_softmax(-1); lrm = lr.masked_fill(spec, float("-inf"))
             s = (lr - lam * lp).masked_fill((lr < lrm.max(-1, keepdim=True).values + math.log(plaus)) | spec, float("-inf"))
             if bias is not None:
-                s = s + bias
+                s = s + (bias(k) if callable(bias) else bias)
             xn = s.argmax(-1)
             if forced is not None:
                 for i, f in enumerate(forced):

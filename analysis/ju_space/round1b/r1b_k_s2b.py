@@ -65,8 +65,8 @@ def k6e_cal(ctx):
     e1 = np.array([float((a["aX"]["H"][:SEG].float() - b["aX"]["H"][:SEG].float()).mean()) if "H" in a["aX"] else 0.0 for a, b in zip(tk, tw)])
     zp = float(e1.mean() / (e1.std(ddof=1) / np.sqrt(N(ctx, 1536, 1536)))) if len(e1) > 1 and e1.std() > 0 else 0.0
     nk = 2 if zp >= 7 else 4
-    u32 = KB.ref_u32_damage(ctx, model, {"H_push_delta2": (lambda: Interv(model, [dict(sel=by_layer(E["HA"]), kind="scale", value=gH)])) if E["HA"] else None}
-                            if E["HA"] else {}, "K6e NSCALE_DN") if E["HA"] else {}
+    u32 = KB.ref_u32_damage(ctx, model, {"H_push_delta2": lambda: Interv(model, [dict(sel=by_layer(E["HA"]), kind="scale", value=gH)])},
+                            "K6e NSCALE_DN") if E["HA"] else {}
     write(ctx, "k/k6e/cal.json", dict(gain=cal, G_K16=dict(z_proj=zp, n_keys=nk, doubled=nk == 4), n_keys=nk, ref_u32=u32),
           labels=[] if nk == 2 else ["G-K16: units doubled (4 keys)"])
 

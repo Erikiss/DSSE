@@ -234,5 +234,5 @@ def rk2_run(ctx):
                 out.append(dict(item=it["id"], block=l, cond=nm, q=float(np.nanmean(q)) if np.isfinite(q).any() else None))
     save(ctx, "k/rk2/rows.pt", dict(rows=out))
     import r1b_k_ana as KA
-    write(ctx, "k/rk2/rk2.json", KA.rk2_rule(out, RC.load_json(KB.up(ctx, "r1b_K_S1", "sg8_preview.json")).get("G_K2")),
+    write(ctx, "k/rk2/rk2.json", KA.rk2_rule(out, RC.load_json(KB.up(ctx, "r1b_K_S1", "sg8_preview.json")).get("G-K2")),
           labels=["reserve RK-2 (reported next to the composite; never enters it)"])

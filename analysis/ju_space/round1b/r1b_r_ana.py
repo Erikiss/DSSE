@@ -554,8 +554,10 @@ def r6(ctx):
         for k, v in sorted(d["turns"].items()):
             okk = ~(t.isnan(v["xp"]).any(1) | t.isnan(v["xm"]).any(1)); D[int(k)] = Dk(v["xp"], v["xm"], okk, po, fixed=fixed)
         d1iv = S.iv(D[1][1]); defined = isinstance(d1iv[0], float) and (d1iv[0] > 0 or d1iv[1] < 0)
-        K_ = {k: dict(pt=D[k][0] / D[1][0], iv=S.iv(D[k][1] / D[1][1])) for k in D if k > 1} if defined else {}
-        kap = {k: dict(pt=D[k][0] / D[k - 1][0], iv=S.iv(D[k][1] / D[k - 1][1])) for k in D if k > 1 and k - 1 in D}
+        qd = lambda a, b: a / b if b else float("nan")
+        with np.errstate(divide="ignore", invalid="ignore"):
+            K_ = {k: dict(pt=qd(D[k][0], D[1][0]), iv=S.iv(D[k][1] / D[1][1])) for k in D if k > 1} if defined else {}
+            kap = {k: dict(pt=qd(D[k][0], D[k - 1][0]), iv=S.iv(D[k][1] / D[k - 1][1])) for k in D if k > 1 and k - 1 in D}
         rt = {int(k): v.get("round_trip_failures") for k, v in d["turns"].items()}
         return D, defined, d1iv, K_, kap, rt
     for T_ in ("0.7", "1.0"):

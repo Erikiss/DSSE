@@ -260,7 +260,8 @@ def jex_batch(series, item, perms_list, weights_list, chunk=256):
         P_ = perms_list[c0:c0 + chunk]; Wl = weights_list[c0:c0 + chunk]
         X = np.stack([np.concatenate([X0, sB[p[rr], kk - 1][:, None]], 1) for p in P_])
         W = np.stack([w[rr] for w in Wl])
-        out.append(S.logit_fe_batch(y, fe, X, int(it.max()) + 1, W=W)[:, 2] / 2)
+        dev = "cuda" if K._torch().cuda.is_available() else "cpu"
+        out.append(S.logit_fe_batch(y, fe, X, int(it.max()) + 1, W=W, device=dev)[:, 2] / 2)
     return np.concatenate(out) if out else np.zeros(0)
 
 

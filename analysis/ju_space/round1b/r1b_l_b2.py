@@ -1101,7 +1101,14 @@ def x5(ctx):
                 continue
             pat = ((x["zs"].float().numpy() > thr[None]).mean(0) > 0.5).astype(float)
             _, u = S.descend(pat[None], hh, JJ)
-            acc.append(bool((np.array(u[0]) == np.array(u[0])).all()))
+            if c.get("spins") is None or not len(c["spins"]):
+                continue
+            a0, a1 = th["off"]["P"]
+            gsp = np.unpackbits(c["spins"], axis=1)[:c["n"], a0:a1].astype(float)
+            if l3c["fit"].get("sel_units"):
+                gsp = gsp[:, l3c["fit"]["sel_units"]]
+            _, u0 = S.descend(((gsp.mean(0) > 0.5).astype(float))[None], hh, JJ)
+            acc.append(bool(np.array_equal(np.array(u[0]), np.array(u0[0]))))   # the original text's basin is recovered
     err = dict(original_accept_rate=float(np.mean(acc)) if acc else None, random_reject_rate=float(1 - np.mean(null)) if null else None)
     wj(ctx, "l/x5.json", dict(attempts=attempts, final=final, null_hits=null, null95=null95, lexical=lex, verifier_error=err,
                               target=target.tolist()), config=dict(item="X5", prompts=cf["x5_prompts"], new=cf["x5_new"]), labels=["descriptive"])

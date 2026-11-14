@@ -915,6 +915,15 @@ def k10a_stats(rows):
     if not rows:
         return nr("input missing")
     content = {"ustar", "uT", "usea", "SJ14"}; out = {}
+    sd = {}
+    for r in rows:                                        # target SDs over texts and readout positions (effects in target SDs)
+        for t, v in (r["eff"].get("base") or {}).items():
+            sd.setdefault(t, []).extend(v)
+    sd = {t: (np.std(v) or 1.0) for t, v in sd.items()}
+    for r in rows:
+        for key, e in r["eff"].items():
+            if isinstance(e, dict) and key not in ("base",):
+                r["eff"][key] = {t: x / sd.get(t, 1.0) for t, x in e.items()}
     for dose in ("delta1", "delta2"):
         kv, tk = [], []
         for r in rows:

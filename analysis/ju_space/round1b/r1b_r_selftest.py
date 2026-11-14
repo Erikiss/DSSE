@@ -63,7 +63,8 @@ def run(sess, d, root, tree, env):
 def sessions(d, root):
     import r1b_run_session as RS
     d = os.path.abspath(d); env = dict(os.environ, MOCK="1", NT="1", RUN_DEVICE="cpu", R1B_ACCOUNT="A", R1B_MOCK_WITH_R1="1",
-                                      POOLDIRS=os.path.join(root, "gpu_pkg", "rk_dirs.pt"), PERSONA=os.path.join(root, "rsi_dl", "persona"))
+                                      POOLDIRS=os.path.join(root, "gpu_pkg", "rk_dirs.pt"), PERSONA=os.path.join(root, "rsi_dl", "persona"),
+                                      R1B_R_FORCE_GATES="1")
     os.environ.update(env); tree = RS.mock_tree(os.path.join(d, "tree"), root, with_r1=True); env["R1B_FREEZE"] = tree["freeze"]
     kb = os.path.join(tree["B"], "r1b_K_S1"); os.makedirs(kb, exist_ok=True)
     json.dump(dict(convention="output", mock=True), open(os.path.join(kb, "k4j.json"), "w")); json.dump(dict(mock=True), open(os.path.join(kb, "session_done.json"), "w"))

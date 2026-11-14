@@ -164,7 +164,7 @@ def decode(model, tok, prompts, keys=None, T=1.0, max_new=24, topk=None, topp=No
         G = Gumbel(dev, T, keys[b0:b0 + B]) if keys is not None else None
         cache, done, conts, lpc = DynamicCache(), torch.zeros(B, dtype=torch.bool, device=dev), [[] for _ in range(B)], [[] for _ in range(B)]
         pos = (am.cumsum(-1) - 1).clamp(min=0); cur = pos[:, -1:].clone()
-        with (setup(b0, B) if setup else contextlib.nullcontext()), torch.no_grad():
+        with (setup(b0, B) if setup else contextlib.nullcontext()), torch.no_grad(), RC.sdpa_efficient(dev):
             o = model(input_ids=ids, attention_mask=am, position_ids=pos, past_key_values=cache, use_cache=True, logits_to_keep=1)
             if on_fwd:
                 on_fwd(b0, 0)
@@ -205,7 +205,7 @@ def tf_batches(model, seqs, pad_id, batch=16, keep=None, setup=None, on_fwd=None
     for b0 in range(0, len(seqs), batch):
         ids, am, pad = RC.pad_left(seqs[b0:b0 + batch], pad_id); ids, am = ids.to(dev), am.to(dev)
         pos = (am.cumsum(-1) - 1).clamp(min=0)
-        with (setup(b0, ids.shape[0]) if setup else contextlib.nullcontext()), torch.no_grad():
+        with (setup(b0, ids.shape[0]) if setup else contextlib.nullcontext()), torch.no_grad(), RC.sdpa_efficient(dev):
             if logits:
                 o = model(input_ids=ids, attention_mask=am, position_ids=pos, **({} if keep is None else dict(logits_to_keep=keep))).logits
             else:

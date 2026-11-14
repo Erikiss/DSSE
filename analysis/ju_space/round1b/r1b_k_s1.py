@@ -435,8 +435,9 @@ def k3a(ctx):
                                       har=dict(X=harX, y=None if har is None else har["y"]), qids_s3=[r["qid"] for r in S3]))
     import r1b_k_rules as KR
     pv = KR.k3a_rule(load_pt(own(ctx, "k/k3/k3a_data.pt")), quick=True)
-    write(ctx, "sg8_preview.json", dict(G_K2=pv["in_domain"]["string"], H_op_name=hs["H_op_name"], detail=pv, note="in-session preview "
-                                       "(SG8); the verdict label uses r1b_K_ana's value"), labels=["SG8 preview"])
+    write(ctx, "sg8_preview.json", {"G-K2": pv["in_domain"]["string"], "G_K2": pv["in_domain"]["string"], "H_op_name": hs["H_op_name"], "detail": pv,
+                                    "note": "in-session preview (SG8); the verdict label uses r1b_K_ana's value"}, labels=["SG8 preview"])
+
 
 
 def k3g2(ctx):

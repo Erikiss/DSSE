@@ -158,14 +158,16 @@ def k9_texts(ctx, E):
     byid = {x["id"]: x for x in b["ach_long"]}
     c1 = [RC.chat_ids(tok, byid[r["item"]]["prompt"]) + r["tok"] for r in k8][:n]
     c2 = [list(t) for t in b["wt"]["neutral"][:n]]
-    tq = []
-    for i in range(N(ctx, 8, 2)):
+    tq = []; plan = {s["sid"]: s for s in S4.k8b_plan(ctx, E)[2]}; byq = {r["qid"]: r for r in b["tqa"]}
+    for i in range(12):
         p = ctx.input("r1b_K_S4", f"k/k8b/part{i}.pt", required=False)
         if p:
             for row in load_pt(p)["rows"]:
                 if row["block"] == "tqa" and row["arm"] == "clean":
                     for s in row["sessions"]:
-                        tq.append(sum((RC.chat_ids(tok, "Question") + t["tok"] + RC.enc(tok, S4.END) for t in s["turns"]), []))
+                        its = plan[s["sid"]]["items"] if s["sid"] in plan else []
+                        tq.append(sum((RC.chat_ids(tok, "Question: " + byq[q]["question"]) + RC.enc(tok, "The answer is") + t["tok"] + RC.enc(tok, S4.END)
+                                       for q, t in zip(its, s["turns"])), []))
     c3 = tq[:n]
     coh = " ".join(b["wt"]["coherent"][:600]); filler = " ".join(b["wt"]["coherent"][k] for k in np.random.default_rng(61).permutation(len(b["wt"]["coherent"]))[:600])
     tgt = c2[0][:N(ctx, 512, 64)] if c2 else []
@@ -383,6 +385,9 @@ def _effects(res, base, T0, kind, A, E, tblocks):
                 a = lambda st: float(st["aH"][p]) if st.get("aH") is not None else 0.0
                 e["aH"] = ((a(res[1][route]) - a(res[-1][route])) / 2) if kind == "dir" else (a(res[1][route]) - a(base))
             out[f"{route}{k}"] = e
+    out["base"] = {nm: [float(base[l][T0 + k] @ d.to(base[l].device)) for k in (1, 2, 4, 8)] for nm, (l, d) in tg.items()}
+    if base.get("aH") is not None:
+        out["base"]["aH"] = [float(base["aH"][T0 + k]) for k in (1, 2, 4, 8)]
     # structural zero: KV route, blocks <= 14, later positions
     sz = 0.0
     for l in [b for b in tblocks if b <= 14]:

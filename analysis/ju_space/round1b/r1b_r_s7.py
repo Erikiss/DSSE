@@ -195,6 +195,7 @@ def cue(ctx):
     (nothing removed)' unless RG13 (share descriptive)."""
     import r2_rk
     t = R.torch(); r71 = K.load_json(ctx.path("r7/r71.json"))
+    force = ctx.mock and os.environ.get("R1B_R_FORCE_GATES") == "1"          # MOCK self-test of the gated paths only
     if not r71.get("selected"):
         R.wj(ctx, "r7/r72.json", dict(string="not applicable (nothing removed)", share=K.coded("NA:gate_closed:RG13")), config=dict()); return
     m = R.M(ctx); var = [v for v in E if v[0] == r71["selected"]][0]; mu = ctx.cached("mu", lambda: module_means(ctx, m)); P = R.p256(ctx)
@@ -210,7 +211,7 @@ def cue(ctx):
         c, Xc, _ = ctx.cached(f"cue_{nm}", lambda: instructed(ctx, m, "rsi", ex, cue=msgs))
         out[nm] = r2_rk.gap_on_fixed_axes(Xc, ax["Xa"]["rsi"], fold, aA, aB)["g"]
     g0, ga = r71["gaps"]["rsi"]["g0"], r71["gaps"]["rsi"]["g_abl"]; sh = (out["abl"] - ga) / (g0 - ga) if g0 != ga else float("nan")
-    if not r71["RG13"]:
+    if not (r71["RG13"] or force):
         s = "not applicable (nothing removed)"
     else:
         s = "shallow" if sh >= 0.5 else ("deep" if sh < 0.2 else "partial")
@@ -224,8 +225,8 @@ def q4b(ctx):
     shared, the unablated model reads. RG14 in session: RG13 and the twin's round 1 p_s <= 0.01 and A lower bound >= 0.10 on u_T^v(14)."""
     import r1b_r_s2
     t = R.torch(); r71 = K.load_json(ctx.path("r7/r71.json")); r0 = K.load_json(ctx.input("r1b_R_S0", "r0_table.json"), {}) or {}
-    bt = bool(r0.get("bootstrap_t"))
-    if not r71.get("RG13"):
+    bt = bool(r0.get("bootstrap_t")); force = ctx.mock and os.environ.get("R1B_R_FORCE_GATES") == "1"   # MOCK self-test of the gated paths
+    if not (r71.get("RG13") or (force and r71.get("selected"))):
         R.wj(ctx, "r7/r73.json", dict(string="not testable (gate: RG13 (erasure not passed))", RG14=False), config=dict()); return
     m = R.M(ctx); var = [v for v in E if v[0] == r71["selected"]][0]; mu = ctx.cached("mu", lambda: module_means(ctx, m)); P = R.p256(ctx)
     cap = float(R.r1_state(ctx, 14)["ref"]["cap"]); q = u_rsi(ctx); ab = eraser(m.model, q, var, mu); dm = R.Dmg(ctx, m, 14, cap)
@@ -244,7 +245,7 @@ def q4b(ctx):
             if nm == "twin" and n == 0:
                 st = S.stat_row(S.Row(R.delta_of(ev), ev["ok"], ev["prompt_of"], len(P["q"])), a1["T_v"], aW["T_v"], P["fold"], H, W, boot_t=bt)
                 rg14 = st["p_s"] <= 0.01 and (S.num(st.get("A_lo")) or 0) >= 0.10
-                if not rg14:
+                if not (rg14 or force):
                     R.wj(ctx, "r7/r73.json", dict(string="not testable (gate: twin does not re-find RSI at round 1)", RG14=False,
                                                        twin_round1={k: v for k, v in st.items() if k not in ("A_draws", "rel_draws")}), config=dict()); return
     rd = {nm: [S.stat_row(S.Row(R.delta_of(e), e["ok"], e["prompt_of"], len(P["q"])), a1["T_v"], aW["T_v"], P["fold"], H, W, boot_t=bt) for e in evs[nm]]

@@ -40,8 +40,16 @@ def _digit_bias(ctx, tok, lens):
     """MOCK only: a selection bias towards digit tokens so that the random mock model writes numbers (exercises the scorers)."""
     if not ctx.mock:
         return None
-    v = T_().zeros(lens.V, device=lens.dev); v[KB.digit_ids(tok)] = 6.0; v[tok.convert_tokens_to_ids("Ġ")] = 3.0; v[tok.convert_tokens_to_ids(",")] = 2.0
-    return v
+    torch = T_(); dg = KB.digit_ids(tok); cm = tok.convert_tokens_to_ids(",")
+
+    def bias(k):                                     # three digits, then a comma; the leading digit rotates with the step
+        v = torch.zeros(lens.V, device=lens.dev)
+        if k % 4 == 3:
+            v[cm] = 9.0
+        else:
+            v[dg] = 6.0; v[dg[(3 * k + 1 + (k // 4)) % 10]] = 8.0
+        return v
+    return bias
 
 
 def item_label(ctx, it, text):

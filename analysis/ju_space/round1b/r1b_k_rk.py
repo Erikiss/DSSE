@@ -94,7 +94,8 @@ def rk1_eval(ctx, n):
     conv = RC.load_json(up(ctx, "r1b_K_S1", "k4j.json")).get("convention", "output"); s0 = St["St"]["t0"]; pc = LN.pieces(tok)
     S4 = load_pt(up(ctx, "r1b_K_S2a", "k/k4/summary.pt")); bias = None
     if ctx.mock:
-        bias = torch.zeros(model.get_output_embeddings().weight.shape[0], device=ctx.device); bias[KB.digit_ids(tok)] = 6.0
+        import r1b_k_s2 as S2
+        bias = S2._digit_bias(ctx, tok, type("Lx", (), dict(V=model.get_output_embeddings().weight.shape[0], dev=ctx.device)))
     rows, skl = [], []
     items = [i for i in I["correct"] if i in s0["items"]][:N(ctx, 128, 3)]
     for l in [b for b in (14, 18) if b in s0["h"]]:

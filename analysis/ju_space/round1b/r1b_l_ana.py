@@ -267,7 +267,7 @@ def l5c(ctx, gate, gen, chan_names, cf):
         res["not_beyond_unc"] = not RU.LB(res["minus_unc"])
     bix = [k for k, n in enumerate(chan_names) if n.startswith("B")]
     res["sel_robust"] = (sum(fit(k) > 0 and K.p_rank(fit(k), bc) <= 0.05 for k in bix) >= 16 * len(bix) / 20) if len(bix) >= 10 else None
-    res["p_cf_herr"] = max(res["beta_H"]["p_lt0"] if False else res["beta_H"]["p_gt0"], res["rank_p"])
+    res["p_cf_herr"] = max(res["beta_H"]["p_gt0"], res["rank_p"])          # main §2.4: max(p(beta_H <= 0), rank p)
     res["error_kinds"] = dict(selection=sum(o["kind"] == "selection" for o in obs), result=sum(o["kind"] == "result" for o in obs))
     return res
 

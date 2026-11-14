@@ -395,7 +395,7 @@ def d1_Ls(ctx):
                     for o in (1, 2):
                         j = (i + k + sw + o) % 6; bf = (o == 1)
                         s_ = mixed(ctx, "fb2", "sym", i, c, sw, k, o, qs=[(j, bf)]) if k else pure("fb2", "sym", i, c, sw, False, qs=[(j, bf)])
-                        s_["id"] += f"|o{o}"; sp.append(s_)
+                        s_["id"] += f"|o{o}"; s_["order"] = o; sp.append(s_)
         save_raw(env, "Ls", run_specs(env, sp, L, "full", "Ls"), dict(L=L, mode="FB-2", n_specs=len(sp)),
                  labels=["engine fallback FB-2: 16K full recompute, 32 items, one attribute per context"])
         return

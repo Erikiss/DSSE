@@ -161,6 +161,14 @@ if {jlens!r} and not NUR_SELBSTTEST:          # SO-JLENS: aus dsse_runs/r1b_inpu
         print("J-Lens geprüft.")
     else:
         print("J-Lens FEHLT: dsse_runs/r1b_inputs/Qwen3-1.7B_jacobian_lens.pt hochladen; Schritte, die sie brauchen, scheitern sonst.")
+if {"qwen3.5-2b" in models!r} and not NUR_SELBSTTEST:   # Teil K (K5a, RK-2): J-Lens von Qwen3.5-2B (Name, sha256: Einfrier-Datensatz jlens.qwen3.5-2b)
+    J2 = (FZ.get("jlens") or {{}}).get("qwen3.5-2b") or {{}}
+    if J2.get("name"):
+        ZIEL2, QUELLE2 = f"{{ROOT}}/jlens/{{J2['name']}}", f"{{RUNS}}/r1b_inputs/{{J2['name']}}"
+        os.makedirs(os.path.dirname(ZIEL2), exist_ok=True)
+        if not os.path.exists(ZIEL2) and os.path.exists(QUELLE2):
+            shutil.copyfile(QUELLE2, ZIEL2)
+        print("J-Lens Qwen3.5-2B:", "geprüft" if os.path.exists(ZIEL2) and sha256(ZIEL2) == J2.get("sha256") else "FEHLT oder Prüfsumme falsch (K5a / RK-2 lesen dann 'not run')")
 print("Eingaben bereit:", ", ".join(MODELLE) or "keine Modelle nötig")
 '''
     copy = '''# Zweiter Ordner: was die Sitzungen dieses Slots aus dem anderen Konto lesen (Konto A: fertige Ordner aus dsse_runs_B; Konto B:
