@@ -39,6 +39,8 @@
   IMPLEMENTATION.md, notebooks/build_runde1b_gpu_notebooks.py; 15 Änderungen am Rahmenplan, u. a. Zeitwächter je Sitzung). Die vier
   Teile R, K, D, L laufen jetzt parallel; danach Integrationstest. Offen laut Kern: Einfrier-Konstanten und runde1b_freeze.json,
   r1b_report.py (Rundenauswertung), J-Lens-Download-URL, GPU-/Colab-Test, Inversfrei-Lint.
+- 14.11. 01:15 MEZ: Teil D fertig umgesetzt; R, K und L in Arbeit (rund 24.000 Zeilen im Ordner, noch nicht integriert).
+  Integrationstest steht aus. Für Codex: Phase 1 jetzt möglich, Phase 2 erst nach „Integrationstest bestanden“.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

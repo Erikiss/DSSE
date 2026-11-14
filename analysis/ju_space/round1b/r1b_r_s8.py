@@ -47,7 +47,7 @@ def setup(ctx):
     ctx.save_pt("r8/setup.pt", dict(refs=refs, cap=2 * med, med=med, diff=diff, keep=keep, fold=t.as_tensor(P["fold"]), u_neg=un, block=B6,
                                     axes={k: v["u"][0] for k, v in ax.items()}), config=dict(model=C.M06, block=B6))
     R.wj(ctx, "r8/j3.json", dict(auc=auc, J3=j3, labels=["not style-free"]), config=dict(thresholds=dict(T=0.85, sea=0.80)))
-    if not j3:
+    if not (j3 or (ctx.mock and os.environ.get("R1B_R_FORCE_GATES") == "1")):            # MOCK self-test of the loops only
         raise K.NotRun("not justified: J3")
 
 
