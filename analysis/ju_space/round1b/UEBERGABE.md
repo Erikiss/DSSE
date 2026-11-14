@@ -56,6 +56,25 @@
   r1b_run_session.py setzen, Plan-Arbeitskopie nach results/ju_space/plans/runde1b/ übernehmen, committen, pushen.
   Dann Stufe 1: A1, A2 (Konto A), B1, B2 (Konto B); vorher in Konto A den Ordner dsse_runs/r1b_xfer für Konto B freigeben und in
   Konto B als Verknüpfung r1b_xfer_A unter „Meine Ablage“ anlegen.
+- 14.11. 11:45 MEZ: Pilot r1b_P0 in Konto B gelaufen. Erster Lauf scheiterte an d0_pilot (GPU-Speicher; Commit de5a6bc behebt das:
+  Speicherüberlauf wird je Stufe als Messwert festgehalten, expandable_segments in den Notebooks), zweiter Lauf fertig.
+  Ergebnisse in Drive, Konto B: dsse_runs/r1b_P0/ (p0_engineering.json, p0/p0_d.json, k0_pilot.json, pilot/l0_a.json,
+  pilot/l0_b.json, session_done.json, logs/). Befunde:
+  * Teil D: Prefill 1,5/3,6/7,8/9,1 s bei 4K/16K/28K/32K; Decode B=1 24,5/13,0/7,9/7,2 Token/s; B=3 passt bei 28K und 32K NICHT
+    (Speicherüberlauf), B=2 passt; Spitze 41 GB. D muss bei 28K/32K mit B <= 2 rechnen (Einfrier-Datensatz, Code prüfen).
+  * Generieren deutlich langsamer als geplant (Plan 25-35 ms je Schritt bei Batch 32): L 122-137 ms bei Kontext 512 und
+    227-233 ms bei 1100; D-Decode wächst fast linear mit der Kontextlänge. Verdacht: vermeidbarer Engpass im Decode-Pfad
+    (float32-Aufmerksamkeit, GQA-Vervielfältigung, Cache-Kopien, Rauschen je Zeile). Vor dem Einfrieren prüfen, ob eine
+    rechengleiche Beschleunigung möglich ist (float32, TF32 aus, identische Tokens); sonst greifen die Pilotregeln der Teile
+    (SG7: R RG18, D G-PIL, K Abwurfreihenfolge bei > 30 % langsamer, L Kürzungen bei < halber Planrate).
+  * Lücken: L0_b-Prefill (0,04 s bei 16K/32K, 6,5 GB) unplausibel, Messung neu; kein Pilotschritt für Teil R; Qwen3.5-2B nicht
+    geladen (Pins für Revision und sha256 fehlen noch).
+  Läuft: Agent „r1b-freeze-prep“ (Gültigkeit der Messungen, Ursache der Langsamkeit, Projektion je Teil nach den Pilotregeln,
+  Entwurf runde1b_freeze.json). Ergebnis wird unter results/ju_space/plans/runde1b/arbeitsstand/freeze_prep.json abgelegt.
+  Nächste Schritte: (1) Entscheidung: Decode beschleunigen und Pilot kurz wiederholen ODER Kürzungen nach Plan anwenden;
+  (2) Qwen3.5-2B pinnen; (3) runde1b_freeze.json schreiben, Konstanten FROZEN_PLAN_SHA256 / FREEZE_RECORD_SHA256 in
+  r1b_run_session.py setzen, Plan-Arbeitskopie (ohne ENTWURF-Banner) nach results/ju_space/plans/runde1b/ übernehmen, committen;
+  (4) Freigabe r1b_xfer A -> B (Verknüpfung r1b_xfer_A in Konto B), dann Slots A1, A2, B1, B2.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
