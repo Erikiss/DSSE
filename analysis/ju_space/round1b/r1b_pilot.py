@@ -260,6 +260,10 @@ class Rec(dict):
             r = fn()
             self["code_checks"][f"{name}_ran"] = True
             return r
+        except K.NotRun as e:
+            self["code_checks"][f"{name}_ran"] = K.coded("NA:not_run:" + (re.sub(r"[^A-Za-z0-9_ .,()'-]", " ", e.reason)[:80] or "x"))
+            self["notes"].append(f"{name}: not run ({e.reason})")
+            return None
         except Exception as e:                                 # a probe result, not a failure of the session
             code = "NaN:oom" if oom(e) else "NaN:error"
             self["code_checks"][f"{name}_ran"] = K.coded(code)

@@ -706,8 +706,9 @@ def finalize(ctx, P, steps, states, ran, guard, attempts, gates):
                     for k_, v_ in (load_json(os.path.join(ctx.work, rel), {}) or {}).items():
                         if k_ != "provenance":
                             agg.setdefault(k_, {})[rel] = v_
-            ctx.step = "_p0_record"; pr = ctx.write_json(C.FILES["p0_record"]["rel"], agg)
-            common["files"][C.FILES["p0_record"]["rel"]] = sha256_file(pr)
+            rel = C.FILES["p0_record"]["rel"] if ctx.session == "r1b_P0" else "p0b_aggregate.json"   # r1b_P0b: its own summary step
+            ctx.step = "_p0_record"; pr = ctx.write_json(rel, agg)                                       # writes p0b_engineering.json
+            common["files"][rel] = sha256_file(pr)
         dump_json(dict(common, finished=iso()), os.path.join(ctx.work, "session_done.json"))
         code, msg = EXIT_DONE, f"session {ctx.session} done"
     else:

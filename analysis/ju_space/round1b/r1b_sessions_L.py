@@ -13,6 +13,8 @@ def _s(name, mod, out, after="", minutes=4.0, item=None, drop_if=()):
 
 
 STEPS = {
+    "r1b_P0b": [Step("p0b_l_decode", fn="r1b_l_p0b:decode_rates", out="p0b/l_decode.json", minutes=4),
+                Step("p0b_l_long", fn="r1b_l_p0b:long", out="p0b/l_long.json", minutes=4)],
     "r1b_P0": [_s("l0_a", PI, "pilot/l0_a.json", minutes=5), _s("l0_b", PI, "pilot/l0_b.json", minutes=5)],
     "r1b_L_A": [
         # step 1: L.POP

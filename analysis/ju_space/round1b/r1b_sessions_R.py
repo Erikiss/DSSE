@@ -114,6 +114,8 @@ STEPS["r1b_R_S8"] = [Step("s8_setup", fn="r1b_r_s8:setup", out="r8/setup.pt r8/j
                      Step("s8_summary", fn="r1b_r_s8:summary", out="r8/r8_2.json", after="s8_loop_RSI_a, s8_loop_RSI_b, s8_loop_SEA_t, s8_loop_RND_1",
                           minutes=1.0)]
 STEPS["r1b_R_ana2"] = [Step("a2_verdicts", fn="r1b_r_ana:pass2", out="r1b_R_verdict2.json", minutes=2.0)]
+STEPS["r1b_P0b"] = [Step("p0b_r_rates", fn="r1b_r_p0b:rates", out="p0b/r_rates.json", minutes=6.0),     # R-P's list (RG18's input)
+                    Step("p0b_r_replay", fn="r1b_r_p0b:replay", out="p0b/r_replay.json", minutes=2.0)]
 
 
 def mock_inputs(runs_A, runs_B, root):

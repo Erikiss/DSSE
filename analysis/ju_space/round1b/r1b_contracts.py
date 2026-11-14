@@ -40,7 +40,7 @@ SHARED = {
     "SO-GVRA": dict(owner="K", made_in=(), users="R D K L", files=(), code="r1b_gvra.py"),
     "SO-PVAL": dict(owner="main", made_in=(), users="all", files=(), code="r1b_core (interval, p_one_sided, p_rank, holm, bh, boot)"),
     "SO-KEYS": dict(owner="main", made_in=(), users="all", files=("keys_registry",), code="r1b_core (KEYS, key, keyseed, gumbel)"),
-    "SO-PILOT": dict(owner="main", made_in=("r1b_P0",), users="P0", files=("pilot_material", "p0_record")),
+    "SO-PILOT": dict(owner="main", made_in=("r1b_P0", "r1b_P0b"), users="P0 P0b", files=("pilot_material", "p0_record", "p0b_record")),
     "SO-XFER": dict(owner="main", made_in=("r1b_R_S0",), users="all cross-account starts", files=("xfer_dmg_ref_R16", "xfer_so_ax_ustar")),
 }
 
@@ -126,6 +126,8 @@ FILES = {
                      "report"),
     "manifest": _f("main", "r1b_ana", "r1b_manifest.json", "json", "merged session manifests", "report"),
     "p0_record": _f("main", "r1b_P0", "p0_engineering.json", "json", "whitelisted engineering numbers of every pilot step", "freeze record"),
+    "p0b_record": _f("main", "r1b_P0b", "p0b_engineering.json", "json", "the re-pilot's compact engineering summary (rates, memory, parity, "
+                     "identity verdicts, pass / fail per item)", "freeze record"),
     "pilot_material": _f("main", None, PKG + "pilot_material.json", "json", "SO-PILOT prompts, passages, books", "P0", "SO-PILOT"),
     "keys_registry": _f("main", None, PKG + "r1b_keys.json", "json", "SO-KEYS registry (r1b_core.write_keys)", "all", "SO-KEYS"),
 }
@@ -190,6 +192,11 @@ _R_TIER1 = ("r1b_R_S0", "r1b_R_S1", "r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S2_06",
 SESSIONS = {
     "r1b_P0": S("main", 0, "B", 0, (), 68.2, (M17, M35), "P0-R, P0-D, P0-K (K0 items 1-9 incl. the Qwen3.5-2B load), P0-L; shared "
                 "engineering items; SO-PILOT material only; engineering numbers only", jlens=True),
+    "r1b_P0b": S("main", 0, "B", 0, (done("r1b_P0", ()),), 60.0, (M17, M35), "re-pilot of r1b_P0's invalid or missing items "
+                 "(arbeitsstand/freeze_prep.json): P0-R (R-P's list), P0-D (warm-up, B = 1-4 after the cache release, crop / copy / chunked "
+                 "against a full recompute), P0-K (K0 items 3-9 incl. the Qwen3.5-2B load), P0-L (L0 (i), (iii), (iv), (vii) on the real PG19 "
+                 "pilot slices), Drive on the Drive path, a decode profile, the engine switches' GPU bit identity; SO-PILOT material only; "
+                 "engineering numbers only", jlens=True),
     "r1b_R_S0": S("R", 1, "A", 1, (), 22.2, (), "R0, R8.1, R9.5; SO-AX package (AX1, U*, leave-loop-out modes, SG10); r1b_xfer exports",
                   r1=R1_S0, r2=R2_S0),
     "r1b_R_S2_14": S("R", 1, "A", 1, (), 58.5, (M17,), "R2.1 (axis texts), R2.2 at 14; AX-1b(14)", r1=R1(14), r2=R2_Q0(14)),
@@ -261,6 +268,7 @@ TIER2_ITEMS = {"r1b_K_S2b": ("K3h",), "r1b_D_C": ("D5-x", "D3-name"),"r1b_L_A": 
 # Slots (main §4.4): one notebook each; sessions in order, each waiting for its start conditions (packing, not a rule).
 SLOTS = {
     "P0": dict(account="B", runtime="a100", sessions=("r1b_P0",)),
+    "P0b": dict(account="B", runtime="a100", sessions=("r1b_P0b",)),
     "A1": dict(account="A", runtime="a100", sessions=("r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S3", "r1b_R_S6", "r1b_K_S5", "r1b_D_C")),
     "A2": dict(account="A", runtime="a100", sessions=("r1b_R_S0", "r1b_R_S1", "r1b_R_S2_06", "r1b_D_B", "r1b_R_S5", "r1b_R_S7",
                                                       "r1b_R_ana", "r1b_K_ana", "r1b_D_ana")),

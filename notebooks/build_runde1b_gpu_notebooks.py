@@ -13,7 +13,9 @@ _spec = importlib.util.spec_from_file_location("r1b_contracts", HERE.parent / "a
 C = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(C)          # data only
 BRANCH = "ccr-6fe02b21-est040"            # the branch with the freeze commit and the round-1b code
 NB = {sl: f"runde1b_{sl}.ipynb" for sl in C.SLOTS}
-TITLE = {"P0": "Pilot r1b_P0 (vor dem Einfrieren; nur technische Kennzahlen)", "A1": "Stufe 1, Konto A, Spur 1",
+TITLE = {"P0": "Pilot r1b_P0 (vor dem Einfrieren; nur technische Kennzahlen)",
+         "P0b": "Nachpilot r1b_P0b (vor dem Einfrieren; ungültige oder fehlende Pilotpunkte, Bit-Identität der Engine-Schalter)",
+         "A1": "Stufe 1, Konto A, Spur 1",
          "A2": "Stufe 1, Konto A, Spur 2", "B1": "Stufe 1, Konto B, Spur 1", "B2": "Stufe 1, Konto B, Spur 2",
          "A_T2": "Stufe 2 (nur finanziert und ausgelöst), Konto A", "B_T2": "Stufe 2 (nur finanziert), Konto B",
          "ANA": "Gesamtauswertung r1b_ana, danach Stufe-2-Bericht r1b_ana2 (CPU-Laufzeit), Konto A"}
@@ -78,7 +80,7 @@ def cells(sl):
     d = C.SLOTS[sl]; acct = d["account"]; cpu = d["runtime"] == "cpu"
     models = sorted({m for s in d["sessions"] for m in C.SESSIONS[s]["models"]})
     jlens = any(C.SESSIONS[s]["jlens"] for s in d["sessions"])
-    r_part = any(C.SESSIONS[s]["part"] == "R" or s == "r1b_P0" for s in d["sessions"])
+    r_part = any(C.SESSIONS[s]["part"] == "R" or s in ("r1b_P0", "r1b_P0b") for s in d["sessions"])
     gpu = ('''import torch
 assert torch.cuda.is_available(), "Keine GPU: Laufzeit → Laufzeittyp ändern → A100 GPU, dann neu starten."
 GPU, CC = torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0)

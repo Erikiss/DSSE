@@ -19,6 +19,9 @@ def parts(name, fn, n, minutes, out_dir, after="", item=None, drop_if=()):
 S1, S2, S2B, S3, S4, S5 = "r1b_k_s1:", "r1b_k_s2:", "r1b_k_s2b:", "r1b_k_s3:", "r1b_k_s4:", "r1b_k_s5:"
 ANA, RK = "r1b_k_ana:", "r1b_k_rk:"
 STEPS = {
+    "r1b_P0b": [Step("p0b_k_rates", fn="r1b_k_p0b:rates", out="p0b/k_rates.json", minutes=7.0),
+                Step("p0b_k_checks", fn="r1b_k_p0b:checks", out="p0b/k_checks.json", minutes=2.0),
+                Step("p0b_k_35", fn="r1b_k_p0b:q35", out="p0b/k_35.json", minutes=8.0)],
     "r1b_P0": [Step("k0_pilot", fn=L(S1 + "k0_pilot"), out="k0_pilot.json", minutes=10)],
     "r1b_K_S1": [
         Step("k1_check", fn=L(S1 + "k1_check"), out="k/k1_check.json", minutes=0.5),
