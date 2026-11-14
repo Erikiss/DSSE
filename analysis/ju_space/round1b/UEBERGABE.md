@@ -75,6 +75,27 @@
   (2) Qwen3.5-2B pinnen; (3) runde1b_freeze.json schreiben, Konstanten FROZEN_PLAN_SHA256 / FREEZE_RECORD_SHA256 in
   r1b_run_session.py setzen, Plan-Arbeitskopie (ohne ENTWURF-Banner) nach results/ju_space/plans/runde1b/ übernehmen, committen;
   (4) Freigabe r1b_xfer A -> B (Verknüpfung r1b_xfer_A in Konto B), dann Slots A1, A2, B1, B2.
+- 14.11. 12:40 MEZ: Auswertung des Piloten fertig (results/ju_space/plans/runde1b/arbeitsstand/freeze_prep.json; Entwurf
+  runde1b_freeze_DRAFT.json und Rechenskripte daneben). Ergebnis: Der Pilot reicht für das Einfrieren noch nicht. Vor dem
+  Einfrieren zu erledigen (nur Technik, keine Regeländerung):
+  1. FEHLER (Pflicht): In Teil D hält `y, *_ = ...decode(...)` den vorigen Cache fest; das sprengte B=3 bei 28K/32K im Piloten
+     und steckt auch in r1b_d_d2 (gen_stream, glce3). Zurückgegebenen Cache verwerfen (`y = ...decode(...)[0]`), Basis wie in den
+     Sitzungen auslagern (LCE.offload). Eine Grenze B <= 2 ist dann nicht nötig.
+  2. Paketdateien: alle 15 aus results/ju_space/plans/runde1b/packages/ (inkl. k1_label_bank/) in den Planordner
+     results/ju_space/plans/runde1b/ kopieren (die Teile lesen dort; nur r1b_d_stim beachtet R1B_PKG_DIR); fehlende bauen:
+     pilot_material.json, r1b_keys.json, l_cal.json (volle L-CAL, etwa 120 CPU-Minuten).
+  3. Qwen3.5-2B pinnen (Revision 15852e8c enthält die 15 mtp.*-Tensoren; sha256 der Dateien in den Datensatz) und den Lader den
+     Einfrier-Datensatz lesen lassen (r1b_k_s3._load35 ruft ensure_model(M35, root, None); load_model reicht ihn nicht weiter).
+  4. PG19 abrufbar machen (Quelle GCS, fetch_dataset kann nur Hugging Face); rk1-Offset prüfen (siehe freeze_prep.json).
+  5. Pilot-Code für einen Nachpiloten r1b_P0b (etwa 1 A100-Stunde): P0-R-Schritte (fehlen ganz in r1b_sessions_R.py); K0-Punkte
+     3, 6, 7, 8, 9 inkl. Laden von Qwen3.5-2B, Hook-Zeit mit Synchronisation und Aufwärmen, FISTA ohne _lip; L0 (i) Decode ohne
+     Prefill auf gepolsterten Zeilen, L0 (iii)/(vii) auf echten PG19-Abschnitten mit probe.begin(), Duet je Nachricht bei etwa
+     420 Token; Drive-Durchsatz wirklich über Drive messen; P0-D mit Aufwärmen und B=3/B=4 neu.
+  6. Optional, zahlengleich (je mit Bit-Identitätstest): E.decode ohne Synchronisation je Schritt (etwa 1,3x), KV-Puffer an Ort
+     statt torch.cat (etwa 1,35x bei 32K, B=3), Gumbel-Rauschen in K nur für die N behaltenen Zeilen.
+  Hochrechnung bei den gemessenen Raten (vorläufig): R 12,3 h (RG18 wählt RL2 -> 12,1 h), D 16,2 h (Kürzungen T1-T8 -> 13,8 h,
+  über dem 9,0-h-Deckel: Budget-Nachtrag +4,8 h nötig oder Speed-Fixes), K 10,6 h, L 5,5 h; Stufe 1 etwa 40 h, Stufe 2 etwa
+  9,7 h, Pilot etwa 1 h, zusammen etwa 51 A100-Stunden statt 40,3. Danach: r1b_P0b laufen lassen, Datensatz fertig, einfrieren.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
