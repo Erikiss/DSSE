@@ -2,7 +2,7 @@
 
 No Qwen run, account hand-off, or upstream integration marker is consulted.
 Run this builder with an optional output directory (default: this directory).
-The notebooks default to offline-model CPU mocks, using real G entry points.
+The pilot defaults to real pilot mode; model notebooks default to CPU mocks.
 """
 from __future__ import annotations
 
@@ -29,6 +29,14 @@ NOTEBOOKS = {
 
 def intro(slot):
     _, title = NOTEBOOKS[slot]
+    quickstart = '''**Pilot starten:** `MODE = "pilot"` ist bereits eingestellt. Die passende
+GPU-Laufzeit wählen und **Alle ausführen** starten.
+Für einen CPU-Test mit kleinen Zufallsmodellen `MODE = "mock"` setzen.'''
+    if slot != "PILOT":
+        quickstart = '''**Sofort ausprobieren:** `MODE = "mock"` lassen und **Alle ausführen** wählen.
+Dabei laufen kleine zufällige Gemma-Modelle auf der CPU; es werden keine
+Modellgewichte heruntergeladen. Die Einrichtung lädt Python-Pakete und den Code.
+Mock-Ergebnisse werden getrennt von echten Messungen gespeichert.'''
     return f"""# Runde 1b · G · {title}
 
 [In Google Colab öffnen](https://colab.research.google.com/github/Erikiss/DSSE/blob/{BRANCH}/notebooks/runde1b_G_{slot}.ipynb)
@@ -37,10 +45,7 @@ Die G-Serie läuft eigenständig. Dieses Notebook verwendet eigene Modelle,
 Eingaben, Ergebnisse und einen eigenen Freeze. Es benötigt keine abgeschlossenen
 Qwen-Läufe und keine Freigabe eines anderen Notebook-Slots.
 
-**Sofort ausprobieren:** `MODE = "mock"` lassen und **Alle ausführen** wählen.
-Dabei laufen kleine zufällige Gemma-Modelle auf der CPU; es werden keine
-Modellgewichte heruntergeladen. Die Einrichtung lädt Python-Pakete und den Code.
-Mock-Ergebnisse werden getrennt von echten Messungen gespeichert.
+{quickstart}
 
 **Echte Läufe:** Im Pilot-Notebook das Modell wählen und `MODE = "pilot"` setzen.
 `INPUTS` ist optional: Für Freeze und Hauptlauf wird bei leerem Feld ein eigenes
@@ -72,8 +77,9 @@ das Notebook meldet dann keinen erfolgreichen vollständigen G-Lauf.
 
 def settings(slot):
     model, _ = NOTEBOOKS[slot]
+    mode = "pilot" if slot == "PILOT" else "mock"
     return f'''# Einstellungen
-MODE = "mock"                    # "mock", "pilot" oder "run"
+MODE = "{mode}"                    # "mock", "pilot" oder "run"
 EXPERIMENT = "gemma-g-v1"
 MODEL = {model!r}                  # PILOT: eines der vier Zielmodelle wählen
 CODE_REF = {BRANCH!r}             # Branch beim ersten Start oder fester 40-stelliger Commit
@@ -443,7 +449,7 @@ def notebook(slot):
     nb.metadata["kernelspec"] = {"name": "python3", "display_name": "Python 3"}
     nb.metadata["language_info"] = {"name": "python"}
     nb.metadata["colab"] = {"provenance": []}
-    nb.metadata["dsse_g"] = {"slot": slot, "default_mode": "mock", "independent": True}
+    nb.metadata["dsse_g"] = {"slot": slot, "default_mode": "pilot" if slot == "PILOT" else "mock", "independent": True}
     nbf.validate(nb)
     return nb
 

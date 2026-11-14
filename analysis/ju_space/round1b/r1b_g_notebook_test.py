@@ -44,7 +44,7 @@ class NotebookStructureTests(unittest.TestCase):
             with self.subTest(slot=slot):
                 nb = B.notebook(slot)
                 nbformat.validate(nb)
-                self.assertEqual(nb.metadata.dsse_g.default_mode, "mock")
+                self.assertEqual(nb.metadata.dsse_g.default_mode, "pilot" if slot == "PILOT" else "mock")
                 self.assertTrue(nb.metadata.dsse_g.independent)
                 for cell in nb.cells:
                     if cell.cell_type == "code":
@@ -146,7 +146,7 @@ class NotebookExecutionTests(unittest.TestCase):
         nb = B.notebook(slot)
         ns = {}
         execute_cell(nb, "settings", ns)
-        ns.update(USE_DRIVE=False, LOCAL_BASE=str(self.base / "workspace"),
+        ns.update(MODE="mock", USE_DRIVE=False, LOCAL_BASE=str(self.base / "workspace"),
                   INSTALL_DEPENDENCIES=False, RUN_SELFTESTS=run_selftests)
         with patch.object(subprocess, "run", side_effect=self.local_transport):
             for cell in nb.cells:
@@ -171,7 +171,7 @@ class NotebookExecutionTests(unittest.TestCase):
             self.assertFalse(ns["report"]["scientific_complete"])
         return ns
 
-    def test_all_six_default_notebooks_execute_real_mock_entrypoint(self):
+    def test_all_six_notebooks_execute_real_mock_entrypoint(self):
         # PILOT and the same model notebook share one experiment deliberately:
         # this also checks that pilot outputs can be resumed by the full run.
         for slot in B.NOTEBOOKS:
@@ -191,7 +191,7 @@ class NotebookExecutionTests(unittest.TestCase):
     def test_interrupted_checkout_resumes_and_preserves_local_edits(self):
         nb, ns = B.notebook("PILOT"), {}
         execute_cell(nb, "settings", ns)
-        ns.update(USE_DRIVE=False, LOCAL_BASE=str(self.base / "interrupted_workspace"))
+        ns.update(MODE="mock", USE_DRIVE=False, LOCAL_BASE=str(self.base / "interrupted_workspace"))
         execute_cell(nb, "paths", ns)
         checkout = ns["BASE"] / "code" / self.commit
         checkout.mkdir(parents=True)

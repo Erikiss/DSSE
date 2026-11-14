@@ -66,8 +66,9 @@ requested additions beyond the original source-only handover allowlist.
 ### Notebook operation
 
 Open `runde1b_G_PILOT.ipynb` to run a standalone pilot, or one of the four model
-notebooks for its G stages. Default `MODE="mock"` uses random CPU models without
-model downloads. `MODE="pilot"` runs the real engineering pilot on A100-80GB;
+notebooks for its G stages. The pilot notebook defaults to `MODE="pilot"` at the
+user's request; the other five notebooks default to `MODE="mock"`. Mock mode uses
+random CPU models without model downloads. `MODE="pilot"` runs the real engineering pilot on A100-80GB;
 `MODE="run"` requires the model's own G freeze. `runde1b_G_ANA.ipynb` reads G
 artifacts without starting model work. A separate experiment name is required
 for real work; mock and real evidence cannot share the same model directory.
