@@ -10,7 +10,7 @@ is discarded). Each item runs under r1b_pilot.Rec.item: an out-of-memory error o
   parity        on SO-PILOT's PG19 slices (book 25 at 16,384 and at 32,768 tokens): the last 700 tokens' log-probs on the crop path
                 (another chunk, crop, the chunk) and on the copy path against one full recompute, and SO-LCE's chunked token_logprobs
                 (2,048-token chunks, the L2a form) against one full causal pass (max and median |log-prob difference|, relative
-                difference; OD-M14 and G-LCE-1 input)
+                difference; OD-M14 and G-LCE-1 input); the full, copy and crop logits also with the in-place KV buffer (bitwise)
   profile       a torch.profiler trace (8 decode steps) of the keyed decode at 32,000, B = 1: kernel names and their share of the GPU
                 time, the attention kernel's share"""
 import time
@@ -95,19 +95,24 @@ def _cmp(a, b):
 
 def parity(ctx):
     import r1b_l_engine as E
-    tok, model, stop, c = _setup(ctx); rec = P.Rec(); eng = LCE(model)
+    tok, model, stop, c = _setup(ctx); rec = P.Rec(); engs = {False: LCE(model, inplace=False), True: LCE(model, inplace=True)}
+    eng = engs[False]
     Ls, nch = ((16384, 32768), 700) if not c.mock else ((64, 96), 16)
     rng = np.random.default_rng(20261116)
     for L in Ls:
         def run(L=L):
             ids = P.pg19_slices(ctx, tok, L)[0][1]
             pre, ch = ids[:-nch], ids[-nch:]; tgt = ch[1:]
-            full = _lp(eng.fwd(ids, keep=nch)[1][0][:-1], tgt); P.free()
-            base, _ = eng.fwd(pre); cp = LCE.copy(base)
-            cop = _lp(eng.fwd(ch, cp, keep=nch)[1][0][:-1], tgt); del cp; P.free()
-            other = [int(x) for x in rng.integers(1000, 100000, nch)]
-            eng.fwd(other, base, keep=1); LCE.crop(base, len(pre))
-            crp = _lp(eng.fwd(ch, base, keep=nch)[1][0][:-1], tgt); del base; P.free()
+            other = [int(x) for x in rng.integers(1000, 100000, nch)]; lg = {}
+            for ip, e in engs.items():                     # plain DynamicCache and the in-place KV buffer (bitwise compared)
+                lg[ip, "full"] = e.fwd(ids, keep=nch)[1][0][:-1].cpu(); P.free()
+                base, _ = e.fwd(pre); cp = LCE.copy(base)
+                lg[ip, "copy"] = e.fwd(ch, cp, keep=nch)[1][0][:-1].cpu(); del cp; P.free()
+                e.fwd(other, base, keep=1); LCE.crop(base, len(pre))
+                lg[ip, "crop"] = e.fwd(ch, base, keep=nch)[1][0][:-1].cpu(); del base; P.free()
+            for k in ("full", "copy", "crop"):
+                rec["code_checks"][f"inplace_identical_{k}_L{L}"] = P.same(lg[False, k], lg[True, k])
+            full, cop, crp = (_lp(lg[False, k], tgt) for k in ("full", "copy", "crop")); lg.clear()
             for nm, v in (("crop", crp), ("copy", cop)):
                 m = _cmp(v, full); m["passed_G-LCE-1_tol"] = bool(m["max_abs"] <= TOL_MAX and m["median_abs"] <= TOL_MED)
                 rec["parity"].update({f"L{L}_{nm}_vs_full_{k}": v_ for k, v_ in m.items()})

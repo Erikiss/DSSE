@@ -310,8 +310,8 @@ def timed(fn, reps=1, warm=1):
 
 def p0b_drive(ctx):
     """Drive throughput on the Drive path: (a) copy of a >= 200 MB file into the synced Drive session folder (write + fsync, then the
-    file is removed); (b) a cold read of a large file another runtime wrote into dsse_runs (r1b_inputs/*.pt, then any file >= 100 MB
-    in dsse_runs at depth <= 3, not written by this session)."""
+    file is removed); (b) a cold read of a large file another runtime wrote into dsse_runs (the largest file >= 100 MB at depth <= 3
+    outside this session's folder and r1b_inputs; else r1b_inputs/*.pt, which the notebook may have read at setup: noted)."""
     rec = Rec(); drive = getattr(ctx, "drive", None); runs = os.path.dirname(drive) if drive else None
     n_mb = 256 if not ctx.mock else 8
 
@@ -329,17 +329,20 @@ def p0b_drive(ctx):
         dt = time.time() - t; os.remove(src); os.remove(dst)
         rec["throughput"] = rec.get("throughput", {}); rec["throughput"]["drive_copy_in_MB_s"] = n_mb / max(dt, 1e-9)
         rec["throughput"]["drive_copy_in_MB"] = n_mb
+        rec["env"]["drive_copy_note"] = "copy into the mounted Drive session folder + fsync; the upload to the cloud may continue asynchronously"
 
     def read():
         if not runs or not os.path.isdir(runs):
             raise K.NotRun("no dsse_runs folder")
-        cand = sorted(x for x in __import__("glob").glob(os.path.join(runs, "r1b_inputs", "*.pt")))
-        if not cand:
-            for r_, ds, fs in os.walk(runs):
-                if r_[len(runs):].count(os.sep) >= 3 or os.path.abspath(r_).startswith(os.path.abspath(drive or "\0")):
-                    ds[:] = []
-                    continue
-                cand += [os.path.join(r_, f) for f in fs if os.path.getsize(os.path.join(r_, f)) >= (100 << 20 if not ctx.mock else 1)]
+        cand, skip = [], {os.path.abspath(drive or "\0"), os.path.abspath(os.path.join(runs, "r1b_inputs"))}
+        for r_, ds, fs in os.walk(runs):                     # files no step of this runtime has read (not r1b_inputs: the notebook
+            if r_[len(runs):].count(os.sep) >= 3 or any(os.path.abspath(r_).startswith(s_) for s_ in skip):   # copied those at setup)
+                ds[:] = []
+                continue
+            cand += [os.path.join(r_, f) for f in fs if os.path.getsize(os.path.join(r_, f)) >= (100 << 20 if not ctx.mock else 1)]
+        warm = not cand
+        if warm:
+            cand = sorted(__import__("glob").glob(os.path.join(runs, "r1b_inputs", "*.pt")))
         if not cand:
             raise K.NotRun("no large file of another runtime in dsse_runs")
         p = max(cand, key=os.path.getsize); n = 0; t = time.time()
@@ -350,6 +353,8 @@ def p0b_drive(ctx):
         rec["throughput"] = rec.get("throughput", {})
         rec["throughput"].update(drive_cold_read_MB_s=n / 1e6 / max(dt, 1e-9), drive_cold_read_MB=n / 1e6,
                                  drive_cold_read_file=os.path.relpath(p, runs))
+        if warm:
+            rec["notes"].append("cold read: only r1b_inputs/*.pt found; the notebook may have read it at setup (possibly cached)")
     rec.item("drive_write", write); rec.item("drive_cold_read", read)
     ctx.write_json("p0b/drive.json", rec, config=dict(n_mb=n_mb))
 
