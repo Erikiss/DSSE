@@ -96,6 +96,13 @@
   Hochrechnung bei den gemessenen Raten (vorläufig): R 12,3 h (RG18 wählt RL2 -> 12,1 h), D 16,2 h (Kürzungen T1-T8 -> 13,8 h,
   über dem 9,0-h-Deckel: Budget-Nachtrag +4,8 h nötig oder Speed-Fixes), K 10,6 h, L 5,5 h; Stufe 1 etwa 40 h, Stufe 2 etwa
   9,7 h, Pilot etwa 1 h, zusammen etwa 51 A100-Stunden statt 40,3. Danach: r1b_P0b laufen lassen, Datensatz fertig, einfrieren.
+- 14.11. 13:15 MEZ: Entscheidungen des Nutzers: Korrekturrunde hier in der Cloud-Sitzung (ein Agent, Mock-Tests, mit den drei
+  zahlengleichen Beschleunigungen) und Mehrbedarf akzeptiert (Runde etwa 45-51 A100-h; D-Deckel 13,8 h statt 9,0 h, D-Kürzungen
+  nur soweit die Pilot-Hochrechnung 13,8 h übersteigt; alle Messungen bleiben). Erledigt: Paketdateien in den Planordner kopiert
+  (Commit 88786c2); Plan-Arbeitskopie: echte Dateinamen in 0.1/9.1, Nachpilot r1b_P0b, D-Nachtrag (Commit c4971aa). Läuft: volle
+  L-CAL (Wrapper scratchpad lcal/lcal_resumable.py, Ergebnis danach nach results/ju_space/plans/runde1b/l_cal.json) und der
+  Korrektur-Agent (Punkte 1-6 oben; Schalter engine.fast.* je mit Bit-Identitätstest; Sitzung r1b_P0b mit Notebook
+  runde1b_P0b.ipynb, Konto B; Pins vor dem Einfrieren aus runde1b_pilot_pins.json). Danach: r1b_keys.json, Notebooks, Nachpilot.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
