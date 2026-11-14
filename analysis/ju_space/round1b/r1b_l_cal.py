@@ -17,6 +17,27 @@ def _t():
     return K._torch()
 
 
+def _maxabs_r(X, members):
+    """max |r| of every unit to a member on X [n, N] (members excluded: -1); = r1b_l_a.hull's partner criterion."""
+    Xc = X - X.mean(0); sd = Xc.norm(dim=0).clamp_min(1e-9)
+    R = (Xc[:, members].T @ Xc) / (sd[members][:, None] * sd[None])
+    mx = R.abs().max(0).values.numpy(); mx[members] = -1
+    return mx
+
+
+def _m_delta(delta, med, Iref):
+    """Smallest m whose median I-hat reaches delta I_ref, log-interpolated (= r1b_l_a.l1_stats.m_delta)."""
+    ms = sorted(med); v = [med[m] for m in ms]
+    for i, m in enumerate(ms):
+        if v[i] >= delta * Iref:
+            if i == 0:
+                return float(m)
+            a, b = v[i - 1], v[i]
+            t = (delta * Iref - a) / (b - a) if b != a else 1.0
+            return float(math.exp(math.log(ms[i - 1]) + t * (math.log(m) - math.log(ms[i - 1]))))
+    return None
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------- (a)
 def item_a(q, seeds):
     """PIP tree on lean's synthetic background (N 4,096, n 1,200, 40 drivers): localist, redundant, dense, dense-threshold (32), XOR3."""
@@ -25,14 +46,15 @@ def item_a(q, seeds):
     grid = [m for m in (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024) if m <= N // 2]
     exp = {"localist": "localised: the H-cluster is the store", "redundant": "H privileged but one of several representations (redundant)",
            "dense": "dense (no sparse store)", "dthr": "distributed without a privileged set", "xor3": "unclassified (profile reported)"}
-    ok = {}
-    for prof in exp:
+    ok, trace = {}, []
+    for prof in [p for p in exp if not os.environ.get("R1B_LCAL_A_PROFILES") or p in os.environ["R1B_LCAL_A_PROFILES"].split(",")]:
         hits = 0
         for sd in range(seeds):
             g = np.random.default_rng(1000 + sd)
-            Z = g.standard_normal((n, 40)); Lm = g.standard_normal((40, N)) * np.linspace(1.5, 0.2, 40)[:, None]
-            X = Z @ Lm / math.sqrt(40) + g.standard_normal((n, N))
-            y = (g.random(n) < 0.5).astype(int); s = 2 * y - 1.0
+            n2 = 2 * n                                   # rows 0..n-1 = S_fit (selection), n..2n-1 = S_L (every I-hat); plan L1: disjoint
+            Z = g.standard_normal((n2, 40)); Lm = g.standard_normal((40, N)) * np.linspace(1.5, 0.2, 40)[:, None]
+            X = Z @ Lm / math.sqrt(40) + g.standard_normal((n2, N))
+            y = (g.random(n2) < 0.5).astype(int); s = 2 * y - 1.0
             if prof == "localist":
                 Sx = g.choice(N, 20, replace=False); X[:, Sx] += 0.45 * s[:, None]
             elif prof == "redundant":
@@ -40,43 +62,74 @@ def item_a(q, seeds):
             elif prof == "dense":
                 X += 0.03 * s[:, None]
             elif prof == "dthr":
-                Cm = g.standard_normal((N, 31)); A = g.standard_normal((n, 31)) * 3.0; X += 0.08 * s[:, None] + A @ Cm.T
+                Cm = g.standard_normal((N, 31)); A = g.standard_normal((n2, 31)) * 3.0; X += 0.08 * s[:, None] + A @ Cm.T
             else:
-                Sx = g.choice(N, 60, replace=False); gg = g.standard_normal((n, 3))
+                Sx = g.choice(N, 60, replace=False); gg = g.standard_normal((n2, 3))
                 for k in range(3):
                     X[:, Sx[20 * k:20 * (k + 1)]] += 0.8 * gg[:, [k]]
                 y = (np.sign(gg).prod(1) > 0).astype(int)
-            Xt = torch.tensor(X, dtype=torch.float32); yt = torch.tensor(y); folds = torch.tensor(S.folds_by_question(n, 5, sd))
-            fr = lambda m, k: [np.sort(g.choice(N, m, replace=False)).tolist() for _ in range(k)]
-            nf = 20 if not q else 3
+            Xf = torch.tensor(X[:n], dtype=torch.float32); yf = torch.tensor(y[:n])
+            Xt = torch.tensor(X[n:], dtype=torch.float32); yt = torch.tensor(y[n:]); folds = torch.tensor(S.folds_by_question(n, 5, sd))
+            # every statistic below as plan L.3 L1 'Rule' / L1 (i)-(ii) define it (amended 15.11.2026, see commit message)
+            nf = 50 if not q else 3                       # L1 (i): 50 fragments per m
+            nperm = 100 if not q else 3                   # L1 (i): floor = q95 over 100 label permutations, fresh U fragment each
+            W = S.boot_counts(n, 2000 if not q else 50, seed=101)    # item bootstrap over the S_L rows (as r1b_l_a.l1_stats)
+            fr = lambda m, k, pool=None: [np.sort(g.choice(N if pool is None else pool, m, replace=False)).tolist() for _ in range(k)]
 
-            def ih(frags, yy=yt):
-                Xf = torch.stack([Xt[:, f] for f in frags])
-                return S.ihat(S.ihat_rows(Xf, yy, folds, iters=40)).numpy()
-            med = {m: float(np.median(ih(fr(m, nf)))) for m in grid}
-            Iref = max(med.values())
-            fl = {m: float(np.quantile([ih(fr(m, 1), yt[torch.as_tensor(g.permutation(n))])[0] for _ in range(10 if not q else 3)], 0.95))
-                  for m in (grid[0], grid[len(grid) // 2], grid[-1])}
-            half = torch.as_tensor(np.arange(n) % 2 == 0)
-            w = S.l1_select(Xt[half], yt[half].float(), 1.0)
-            H1 = np.argsort(-w.numpy())[:20].tolist()
+            def loss(frags, yy=None):
+                Xq = torch.stack([Xt[:, f] for f in frags])
+                return S.ihat_rows(Xq, yt if yy is None else yy, folds, iters=40).numpy()     # [F, n] bits
+            bI = lambda L: 1.0 - (W @ L.T) / W.sum(1, keepdims=True)                          # [B, F] I-hat per replicate
+            # PIP U family, medians and their bootstrap lower bounds; floors F(m) at every grid size and at |P| (L1 (i))
+            LU = {m: loss(fr(m, nf)) for m in grid}
+            med = {m: float(np.median(1.0 - LU[m].mean(1))) for m in grid}
+            medlo = {m: float(np.percentile(np.median(bI(LU[m]), 1), 5)) for m in grid}
+            Iref = max(med[m] for m in grid if m <= 1024)
+
+            def floor(m):
+                Yp = torch.stack([yt[torch.as_tensor(g.permutation(n))] for _ in range(nperm)])
+                return float(np.quantile(1.0 - loss(fr(m, nperm), Yp).mean(1), 0.95))
+            Fm = {m: floor(m) for m in sorted(set(grid) | {20})}
+            # H_1 = the selector on S_fit (|P| = 20); M = 99 control sets of size |P|
+            w = S.l1_select(Xf, yf.float(), 1.0)
+            H = [np.argsort(-w.numpy())[:20].tolist()]
             ctrl = fr(20, 99 if not q else 9)
-            Ics = ih([H1] + ctrl)
-            excl = torch.zeros(N, dtype=torch.bool); excl[H1] = True
-            w2 = S.l1_select(Xt[half], yt[half].float(), 1.0, exclude=excl)
-            H2 = np.argsort(-w2.numpy())[:20].tolist()
-            I2 = ih([H2])[0]
-            Ip = Ics[0]
-            priv = K.p_rank(Ip, Ics[1:]) <= 1.0 / len(Ics) + 1e-12 and Ip > fl[min(fl)]
-            m0 = next((m for m in sorted(med) if med[m] > fl.get(m, fl[max(fl)])), None)
-            rho = I2 / Ip if Ip > 0 else None
-            st = dict(Priv=priv, rho2=None if rho is None else dict(pt=rho, lo=rho, hi=rho), R_rep=1 + int(I2 >= 0.8 * Ip),
-                      xh_ratio=4 if (priv and rho is not None and rho < 0.5) else 1, Ihat_P=dict(pt=Ip), I_ref=dict(pt=Iref),
-                      medU1024=dict(pt=med[max(med)]), m0=m0, syn=None, mono=False, red=False)
-            hits += RU.rule_L1(st)["verdict"] == exp[prof]
+            LM = loss([H[0]] + ctrl)
+            IM = 1.0 - LM.mean(1)
+            Ip = float(IM[0])                             # python floats: r1b_l_stats.lo/hi/pt read only float
+            bP = bI(LM[:1])[:, 0]
+            priv = bool(K.p_rank(Ip, IM[1:]) <= 1.0 / len(IM) + 1e-12 and float(np.percentile(bP, 5)) > Fm[20])
+            # L1 (ii): knock-out reselection r = 2..6, H_1..H_(r-1) and their |r| > 0.7 hulls (on S_fit) excluded
+            hullf = lambda mem: sorted(set(mem) | set(np.flatnonzero(_maxabs_r(Xf, mem) > 0.7).tolist()))
+            excl = torch.zeros(N, dtype=torch.bool)
+            for r_ in range(2, 7):
+                excl[hullf(H[-1])] = True
+                wr = S.l1_select(Xf, yf.float(), 1.0, exclude=excl)
+                H.append([int(k) for k in np.argsort(-wr.numpy())[:20] if not excl[int(k)]][:20])
+            LH = loss(H)
+            IH = 1.0 - LH.mean(1); bH = bI(LH)
+            R_rep = 1 + int(sum(IH[r_] >= 0.8 * IH[0] for r_ in range(1, len(IH))))
+            rho2 = None
+            if priv and IH[0] > 0:
+                rb = bH[:, 1] / np.where(bH[:, 0] > 0, bH[:, 0], np.nan)
+                rho2 = dict(pt=float(IH[1] / IH[0]), lo=float(np.nanpercentile(rb, 5)), hi=float(np.nanpercentile(rb, 95)))
+            # XH ratio = m_0.5(XH) / m_0.5(U); XH = uniform excluding P's hull; censored at 1,024 / m_0.5(U)
+            pool = np.setdiff1d(np.arange(N), hullf(H[0]))
+            medXH = {m: float(np.median(1.0 - loss(fr(m, nf, pool)).mean(1))) for m in grid if m <= len(pool)}
+            mU, mXH = _m_delta(0.5, med, Iref), _m_delta(0.5, medXH, Iref)
+            xh = (mXH / mU) if (mU and mXH) else ((max(grid) / mU) if mU else None)
+            # m_0 = smallest grid m whose median-I-hat lower bound exceeds F(m)
+            m0 = next((m for m in grid if medlo[m] > Fm[m]), None)
+            st = dict(Priv=priv, rho2=rho2, R_rep=R_rep, xh_ratio=xh, Ihat_P=dict(pt=Ip), I_ref=dict(pt=float(Iref)),
+                      medU1024=dict(pt=med[max(m for m in grid if m <= 1024)]), m0=m0, syn=None, mono=False, red=False)
+            v = RU.rule_L1(st)["verdict"]
+            print(f"L-CAL (a) {prof} seed {sd}: {v} | Priv={priv} Ip={Ip:.4f} Iref={Iref:.4f} rho2={rho2} R_rep={R_rep} xh={xh} m0={m0}", flush=True)
+            trace.append(dict(profile=prof, seed=sd, verdict=v, Priv=priv, Ihat_P=Ip, I_ref=float(Iref), rho2=rho2, R_rep=R_rep, xh_ratio=xh,
+                              m0=m0, med=med, medlo=medlo, F=Fm, Ihat_H=[float(x) for x in IH]))
+            hits += v == exp[prof]
         ok[prof] = hits
     need = max(1, math.ceil(0.8 * seeds))
-    return dict(hits=ok, seeds=seeds, pass_=all(ok[p] >= need for p in exp))
+    return dict(hits=ok, seeds=seeds, trace=trace, pass_=all(ok.get(p, -1) >= need for p in exp))
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------- (b)-(d)
