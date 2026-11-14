@@ -1,0 +1,658 @@
+{
+ "created": "2026-11-14T01:32:39Z",
+ "note": "Round-1b package files, built and checked on the CPU before the freeze; no model was run (tokenizer only). The code reads package files from results/ju_space/plans/runde1b/ (r1b_contracts.PKG); this directory is the staging copy.",
+ "tokenizer": {
+  "repo": "Qwen/Qwen3-1.7B",
+  "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+  "pinned": "revision in r1b_core.MODELS; tokenizer.json sha256 as verified in <root>/models/verified.json",
+  "sha256": {
+   "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+   "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+   "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+   "merges.txt": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+  },
+  "note": "tokenizer files only (no model weights loaded); tokenizer_config.json carries the chat template used for REF-K16"
+ },
+ "datasets": {
+  "wikitext103": {
+   "repo": "Salesforce/wikitext",
+   "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+   "allow_patterns": [
+    "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+    "wikitext-103-raw-v1/validation-00000-of-00001.parquet",
+    "wikitext-103-raw-v1/test-00000-of-00001.parquet"
+   ],
+   "sha256": {
+    "wikitext-103-raw-v1/train-00000-of-00002.parquet": "74da360f23826045b3e6ac6375411fdb15f003030aa74f2596ed08b857cb9212",
+    "wikitext-103-raw-v1/validation-00000-of-00001.parquet": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+    "wikitext-103-raw-v1/test-00000-of-00001.parquet": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+   },
+   "k_train_offset_lines": 19613,
+   "k_train_offset_rule": "raw train row after D streams end_passage 9304 (r1b_d_stim.streams; d_streams_sha256 fdf7a27ce17551be8145feb56321288c050cdf9e244ff0a601119e891fff348b)",
+   "d_streams": {
+    "end_passage": 9304,
+    "d_streams_sha256": "fdf7a27ce17551be8145feb56321288c050cdf9e244ff0a601119e891fff348b",
+    "k_ref_1M_end_line": 34137,
+    "recomputed": "r1b_d_stim.py streams (2026-11-14, same sha256 and end_passage)"
+   }
+  },
+  "triviaqa_rc_nocontext": {
+   "repo": "mandarjoshi/trivia_qa",
+   "revision": "0f7faf33a3908546c6fd5b73a660e0f8ff173c2f",
+   "allow_patterns": [
+    "rc.nocontext/train-00000-of-00001.parquet",
+    "rc.nocontext/validation-00000-of-00001.parquet"
+   ],
+   "sha256": {
+    "rc.nocontext/train-00000-of-00001.parquet": "455223e4a3ba6977611914d96b1b812fe19a6cd4ea3aef4df381f093b297670c",
+    "rc.nocontext/validation-00000-of-00001.parquet": "48a5005c0eb4f8a4ae5b9868644297fd5bf1e694aeb3dc9c8ab958cac0d5b201"
+   }
+  },
+  "pg19_test": {
+   "source": "PG19 test split, public bucket gs://deepmind-gutenberg (https://storage.googleapis.com/deepmind-gutenberg/test/<file>), file list of the HF loader deepmind/pg19 (100 test books, sorted by name); MD5 checked against the GCS x-goog-hash",
+   "files_read_by_builder": {
+    "10146.txt": {
+     "sha256": "f8dd4334fd8d422cd2f9153ffbff9b097611569592d7ca09fc6fe7881336d331",
+     "md5": "0bbe2569ea7d62f4f7cfb74e09ba3827",
+     "size": 253872,
+     "selected": true
+    },
+    "10321.txt": {
+     "sha256": "fedcb2723c2ad091f76d45eb98efd810977e7b906f6fd8cbd815734d1e90c456",
+     "md5": "1b8464003c946af01a1e66f57a942cca",
+     "size": 324979,
+     "selected": true
+    },
+    "10356.txt": {
+     "sha256": "af4b57d358448588adbc6da962cad655bf586ae746dba21f62e956d36d97c88e",
+     "md5": "951b6477f43a7263939b17c3325f9ad1",
+     "size": 314879,
+     "selected": true
+    },
+    "10762.txt": {
+     "sha256": "fcc71b161311d4854a078f8cdda6e4381542536167145f6dfdda84bcad256d5f",
+     "md5": "d2888660518d460ef128fc1459a317f6",
+     "size": 348606,
+     "selected": true
+    },
+    "12204.txt": {
+     "sha256": "e1c79655be744bc89fd291f84b77ddb1819d117f2bba142373f94d5ab309d0d0",
+     "md5": "85396b6b2f2a2e1f8a417ac6de27eb6b",
+     "size": 24408,
+     "selected": false
+    },
+    "15562.txt": {
+     "sha256": "90eae481a404688312d407918b07e649643ce6c934a16ad31040614221673ca1",
+     "md5": "99c2a7dcb386971eb998976139c4f988",
+     "size": 222300,
+     "selected": true
+    },
+    "22424.txt": {
+     "sha256": "a3475140ed4763614c11c4f2e486e468ae5620bf539877bf769e16710d808a0d",
+     "md5": "1b120e9872a339fb484d9e367f0dd105",
+     "size": 444287,
+     "selected": true
+    },
+    "24553.txt": {
+     "sha256": "b188fef90522bd12a523906162d9c3df9987e662025183e3a14e731d866a831a",
+     "md5": "e1feb2a9e23c5f199b598a152b154873",
+     "size": 130627,
+     "selected": false
+    },
+    "2544.txt": {
+     "sha256": "0c79ceaf5bcc208b8c924037613c2c7fb1606de21ec8d99d5c446a516c4af787",
+     "md5": "e0f390d7ead75a38124cd52b492f2196",
+     "size": 352384,
+     "selected": true
+    },
+    "25646.txt": {
+     "sha256": "04af5d410857dab7b4ef5a90d43bff622450b4bc9ee9abfc578487203f423d64",
+     "md5": "ec49975b82fdcc61cca240b068c74844",
+     "size": 103323,
+     "selected": false
+    },
+    "25773.txt": {
+     "sha256": "02dedc58fe901826fe05a6864f377ec2d38993bd8c4e27429152e5e047dd52c4",
+     "md5": "9195d2c9af5d9e0433a25b73c0fe3362",
+     "size": 488162,
+     "selected": true
+    },
+    "25830.txt": {
+     "sha256": "63a0e5ee09349c28a33fea6a19c88d741307731b2f1a68da9b3982aeda91694f",
+     "md5": "85ea16dc23cc6f0ed362194587eb6542",
+     "size": 123962,
+     "selected": false
+    },
+    "26183.txt": {
+     "sha256": "b73ddfcfe10430b96635b021312cbe21eaa6227bf1614b39846d4234d9e12a66",
+     "md5": "774da4d0a2c1c9966e63ff2a4d204dd3",
+     "size": 475456,
+     "selected": true
+    },
+    "26239.txt": {
+     "sha256": "550798583dc17a1b7f7300591a6531d1f0a3440b6d530c331186814225a36344",
+     "md5": "ec9ee99e1613a58700e4493c4667a8ac",
+     "size": 354117,
+     "selected": true
+    },
+    "26493.txt": {
+     "sha256": "f2088dc639475a627a830a819d2b4ade98e347a840a08980e0fdf35a7f836275",
+     "md5": "673439db9a661d8e8c4a143ca5724035",
+     "size": 562729,
+     "selected": true
+    },
+    "26618.txt": {
+     "sha256": "9352d2211b37f9e32ca13ea68027fbec101acf13718ff96c606e766f9144b677",
+     "md5": "a84b05aaf5af2993f14444b66a6d6269",
+     "size": 58957,
+     "selected": false
+    },
+    "27454.txt": {
+     "sha256": "0f5a3efba148e8435ae9acc4a34e570369d493d635413d56a3044b08d70f6d9a",
+     "md5": "d2439eeb4039d83fb6860520a44670cd",
+     "size": 404307,
+     "selected": true
+    },
+    "28444.txt": {
+     "sha256": "f7bd54971caf53bc3ca651cacbaaefae402812b56918f6c4b5dcaeb6a279864f",
+     "md5": "cd53919aa546e4da4e0f38fc328632d0",
+     "size": 335975,
+     "selected": true
+    },
+    "28988.txt": {
+     "sha256": "5ba1eb22b96320155afd942871f76b1f040d4918d9871a1d4b854176c7015567",
+     "md5": "ac699e90bfb3fc2b18669a35c5a76927",
+     "size": 737008,
+     "selected": true
+    },
+    "29594.txt": {
+     "sha256": "f4590fbca52dedf54ce45d1ef6ad6d01875d8cde22796213c40dd01dc971696a",
+     "md5": "ffd7f4542412c1e0803ec081649302ae",
+     "size": 86075,
+     "selected": false
+    },
+    "29973.txt": {
+     "sha256": "349ac4532773414f8da1723d38f09ffad5911018fb380365022e6e76e48abf46",
+     "md5": "f1aa598d80041885bf111f2c219b8d3e",
+     "size": 168905,
+     "selected": true
+    },
+    "30312.txt": {
+     "sha256": "4d9c0b401a9fd85b169a744d76c9e88e1d2a4b5d9a690c40fa2bf98164823032",
+     "md5": "def92b3e4d336d5a292e9304a8e303e2",
+     "size": 2502293,
+     "selected": true
+    },
+    "30752.txt": {
+     "sha256": "14f951b46330ff912bf29fe4888d668fc4693cd05b9d87f0c2fd0d985f3c29de",
+     "md5": "2fb13b7e5f80fd6ef56eb131ca2e421b",
+     "size": 171844,
+     "selected": true
+    },
+    "30754.txt": {
+     "sha256": "f01af5df32ed5c8c4f5e99121f85d25667d45579da31856e9d572fd09810dd50",
+     "md5": "2fc43bab597bbc7dc9bac910e600ad04",
+     "size": 916394,
+     "selected": true
+    },
+    "30909.txt": {
+     "sha256": "1eebeea3739f55afd5d47e989fca2657022e72829abcab070af599cefa62dc92",
+     "md5": "5833fe492b35d7312a862b625bfea05c",
+     "size": 190582,
+     "selected": true
+    },
+    "30981.txt": {
+     "sha256": "c77512286586b2c9367f8ad0e493e947c42f03fb5cb4d20f84db78c1eaac4dfe",
+     "md5": "e85d59377b54f73f3846b3d462c67730",
+     "size": 153798,
+     "selected": false
+    },
+    "31065.txt": {
+     "sha256": "9d8228e48a41bef67408a097a3598588325bc70d5e2f6b00c96372783029d05f",
+     "md5": "c5f9f60a877440ea9ec2c28940f0a6cd",
+     "size": 276227,
+     "selected": true
+    },
+    "3129.txt": {
+     "sha256": "7e561c6b6d4fa20f508b9484f56a9703a88d469e7c2d7a47d91e74431e4c6ff0",
+     "md5": "0a24f6fa0151c04ff7d16c67aedee955",
+     "size": 82156,
+     "selected": false
+    },
+    "31974.txt": {
+     "sha256": "9b4f3142b8512a98e0e245140f6aaad36bd50eac5d1684d04513ead2a7fc1df0",
+     "md5": "bdf73c639df25d20ae3c2f6e5545ebc6",
+     "size": 14880,
+     "selected": false
+    },
+    "3247.txt": {
+     "sha256": "aa97806b530ffb25b5678e4c562e49055715eb5734c533c0b244537734b6a59c",
+     "md5": "7f2bdbec382101ed138f4e515c509a62",
+     "size": 539667,
+     "selected": true
+    },
+    "32761.txt": {
+     "sha256": "cd0c0c4cb9508cbabd73f90673c63363bf03e2d72aa87de2e86ed895689c3c13",
+     "md5": "71835af4069e0e8c30fab224011bc8e6",
+     "size": 506070,
+     "selected": true
+    },
+    "3340.txt": {
+     "sha256": "0d3bea08577a6bde3265827ddf5e688d8aa8ce1ab4ff4243075358c19709d788",
+     "md5": "c839ee5d986d357070ea0c8ca996f746",
+     "size": 392865,
+     "selected": true
+    },
+    "33426.txt": {
+     "sha256": "5f241da148e653140f9cafab7c93a0ff0f3e1d214077137b85fe8668a0bd522f",
+     "md5": "c2fe4300b734c13ec34c9626d16a9e51",
+     "size": 465022,
+     "selected": true
+    },
+    "33756.txt": {
+     "sha256": "636bea04db47134816380f2d03d735d46970fe214a0e11bd87d97f270d237cf4",
+     "md5": "bb922c709ccfd83ab94f108af1080db4",
+     "size": 322011,
+     "selected": true
+    },
+    "34467.txt": {
+     "sha256": "32d9cc33391e172ebaf885e574b365ee9738fa0041537a5c8a9859e7d84b6181",
+     "md5": "18ee3128ad445f3cbb5ed20637ef60a0",
+     "size": 207793,
+     "selected": true
+    },
+    "35205.txt": {
+     "sha256": "05440b6f4c77d4204facc7c8ec5ebea3df8fef5782f03cb041f2accd184265f9",
+     "md5": "47cc1edc3d8f67f60ced05087e5c5b15",
+     "size": 364651,
+     "selected": true
+    },
+    "35246.txt": {
+     "sha256": "4362445794452e6df50919837f9aa851539a11eaed673b8eb3ed613ac0b1a84b",
+     "md5": "fba8ba284f5ee067172e43fb8156652f",
+     "size": 228141,
+     "selected": true
+    }
+   },
+   "note": "build_longdoc_list reads books in sorted name order and stops at the 28th qualifying one (35246.txt); 37 books read, 28 selected; the remaining test books cannot change the selection"
+  }
+ },
+ "other_sources": {
+  "rk_loop": {
+   "path": "analysis/ju_space/rk_loop.py",
+   "sha256": "1a20f61992637386c97197b7283a8b743214aa89028f504c4af6c2fbedbab2a1",
+   "use": "the 64 round-1 prompts (RSI_PROMPTS, SCENE_PROMPTS) at P256 indices 0-31 / 128-159, read verbatim with ast"
+  },
+  "plan_R": {
+   "path": "results/ju_space/plans/runde1b/runde1b_plan_teil_R.md",
+   "sha256": "5bc1db06d2e130276bd633f536a2e14c8c6d68f0ba46117a687c0bafcf82ae03",
+   "use": "Appendix R.A neutral pool (628 words, pinned sha256 4b3bcaca06f45521a00f12ec2b056a13962bbfdd066ab93867980c9b0be9ebf5)"
+  }
+ },
+ "files": [
+  {
+   "file": "prompts_1b.json",
+   "part": "R",
+   "size": 16826,
+   "sha256": "6360c50f754bb33920d3199bcf13630ecd518b7b8e6eb4f7a73fb3e439b442d7",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_package.py",
+     "sha256": "ab7407e469b302bf740b5ee78d4fa2181526a8fd0e83ae375a70d0d1bbc40add"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_lib.py",
+     "sha256": "0b2c4612edfe7e7a0dad7e57203ba3c76a4840402e27461b1ec69ef2ee61ae62"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_s5.py",
+     "sha256": "1849798befbb79360590b63895f4eb75a6dda09935b29a97262b0f01f420ab52"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_r_package.py build --new new192.json --out <dir>  (new192.json = prompts_1b.json['prompts'][32:128] + ['prompts'][160:256]); python3 r1b_r_package.py check <dir>/prompts_1b.json",
+   "checks": [
+    "r1b_r_package.check: OK (256 prompts; round-1 at 0-31 / 128-159; 5-16 words; one sentence; banned words; trigram Jaccard < 0.6, max new-vs-round-1 0.435)",
+    "rebuilt byte-identical",
+    "192 new prompts: 96 RSI-topic + 96 scene, 48 questions in each type; no stance words; scene prompts free of AI / learning / change / tech words; no verbatim copy anywhere else in the repository"
+   ],
+   "sources": [
+    "192 new prompts written by the plan authors before the freeze (no model output)",
+    "rk_loop"
+   ]
+  },
+  {
+   "file": "neutral_pool_1b.txt",
+   "part": "R",
+   "size": 3716,
+   "sha256": "4b3bcaca06f45521a00f12ec2b056a13962bbfdd066ab93867980c9b0be9ebf5",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_package.py",
+     "sha256": "ab7407e469b302bf740b5ee78d4fa2181526a8fd0e83ae375a70d0d1bbc40add"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_lib.py",
+     "sha256": "0b2c4612edfe7e7a0dad7e57203ba3c76a4840402e27461b1ec69ef2ee61ae62"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_s5.py",
+     "sha256": "1849798befbb79360590b63895f4eb75a6dda09935b29a97262b0f01f420ab52"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_r_package.py build --new new192.json --out <dir>  (new192.json = prompts_1b.json['prompts'][32:128] + ['prompts'][160:256]); python3 r1b_r_package.py check <dir>/prompts_1b.json",
+   "checks": [
+    "sha256 = pinned 4b3bcaca... (Appendix R.A)",
+    "rebuilt byte-identical"
+   ],
+   "sources": [
+    "plan_R"
+   ]
+  },
+  {
+   "file": "wordsets_1b.json",
+   "part": "R",
+   "size": 2156,
+   "sha256": "58e9f8a9c1a3b3495cf3e2a4cea718e5e766f491ec929a45b84b7e728fa6d293",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_package.py",
+     "sha256": "ab7407e469b302bf740b5ee78d4fa2181526a8fd0e83ae375a70d0d1bbc40add"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_lib.py",
+     "sha256": "0b2c4612edfe7e7a0dad7e57203ba3c76a4840402e27461b1ec69ef2ee61ae62"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_s5.py",
+     "sha256": "1849798befbb79360590b63895f4eb75a6dda09935b29a97262b0f01f420ab52"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_r_package.py build --new new192.json --out <dir>  (new192.json = prompts_1b.json['prompts'][32:128] + ['prompts'][160:256]); python3 r1b_r_package.py check <dir>/prompts_1b.json",
+   "checks": [
+    "rebuilt byte-identical"
+   ],
+   "sources": [
+    "r1b_r_lib.WORDSETS"
+   ]
+  },
+  {
+   "file": "label_bank_1b.json",
+   "part": "R",
+   "size": 3431,
+   "sha256": "f2c3eec12088be484f134f49956fb1ea6565a42793d807dc95168e8211d5c620",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_package.py",
+     "sha256": "ab7407e469b302bf740b5ee78d4fa2181526a8fd0e83ae375a70d0d1bbc40add"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_lib.py",
+     "sha256": "0b2c4612edfe7e7a0dad7e57203ba3c76a4840402e27461b1ec69ef2ee61ae62"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_r_s5.py",
+     "sha256": "1849798befbb79360590b63895f4eb75a6dda09935b29a97262b0f01f420ab52"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_r_package.py build --new new192.json --out <dir>  (new192.json = prompts_1b.json['prompts'][32:128] + ['prompts'][160:256]); python3 r1b_r_package.py check <dir>/prompts_1b.json",
+   "checks": [
+    "rebuilt byte-identical",
+    "status field: 'draft wording (R5.5)'"
+   ],
+   "sources": [
+    "r1b_r_s5.BANK"
+   ]
+  },
+  {
+   "file": "d1_stimuli.json",
+   "part": "D",
+   "size": 101683,
+   "sha256": "e57e77464c2b99ee44a166d5cf9bb7e8960cbe89ffdf9255d58565d53004ba0d",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_d_stim.py",
+     "sha256": "14b7f09a14c363be0ab9431382204ff508053dc634e6aaa76d69f7159e3d21dc"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_d_stim.py build <root>/models/qwen3-1.7b <dir>",
+   "checks": [
+    "rebuilt byte-identical (builder asserts passed)",
+    "check_d1 (report lengths, neutralised lengths, block length 615-665, piecewise = whole-text ids, copy guard); 48 F-sym + 24 F-asym items"
+   ],
+   "sources": [
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "d2_prompts.json",
+   "part": "D",
+   "size": 18393,
+   "sha256": "bf4d1e43a0fd6e9112640dc396d592207e50b3664628a998f6490d7de8398a26",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_d_stim.py",
+     "sha256": "14b7f09a14c363be0ab9431382204ff508053dc634e6aaa76d69f7159e3d21dc"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_d_stim.py build <root>/models/qwen3-1.7b <dir>",
+   "checks": [
+    "rebuilt byte-identical (builder asserts passed)",
+    "160 settings of exactly 24 tokens"
+   ],
+   "sources": [
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "d3_items.json",
+   "part": "D",
+   "size": 6587,
+   "sha256": "027edeec7bb44e155f436918a1e515af66b03cd11fe7865aff48e47d240e0b3d",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_d_stim.py",
+     "sha256": "14b7f09a14c363be0ab9431382204ff508053dc634e6aaa76d69f7159e3d21dc"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_d_stim.py build <root>/models/qwen3-1.7b <dir>",
+   "checks": [
+    "rebuilt byte-identical (builder asserts passed)",
+    "24 items (16 core + 8 reserve), 24 neutral prompts"
+   ],
+   "sources": [
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "d4_roles.json",
+   "part": "D",
+   "size": 3866,
+   "sha256": "b30bea5317890e99104026996783b9065ffc9c7878a397fd9ea6b08f6848d766",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_d_stim.py",
+     "sha256": "14b7f09a14c363be0ab9431382204ff508053dc634e6aaa76d69f7159e3d21dc"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_d_stim.py build <root>/models/qwen3-1.7b <dir>",
+   "checks": [
+    "rebuilt byte-identical (builder asserts passed)",
+    "16 roles"
+   ],
+   "sources": [
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "d1v_pairs.json",
+   "part": "D",
+   "size": 2805,
+   "sha256": "81a712a95c7ed1dadef5d6cdb56c6459691947183f5b97a80a024e76a99a58a7",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_d_stim.py",
+     "sha256": "14b7f09a14c363be0ab9431382204ff508053dc634e6aaa76d69f7159e3d21dc"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_d_stim.py build <root>/models/qwen3-1.7b <dir>",
+   "checks": [
+    "rebuilt byte-identical (builder asserts passed)",
+    "3 families x 24 pairs"
+   ],
+   "sources": [
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "longdoc_slices.json",
+   "part": "L",
+   "size": 4907,
+   "sha256": "94878b4e67105bf75414d91b524d94324d10ce5df9924abe8f501c8bef5d46c4",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_l_base.py",
+     "sha256": "679e1f3fdeccd26e1a598472b4dd643984ce800fba8de8ed5dc14bd7e0fa08c0"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 -c \"import r1b_l_base as LB; LB.build_longdoc_list('<root>/data/pg19', '<root>/models/qwen3-1.7b', '<dir>/longdoc_slices.json')\"",
+   "checks": [
+    "rebuilt byte-identical",
+    "24 analysis + 4 pilot books, slice [2000, 34768), each with >= 36,000 tokens after 2,000"
+   ],
+   "sources": [
+    "pg19_test",
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "k1_label_bank/bank.json",
+   "part": "K",
+   "size": 12501012,
+   "sha256": "55b80e28ecd2dc5743cd8cd57247cc84ba311e67896588d17dd9dc25cc928e90",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_k_labels.py",
+     "sha256": "41c9cec9c41fa09f905aba8eed1aa4863c4d9c362d1131441ec45046034e48ba"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_core.py",
+     "sha256": "52007bdd6aa634a86f73ac083b4ddcb7af504c6cbea245ba3719573a199cc6bb"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_k_labels.py build <root> <freeze.json> <dir>/k1_label_bank  (writes <dir>/ref_k16.json; freeze.json: datasets.wikitext103 with k_train_offset_lines 19613, datasets.triviaqa_rc_nocontext)",
+   "checks": [
+    "21 content checks passed (counts and splits; TriviaQA qids unique; P0 16 tokens; F512 / F2048 exact and digit-free; WT sets incl. 64 planted states; REF-K16 16 items; wt_train_ref starts at train row 19613; unigram table finite)",
+    "scorer unit tests 14/14",
+    "ACH-long preambles 8 x 400 tokens, digit-free",
+    "200 distinct capitalised function words",
+    "NE names: none found in the local WikiText-103 files (train-00000, validation, test) or TriviaQA rc.nocontext train / validation"
+   ],
+   "sources": [
+    "wikitext103",
+    "triviaqa_rc_nocontext",
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "k1_label_bank/sha256.json",
+   "part": "K",
+   "size": 265,
+   "sha256": "461a17d2ab4d3fe5e6c8eb645ce7df4422bc5faaffd70078768906e3e2159a57",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_k_labels.py",
+     "sha256": "41c9cec9c41fa09f905aba8eed1aa4863c4d9c362d1131441ec45046034e48ba"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_core.py",
+     "sha256": "52007bdd6aa634a86f73ac083b4ddcb7af504c6cbea245ba3719573a199cc6bb"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_k_labels.py build <root> <freeze.json> <dir>/k1_label_bank  (writes <dir>/ref_k16.json; freeze.json: datasets.wikitext103 with k_train_offset_lines 19613, datasets.triviaqa_rc_nocontext)",
+   "checks": [
+    "matches bank.json, unigram_logfreq.npy, wt_train_ref.npy"
+   ],
+   "sources": [
+    "wikitext103",
+    "triviaqa_rc_nocontext",
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "k1_label_bank/unigram_logfreq.npy",
+   "part": "K",
+   "size": 606804,
+   "sha256": "a1528f070f3db66fac76e5d1a6236e0c08180b37f420720c1e4e802711fc171f",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_k_labels.py",
+     "sha256": "41c9cec9c41fa09f905aba8eed1aa4863c4d9c362d1131441ec45046034e48ba"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_core.py",
+     "sha256": "52007bdd6aa634a86f73ac083b4ddcb7af504c6cbea245ba3719573a199cc6bb"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_k_labels.py build <root> <freeze.json> <dir>/k1_label_bank  (writes <dir>/ref_k16.json; freeze.json: datasets.wikitext103 with k_train_offset_lines 19613, datasets.triviaqa_rc_nocontext)",
+   "checks": [
+    "listed in k1_label_bank/sha256.json"
+   ],
+   "sources": [
+    "wikitext103",
+    "triviaqa_rc_nocontext",
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "k1_label_bank/wt_train_ref.npy",
+   "part": "K",
+   "size": 4000128,
+   "sha256": "d46f2e59a508ea06af1e3395af499ff1ccb08a661e84ff8612a3818fd45d9227",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_k_labels.py",
+     "sha256": "41c9cec9c41fa09f905aba8eed1aa4863c4d9c362d1131441ec45046034e48ba"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_core.py",
+     "sha256": "52007bdd6aa634a86f73ac083b4ddcb7af504c6cbea245ba3719573a199cc6bb"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_k_labels.py build <root> <freeze.json> <dir>/k1_label_bank  (writes <dir>/ref_k16.json; freeze.json: datasets.wikitext103 with k_train_offset_lines 19613, datasets.triviaqa_rc_nocontext)",
+   "checks": [
+    "listed in k1_label_bank/sha256.json"
+   ],
+   "sources": [
+    "wikitext103",
+    "triviaqa_rc_nocontext",
+    "tokenizer"
+   ]
+  },
+  {
+   "file": "ref_k16.json",
+   "part": "K",
+   "size": 7839,
+   "sha256": "861610d2f194c6c31512e621d181eca694d59de751b35b1f23736e72b00d5bab",
+   "builder": [
+    {
+     "path": "analysis/ju_space/round1b/r1b_k_labels.py",
+     "sha256": "41c9cec9c41fa09f905aba8eed1aa4863c4d9c362d1131441ec45046034e48ba"
+    },
+    {
+     "path": "analysis/ju_space/round1b/r1b_core.py",
+     "sha256": "52007bdd6aa634a86f73ac083b4ddcb7af504c6cbea245ba3719573a199cc6bb"
+    }
+   ],
+   "command": "cd analysis/ju_space/round1b && python3 r1b_k_labels.py build <root> <freeze.json> <dir>/k1_label_bank  (writes <dir>/ref_k16.json; freeze.json: datasets.wikitext103 with k_train_offset_lines 19613, datasets.triviaqa_rc_nocontext)",
+   "checks": [
+    "8 WikiText validation passages (80 ids, 64 scored) + 8 TriviaQA S2 pairs (chat template, thinking off)",
+    "identical in two rebuilds"
+   ],
+   "sources": [
+    "wikitext103",
+    "triviaqa_rc_nocontext",
+    "tokenizer"
+   ]
+  }
+ ]
+}

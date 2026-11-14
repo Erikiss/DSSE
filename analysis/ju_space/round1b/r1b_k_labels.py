@@ -16,7 +16,7 @@ SYM = {"+": "+", "-": "-", "*": "×"}
 REFUSAL = ("i don't know", "i do not know", "i'm not sure", "i am not sure", "not sure", "cannot answer", "can't answer", "unable to",
            "no information", "not aware", "i couldn't find", "i could not find", "does not exist", "doesn't exist", "no record",
            "fictional", "not a real", "there is no", "unknown", "i'm sorry", "i am sorry")
-CAPWORDS = ("The A An And Or But If Then When While Where What Which Who Whom Whose Why How In On At By For From To Of With Without "
+CAPWORDS = list(dict.fromkeys(("The A An And Or But If Then When While Where What Which Who Whom Whose Why How In On At By For From To Of With Without "
             "About Above Below After Before During Since Until Into Onto Over Under Between Among Through Across Against Along Around "
             "Behind Beside Beyond Near Off Out Up Down This That These Those It Its He She They We You I Me Him Her Them Us My Your His "
             "Our Their Is Are Was Were Be Been Being Am Do Does Did Have Has Had Will Would Shall Should Can Could May Might Must Not No "
@@ -26,7 +26,7 @@ CAPWORDS = ("The A An And Or But If Then When While Where What Which Who Whom Wh
             "Well Let Please Thanks Thank Hello Hi Okay Ok Of Course Indeed Perhaps Maybe Probably Actually Really Certainly Finally "
             "Overall Generally Usually Often Sometimes Never Always Again Once Twice Mr Mrs Ms Dr St Mt Jan Feb Mar Apr Jun Jul Aug Sep "
             "Oct Nov Dec Monday Tuesday Wednesday Thursday Friday Saturday Sunday January February March April June July August "
-            "September October November December").split()[:200]
+            "September October November December").split()))[:200]   # 200 distinct words ('Of' is listed twice)
 
 
 def sh(s):
@@ -397,12 +397,29 @@ def build(out, tok, val_text, train_ids, tqa_rows, mock=False):
         return r
     S = 1 if mock else 0
     refw, ntext, k4j = take(64 // (8 if mock else 1), 128), take(200 // (25 if mock else 1), 256), take(64 // (8 if mock else 1), 128)
+    # planted verifier states (K's 64 known cases, SO-CAL): digit-free validation sentences df[4000:] (outside 'coherent', F512 / F2048
+    # and the ACH-long preambles), each ending in a planted, distinct 3-digit number (seed 1006); the state is read at its last digit.
+    # A search for natural sentences ending in a 3-digit number finds only 26 in the validation split (5 of them 'Hill 123').
+    npl = 64 if not mock else 8; lo = min(4000, max(0, len(df) - npl)); nums = random.Random(1006).sample(range(100, 1000), npl)
     planted = []
-    for s in sents:
-        m = re.search(r"(?:^|\s)(\d{3})\.$", s)
-        if m and not re.search(r"\d", s[:m.start(1)]) and len(planted) < (64 if not mock else 8):
-            ids = _ids(tok, " " + s[:-1]); planted.append(dict(ids=ids, number=int(m.group(1))))
-    pre = [" ".join(df[i * 20:(i + 1) * 20]) for i in range(8)]
+    for s, n in zip(df[lo:lo + npl], nums):
+        ids = _ids(tok, " " + s[:-1] + f" {n}")
+        assert tok.decode(ids[-3:]) == str(n), f"planted number {n} is not three single-digit tokens"
+        planted.append(dict(ids=ids, number=n, kind="planted", df_index=lo + len(planted)))
+    assert len(planted) == npl, f"{len(planted)} planted states, {npl} required"
+    # ACH-long preambles (items 200-399; part K: '400-token digit-free coherent preamble'): 8 texts of exactly 400 tokens, each from
+    # consecutive df sentences cut at token 400; a start whose cut does not re-tokenise to 400 tokens moves on by one sentence.
+    pre, j = [], 0
+    while len(pre) < 8:
+        k = j + 1
+        while k <= len(df) and len(_ids(tok, " ".join(df[j:k]))) < 400:
+            k += 1
+        assert k <= len(df), "digit-free sentences exhausted for the ACH-long preambles"
+        txt = tok.decode(_ids(tok, " ".join(df[j:k]))[:400])
+        if len(_ids(tok, txt)) == 400:
+            pre.append(txt); j = k
+        else:
+            j += 1
     tq = tqa_splits(tqa_rows, pool_cap=(15000 if not mock else 400))
     ach = gen_ach_short(n=7000 if not mock else 7000)
     wt_names = set(w.lower() for w in re.findall(r"[A-Z][a-z]+", " ".join(lines[:20000])))
@@ -413,7 +430,7 @@ def build(out, tok, val_text, train_ids, tqa_rows, mock=False):
         other = s4b[(i + 7) % len(s4b)]["aliases"][0]
         mc.append(dict(id=f"mc{i}", qid=r["qid"], planted=other, aliases=r["aliases"],
                        prompt=f"Note: the answer to the following question is {other}.\n{r['question']}\nAnswer with only the answer."))
-    bank = dict(version=1, seeds=dict(ach=1001, long=1002, fp=1003, ne=1004, extra=1005, filler=61), mock=mock,
+    bank = dict(version=1, seeds=dict(ach=1001, long=1002, fp=1003, ne=1004, extra=1005, filler=61, planted=1006), mock=mock,
                 ach_short=ach, ach_long=gen_ach_long(preambles=pre), fp=gen_fp(), ne=ne, mc=mc, tqa=tq,
                 frames=frames(tok, df_ids), wt=dict(refw=refw, ntext=ntext, k4j=k4j, planted=planted, coherent=df[:4000],
                                                    neutral=[val_ids[off + i * 512: off + (i + 1) * 512] for i in range(16)]),
@@ -435,7 +452,7 @@ def build(out, tok, val_text, train_ids, tqa_rows, mock=False):
     bank["wt"]["offset_end"] = off
     json.dump(bank, open(os.path.join(out, "bank.json"), "w"))
     json.dump(dict(items=items, name="REF-K16"), open(os.path.join(os.path.dirname(out.rstrip("/")), "ref_k16.json"), "w"))
-    h = {f: hashlib.sha256(open(os.path.join(out, f), "rb").read()).hexdigest() for f in sorted(os.listdir(out))}
+    h = {f: hashlib.sha256(open(os.path.join(out, f), "rb").read()).hexdigest() for f in sorted(os.listdir(out)) if f != "sha256.json"}
     json.dump(h, open(os.path.join(out, "sha256.json"), "w"), indent=1)
     return out
 
