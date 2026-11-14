@@ -41,6 +41,9 @@
   r1b_report.py (Rundenauswertung), J-Lens-Download-URL, GPU-/Colab-Test, Inversfrei-Lint.
 - 14.11. 01:15 MEZ: Teil D fertig umgesetzt; R, K und L in Arbeit (rund 24.000 Zeilen im Ordner, noch nicht integriert).
   Integrationstest steht aus. Für Codex: Phase 1 jetzt möglich, Phase 2 erst nach „Integrationstest bestanden“.
+- 14.11. 01:30 MEZ: Teile D und L fertig umgesetzt, Mock-Selbsttests bestanden (D: Langkontext-Engine SO-LCE, Reize, alle Sitzungen,
+  Auswertung; L: alle Schritte von r1b_L_A/r1b_L_B und l_ana). Offen bei D/L: Paketdateien vor dem Einfrieren erzeugen
+  (r1b_d_stim.py build; r1b_l_base.build_longdoc_list), volle L-CAL (etwa 120 CPU-Min.) vor dem Einfrieren. R und K in Arbeit.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

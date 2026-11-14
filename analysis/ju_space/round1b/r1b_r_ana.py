@@ -683,7 +683,8 @@ def verdicts(ctx):
                                      SENS_sea=sn.get("SENS_sea"), R27=dict(label=r2["R27"]["label"], generic=r2["R27"]["generic"]), R32=r32,
                                      R33={u: dict(string=(d["string"] if (u != "T_v" or go0) else "not decidable (RSI axis not resolved)"), shape=d["shape"], even=d["even"], labels=d["labels"])
                                           for u, d in r3["directions"].items()}, R34={k: (v_["string"] if isinstance(v_, dict) and "string" in v_ else v_) for k, v_ in r3["R34"].items()},
-                                     R42=K.labelled(r4["strings"], *r4.get("labels", [])), R43={k: v_["string"] for k, v_ in r4["R43"].items()}, RG9_bad=bad, RG5=cc)
+                                     R42=K.labelled(r4["strings"], *r4.get("labels", [])), R43={k: v_["string"] for k, v_ in r4["R43"].items()}, RG9_bad=bad, RG5=cc,
+                                     R31=dict(by_family=cal["by_family"], labels=["descriptive"]))
     r62 = r6_["R62"].get("0.7", {}); s62 = r62.get("string", "not run")
     out["F_plus"].append(dict(member="R6.2 self-sustaining at T 0.7", reached=s62 == "self-sustaining at T 0.7", p=r62.get("p", {}).get("ge1", 1.0) if s62 == "self-sustaining at T 0.7" else 1.0))
     out["F_minus"].append(dict(member="R6.2 dissipative at T 0.7", reached=s62 == "dissipative at T 0.7", p=r62.get("p", {}).get("lt1", 1.0) if s62 == "dissipative at T 0.7" else 1.0))
@@ -694,7 +695,7 @@ def verdicts(ctx):
         out[fam + "_counts"] = dict(reached=sum(m["reached"] for m in out[fam]), confirmed=sum(m["label"] == "confirmatory (Holm)" for m in out[fam]),
                                     null_expectation=dict(reached="<= 0.5", confirmed="<= 0.05 (family-wise)"))
     ok = [b for b in R.BLOCKS if pcs[b] and out["blocks"][str(b)]["RG5"] and not out["blocks"][str(b)]["RG9_bad"]]
-    out["R25"] = _r25(ctx, ok)
+    out["R25"] = _r25(ctx, ok); out["R26"] = _r26(ctx)
     out["R6"] = r6_; out["R5"] = {k: K.load_json(R.find(ctx, k) or "", None) for k in ("jlens_validity.json", "rg11.json", "r5/r52.json", "r5/r53.json", "r5/r55.json")}
     out["R7"] = {k: K.load_json(R.find(ctx, f"r7/{k}.json") or "", None) for k in ("r71_select", "r71", "r72", "r73", "r71_others")}
     r81 = K.load_json(R.find(ctx, "r8_1.json") or "", {}) or {}; J1, J2 = bool(r81.get("J1")), bool(pcs.get(14))
@@ -707,6 +708,27 @@ def verdicts(ctx):
                 v.pop("provenance", None)
     R.wj(ctx, "r1b_R_verdict.json", out, config=dict(families="F+ / F- (Holm 0.05)"))
     R.wj(ctx, "rg15.json", dict(J1=J1, J2=J2, J1_and_J2=J1 and J2), config=dict())
+
+
+def _r26(ctx):
+    """R2.6 attribution ladder (descriptive): L0 round-1 statistics (R0.1), L1 round-1 data with 1b statistics (R0), L2 replay (R1), L3 FX,
+    L4 DN, L5 NP (RSI_a's A_n on u_T^v and u_T_perp^1b, damage, debiased style cosine), L6 PC definition (SEA_raw against SEA_t); paired
+    bootstrap differences L4 - L3 and L5 - L4 of RSI_a's A_n (shared prompts and keys)."""
+    r0 = K.load_json(R.find(ctx, "r0_table.json") or "", {}) or {}; r1 = K.load_json(R.find(ctx, "r1/r1_replay.json") or "", {}) or {}; out = {}
+    for b in R.BLOCKS:
+        r2 = K.load_json(ctx.path(f"ana/r2_b{b}.json")); dr = R.load_pt(ctx.path(f"ana/r2_b{b}_draws.pt")); rows = r2["rows"]; rung = {}
+        b0 = (r0.get("blocks") or {}).get(str(b), {}); rr = {k: v.get("u_T_perp") for k, v in (b0.get("rows") or {}).items() if k.startswith("RSI_a:")}
+        rung["L0"] = {k: dict(c=v.get("c_r1"), p=v.get("p_r1")) for k, v in rr.items()}; rung["L1"] = {k: dict(A=v.get("A"), p_s=v.get("p_s")) for k, v in rr.items()}
+        rung["L2"] = ((r1.get("blocks") or {}).get(str(b)) or {}).get("verdict")
+        for L_, arm in (("L3", "FX"), ("L4", "DN"), ("L5", "NP")):
+            rung[L_] = {ax: [(rows.get(f"{arm}|RSI_a|{n}|{ax}") or {}).get("A") for n in range(4)] for ax in ("T_v", "T_ps" if b == 6 else "T_1b")}
+        diff = {}
+        for (x, y) in (("FX", "DN"), ("DN", "NP")):
+            diff[f"{y}-{x}"] = [S.iv(dr[f"{y}|RSI_a|{n}|T_v"] - dr[f"{x}|RSI_a|{n}|T_v"]) if f"{y}|RSI_a|{n}|T_v" in dr and f"{x}|RSI_a|{n}|T_v" in dr
+                                else K.coded("NA:not_run:arm missing") for n in range(4)]
+        rung["L6"] = dict(PC_round1_definition_SEA_raw=r2.get("PC_round1_def_on_SEA_raw"), PC_1b_SEA_t=(r2["PC"].get("SEA_t") or {}).get("pass_"))
+        out[str(b)] = dict(rungs=rung, paired_A_diff_iv=diff, deb_cos_ustar=r2["deb_cos_ustar"], labels=["descriptive"])
+    return out
 
 
 def _r25(ctx, ok):
