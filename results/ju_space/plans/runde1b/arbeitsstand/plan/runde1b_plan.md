@@ -57,7 +57,10 @@ notebooks/build_runde2_gpu_notebooks.py (sessions, gates, time guard, Drive sync
 - **Tier 2 (extension or reserve).** Runs only if funded (the user's budget decision, main §4 and question Q1) and, for a conditional
   item, only when its trigger fires. A tier-2 item that did not run reads 'not run (tier 2 not funded)' or 'not run (conditional not
   triggered)'. No tier-1 rule needs a tier-2 output; where a part attaches a tier-2 result to a tier-1 verdict, it is a label only.
-- The tier of every session and item is in main §4.2; the order in which tier-2 items are given up is in main §4.5.
+- The tier of every session and item is in main §4.2; the order in which tier-2 items are given up is in main §4.5. Tier-2 items inside
+  tier-1 sessions (D5-x and D3-name in r1b_D_C, K3h in r1b_K_S2b, X1-X6 in r1b_L_A / r1b_L_B; r1b_contracts.TIER2_ITEMS) run only if
+  funded and never delay their session's tier-1 steps. L's X1 and X2 are labels only (L.14): they never add a route to a line or a
+  member to CF-L.
 
 ### 0.4 Verdict and label conventions
 
@@ -109,7 +112,7 @@ README. 'Haarneuronen' is read as 'H-Neuronen' (hallucination-associated neurons
 | **Training data as hyper-catfishing.** 'dass sowohl LLMs als auch die zugrunde liegenden Trainingsdaten als Hyper-Catfishing ... modelliert werden kann' | D | No counterpart in a frozen model (needs training). Proxies: D1-e (the trained prior as a hidden participant); D's reserve R1, the M2 reading (tier 2) | Nothing about training data |
 | **Retokenisation aside.** 'ich kann retokenisieren, aber irgendwann erreiche ich dort auch eine Grenze ... Buchstaben oder ... Pixeln'. The duality must not live inside one token | D | D1-r (random segmentation and character-level ids at L0); D's reserve R3 (D1-r at L*, tier 2) | Pixels: no counterpart (text-only model) |
 | **Analogy aside.** 'König und dann Mann plus Frau ergibt Königin ... sehr symmetrisch ... ziemlich asymmetrisch gestalten. Und was passiert dann, wenn ich tokenisiere?' | D | D1-v (3CosAdd forward and reverse; symmetric gender pairs against directional families; canonical, segmented, character-level; blocks 14 and 18) | Not a duality test (D.20: Reversal Curse) |
-| **MTP and routing.** 'Multitoken Prediction lebt von einem Gradient, von den Gradient Through Routing ... dieses Durchrouten'. Multi-token prediction lives on gradients routed across positions | K | Qwen3-1.7B has no MTP head: self-rollout chain lens CL17 (K4), native MTP chain lens on Qwen3.5-2B for calibration (K5a), trained head (RK-1, tier 2). Inference counterpart of routing: the cross-position Jacobian split into re-routing (QK) and along-route (OV) parts with a head routing map (K10b) | No gradient flows at inference; training-time 'gradient routing' (Cloud et al.) has no counterpart (K.1) |
+| **MTP and routing.** 'Multitoken Prediction lebt von einem Gradient, von den Gradient Through Routing ... dieses Durchrouten'. Multi-token prediction lives on gradients routed across positions | K | Qwen3-1.7B has no MTP head: self-rollout chain lens CL17 (K4), native MTP chain lens on Qwen3.5-2B for calibration (K5a), two trained heads (RK-1, tier 2: standard CE and Soft-MTP after Teoh 2026, 'Gradient Through Routing', arXiv 2610.38331, straight-through gradient routing, g_KL against g_res). Measured counterparts: a per-step self-consistency KL (K4, K5a, RK-1) and RK-1's two heads. Inference analogue of routing (K's, not Teoh's): the cross-position Jacobian split into re-routing (QK) and along-route (OV) parts with a head routing map (K10b) | No gradient flows at inference; K10b is K's forward analogue, not a test of Teoh's training-time routing (K.1) |
 | **'Folge, nicht Reihe'.** 'im Sinne einer Folge, nicht einer Reihe'; 'der Token ist die Folge des vorherigen Tokens. Ich kann aber nicht sagen, der dritte Token ist die Folge von [dem ersten]' | K (L) | K10c (chained CL17 readout against direct L-par and L-jac readouts), K10a (KV share at lag 2; token against KV route); L3b's route line (KV against text) | A front reaches its own block at later positions only through tokens (structural code check, K.1 row 4) |
 | **Fronts and channels.** 'die vorderste Front ... in der Zeit auftragen ... Reihen von Tokenfronten'; 'verschiedene Kanäle ... wo die Token durchfließen' | K | Front F(t) = the 28 block outputs at the newest position; channels SO-CH (448 heads, named subspaces, neuron groups, per-step lens channels); the front dump SO-FD | Every non-head channel is an analyst's basis choice within one residual stream (K.1 row 6) |
 | **Hierarchy.** 'hierarchisch ordnen ... einzelne Kanäle beeinflussen wiederum andere ... äußere Gegebenheiten, welche die Hierarchie ... beeinflussen' | K | K9 (depth-residualised transfer hierarchy among 10 named channels; reordering across 5 text conditions), K7a outflow / inflow; directed couplings in L3c and L4 (descriptive) | Not the full 448-head hierarchy (K.9) |
@@ -151,7 +154,7 @@ README. 'Haarneuronen' is read as 'H-Neuronen' (hallucination-associated neurons
   - Qwen3-0.6B (revision c1899de289a04d12100db370d81485cdf75e47ca; model.safetensors
     f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b): D1-s (tier 1), R8.1 (a round-2 file only), R8.2 (tier 2).
   - Qwen3.5-2B under transformers 5.22.2 (revision and shard sha256 written into the freeze record): K5a (tier 1) and RK-2 (tier 2).
-  - The only training is RK-1's auxiliary MTP head on frozen Qwen3-1.7B (tier 2, bf16; K).
+  - The only training is RK-1's two auxiliary MTP heads (standard CE and Soft-MTP) on frozen Qwen3-1.7B (tier 2, bf16; K).
 - **Template.** Chat template, thinking off (the empty think block, 4 tokens), as in rounds 1 and 2. Plain-text frames only where a
   part states them: K's lens frames (K3g, K4, K4j, K5a, K6f, K6g), K's reference and filler texts (REF-W, N-text, F512, F2048),
   L2a's raw documents, teacher-forced reference texts. History conventions are per measurement and stated there (B-Q8 concatenation
@@ -231,17 +234,17 @@ the names the parts use for it, which the harmonisation edits replace by the mai
 
 | ID | Definition | Owner (made in) | Users | Local names replaced |
 |---|---|---|---|---|
-| **SO-AX** | Three axis families. **AX1:** the round-1 axes u_T_perp(b), u_sea(b), u_sports(b), u_tone(b), u_neg(b) at b in {14, 18, 6} from R1.state[b]['axes']. **U\*:** u*_b at b in {14, 18, 6} = the round-2 file r2_q2/theta/b<b>_q0.pt['u_star'], copied unchanged with its sha256 (canonical); the leave-loop-out modes u*_b^(-L) (R.1). **AX-1b:** R's 1b axes (u_T, raw and perp* and ^1b versions, the verdict axes u_X^v(b), fold axes, kappa_X, centred nulls, AUCs) at 14, 18, 6 and at R5.1's lens blocks {2, 6, 10, 14, 18, 22, 24, 26} | R (AX1, U* and the SG10 rebuild check in r1b_R_S0; AX-1b in r1b_R_S2_14 / _18 / _06 and r1b_R_S5) | R (all); K (K3f: u*_14; K7b, K9, K10a and SO-CH named channels: u*_b and AX-1b's u_T^v(14), u_sea^v(14), u_T^v(18), and u_sea^v(18) for K7b's block-18 cells, OD-M5); D (D2-f: u_T_perp(14), u*_14 and u_T^v(14), OD-M6); L (L3b descriptive line: u*_14) | R 'AX-1b(b)', 'u*_b, u*_b^(-L)'; K 'SO-AX', 'KS-axes'; D 'Axes'; L 'R.AXES' |
-| **SO-DMG** | Damage and its calibration. Damage functional: teacher-forced KL(unmodified || modified) in nats over the scored positions of a reference set, logits_to_keep on scored positions. Calibrate rule: f <- f sqrt(target / damage), band +-10 % of the target, at most 6 evaluations for pushes and 8 for neuron scaling (K's NSCALE_DN: (alpha - 1) <- (alpha - 1) sqrt(target / damage), alpha <= 20, 'dose capped' label); the closest value tried is kept and labelled when out of band. Reference sets: **REF-R16** = R1.state[14]['ref'] continuations of round-1 prompts 0-7 (RSI-topic) and 32-39 (scene) (r1b_R_S0 asserts equality with the copies at 18 and 6 and logs differences); **REF-K16** = K's DMG_K (8 WikiText-103 validation passages with 64 scored tokens, 8 TriviaQA S2 question / answer pairs), frozen as token ids by K1 before the freeze; **REF-U32** = REF-R16 union REF-K16. Levels delta1 = 0.05 and delta2 = 0.15 nats. Push operators: PUSH-DN and PUSH-NP (R3.1, R3.2); K's and L's neuron operators in their parts. **Calibration reference per part, as frozen:** R on REF-R16 (dmg_sym, both signs, R3.1); K on REF-K16; L on REF-U32 plus 64 held-out S_L answers (L.2). **Reporting:** every calibrated intervention of R, K and L also reports its damage on REF-U32 (descriptive), so that damage is comparable across parts | R (functional, rule, REF-R16, PUSH-DN, PUSH-NP; function-style implementation in r1b_core for K and L); K (REF-K16, NSCALE_DN) | R, K, L (D runs no push) | R 'PUSH-DN', 'PUSH-NP', 'dmg_sym', '16 references'; K 'SO-DMG', 'DMG_K', 'D1', 'D2' (as damage levels); L 'R.DMGPUSH', 'R's REF16 / K's REF-K16 union' |
+| **SO-AX** | Three axis families. **AX1:** the round-1 axes u_T_perp(b), u_sea(b), u_sports(b), u_tone(b), u_neg(b) at b in {14, 18, 6} from R1.state[b]['axes']. **U\*:** u*_b at b in {14, 18, 6} = the round-2 file r2_q2/theta/b<b>_q0.pt['u_star'], copied unchanged with its sha256 (canonical); the leave-loop-out modes u*_b^(-L) (R.1). **AX-1b:** R's 1b axes (u_T, raw and perp* and ^1b versions, the verdict axes u_X^v(b), fold axes, kappa_X, centred nulls, AUCs) at 14, 18, 6 and at R5.1's lens blocks {2, 6, 10, 14, 18, 22, 24, 26} | R (AX1, U* and the SG10 rebuild check in r1b_R_S0; AX-1b in r1b_R_S2_14 / _18 / _06 and r1b_R_S5) | R (all); K (K3f: u*_14; K7b, K9, K10a and SO-CH named channels: u*_b and AX-1b's u_T^v(14), u_sea^v(14), u_T^v(18), and u_sea^v(18) for K7b's block-18 cells, OD-M5; K's SO-AX channels exist only in r1b_K_S5 at blocks 14 / 18; K7a in r1b_K_S4, account B, uses SO-AX-free channels); D (D2-f: u_T_perp(14), u*_14 and u_T^v(14), OD-M6); L (L3b descriptive line: u*_14) | R 'AX-1b(b)', 'u*_b, u*_b^(-L)'; K 'SO-AX', 'KS-axes'; D 'Axes'; L 'R.AXES' |
+| **SO-DMG** | Damage and its calibration. Damage functional: teacher-forced KL(unmodified || modified) in nats over the scored positions of a reference set, logits_to_keep on scored positions. Calibrate rule: f <- f sqrt(target / damage), band +-10 % of the target, at most 6 evaluations for pushes and 8 for neuron scaling (K's NSCALE_DN: (alpha - 1) <- (alpha - 1) sqrt(target / damage), alpha <= 20, 'dose capped' label); the closest value tried is kept and labelled when out of band. Reference sets: **REF-R16** = R1.state[14]['ref'] continuations of round-1 prompts 0-7 (RSI-topic) and 32-39 (scene) (r1b_R_S0 asserts equality with the copies at 18 and 6 and logs differences); **REF-K16** = K's DMG_K (8 WikiText-103 validation passages with 64 scored tokens, 8 TriviaQA S2 question / answer pairs), frozen as token ids by K1 before the freeze; **REF-U32** = REF-R16 union REF-K16. Levels delta1 = 0.05 and delta2 = 0.15 nats. Push operators: PUSH-DN and PUSH-NP (R3.1, R3.2); K's and L's neuron operators in their parts. **Calibration reference per part, as frozen:** R on REF-R16 (dmg_sym, both signs, R3.1); K on REF-K16; L on REF-U32 plus 64 held-out S_L answers (the last 64 S_L rows by id; L.2). **L's forms (L.1):** every L neuron operation uses the gain form ((alpha - 1) <- (alpha - 1) sqrt(target / damage), +-10 %, <= 6 evaluations); partial mean ablation is calibrated on (1 - lambda). **Reporting:** every calibrated intervention of R, K and L also reports its damage on REF-U32 (descriptive), so that damage is comparable across parts; K's REF-U32 reports are made in r1b_K_S2a (V8 beta and r1b_K_S1's calibrations), r1b_K_S2b (K6e NSCALE_DN) and r1b_K_S5 (K3f, K10a) | R (functional, rule, REF-R16, PUSH-DN, PUSH-NP; function-style implementation in r1b_core for K and L); K (REF-K16, NSCALE_DN) | R, K, L (D runs no push) | R 'PUSH-DN', 'PUSH-NP', 'dmg_sym', '16 references'; K 'SO-DMG', 'DMG_K', 'D1', 'D2' (as damage levels); L 'R.DMGPUSH', 'R's REF16 / K's REF-K16 union' |
 | **SO-JLENS** | The Neuronpedia J-lens for Qwen3-1.7B (qwen3-1.7b/jlens/Salesforce-wikitext/Qwen3-1.7B_jacobian_lens.pt; 27 fp16 2,048 x 2,048 maps, blocks 0-26 to block 27; sha256 6fcc79011bd921ffd87612255e2e99950a124fa519470ee44ebaf161c39be9d6); its index convention (J[l] maps the output or the input of block l), decided by K4j (G-K-J) in r1b_K_S1; its per-block validity and layer profile (R5.1, RG10); LENS-J1b (R5.4's refit, tier 2, used by R only) | R (file, validity, LENS-J1b); K (convention) | R (R5.1-R5.5), K (K4 seeds, K4j, K10c's L-jac) | R 'LENS-J'; K 'SO-LENS (J-lenses)' |
-| **SO-CL** | The chain-lens instruments: CL17 (K4: self-rollout from J-lens seeds, contrastive decoding against mu_task, chain-only context, re-injection off in primaries), CL35 (K5a native MTP lens on Qwen3.5-2B), the verifier, frames and fillers (P0 16 tokens, F512, F2048), priors mu_task and mu_gen, L-par and L-jac | K | K only (L consumes SO-LENSOUT) | K 'SO-LENS'; L 'K's lens' |
+| **SO-CL** | The chain-lens instruments: CL17 (K4: self-rollout from J-lens seeds, contrastive decoding against mu_task, chain-only context, re-injection off in primaries), CL35 (K5a native MTP lens on Qwen3.5-2B), the verifier, frames and fillers (P0 16 tokens, F512, F2048), priors mu_task and mu_gen, L-par and L-jac; the per-step self-consistency KL (descriptive; K4, K5a, RK-1), the measured counterpart of Teoh 2026's g_KL / g_res routing (K.1; K10b is K's forward analogue) | K | K only (L consumes SO-LENSOUT) | K 'SO-LENS'; L 'K's lens' |
 | **SO-LENSOUT** | K4's per-chain records, one per chain: item id, stratum (K4 'correct' = L's 'known'; K4 'wrong' = L's 'prone'), number of operations (two or three), variant, read block, position type, seed rank, key, emitted token ids at steps s = 0..16, k*_conf (first CONFAB), share_H(s) with the RS39 band (q95 of share_R), a_H(s); plus K4's gating answers for every gated A-lens pool item (greedy and 4 samples at T 0.7) | K (r1b_K_S2a) | L (L5a, L5b; L5's own-CoT items) | L 'K.LENS-OUT' (B_hal -> k*_conf; FOV_H(q) -> share_H(s); A_H(q) -> a_H(s)), 'K.ITEMS-ARITH' |
 | **SO-HN** | The H-neuron sets and their machinery (K2): H_tq (Gao's protocol, prose label convention, positive weights at C*), H_ar (arithmetic), H+ (H plus every unselected neuron with |r| >= 0.7 to a member), F (negative weights, contrast only); **H_op**, the operative set = H_tq, or H+ after G-K22's switch, or H_ar after G-K1's fallback ('H_ar primary'); theta, C*, refit L2 detectors; the 20 question-bootstrap refit sets of diagnostic Dg2 (positive weights at C*); REF-W per-neuron mean and SD of z and CETT and the 99.8th percentiles; random sets RS39, RS39mc, RS19, RS20, RS10; the down_proj hook manager (z, CETT, per-position scaling, mean-clamp), the GPU FISTA selector select(X, y, C*, exclude_mask) and the random-set generator (same count per layer, mean answer-CETT within +-20 %) as importable functions. Files hn_set.json (incl. the boot sets and H+ ordered by selection frequency, then |r|), hn_detectors.pt, rs_sets.json, hn_meta.json | K (r1b_K_S1) | K; L (P, L.POP, CTRL99, SEL+, UNC+, the selection-robustness label, CETT recompute, mean ablation); D (optional descriptive covariate, OD-M25) | L 'K.HSET', 'K.HSET+', 'K.HBOOT', 'K.CETT / K.NH', 'K.SELECT', 'K.RANDSETS', 'K.REF'; D 'the H-neuron set (part K)' |
 | **SO-CHH** | The per-token H channel: a_X(t) = mean over the neurons of X of zCETT (CETT standardised per neuron on REF-W); s_H and H~ as K defines them (K.0) | K | K; L (primary a_t; L's standardised-z mean is its sensitivity variant, OD-M11); D (covariate) | L 'K.CH-H' |
-| **SO-LAB** | Labels and items (K1, K2, K4): ACH-short and ACH-long; FP, MC, SY; NE (300 fabricated-entity items = L's FAB); TriviaQA rc.nocontext (pinned) split by question-id hash into the S1 screening pool (allocated in K2 to S_fit, S_lens, S_sess and **S_L**, OD-M8), S2, S3, S4a-c; the arithmetic splits; the scorers (numeral parser, alias matcher, refusal lexicon, compliance parsers, W enumerator, OWN sets, CONFAB-QA parser with audit, loop-onset detector); per item the 10 sampled answers with keys, the consistency class (CC = 10 / 10 correct; CI = 0 / 10 correct and no refusal) and the answer spans | K (K1 before the freeze; K2 and K4 in r1b_K_S1 and r1b_K_S2a) | K; L (S_fit for selection, S_L for evaluation, NE, the scorers, K4's gated items) | L 'K.LABELS' ('S1' -> S_fit, 'S2' -> S_L, 'FAB' -> NE), 'K.ITEMS-ARITH' |
+| **SO-LAB** | Labels and items (K1, K2, K4): ACH-short and ACH-long; FP, MC, SY; NE (300 fabricated-entity items = L's FAB); TriviaQA rc.nocontext (pinned) split by question-id hash into the S1 screening pool (allocated in K2 to S_fit, S_lens, S_sess and **S_L**, OD-M8), S2, S3, S4a-c; the arithmetic splits; the scorers (numeral parser, alias matcher, refusal lexicon, compliance parsers, W enumerator, OWN sets, CONFAB-QA parser with audit, loop-onset detector); per item the 10 sampled answers with keys, the consistency class (CC = 10 / 10 correct; CI = 0 / 10 correct and no refusal) and the answer spans. Contract (as implemented): lab/so_lab.json carries labels and ids; question texts, aliases and the NE items come from K's label bank (bank.json 'tqa', 'ne', 'ach_short'); NE rows have no K answers (L generates its greedy 24-token NE answers itself, labelled); lab/k4_gating.json item ids are bank 'ach_short' ids with a 'cal' flag | K (K1 before the freeze; K2 and K4 in r1b_K_S1 and r1b_K_S2a) | K; L (S_fit for selection, S_L for evaluation, NE, the scorers, K4's gated items) | L 'K.LABELS' ('S1' -> S_fit, 'S2' -> S_L, 'FAB' -> NE), 'K.ITEMS-ARITH' |
 | **SO-LCE** | The long-context engine: B = 1 shared-prefix prefill per length and stream; chunked extension with logits_to_keep; explicit position_ids and cache_position; the crop path (unstopped chunk, all layers cropped; D), per-layer crop of layers <= b after a stopped read (K, and R's rule for any prefix reuse), the copy path (no crop); branching by cache copies (batch_repeat_interleave); keyed Gumbel decode (SO-KEYS); generation-time capture; the SDPA memory-efficient kernel asserted; manifest of peak memory, backend, GPU and versions. Parity is gated per use, each with its frozen tolerance: D's G-LCE-1..4, K's G-K20, L's G-L2a-LCE (OD-M14) | D | D; K (<= 4,096 tokens: K6e-d, K6f, K8a); L (L2a at up to 32,768) | D 'LCE'; K 'SO-LCE'; L 'D.LONGCTX' |
 | **SO-D1STIM** | D's frozen D1 stimulus file d1_stimuli.json (F-sym and F-asym referents, six attribute slots, versions 1 and 2, the third value v3, the second referent Y_i, report templates, questions). **F-sym items 0-31 are L4's fork items:** entity = referent i, contested attribute = slot j = i mod 6, v1 / v2 = that slot's version-1 / version-2 values | D (before the freeze) | D (D1); L (L4) | L 'D.FORK-F1' |
-| **SO-WT103** | WikiText-103 raw at one pinned revision (sha256 in the freeze record), CC BY-SA 3.0, split by use: **train** (file order): D's 16 filler streams first (as D's frozen script builds them; the shuffled versions reuse their text), then K's 1M-token percentile reference, then SO-PILOT's 8 passages, then (tier 2) RK-1's 20M training tokens; **validation:** part K only (REF-W, N-text, F512 / F2048, REF-K16's passages, K4j's passages; K fixes disjoint offsets); **test:** part L only (the 200 natural-position passages of L.R) | D (pins), K and L (their offsets) | D, K, L, P0 | D 'generic filler corpus'; K 'WikiText-103 validation'; L 'WikiText-103 validation passages (disjoint from K.REF's)' |
+| **SO-WT103** | WikiText-103 raw at one pinned revision (sha256 in the freeze record), CC BY-SA 3.0, split by use: **train** (file order): D's 16 filler streams first (as D's frozen script builds them; the shuffled versions reuse their text), then D1-d's 2 reference passages and G-D6's 16 validation texts (D's stream record names the 'end_passage'), then K's 1M-token percentile reference (starting after D's 'end_passage'), then SO-PILOT's 8 passages, then (tier 2) RK-1's 16M training tokens; K3c's unigram counts over the first 10M train tokens are corpus statistics (no text is shown to the model) and may overlap the other train uses; K's offsets are freeze keys datasets.wikitext103.k_train_offset_lines and rk1_train_offset_lines; **validation:** part K only (REF-W, N-text, F512 / F2048, REF-K16's passages, K4j's passages; K fixes disjoint offsets); **test:** part L only (the 200 natural-position passages of L.R; L's REF-W fallback reuses the first 512 tokens, positions >= 16, of these passages) | D (pins), K and L (their offsets) | D, K, L, P0 | D 'generic filler corpus'; K 'WikiText-103 validation'; L 'WikiText-103 validation passages (disjoint from K.REF's)' |
 | **SO-LONGDOC** | L.LONGDOC: PG19 test split at a pinned revision, the first 24 books in file order with >= 36,000 tokens after skipping 2,000, slice [2,000, 34,768) | L | L (L2a); P0 uses qualifying books 25-28 (the next four in the same order) for timing only | L 'D.LONGCORPUS / L.LONGDOC' |
 | **SO-TURN** | Round-2 turn machinery, imported unchanged: r2_stimuli.TURN2_SUFFIX, turn2_ids, check_turn2, round_trip_stable (OD-B13 concatenation, history think blocks kept); the B-Q8 read convention ('read as the reply to the plain prompt'); r2_theta.stage_turn2; the R6 rule logic of r2_theta_verdict (K defined only if the denominator's 90 % interval excludes 0) | main (round-2 code at 8171b86) | R (R6.2, R6.3), D (D2, D2-f), K (K8b's history convention, G-K8), L (L3b, L4) | various |
 | **SO-GVRA** | The inverse-free generate-verify-revise-abstain convention (main §2.5): forward generator; verifier = a forward round trip through the unmodified model, decoupled from the generator, with three outcomes (correct / minor fix needed / critically flawed); reviser; attempt limit 3; abstentions counted and reported; the verifier's error rate measured on known cases before its outputs are read | K (r1b_gvra.py) | R (R5.5), D (D3 mode naming, INJ starts), K (K3e, K4, K7b), L (X5) | K 'SO-GVRA'; L 'K.GVRA' |
@@ -270,6 +273,8 @@ registered tag:
 | L | 'r1bL' | 'r1bL0', 'r1bL2', 'r1bL2b', 'r1bL2s', 'r1bL3', 'r1bL3t', 'r1bL4', 'r1bL5', 'r1bLX'; string seeds 'r1bL1rot', 'r1bL-ERA', 'r1bL2perm', 'r1bL-CTRL', 'r1bL5-FM', 'r1bL-BOOT', 'r1bL-SUR', 'r1bL-SHUF' |
 | main | 'r1bP0_' | pilot texts |
 
+- R's loop names are RSI_a, RSI_b, SEA_t, SPO_t, SEA_raw, RND_1, RND_2 (registered by r1b_sessions_R through
+  r1b_core.register_r_loops); the package file r1b_keys.json is written with r1b_sessions_R imported, otherwise these tags are missing.
 - r1b_core.KEYS lists every tag. A code test asserts that the tags are unique across parts, differ from every round-1 and round-2
   tag ('ref', 'axis', 'mirror', the round-1 loop names with their SUF, 'r2GEN...', 'theta', 'theta2', 'r2PWR', 'r2fdt', 'r2CNT',
   'r2RSIb...', 'r2Q4B', 'r2ARMA', 'r2SUP', 'r2DOSE', 'r2CHK') except for R's stated reuse, and that no R loop name forms a tag equal to
@@ -322,11 +327,11 @@ the round-level label is added by r1b_ana.
 
 | Family | Question | Members (part : ID 'string') | Member p | Control |
 |---|---|---|---|---|
-| CF-R+ | R | R.1's F+ (10): V_RSI_1b 'likely' (either strength: 'RSI-dominated' or 'substantial RSI component') at 14, 18, 6; R3.3 'reaches 1 at small push' along u_T^v at 14, 18, 6; R4.2 'lambda_RSI >= 1' at 14, 18, 6; R6.2 'self-sustaining at T 0.7' | R.1 | Holm, 0.05 (R's own) |
+| CF-R+ | R | R.1's F+ (10): V_RSI_1b 'likely' (either strength: 'RSI-dominated' or 'substantial RSI component') at 14, 18, 6; R3.3 'reaches 1 at small push' along u_T^v at 14, 18, 6; R4.2 'lambda_RSI >= 1' at 14, 18, 6; R6.2 'self-sustaining at T 0.7' | R.1 as amended (R.9): the 'likely' member's bound component tests A_bar against 0.25 (stats-11); C_pos's RND conditions are two-sided (two-sided p_s, |A| lower bound >= 0.25) | Holm, 0.05 (R's own) |
 | CF-R- | R | R.1's F- (10): 'unlikely (RSI does not persist)' at 14, 18, 6; R3.3 'below 1 at small push' at 14, 18, 6; R4.2 'lambda_RSI below 1' at 14, 18, 6; R6.2 'dissipative at T 0.7' | R.1 | Holm, 0.05 (R's own) |
 | CF-D | D | (a) D1-a verdict 4 without 'explained by' (D.17's support condition); (b1) D3 'split grows with length'; (b2) D2 member M or D5-a 'two competing voices sustain coherence longer' | D.17 (p_a, p_b1, p_b2 = min(2 p_M, 2 p_D5)) | Holm over three, 0.05 (D's own) |
 | CF-K-attr | K | Q9's six members: K6e TOK carry, K6e TOK+KV carry, K6e bistability, K8b ACH carry, K8b TQA carry, K8b ACH bistability | p_IUT with PI specificity (K.4) | Holm over six, 0.05 (K's own Q9) |
-| CF-K-link | K | the seven A+ members of K.7: K6b(i), K6b(ii) 'H-activity predicts lens confabulation beyond chain length'; K6c(i), K6c(ii) '... reduces lens confabulation specifically'; K6e-c 'H push raises ...' and 'H clamp lowers ...'; K6h 'H-activity predicts lens confabulation beyond chain length (QA)' | p_IUT (K.4) | Holm over seven, 0.05 (new at round level, C25) |
+| CF-K-link | K | the seven A+ members of K.7: K6b(i), K6b(ii) 'H-activity predicts lens confabulation beyond chain length'; K6c(i), K6c(ii) '... reduces lens confabulation specifically'; K6e-c 'H push raises ...' and 'H clamp lowers ...'; K6h 'H-activity predicts lens confabulation beyond chain length (QA)' | p_IUT with the PI-form specificity p (K.4; k_verdict.json round_level.CF_K_link_pi). The rank form (floor 1/40 against RS39) cannot pass Holm over seven (0.05 / 7 = 0.0071) and is reported only (K.12, stats-1) | Holm over seven, 0.05 (new at round level, C25) |
 | CF-L | L | L3 attractor line 'H-attractor (self-sustaining or bistable, H-specific, seen in natural dynamics)'; L2b 'H rises beyond information loss' | below | Holm over two, 0.05 (new at round level) |
 | CF-HERR | K and L | K8c 'H-activity predicts the next error beyond length, position, difficulty and uncertainty'; L5c 'H predicts the model's own step errors (within item, beyond step and uncertainty)' | K8c: p_IUT (K.4); L5c: max(p(beta_H <= 0), rank p) | Holm over two, 0.05 (new at round level, C21) |
 
@@ -334,7 +339,7 @@ the round-level label is added by r1b_ana.
   one-sided bootstrap p; an all-of verdict the largest component p; an any-of-k verdict k x its smallest component p (Bonferroni); a
   member whose verdict is not reached (gate failed, not decidable, not run) has p = 1. For CF-L: p(L3 attractor line) =
   max(2 x min(p_A1, p_A2), 2 x min(p_stick, p_pers)), where p_A1 = max(p(K_H^pool <= 1), p(Delta K <= 0)), p_A2 = max(surrogate p,
-  rank p) of 'within-item bistability (H-specific)', and p_stick, p_pers are the largest one-sided p of the conditions of
+  rank p, p(BI_P - BI_SEL+ <= 0)) of 'within-item bistability (H-specific)' (L.14), and p_stick, p_pers are the largest one-sided p of the conditions of
   'H-specific stickiness' and 'H-specific persistence' (L3a, L3b); p(L2b) = max(p(beta_pos^(iota,e) <= 0), p(Delta beta^(iota,e) <= 0)).
 - A member is labelled 'confirmatory (<family>)' only if its part's rule reaches the string with the part's own adjustments and it
   survives the round-level Holm step; otherwise 'exploratory (Holm not met)'.
@@ -364,6 +369,7 @@ a neuron or direction encodes, which input produced a readout). Every such step 
 | D's INJ starts (1) | none (no cause is inferred); the loop makes instruction-stripped starts | keyed generation | forward check of the intended stance | 3 attempts; an abstaining item is replaced by a reserve item (G-D0d) | the other bundle's texts |
 | K3e (1) | what H write vectors encode | neuron-lens chains | neuron-activation round trip (the readout fed back must activate the neuron above its 99.8th WikiText percentile and above 90 % of random readouts) | 3 attempts | planted known cases |
 | K4, K7b, K8c lens reach (1) | the content of a read state | CL17 chains | the chain fed through the unpatched model: cos(s(c) - mu, h - mu) against V2 and token-shuffled thresholds | minor fix: next contrastive candidate; 3 attempts per seed | 64 planted states (G-K6) |
+| K3h (2, item in r1b_K_S2b) | what an H neuron-pole encodes (atlas-compatible, effect-based simulatability) | a description: the top-10 firing tokens with their mean activation (revision: top-20; next family: K3e's chain-lens readout tokens) | the description simulates the activation on held-out N-text and is patched in; R = 1 - sum KL(orig ‖ simulated) / sum KL(orig ‖ zeroed): correct >= 0.5, minor fix 0.2-0.5, critically flawed < 0.2 | 3 attempts, then abstain ('uninterpretable') | token-detector neurons (sensitivity) and foreign descriptions (false accept) |
 | X5 L.gv (2) | what an energy basin is | lexical statistics of basin texts | forward generation and acceptance test (L.4 X5) | gains x 1.25 for a minor fix, family switch for a critical flaw; 3 attempts | planted Ising basins and self-consistency cases |
 
 **Not reconstructions** (forward maps, fits and nulls; allowed by the design rules and named in the parts): the J-lens transport
@@ -412,7 +418,7 @@ J = -C^-1, TAP or the graphical lasso to reconstruct anything. main §6.3's lint
 | C29 | L-ANA runs 'on a CPU runtime inside the round-1b analysis session', which no part defines | L-ANA is a step of r1b_ana (CPU runtime, account A) (OD-M26) | No A100 time for CPU work |
 | C30 | R states that part D must recalibrate pushes per length | Moot: part D steers nothing (D.2) | - |
 | C31 | Four carry estimators named K (R6.2, D2-f, K6e / K8b, L3b) | Cited with their part's estimator; never pooled (main §0.2) | Different designs |
-| C32 | K-S6 (RK-1) is placed in account B, but its trigger (G-K5) is decided in r1b_K_ana (account A) | r1b_K_S6 runs in account A | Avoids an A -> B trigger transfer |
+| C32 | K-S6 (RK-1) is placed in account B, but its trigger (G-K5) is decided in r1b_K_ana (account A) | r1b_K_S6 runs in account A; since the implementation RK-1 is unconditional in tier 2 (two heads, K.1) and starts after r1b_K_S1 and r1b_K_S2a, without a trigger. K3h is a tier-2 item in the tier-1 session r1b_K_S2b (B) | Avoids an A -> B trigger transfer |
 
 ## 3 Gates
 
@@ -488,7 +494,7 @@ J = -C^-1, TAP or the graphical lasso to reconstruct anything. main §6.3's lint
 | G-K3 | H in arithmetic | arithmetic H statements use H_ar ('domain-specific H-set') or read 'H not valid in arithmetic' |
 | G-K4 | 'chain lens reads intermediates' (P-L) | lens-side verdicts 'not testable (lens fails its positive control)' |
 | G-K4b | intermediates present lens-free at >= 1 block (K4p) | with a G-K4 failure: 'nothing to read' |
-| G-K5 | 'self-rollout calibrated' (K5a) | label 'lens substitute not calibrated'; RK-1 eligible (tier 2) |
+| G-K5 | 'self-rollout calibrated' (K5a) | label 'lens substitute not calibrated' (RK-1 runs in tier 2 whatever G-K5 reads, C32) |
 | G-K6 | verifier reliable: false-accept <= 0.20, sensitivity >= 0.50 | k*_ver labelled 'verifier unreliable' |
 | G-K7 | J-lens seeds on task text | label only |
 | G-K8 | carry defined (R6K) | 'K not defined' |
@@ -564,7 +570,11 @@ J = -C^-1, TAP or the graphical lasso to reconstruct anything. main §6.3's lint
 - **Harmonisation additions** (work, before the x1.5 margin): S_L screening in r1b_K_S1 +6.4 min (charged to L); K4's 22 extra wrong
   items in r1b_K_S2a +0.67 min (charged to L); L's 6 extra gating samples in r1b_L_B +0.33 min; REF-U32 reporting of R's pushes on
   REF-K16 +2.7 min and of K's interventions on REF-R16 +2.0 min (charged to the round).
-- Sessions stay far below the 5-h Colab limit (largest: r1b_D_A, 3.4 h).
+- **Implementation amendments** (planned minutes, x1.5 included): r1b_D_A +5.9 (D1-f and D1-s on each item's own stream i mod 16: up
+  to 8 more shuffled 32K prefills, about 2.3 raw min, and 8 more 0.6B prefills, about 1.6 raw min; D.23); r1b_L_B +2.9 (L's expected
+  anchor information iota*, about 1.9 raw min; L.14). Tier 2: RK-1 72 (was 58; two heads, unconditional), K3h 30 (item in
+  r1b_K_S2b), D3-name 7.5 (item in r1b_D_C, <= 5 raw min, conditional).
+- Sessions stay far below the 5-h Colab limit (largest: r1b_D_A, 3.5 h).
 
 ### 4.2 Sessions
 
@@ -575,65 +585,76 @@ A100-minutes as planned (setup + I/O + 1.5 x work). 'Starts after' lists start c
 | r1b_P0 | all | pilot | B | 0 | harmonised part files and package drafts; before the freeze | P0-R (R-P's list), P0-D (D's pilot list), P0-K (K0 items 1-9 incl. the Qwen3.5-2B load), P0-L (L0 items i-vi); shared items measured once (Drive throughput, short-context decode with and without L's capture set, 16K / 32K prefill with and without down_proj hooks, crop / copy path and cached-vs-recomputed parity metrics); SO-PILOT only; engineering numbers only | 68.2 |
 | r1b_R_S0 | R | 1 | A | 1 | freeze | R0, R8.1, R9.5; SO-AX package (AX1, U*, leave-loop-out modes, SG10 check); exports to r1b_xfer (REF-R16 token ids, u*_b) | 22.2 |
 | r1b_R_S2_14 | R | 1 | A | 1 | freeze | R2.1 (axis texts), R2.2 at 14; AX-1b(14) | 58.5 |
-| r1b_R_S1 | R | 1 | A | 1 | r1b_R_S0 (concurrency, R.5) | R1 closed and open loop | 35.9 |
-| r1b_R_S2_18 | R | 1 | A | 2 | r1b_R_S2_14 | R2.1 reads, R2.2 at 18; AX-1b(18) | 60.8 |
-| r1b_R_S2_06 | R | 1 | A | 2 | r1b_R_S2_14 | R2.1 reads, R2.2 at 6; AX-1b(6) | 60.8 |
-| r1b_R_S3 | R | 1 | A | 3 | r1b_R_S2_14, _18, _06 | R3.3, TXT0 (R3.4), R4.1-R4.3 | 100.2 |
-| r1b_R_S5 | R | 1 | A | 4 | r1b_R_S3; r1b_K_S1 (k4j.json via dsse_runs_B) | R5.1, R5.2, R5.3, R5.5; AX-1b at the lens blocks; RG10, RG11 | 29.1 |
-| r1b_R_S6 | R | 1 | A | 4 | r1b_R_S3 | R6.1, R6.2, R6.3 | 63.2 |
-| r1b_R_S7 | R | 1 | A | 4 | r1b_R_S3 | R7.1-R7.3 (RG13, RG14 in session) | 21.8 |
+| r1b_R_S1 | R | 1 | A | 1 | r1b_R_S0 (concurrency, R.5); round-1 pilot files | R1 closed and open loop | 35.9 |
+| r1b_R_S2_18 | R | 1 | A | 2 | r1b_R_S2_14 (ax1b/ only) | R2.1 reads, R2.2 at 18; AX-1b(18) | 60.8 |
+| r1b_R_S2_06 | R | 1 | A | 2 | r1b_R_S2_14 (ax1b/ only) | R2.1 reads, R2.2 at 6; AX-1b(6) | 60.8 |
+| r1b_R_S3 | R | 1 | A | 3 | r1b_R_S2_14, _18, _06 (AX-1b and the loops' directions) | R3.3, TXT0 (R3.4), R4.1-R4.3 | 100.2 |
+| r1b_R_S5 | R | 1 | A | 4 | r1b_R_S3; r1b_K_S1 (k4j.json via dsse_runs_B); AX-1b of r1b_R_S2_14, _18, _06 | R5.1, R5.2, R5.3, R5.5; AX-1b at the lens blocks; RG10, RG11 | 29.1 |
+| r1b_R_S6 | R | 1 | A | 4 | r1b_R_S3; AX-1b of r1b_R_S2_14, _18, _06 | R6.1, R6.2, R6.3 | 63.2 |
+| r1b_R_S7 | R | 1 | A | 4 | r1b_R_S3; r1b_R_S2_14 (AX-1b and directions); r1b_R_S0 (r0_table.json) | R7.1-R7.3 (RG13, RG14 in session) | 21.8 |
 | (R's REF-U32 reporting) | R | 1 | A | - | inside r1b_R_S2_*, _S3, _S6, _S7 | damage of R's calibrated pushes on REF-K16 | 4.0 |
-| r1b_R_ana | R | 1 | A | 5 | all R tier-1 sessions | R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check | 55.3 |
-| r1b_D_A | D | 1 | B | 1 | freeze | G-LCE-1 / G-LCE-2 first (SG9), stream prefills, D1 (main, neutral, degradation, non-competing, D1-h), D1-c, D1-d, D1-e, D1-f, D1-r, D1-v, D1-s | 202.3 |
+| r1b_R_ana | R | 1 | A | 5 | all R tier-1 sessions (of r1b_R_S1 only r1/); round-1 dn_delta.json, round-2 theta_verdict.json | R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check | 55.3 |
+| r1b_D_A | D | 1 | B | 1 | freeze | G-LCE-1 / G-LCE-2 first (SG9), stream prefills, D1 (main, neutral, degradation, non-competing, D1-h), D1-c, D1-d, D1-e, D1-f, D1-r, D1-v, D1-s (D1-f and D1-s on each item's own stream: +5.9, main §4.1) | 208.2 |
 | r1b_D_B | D | 1 | A | 2 | freeze (input-free; fills a free A slot) | G-LCE-3, D2 | 122.2 |
 | r1b_D_C | D | 1 | A | 4 | freeze (input-free; fills a free A slot) | D3 (with starts), D4 (with starts), D5 (D5-x only if tier 2 is funded) | 149.6 |
 | r1b_D_ana | D | 1 | A | 5 | r1b_D_A (via dsse_runs_B), r1b_D_B, r1b_D_C; r1b_R_S0, r1b_R_S2_14 | all D verdicts, G-D1-null, G-D2-null, D3 mixtures, D2-f, combined Holm (D.17); I/O allowance included | 32.5 |
 | r1b_K_S1 | K | 1 | B | 1 | freeze | K2 (incl. the S_L screening, OD-M8), K3a-e, K3g(ii), K4j; SG8 preview | 126.4 |
 | r1b_K_S3 | K | 1 | B | 1 | freeze (parallel to r1b_K_S1) | K5a | 28.9 |
 | r1b_K_S2a | K | 1 | B | 2 | r1b_K_S1; r1b_K_S3's k5a_calib.json (or r1b_K_S3 'not run' after two attempts: variant E); r1b_xfer_A/dmg_ref_R16.json | K4 gating (incl. export to SO-LAB), K4 (150 wrong items), K4p, K6c, K6f, K6g, K6h, K10c; REF-U32 reporting of r1b_K_S1's calibrations | 92.2 |
-| r1b_K_S2b | K | 1 | B | 3 | r1b_K_S2a | K6e | 51.1 |
+| r1b_K_S2b | K | 1 | B | 3 | r1b_K_S2a, r1b_K_S1; r1b_xfer_A/dmg_ref_R16.json | K6e (+ K3h if tier 2 is funded, below) | 51.1 |
 | r1b_K_S4 | K | 1 | B | 3 | r1b_K_S1, r1b_K_S3 | K8a, K8b, K8c, K7a | 119.9 |
-| r1b_K_S5 | K | 1 | A | 4 | r1b_K_S1, r1b_K_S2a, r1b_K_S4 (K9's K8a instances, K8b and K8c texts; via dsse_runs_B); r1b_R_S0; r1b_R_S2_14, _18 | K9, K10a, K10b, K3f, K7b (SO-AX read; no KS-axes recomputation) | 70.1 |
+| r1b_K_S5 | K | 1 | A | 4 | r1b_K_S1, r1b_K_S2a, r1b_K_S4 (K9's K8a instances, K8b and K8c texts; via dsse_runs_B); r1b_R_S0 (so_ax/, xfer/); r1b_R_S2_14, _18 (ax1b/) | K9, K10a, K10b, K3f, K7b (SO-AX read; no KS-axes recomputation) | 70.1 |
 | r1b_K_ana | K | 1 | A | 5 | r1b_K_S1, _S2a, _S2b, _S3, _S4 (via dsse_runs_B), r1b_K_S5 | all K statistics, K6a / K6b / K6d, Holm families, the K.7 composite; I/O allowance included | 43.0 |
 | r1b_L_A | L | 1 | B | 2 | r1b_K_S1 (SO-HN, SO-LAB incl. S_L); r1b_xfer_A (REF-R16, u*_14) | step 1 L.POP; L1, L3b, L4 (X2, X6 if tier 2 funded) | 168.9 |
-| r1b_L_B | L | 1 | B | 3 | r1b_L_A (L.POP, and L3b's twin-0 rows, which L3a reads); SG9 (r1b_D_A's G-LCE-1 / -2 records); r1b_K_S2a's gating export | L.R corpus, L2, L3a, L3c, L3d; L5 generation (own CoT, sub-answers, 6 extra gating samples, t* pass) (X1, X3, X4, X5 if tier 2 funded) | 117.2 |
-| r1b_ana | all | 1 | A (CPU) | 6 | r1b_R_ana, r1b_D_ana, r1b_K_ana, r1b_L_A, r1b_L_B (via dsse_runs_B) | L-ANA (L's verdict assembly, L5 analyses, L.5 combinations); round-level families (main §2.4); cross-part labels and side-by-side tables; runde1b_summary.json; merged manifest | 0 |
+| r1b_L_B | L | 1 | B | 3 | r1b_L_A (L.POP, and L3b's twin-0 rows, which L3a reads); SG9 (r1b_D_A's G-LCE-1 / -2 records); r1b_K_S2a's gating export | L.R corpus, L2, L3a, L3c, L3d; L5 generation (own CoT, sub-answers, 6 extra gating samples, t* pass), iota* (+2.9, main §4.1) (X1, X3, X4, X5 if tier 2 funded) | 120.1 |
+| r1b_ana | all | 1 | A (CPU) | 6 | r1b_R_ana, r1b_D_ana, r1b_K_ana, r1b_L_A, r1b_L_B (via dsse_runs_B); r1b_K_S2a (lensout/, lab/); r1b_R_S5 (jlens_validity.json) | L-ANA (L's verdict assembly, L5 analyses, L.5 combinations); round-level families (main §2.4); cross-part labels and side-by-side tables; runde1b_summary.json; merged manifest r1b_manifest.json with the SG6 report check (r1b_report.py) | 0 |
 | **Tier 2** | | | | | | | |
 | (in r1b_D_C) | D | 2 | A | 4 | funded at the freeze | D5-x (D's T1 halves it first) | 30.0 |
+| (in r1b_D_C) | D | 2 | A | 4 | funded at the freeze; triggered in session (>= 4 seeds of a D3 item end with \|x\| < 0.5 and no bundle value in answers 6-8, D.23) | D3-name (SO-GVRA mode naming, <= 5 raw min) | 7.5 |
+| (in r1b_K_S2b) | K | 2 | B | 3 | funded at the freeze | K3h (atlas-compatible H-neuron metrics, descriptive; never delays r1b_K_S1's SO-HN) | 30.0 |
 | (in r1b_L_A, r1b_L_B) | L | 2 | B | 2-3 | funded at the freeze | X2 22.95, X6 3.9 (L_A); X1 12.75, X3 7.5, X4 3.75, X5 4.5 (L_B) | 55.4 |
 | r1b_R_S5L (was R-S5b) | R | 2 | A | 5 | r1b_R_S5 with RG11 'refit'; funded | R5.4 (bf16 refit), repeated R5.1, R5.2 / R5.3 at newly valid blocks | 105.0 |
 | r1b_R_S8 | R | 2 | A | 6 | r1b_R_ana with RG15's J1 and J2 met; funded | R8.2 (J3 in session) | 19.5 |
-| r1b_R_ana2 | R | 2 | A | 7 | r1b_R_S5L or r1b_R_S8 ran | R pass 2 | 10.2 |
-| r1b_D_R | D | 2 | A | 6 | r1b_D_ana (R2's trigger: D3 'split grows with length'); funded | D's reserves in priority R1, R2 (conditional), R3 | 119.0 |
-| r1b_K_S6 | K | 2 | A | 6 | r1b_K_ana with G-K5 not 'calibrated'; funded | RK-1 (trained MTP head, bf16; descriptive arm) | 58.0 |
-| r1b_K_S7 | K | 2 | B | 4 | r1b_K_S3; funded | RK-2 (H-link on the native lens, Qwen3.5-2B) | 53.0 |
+| r1b_R_ana2 | R | 2 | A | 7 | r1b_R_S5L or r1b_R_S8 ran; r1b_R_ana (r1b_R_verdict.json, ana/) | R pass 2 | 10.2 |
+| r1b_D_R | D | 2 | A | 6 | r1b_D_ana (R2's trigger: D3 'split grows with length'); r1b_D_C (d5/pool.json, d3/starts); r1b_D_A (d1/lstar.json, d1/raw_L0.pt); funded | D's reserves in priority R1, R2 (conditional), R3 | 119.0 |
+| r1b_K_S6 | K | 2 | A | 3 | r1b_K_S1, r1b_K_S2a; funded (no trigger, C32) | RK-1 (two post-hoc MTP heads on frozen Qwen3-1.7B, bf16: standard CE and Soft-MTP after Teoh 2026; 16M WikiText-103 train tokens; descriptive arm) | 72.0 |
+| r1b_K_S7 | K | 2 | B | 4 | r1b_K_S3, r1b_K_S1; funded | RK-2 (H-link on the native lens, Qwen3.5-2B; the Qwen3-1.7B tokenizer re-encodes K's bank) | 53.0 |
+| r1b_ana2 | all | 2 | A (CPU) | 8 | r1b_ana; r1b_R_ana2, r1b_D_R, r1b_K_S6, r1b_K_S7 each finished or 'not run'; funded with any tier-2 item | tier-2 report: R pass 2, D's reserves (d_reserves.json), RK-1 and RK-2 next to the four answers, labelled 'conditional run'; runde1b_summary_t2.json (r1b_report.py) | 0 |
+
+Copy-in details are executable in r1b_contracts.SESSIONS, which governs where this table is shorter: round 2's u*_b files
+(r2_q2/theta/b<b>_q0.pt / .json) are copied by r1b_R_S2_* (own block), r1b_R_S3, _S5, _S6, _S7 (block 14), r1b_R_ana and r1b_R_S5L;
+'(ax1b/)' and similar name the only folders copied from that producer.
 
 ### 4.3 Totals
 
 | | Tier 1 (A100-h) | Tier 2 (A100-h) | Parts' own figures (A100-h) |
 |---|---|---|---|
 | R | 8.53 (sessions 8.46 + REF-U32 reporting 0.07) | 2.25 (r1b_R_S5L 1.75, r1b_R_S8 0.33, r1b_R_ana2 0.17) | 11.03 = 8.78 unconditional (incl. R-P 0.32) + 2.24 conditional |
-| D | 8.44 (r1b_D_A 3.37, r1b_D_B 2.04, r1b_D_C 2.49, r1b_D_ana 0.54) | 2.48 (D5-x 0.50; reserves R1 0.53, R2 0.90, R3 0.48 with r1b_D_R's setup) | 9.03 (incl. pilot share 0.17 and D5-x); reserves 1.9 outside |
-| K | 8.86 sessions, of which 8.63 K's own (incl. I/O 0.17), 0.18 for L, 0.05 REF-U32 reporting | 1.85 (RK-1 0.97, RK-2 0.88) | 8.78 (incl. K-S0 0.32); conditional 2.2 outside |
-| L | 4.77 sessions; 4.95 charged (incl. 0.18 run in K's sessions) | 0.92 (X1-X6) | 6.0 (core 5.08 incl. L-P 0.32; extensions 0.92) |
-| **Round** | **30.60** (account A 15.49, account B 15.12) | **7.50** (A 5.70, B 1.81) | 34.84 (+ reserves 4.1 outside) |
+| D | 8.54 (r1b_D_A 3.47, r1b_D_B 2.04, r1b_D_C 2.49, r1b_D_ana 0.54) | 2.61 (D5-x 0.50; D3-name 0.13; reserves R1 0.53, R2 0.90, R3 0.48 with r1b_D_R's setup) | 9.03 (incl. pilot share 0.17 and D5-x) + 0.10 implementation amendments (D.23); reserves 1.9 outside |
+| K | 8.86 sessions, of which 8.63 K's own (incl. I/O 0.17), 0.18 for L, 0.05 REF-U32 reporting | 2.58 (RK-1 1.20, RK-2 0.88, K3h 0.50) | 8.78 (incl. K-S0 0.32); tier 2 2.58 (K.8) |
+| L | 4.82 sessions; 5.00 charged (incl. 0.18 run in K's sessions) | 0.92 (X1-X6) | 6.0 (core 5.08 incl. L-P 0.32; extensions 0.92) + 0.05 iota* (L.14) |
+| **Round** | **30.75** (account A 15.49, account B 15.26) | **8.36** (A 6.05, B 2.31) | 34.84 (+ reserves 4.1 outside), before the implementation amendments |
 | Pilot r1b_P0 | 1.14 (account B; before the freeze) | | 1.12 (four separate pilots) |
 
-- **Tier 1 = 30.6 A100-h** at the parts' planned rates, near the round-level target of about 30 h. No rule was changed to reach it: the
+- **Tier 1 = 30.75 A100-h** at the parts' planned rates (30.60 before the implementation amendments of main §4.1: r1b_D_A +0.10 h,
+  r1b_L_B +0.05 h), near the round-level target of about 30 h. No rule was changed to reach it: the
   difference from the parts' 34.8 h is the pilots (1.1 h, now r1b_P0), R's conditional sessions (2.2 h), L's extensions (0.9 h) and
   D5-x (0.5 h), all of which the parts themselves mark as pilot, conditional or extension; the harmonisation additions (0.30 h) and
   I/O allowances (0.25 h) add 0.55 h.
-- All funded: tier 1 + tier 2 + pilot = 39.2 A100-h. Conditional tier-2 items spend only when triggered.
-- Each part stays within its own cap (pilot excluded): R 8.53 + 2.25 = 10.78 h <= 12.5 h (RG18); D 8.44 (+ 0.50 if D5-x is funded)
-  <= 9.0 h; K 8.63 + its pilot share 0.32 = 8.95 h <= 9.0 h (RK-1 and RK-2 therefore need the round's tier-2 funding, not K's
-  headroom); L 4.95 + 0.92 = 5.87 h.
+- All funded: tier 1 + tier 2 + pilot = 30.75 + 8.36 + 1.14 = 40.25 A100-h (39.2 before: RK-1's two heads +0.23 h, K3h +0.50 h,
+  D3-name +0.13 h, the tier-1 amendments +0.15 h). Conditional tier-2 items spend only when triggered.
+- Each part stays within its own cap (pilot excluded): R 8.53 + 2.25 = 10.78 h <= 12.5 h (RG18); D 8.54 (+ 0.50 if D5-x is funded:
+  9.04 h, so D's T1 halves D5-x first, 8.79 h) <= 9.0 h; K 8.63 + its pilot share 0.32 = 8.95 h <= 9.0 h (RK-1, RK-2 and K3h therefore
+  need the round's tier-2 funding, not K's headroom); L 5.00 + 0.92 = 5.92 h.
 
 ### 4.4 Order, waves and wall clock
 
 - Wave 0: r1b_P0 (B), then the freeze (main §9).
 - Account A, two slots: (1) r1b_R_S2_14 -> r1b_R_S2_18 -> r1b_R_S3 -> r1b_R_S6 -> r1b_K_S5 -> r1b_D_C; (2) r1b_R_S0 -> r1b_R_S1 ->
-  r1b_R_S2_06 -> r1b_D_B -> r1b_R_S5 -> r1b_R_S7 -> r1b_R_ana -> r1b_K_ana -> r1b_D_ana; then r1b_ana (CPU). A session waits only
-  for its start conditions; the slot order is a suggestion (packing, not a rule).
+  r1b_R_S2_06 -> r1b_D_B -> r1b_R_S5 -> r1b_R_S7 -> r1b_R_ana -> r1b_K_ana -> r1b_D_ana; then r1b_ana (CPU) and, after the tier-2
+  sessions, r1b_ana2 (CPU, same notebook). A session waits only for its start conditions; the slot order is a suggestion (packing, not
+  a rule). Open (D): under this packing r1b_D_A usually starts before r1b_K_S1's SG8 preview exists, so D's optional H covariate
+  reads 'not run (H-set not available at start)'.
 - Account B, two slots: (1) r1b_K_S1 -> r1b_K_S4 -> r1b_L_A -> r1b_L_B; (2) r1b_K_S3 -> r1b_D_A -> r1b_K_S2a -> r1b_K_S2b
   (r1b_K_S4 early, because r1b_K_S5 in A waits for it).
 - Expected wall clock for tier 1: about 9-10 h from the freeze (critical path: R's chain in A, about 5.6 h, then the analyses; K's and
@@ -645,24 +666,30 @@ A100-minutes as planned (setup + I/O + 1.5 x work). 'Starts after' lists start c
 
 Tier-2 items are given up in this order (first dropped first) when the funded budget is smaller than tier 1 + tier 2. The order keeps
 longest what can change a verdict or repair an instrument, and keeps each part's own relative order (L.8 for X1-X6; D.19 for D's
-reserves, priority R1 > R2 > R3; K.8 for RK-1 > RK-2):
+reserves, priority R1 > R2 > R3; K.8 for RK-1 > RK-2 > K3h):
 1. RK-2, r1b_K_S7 (0.88 h): descriptive, never enters the composite.
-2. X5 (0.08 h), 3. X4 (0.06 h), 4. X3 (0.13 h), 5. X6 (0.07 h): descriptive or deepening.
-6. R8.2, r1b_R_S8 (0.33 h; with r1b_R_ana2 0.17 h if r1b_R_S5L does not run): descriptive size comparison.
-7. D's reserve R3 (0.48 h), 8. D's reserve R2 (0.90 h; conditional), 9. D's reserve R1 (0.53 h, with r1b_D_R's 5-min setup).
-10. D5-x (0.50 h; D's T1 halves it first): a descriptive qualifier of D.17.
-11. X1 (0.21 h): adds attractor route A3 to L's attractor line.
-12. X2 (0.38 h): adds the H-down coupling line (Holm over up and down).
-13. RK-1, r1b_K_S6 (0.97 h; conditional on G-K5): a second, trained lens arm when the substitute is not calibrated.
-14. R5.4, r1b_R_S5L with r1b_R_ana2 (1.92 h; conditional on RG11): makes R's lens readouts valid where the Neuronpedia lens fails.
+2. K3h (0.50 h, item in r1b_K_S2b): descriptive atlas-compatible H-neuron metrics, never counted for or against H-CHAIN.
+3. X5 (0.08 h), 4. X4 (0.06 h), 5. X3 (0.13 h), 6. X6 (0.07 h): descriptive or deepening.
+7. R8.2, r1b_R_S8 (0.33 h; with r1b_R_ana2 0.17 h if r1b_R_S5L does not run): descriptive size comparison.
+8. D3-name (0.13 h, item in r1b_D_C; conditional): names an unexpected D3 mode (SO-GVRA), descriptive.
+9. D's reserve R3 (0.48 h), 10. D's reserve R2 (0.90 h; conditional), 11. D's reserve R1 (0.53 h, with r1b_D_R's 5-min setup).
+12. D5-x (0.50 h; D's T1 halves it first): a descriptive qualifier of D.17.
+13. X1 (0.21 h): a label on L's attractor line (labels only, L.14; no route is added to CF-L).
+14. X2 (0.38 h): a label on the core H line ('DD_down'; labels only, L.14).
+15. RK-1, r1b_K_S6 (1.20 h; unconditional in tier 2, two heads): a second, trained lens arm (descriptive).
+16. R5.4, r1b_R_S5L with r1b_R_ana2 (1.92 h; conditional on RG11): makes R's lens readouts valid where the Neuronpedia lens fails.
+
+r1b_ana2 (CPU, no A100 time) runs whenever any tier-2 item is funded.
 
 **Tier 1 under a smaller budget.** If r1b_P0's projection of tier 1 exceeds the funded tier-1 budget, each part applies its own frozen
-order, in proportion to its share of tier 1, until its projection is at most (funded tier 1) x (its planned tier-1 hours / 30.6): R its
+order, in proportion to its share of tier 1, until its projection is at most (funded tier 1) x (its planned tier-1 hours / 30.75): R its
 reduction levels RL1, then RL2 (RG18); D its trims T2-T8 (T1 concerns D5-x, now tier 2); K its drop order items 1-6 (K.8); L its trims
 2-5 (L.8; trim 1 concerns the extensions). Items that the parts mark 'never dropped' stay (K: K2, K3a, K4 V1 / V2, K4p, K5a, the K6e
 primary cells, the K8b main block, K8c). The trims and the resulting projection are written into runde1b_freeze.json before the freeze.
 
 ### 4.6 Sensitivity
+
+The figures below are for the 30.6-h version; the implementation amendments (main §4.1) add 0.15 h, of which about 0.05 h is margin.
 
 - **Margin.** Of the 30.6 h, about 9.2 h is the x1.5 margin on work; expected consumption at the planned rates is about 21.4 A100-h
   (setup and I/O 3.0 h, work 18.4 h).
@@ -677,7 +704,8 @@ primary cells, the K8b main block, K8c). The trims and the resulting projection 
 
 ### 4.7 Runner behaviour (as round 2, adapted)
 
-- One notebook per slot of main §4.4 (runde1b_P0, _A1, _A2, _B1, _B2, _A_T2, _B_T2, _ANA); the notebook names its account. The slot
+- One notebook per slot of main §4.4 (runde1b_P0, _A1, _A2, _B1, _B2, _A_T2, _B_T2, _ANA; _ANA runs r1b_ana, then r1b_ana2 once the
+  tier-2 sessions are finished or 'not run'; run it again after tier 2 if it stopped waiting); the notebook names its account. The slot
   runner r1b_run_slot.py runs the slot's sessions in order, each as its own process, and waits for each session's start conditions by
   polling Drive (with a timeout); in account A it copies a finished B folder from dsse_runs_B as in round 2, and r1b_R_S0 publishes
   its exports to dsse_runs/r1b_xfer with xfer_manifest.json. Every session: SG1-SG4 at start, the copy-in of its inputs
@@ -705,7 +733,8 @@ primary cells, the K8b main block, K8c). The trims and the resulting projection 
 | All K statistics, K6a, K6b, K6d, Holm families, equivalence verdicts, K.7 composite | r1b_K_ana (A100, A) | r1b_K_S1 ... r1b_K_S5 | k_verdict.json | K.7 composite with suffixes; CF-K-attr, CF-K-link, CF-HERR (K8c) |
 | L1 statistics (L-A), L2, L3a, L3c, L3d (L-B), L3b and L4 (L-A); in-session gates | r1b_L_A, r1b_L_B (A100, B) | SO-HN, SO-LAB, SO-LCE, SO-LONGDOC, SO-D1STIM, SO-DMG | l_session_*.json | - |
 | L5 analyses, L-ALL, V-OWN, V-HOLO, V-CHAIN, selection-robustness labels | L-ANA, a step of r1b_ana (CPU, A) | r1b_L_A, r1b_L_B, SO-LENSOUT, K's G-K2 / G-K4 / G-K4b / G-K5 / G-K14 labels | l_verdicts.json | L.5 answer template; CF-L, CF-HERR (L5c) |
-| Round level: CF families (Holm), cross-part labels (RG10 on K's lens statements; SG8 on D and L; K's lens labels on L5), side-by-side tables (attractor; H before errors; catfish), the four answers, the 'for'-family count against its null bound | r1b_ana (CPU, A) | r1b_R_verdict.json, d_verdict.json, k_verdict.json, l_verdicts.json, all session manifests | runde1b_summary.json; r1b_manifest.json | results/ju_space/runde1b_ergebnisse/: the JSON files and a German readout AUSWERTUNG.md written after a skeptic's check, as in round 2 |
+| Round level: CF families (Holm), cross-part labels (RG10 on K's lens statements; SG8 on D and L; K's lens labels on L5; L4 on D.17), side-by-side tables (attractor; H before errors; catfish), the four answers, the 'for'-family count against its null bound, the merged manifest and the SG6 report check | r1b_ana (CPU, A; r1b_report.py) | r1b_R_verdict.json, d_verdict.json, k_verdict.json, l_verdicts.json, jlens_validity.json, all session manifests | runde1b_summary.json; r1b_manifest.json | results/ju_space/runde1b_ergebnisse/: the JSON files and a German readout AUSWERTUNG.md written after a skeptic's check, as in round 2 |
+| Tier-2 report: R pass 2, D's reserves, RK-1, RK-2 next to the four answers (K: next to the K.7 composite); L's X items, D5-x, D3-name and K3h are reported by their parts' tier-1 outputs | r1b_ana2 (CPU, A; r1b_report.py) | runde1b_summary.json, r1b_R_verdict2.json, d_reserves.json, k/rk1.json, k/rk2/rk2.json | runde1b_summary_t2.json | labelled 'conditional run'; exploratory at the round level; changes no tier-1 verdict or family |
 
 The four answers in runde1b_summary.json: R: V_RSI_1b per block with F+ / F- reached and confirmed; D: D.17's combined string with its
 qualifiers; K: K.7's composite with its suffixes; L: L.5's answer template. Each answer names its rule (part and ID) and lists every
@@ -742,11 +771,11 @@ deviation (amendments, 'not run', labels, tier-2 items not funded).
 | r1b_sessions_R/D/K/L.py | each part | the part's sessions and steps (registry read by the runner) | - |
 | r1b_common.py (merged into r1b_core.py) | main | SO-KEYS (registry, keyseed / Gumbel copy, uniqueness test), SO-PVAL (bootstraps incl. two-level, one-sided p, rank p, PI p, Holm, BH), R9.1-R9.4 helpers (provenance block, codes, labels, distributions), sha256-verified copy | rk_loop source lines (checked, not imported) |
 | r1b_run_session.py | main | runner: SESSIONS table of main §4.2 (from r1b_contracts), SG1-SG10, pilot mode for r1b_P0 (automatic: SG1 off, output whitelist), --selftest, time guard 4.5 h per session, Drive sync, the B -> A and A -> B copies, the two-attempt rule | r2_run_session.py's structure (new file) |
-| r1b_report.py | main | r1b_ana: L-ANA call, round-level families, labels, side-by-side tables, runde1b_summary.json, merged manifest, report check | - |
+| r1b_report.py, r1b_sessions_main.py | main | r1b_ana (after L-ANA, which part L registers as a step of r1b_ana): round-level families, labels, side-by-side tables, runde1b_summary.json, merged manifest, report check; r1b_ana2: the tier-2 report | - |
 | r1b_core.py | main (shared core: models, SO-KEYS, SO-PVAL, SO-DMG function style, hooks, SO-JLENS loading, Ctx, R9.1-R9.4 helpers) and R | function-style multi-block core (push, read, damage, scores, soft-token generation, lens predictions); SO-DMG's function-style damage and calibrate for K and L (equivalence-tested against r2_unlearn_qwen.RefKL / calibrate to 1e-6) | rk_loop's push (CC4) |
-| r1b_rk.py | R | extra hooks through r2_rk.open_block: PUSH-NP, the 16-reference RefKL with both signs and top-1 change, the calibrated loop driver, generation-time capture, R1's reduced-state openers | r2_rk.open_block, CbarHook, r2_unlearn_qwen.calibrate / RefKL / ConstPush pattern |
-| r1b_stats.py | R | STAT-1b (centred pseudo-axes, disattenuated K1-s and A, joint bootstrap, SENS, size and power plants, joint MDEs, Holm F+ / F-, cross-fitted Ritz pairs) | r2_rk.prompt_bootstrap, halvings, stats_on_axis (n_prompts = 256), fixed_fold_axes; rk_verdict |
-| r1b_prompts_check.py, r1b_R0.py ... r1b_R8.py, r1b_R_verdict.py | R | R's measurement scripts and analysis (r1b_R0.py also writes SO-AX and the r1b_xfer exports) | as above |
+| r1b_r_lib.py (was r1b_rk.py) | R | P256, WORDSETS, the neutral pool, round-1 / round-2 inputs; the model side through r1b_core in the session process (DN / NP / FX pushes, generation-time cbar, read windows, dmg_sym with calibration, REF-U32 reporting); R1 and CC4 use rk_loop itself (R.9) | r1b_core, rk_loop (R1, CC4) |
+| r1b_r_stats.py (was r1b_stats.py) | R | STAT-1b (centred pseudo-axes, disattenuated K1-s and A, joint bootstrap, SENS, size and power plants, joint MDEs, Holm F+ / F-, cross-fitted Ritz pairs; inverse-free eigen helpers) | r2_rk.prompt_bootstrap, halvings, stats_on_axis (n_prompts = 256), fixed_fold_axes; rk_verdict |
+| r1b_r_s0.py, r1b_r_s1.py, r1b_r_s2.py, r1b_r_s3.py, r1b_r_s5.py ... r1b_r_s8.py, r1b_r_ana.py, r1b_r_package.py, r1b_r_selftest.py | R | R's measurement steps per session, analysis (pass 1 and 2) and package builder (r1b_r_s0.py also writes SO-AX and the r1b_xfer exports) | as above |
 | r1b_lce.py | D | SO-LCE (all features of main §2.3, parity utilities) | - |
 | r1b_D_stimuli.py | D | frozen generators (d1_stimuli, d2_prompts, d3_items, d4_roles, d1v_pairs, filler streams); run before the freeze | SO-WT103 |
 | r1b_D.py, r1b_D_verdict.py | D | D0-D5 session code; r1b_D_ana | SO-TURN, SO-LCE |
@@ -757,7 +786,8 @@ deviation (amendments, 'not run', labels, tier-2 items not funded).
 | r1b_te.py | K | SO-TE (central differences, frozen-QK attention, VJP edge attribution, FD-vs-JVP check) | - |
 | r1b_K.py, r1b_K_verdict.py | K | K2-K10 session code; r1b_K_ana | SO-TURN, SO-LCE, SO-DMG |
 | r1b_L.py, r1b_L_verdict.py, r1b_L_cal.py | L | L.10's builders (L.POP, L.R, L.PIP, L.EQMI, L.TWIN, L.MARKOVSUR, L.KISING, L.DUET, L.OWN, L5c parser and hazard, X3 toy); L-ANA; L-CAL generators | SO-HN, SO-LAB, SO-LCE, SO-DMG, SO-TURN, r2_linearity.auc_cols |
-| notebooks/build_runde1b_gpu_notebooks.py | main | one notebook per session; account named; setup cells (pinned models and checksums, Qwen3-0.6B and Qwen3.5-2B where needed), the second-folder copy cells (dsse_runs_B in A; r1b_xfer_A in B), the self-test, the main run, a summary | build_runde2_gpu_notebooks.py's structure |
+| (D, K, L as implemented) | D, K, L | D: r1b_d_stim.py (= r1b_D_stimuli.py), r1b_d_d1.py, r1b_d_d2.py, r1b_d_d3.py, r1b_d_d5.py, r1b_d_res.py, r1b_d_ana.py, r1b_d_selftest.py (= r1b_D.py, r1b_D_verdict.py); K: r1b_k_*.py, with r1b_hn.py and r1b_gvra.py as re-export modules of r1b_k_hn.py and r1b_k_gvra.py and SO-CL in r1b_k_lens.py (= r1b_K_lens.py), r1b_k_te.py (= r1b_te.py), r1b_k_labels.py (= r1b_K_labels.py); L: r1b_l_base, r1b_l_engine, r1b_l_stats, r1b_l_rules, r1b_l_a, r1b_l_duet, r1b_l_b, r1b_l_b2, r1b_l_ana, r1b_l_cal, r1b_l_pilot, r1b_l_selftest (= r1b_L.py, r1b_L_verdict.py, r1b_L_cal.py) | the file names in this row govern |
+| notebooks/build_runde1b_gpu_notebooks.py | main | one notebook per slot (main §4.7); account named; setup cells (pinned models and checksums, Qwen3-0.6B and Qwen3.5-2B where needed), the second-folder copy cells (dsse_runs_B in A; r1b_xfer_A in B), the self-test, the main run, a summary | build_runde2_gpu_notebooks.py's structure |
 
 ### 6.3 Tests (as round 2)
 
@@ -890,14 +920,25 @@ runde1b_freeze.json and into r1b_run_session.py's constant FROZEN_PLAN_SHA256 (S
 holds: the sha256 of the five files and of every package file; the package files' paths; the pinned dataset revisions (WikiText-103,
 TriviaQA rc.nocontext, PG19) and model revisions (Qwen3-1.7B, Qwen3-0.6B, Qwen3.5-2B with shard sha256) and the two J-lens files;
 r1b_P0's engineering record; each part's trim level and the round-level projection (SG7); OD-M14's decision; the funded tier (Q1); the
-freeze time (UTC).
+freeze time (UTC). Keys the implemented code reads (r1b_core, r1b_run_session and the parts): freeze_commit, freeze_time, plan_files,
+package_files, pilot, trims (per part, e.g. trims['L'] within T2-T5), projection_h, funded {tier2, items}, decisions (e.g. 'OD-M14':
+'grid_2^14'), datasets (wikitext103 with its parquet pins, k_train_offset_lines, rk1_train_offset_lines and d_streams_sha256;
+triviaqa_rc_nocontext; pg19), models (incl. Qwen3.5-2B's pins), jlens (url; 'qwen3.5-2b' {name, sha256}).
 
 **Package files** (frozen with the plan, sha256 in the freeze record): R: prompts_1b.json, neutral_pool_1b.txt (sha256
 4b3bcaca06f45521a00f12ec2b056a13962bbfdd066ab93867980c9b0be9ebf5), the WORDSETS files, R5.5's candidate bank; D: d1_stimuli.json,
 d2_prompts.json, d3_items.json, d4_roles.json, d1v_pairs.json, the RSP pool's prompt list, instruction and keys (its texts are
 generated in session, D.16), the filler streams' token ids and their generator scripts; K: the K1 label bank (items, TriviaQA question-id hashes and screening order, arithmetic splits, frames and fillers, REF-K16
-token ids, scorer test files, the capitalised function-word list); L: F-neu, the SO-LONGDOC slice list, the natural-position passage
-list, the L-CAL generators, seeds and pre-freeze results; main: SO-PILOT, the SO-KEYS registry (r1b_keys.json).
+token ids as ref_k16.json, scorer test files, the capitalised function-word list); L: F-neu, the SO-LONGDOC slice list
+(longdoc_slices.json), the natural-position passage list, the L-CAL generators, seeds and pre-freeze results (l_cal.json); main:
+SO-PILOT, the SO-KEYS registry (r1b_keys.json, written with r1b_sessions_R imported).
+
+**Builders (run before the freeze, CPU, no Qwen output).** R: r1b_r_package.py (prompts_1b.json with the 192 new prompts, neutral
+pool, word sets, R5.5 bank); D: r1b_d_stim.py build <tokenizer dir> <dir> (the five D package files and the streams); K:
+r1b_k_labels.py build <root> <freeze.json> <dir> (K1 bank and ref_k16.json; needs the WikiText-103 and TriviaQA pins); L:
+r1b_l_base.build_longdoc_list (longdoc_slices.json) and r1b_l_cal.py run (l_cal.json, about 120 CPU-min); main: r1b_core.py keys.
+Without l_cal.json L-ANA reads every dependent branch 'not testable (pipeline calibration failed)'; without prompts_1b.json R's P256
+steps read 'not run (input missing)'.
 
 ### 9.2 Before the freeze
 

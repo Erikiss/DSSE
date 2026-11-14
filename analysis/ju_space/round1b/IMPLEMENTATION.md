@@ -9,6 +9,7 @@ Plan: `results/ju_space/plans/runde1b/` (main §2.3 shared objects, §3.1 gates,
 | `r1b_run_session.py` | runs one session (gates, start conditions, copy-in, steps, Drive sync, time guard, manifests). |
 | `r1b_run_slot.py` | runs a slot's sessions in one notebook runtime, waiting for start conditions; `--mock-dry-run`. |
 | `r1b_sessions_R/D/K/L.py` | your session registries (stubs with one MOCK-only example step each; replace the example). |
+| `r1b_sessions_main.py`, `r1b_report.py` | round level: r1b_ana's steps after L-ANA (CF families, four answers, labels, side-by-side tables, merged manifest, SG6 report check) and the tier-2 report session r1b_ana2 (CPU, ANA notebook). |
 | `../../../notebooks/build_runde1b_gpu_notebooks.py` | builds the 8 slot notebooks (German cells). |
 
 ## 1. Registering steps

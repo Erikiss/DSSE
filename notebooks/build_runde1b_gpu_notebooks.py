@@ -1,6 +1,6 @@
 """Builds the Colab notebooks of round 1b (run: python notebooks/build_runde1b_gpu_notebooks.py): one notebook per slot of main §4.4
 (analysis/ju_space/round1b/r1b_contracts.SLOTS): runde1b_P0 (pilot, account B), runde1b_A1, runde1b_A2 (account A), runde1b_B1,
-runde1b_B2 (account B), runde1b_A_T2, runde1b_B_T2 (tier 2), runde1b_ANA (r1b_ana, CPU runtime, account A). Each runs
+runde1b_B2 (account B), runde1b_A_T2, runde1b_B_T2 (tier 2), runde1b_ANA (r1b_ana, then r1b_ana2, CPU runtime, account A). Each runs
 analysis/ju_space/round1b/r1b_run_slot.py, which runs the slot's sessions in order and waits for each session's start conditions.
 Sessions, accounts, models and start conditions come from r1b_contracts, so that notebooks and runner cannot disagree."""
 import importlib.util
@@ -16,7 +16,7 @@ NB = {sl: f"runde1b_{sl}.ipynb" for sl in C.SLOTS}
 TITLE = {"P0": "Pilot r1b_P0 (vor dem Einfrieren; nur technische Kennzahlen)", "A1": "Stufe 1, Konto A, Spur 1",
          "A2": "Stufe 1, Konto A, Spur 2", "B1": "Stufe 1, Konto B, Spur 1", "B2": "Stufe 1, Konto B, Spur 2",
          "A_T2": "Stufe 2 (nur finanziert und ausgelöst), Konto A", "B_T2": "Stufe 2 (nur finanziert), Konto B",
-         "ANA": "Gesamtauswertung r1b_ana (CPU-Laufzeit), Konto A"}
+         "ANA": "Gesamtauswertung r1b_ana, danach Stufe-2-Bericht r1b_ana2 (CPU-Laufzeit), Konto A"}
 
 
 def cond_de(c):

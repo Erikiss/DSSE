@@ -242,7 +242,7 @@ def _get(d, key):
 
 def funded(freeze, item):
     f = (freeze or {}).get("funded") or {}
-    return bool(f.get("tier2")) and (not f.get("items") or item in f["items"])
+    return bool(f.get("tier2")) and (not f.get("items") or item in f["items"] or (C.SESSIONS.get(item) or {}).get("part") == "main")
 
 
 def check_start(session, P, freeze, copy=True):

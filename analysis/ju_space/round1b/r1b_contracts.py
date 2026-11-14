@@ -96,13 +96,15 @@ FILES = {
     "sg8_preview": _f("K", "r1b_K_S1", "sg8_preview.json", "json", "G-K2 preview (string), H_op_name", "D L", "SO-HN", note="SG8"),
     "so_lab": _f("K", "r1b_K_S1", "lab/so_lab.json", "json",
                  "items {id: split (S_fit, S_lens, S_sess, S_L, S2, S3, S4a-c), class (CC, CI, ...), answers [10 x {text_ids, key}], "
-                 "spans}; scorer versions", "L", "SO-LAB"),
+                 "spans}; scorer versions. Question texts, aliases and NE items come from K's bank (bank.json 'tqa', 'ne', "
+                 "'ach_short'); NE rows have no K answers (L generates them)", "L", "SO-LAB"),
     "k5a_calib": _f("K", "r1b_K_S3", "k5a_calib.json", "json", "K5a calibration (variant, metrics)", "K", "SO-CL"),
     "lensout": _f("K", "r1b_K_S2a", "lensout/so_lensout.jsonl", "jsonl",
                   "one record per chain: item, stratum, ops, variant, read block, position type, seed rank, key, tokens[s 0..16], "
                   "k_star_conf, share_H[s] with RS39 band, a_H[s]", "L", "SO-LENSOUT"),
     "k4_gating": _f("K", "r1b_K_S2a", "lab/k4_gating.json", "json",
-                    "items {id: stratum ('correct' = known, 'wrong' = prone), greedy, samples[4] (T 0.7, keys)}", "L", "SO-LAB"),
+                    "items {id (bank 'ach_short' id): stratum ('correct' = known, 'wrong' = prone), cal flag, greedy, samples[4] (T 0.7, "
+                    "keys)}", "L", "SO-LAB"),
     "k_verdict": _f("K", "r1b_K_ana", "k_verdict.json", "json", "K.7 composite; gates {G-K2, G-K4, G-K4b, G-K5, G-K14}; Holm families",
                     "r1b_ana r1b_K_S6"),
     "k_rk1": _f("K", "r1b_K_S6", "k/rk1.json", "json", "RK-1 strings (CE and Soft-MTP heads), C_k, self-consistency KL", "r1b_ana"),
@@ -118,7 +120,10 @@ FILES = {
     "longdoc_list": _f("L", None, PKG + "longdoc_slices.json", "json", "SO-LONGDOC books and slices", "L P0", "SO-LONGDOC"),
     # main
     "l_verdicts": _f("L", "r1b_ana", "l_verdicts.json", "json", "L-ANA verdicts", "r1b_ana"),
-    "summary": _f("main", "r1b_ana", "runde1b_summary.json", "json", "four answers, CF families, labels, deviations", "report"),
+    "d_reserves": _f("D", "r1b_D_R", "d_reserves.json", "json", "D's reserves R1-R3 (tier 2, descriptive; none enters D.17)", "r1b_ana2"),
+    "summary": _f("main", "r1b_ana", "runde1b_summary.json", "json", "four answers, CF families, labels, deviations", "report r1b_ana2"),
+    "summary_t2": _f("main", "r1b_ana2", "runde1b_summary_t2.json", "json", "tier-2 results next to the four answers ('conditional run')",
+                     "report"),
     "manifest": _f("main", "r1b_ana", "r1b_manifest.json", "json", "merged session manifests", "report"),
     "p0_record": _f("main", "r1b_P0", "p0_engineering.json", "json", "whitelisted engineering numbers of every pilot step", "freeze record"),
     "pilot_material": _f("main", None, PKG + "pilot_material.json", "json", "SO-PILOT prompts, passages, books", "P0", "SO-PILOT"),
@@ -204,7 +209,7 @@ SESSIONS = {
     "r1b_R_ana": S("R", 1, "A", 5, tuple(done(s, ("r1/**",) if s == "r1b_R_S1" else ("**",)) for s in _R_TIER1), 55.3, (M17,),
                    "R pass 1: all R statistics and verdicts, F+ / F-, RG7, RG8a, RG8b, RG12, RG15 (J1, J2), R9 report check", r1=R1_ALL + ("gpu2/dn_delta.json",),
                    r2=R2_Q0(14, 18, 6) + ("r2_ana/theta_verdict.json",)),
-    "r1b_D_A": S("D", 1, "B", 1, (), 202.3, (M17, M06), "G-LCE-1 / G-LCE-2 first (SG9), stream prefills, D1 (main, neutral, "
+    "r1b_D_A": S("D", 1, "B", 1, (), 208.2, (M17, M06), "G-LCE-1 / G-LCE-2 first (SG9), stream prefills, D1 (main, neutral, "
                  "degradation, non-competing, D1-h), D1-c, D1-d, D1-e, D1-f, D1-r, D1-v, D1-s", optional=(file("sg8_preview"),)),
     "r1b_D_B": S("D", 1, "A", 2, (), 122.2, (M17,), "G-LCE-3, D2"),
     "r1b_D_C": S("D", 1, "A", 4, (), 149.6, (M17,), "D3 (with starts), D4 (with starts), D5 (D5-x only if tier 2 is funded)"),
@@ -226,12 +231,16 @@ SESSIONS = {
                    43.0, (M17,), "all K statistics, K6a / K6b / K6d, Holm families, the K.7 composite"),
     "r1b_L_A": S("L", 1, "B", 2, (done("r1b_K_S1"), xfer("xfer_dmg_ref_R16"), xfer("xfer_so_ax_ustar")), 168.9, (M17,),
                  "step 1 L.POP; L1, L3b, L4 (X2, X6 if tier 2 funded)"),
-    "r1b_L_B": S("L", 1, "B", 3, (done("r1b_L_A"), file("glce"), file("k4_gating")), 117.2, (M17,),
+    "r1b_L_B": S("L", 1, "B", 3, (done("r1b_L_A"), file("glce"), file("k4_gating")), 120.1, (M17,),
                  "L.R corpus, L2, L3a, L3c, L3d; L5 generation (X1, X3, X4, X5 if tier 2 funded)"),
-    "r1b_ana": S("main", 1, "A", 6, (done("r1b_R_ana"), done("r1b_D_ana"), done("r1b_K_ana"), done("r1b_L_A"), done("r1b_L_B"),
+    "r1b_ana": S("main", 1, "A", 6, (done("r1b_R_ana", ("r1b_R_verdict*.json",)), done("r1b_D_ana", ("d_verdict*.json",)),
+                                     done("r1b_K_ana", ("k_verdict*.json",)), done("r1b_L_A"), done("r1b_L_B"),
                                      done("r1b_K_S2a", ("lensout/*", "lab/*")), done("r1b_R_S5", ("jlens_validity.json",))),
                  0.0, (), "L-ANA; round-level families; cross-part labels; side-by-side tables; runde1b_summary.json; merged manifest",
                  runtime="cpu"),
+    "r1b_ana2": S("main", 2, "A", 8, (done("r1b_ana", ("runde1b_summary.json",)), done("r1b_R_ana2", ("r1b_R_verdict2.json",)),
+                                      done("r1b_D_R", ("d_reserves.json",)), done("r1b_K_S6", ("k/rk1.json",)), done("r1b_K_S7", ("k/rk2/rk2.json",))),
+                  0.0, (), "tier-2 report: R pass 2, D's reserves, RK-1, RK-2 next to the four answers; runde1b_summary_t2.json", runtime="cpu"),
     # tier 2 (main §4.2; funding in runde1b_freeze.json, SG7)
     "r1b_R_S5L": S("R", 2, "A", 5, (trig("rg11", "decision", "eq", "refit"), done("r1b_R_S5"), done("r1b_R_S3", ("txt0/**", "r3/**")))
                    + tuple(done(s, ("ax1b/**",)) for s in R_S2), 105.0, (M17,),
@@ -259,7 +268,7 @@ SLOTS = {
     "B2": dict(account="B", runtime="a100", sessions=("r1b_K_S3", "r1b_D_A", "r1b_K_S2a", "r1b_K_S2b")),
     "A_T2": dict(account="A", runtime="a100", sessions=("r1b_R_S5L", "r1b_R_S8", "r1b_R_ana2", "r1b_K_S6", "r1b_D_R")),
     "B_T2": dict(account="B", runtime="a100", sessions=("r1b_K_S7",)),
-    "ANA": dict(account="A", runtime="cpu", sessions=("r1b_ana",)),
+    "ANA": dict(account="A", runtime="cpu", sessions=("r1b_ana", "r1b_ana2")),
 }
 
 

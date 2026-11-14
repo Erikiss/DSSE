@@ -1,0 +1,126 @@
+{
+ "bank": [
+  {
+   "name": "enthusiastic tone",
+   "pro": "(Answer in an enthusiastic, upbeat tone.)",
+   "anti": "(Answer in a flat, reserved tone.)"
+  },
+  {
+   "name": "formal / casual",
+   "pro": "(Answer in a formal register.)",
+   "anti": "(Answer in a casual, chatty register.)"
+  },
+  {
+   "name": "long / short sentences",
+   "pro": "(Answer in long, elaborate sentences.)",
+   "anti": "(Answer in very short sentences.)"
+  },
+  {
+   "name": "concrete / abstract",
+   "pro": "(Answer with concrete sensory details.)",
+   "anti": "(Answer in abstract, general terms.)"
+  },
+  {
+   "name": "first person / impersonal",
+   "pro": "(Answer in the first person.)",
+   "anti": "(Answer impersonally, without 'I'.)"
+  },
+  {
+   "name": "list / prose",
+   "pro": "(Answer as a bulleted list.)",
+   "anti": "(Answer as continuous prose.)"
+  },
+  {
+   "name": "optimistic / pessimistic",
+   "pro": "(Answer optimistically.)",
+   "anti": "(Answer pessimistically.)"
+  },
+  {
+   "name": "confident / hedging",
+   "pro": "(Answer with full confidence.)",
+   "anti": "(Answer with many hedges and qualifications.)"
+  },
+  {
+   "name": "poetic / plain",
+   "pro": "(Answer poetically.)",
+   "anti": "(Answer in plain words.)"
+  },
+  {
+   "name": "technical / plain",
+   "pro": "(Answer in technical language.)",
+   "anti": "(Answer in everyday language a child understands.)"
+  },
+  {
+   "name": "questions / statements",
+   "pro": "(Answer mostly with questions.)",
+   "anti": "(Answer only with statements.)"
+  },
+  {
+   "name": "humorous / serious",
+   "pro": "(Answer humorously.)",
+   "anti": "(Answer seriously.)"
+  },
+  {
+   "name": "sea",
+   "pro": "(Answer as someone who loves the sea and brings it up whenever possible.)",
+   "anti": "(Answer as someone who never mentions the sea or water.)"
+  },
+  {
+   "name": "sports",
+   "pro": "(Answer as someone who loves sports and brings them up whenever possible.)",
+   "anti": "(Answer as someone who finds sports boring and never mentions them.)"
+  },
+  {
+   "name": "nature imagery / none",
+   "pro": "(Answer with images from nature.)",
+   "anti": "(Answer without any nature imagery.)"
+  },
+  {
+   "name": "past / future",
+   "pro": "(Answer in the past tense.)",
+   "anti": "(Answer in the future tense.)"
+  },
+  {
+   "name": "dialogue / narration",
+   "pro": "(Answer as a dialogue.)",
+   "anti": "(Answer as a narration.)"
+  },
+  {
+   "name": "metaphorical / literal",
+   "pro": "(Answer with metaphors.)",
+   "anti": "(Answer literally, without metaphors.)"
+  },
+  {
+   "name": "emotional / neutral",
+   "pro": "(Answer emotionally.)",
+   "anti": "(Answer neutrally.)"
+  },
+  {
+   "name": "simple / sophisticated vocabulary",
+   "pro": "(Answer with simple words.)",
+   "anti": "(Answer with sophisticated vocabulary.)"
+  },
+  {
+   "name": "how-to / description",
+   "pro": "(Answer as step-by-step instructions.)",
+   "anti": "(Answer as a description.)"
+  },
+  {
+   "name": "storytelling / exposition",
+   "pro": "(Answer by telling a story.)",
+   "anti": "(Answer as an exposition.)"
+  },
+  {
+   "name": "addressing you / third person",
+   "pro": "(Answer addressing the reader as 'you'.)",
+   "anti": "(Answer in the third person.)"
+  },
+  {
+   "name": "exclamatory / calm",
+   "pro": "(Answer with exclamations!)",
+   "anti": "(Answer calmly.)"
+  }
+ ],
+ "sha256": "f99f7db19dfd7a2b79ee87dd3ab623a7ead4377fcc6c26d5eb256a530ffea3d3",
+ "status": "draft wording (R5.5)"
+}

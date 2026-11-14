@@ -1,0 +1,166 @@
+{
+ "version": 1,
+ "gen_seed": 20261113,
+ "roles": [
+  {
+   "role": 0,
+   "name": "Telostkas",
+   "occupation": "painter",
+   "occupation_alt": "gardener",
+   "town": "Selost",
+   "town_alt": "Wenbro",
+   "family": "has three daughters",
+   "family_alt": "has a younger sister abroad"
+  },
+  {
+   "role": 1,
+   "name": "Patum",
+   "occupation": "glassblower",
+   "occupation_alt": "postman",
+   "town": "Doros",
+   "town_alt": "Calfen",
+   "family": "lives with an older brother",
+   "family_alt": "lives with two grandchildren"
+  },
+  {
+   "role": 2,
+   "name": "Zuri",
+   "occupation": "shepherd",
+   "occupation_alt": "baker",
+   "town": "Mirvas",
+   "town_alt": "Lonel",
+   "family": "looks after an elderly mother",
+   "family_alt": "has four brothers"
+  },
+  {
+   "role": 3,
+   "name": "Renhal",
+   "occupation": "pharmacist",
+   "occupation_alt": "nurse",
+   "town": "Vivaskas",
+   "town_alt": "Linou",
+   "family": "has twin sons",
+   "family_alt": "cares for a disabled father"
+  },
+  {
+   "role": 4,
+   "name": "Quelloou",
+   "occupation": "beekeeper",
+   "occupation_alt": "plumber",
+   "town": "Vardar",
+   "town_alt": "Tumkas",
+   "family": "is raising a niece",
+   "family_alt": "has one adopted son"
+  },
+  {
+   "role": 5,
+   "name": "Telossel",
+   "occupation": "fisherman",
+   "occupation_alt": "watchmaker",
+   "town": "Pertir",
+   "town_alt": "Belsan",
+   "family": "has a younger sister abroad",
+   "family_alt": "lives with a widowed aunt"
+  },
+  {
+   "role": 6,
+   "name": "Nylintra",
+   "occupation": "carpenter",
+   "occupation_alt": "teacher",
+   "town": "Montren",
+   "town_alt": "Sanou",
+   "family": "lives with two grandchildren",
+   "family_alt": "has five cousins nearby"
+  },
+  {
+   "role": 7,
+   "name": "Zuquelou",
+   "occupation": "gardener",
+   "occupation_alt": "bookbinder",
+   "town": "Pazugor",
+   "town_alt": "Pakever",
+   "family": "has four brothers",
+   "family_alt": "has a daughter who is a doctor"
+  },
+  {
+   "role": 8,
+   "name": "Ketrador",
+   "occupation": "postman",
+   "occupation_alt": "locksmith",
+   "town": "Gatra",
+   "town_alt": "Linmontwen",
+   "family": "cares for a disabled father",
+   "family_alt": "shares a house with a twin sister"
+  },
+  {
+   "role": 9,
+   "name": "Rengavi",
+   "occupation": "baker",
+   "occupation_alt": "farmer",
+   "town": "Brosan",
+   "town_alt": "Vermor",
+   "family": "has one adopted son",
+   "family_alt": "has a son in the navy"
+  },
+  {
+   "role": 10,
+   "name": "Riost",
+   "occupation": "nurse",
+   "occupation_alt": "librarian",
+   "town": "Wenvar",
+   "town_alt": "Montou",
+   "family": "lives with a widowed aunt",
+   "family_alt": "raises three stepchildren"
+  },
+  {
+   "role": 11,
+   "name": "Tumke",
+   "occupation": "plumber",
+   "occupation_alt": "tailor",
+   "town": "Nyganel",
+   "town_alt": "Dortel",
+   "family": "has five cousins nearby",
+   "family_alt": "has three daughters"
+  },
+  {
+   "role": 12,
+   "name": "Montcal",
+   "occupation": "watchmaker",
+   "occupation_alt": "potter",
+   "town": "Halga",
+   "town_alt": "Vaskebel",
+   "family": "has a daughter who is a doctor",
+   "family_alt": "lives with an older brother"
+  },
+  {
+   "role": 13,
+   "name": "Zusandor",
+   "occupation": "teacher",
+   "occupation_alt": "painter",
+   "town": "Pernel",
+   "town_alt": "Mirpa",
+   "family": "shares a house with a twin sister",
+   "family_alt": "looks after an elderly mother"
+  },
+  {
+   "role": 14,
+   "name": "Osselren",
+   "occupation": "bookbinder",
+   "occupation_alt": "glassblower",
+   "town": "Darmor",
+   "town_alt": "Telkezu",
+   "family": "has a son in the navy",
+   "family_alt": "has twin sons"
+  },
+  {
+   "role": 15,
+   "name": "Vasfenfen",
+   "occupation": "locksmith",
+   "occupation_alt": "shepherd",
+   "town": "Zuvi",
+   "town_alt": "Ostoshal",
+   "family": "raises three stepchildren",
+   "family_alt": "is raising a niece"
+  }
+ ]
+}

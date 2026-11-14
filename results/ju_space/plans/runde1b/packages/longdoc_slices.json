@@ -1,0 +1,203 @@
+{
+ "analysis": [
+  {
+   "file": "10146.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 57721,
+   "sha256": "f81546c0a38adb6e016e09f790506ec4d6cc652ace8b228ac2d72364f5b274e4"
+  },
+  {
+   "file": "10321.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 81680,
+   "sha256": "969c057e41f6f3f765a53c7d831bf3569c10c4b3219128dd2d305275dbec74f1"
+  },
+  {
+   "file": "10356.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 76786,
+   "sha256": "9dfbc93256bd53baf287a629c45dcec0e63a0bbf02c86973d6f8152e1026aabb"
+  },
+  {
+   "file": "10762.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 77655,
+   "sha256": "8e7032aa6496c369799879abad9a1326140bbb3dc810e323f61bd2e256d189e0"
+  },
+  {
+   "file": "15562.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 55756,
+   "sha256": "795d4bc96cbfc66d1f8a5917407b381c802f8ba6d1b3428368a028488853446d"
+  },
+  {
+   "file": "22424.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 109150,
+   "sha256": "76ae822f63538aaab8c0f06723cf4750f17b20a993ad48aaf26cf7ecd8d1c9fb"
+  },
+  {
+   "file": "2544.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 85132,
+   "sha256": "6e39b3785b1c2750f564bd0f607a39e86994dd2ced51cedd1917b875b46c026a"
+  },
+  {
+   "file": "25773.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 125129,
+   "sha256": "39cd4f4256df03062a0ab24f910f6da6b453cfbe17b4a61a89ce4a30a5d76d41"
+  },
+  {
+   "file": "26183.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 126844,
+   "sha256": "f8c16859b9b1151069df62785441f8646c501cb3557e6886171f2f1d2ac22b0d"
+  },
+  {
+   "file": "26239.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 86532,
+   "sha256": "6570ac123924bc086707ec41c186ca8fc7e595e552c44d91fb0155ba6c5ac54c"
+  },
+  {
+   "file": "26493.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 136936,
+   "sha256": "925d933880ea048860094c82bf283832784ca3f6982f569d09f50b0f5e123504"
+  },
+  {
+   "file": "27454.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 100280,
+   "sha256": "cf2d01dc56c06048b7a42f958e7b85784a8e6942c711ee3096184d75b22a88cf"
+  },
+  {
+   "file": "28444.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 80176,
+   "sha256": "21b1bec4509dc5e81cd01afe8cc8302374cbf0c966969635180d6b092e1584e6"
+  },
+  {
+   "file": "28988.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 173457,
+   "sha256": "f11d26c83f702343ed13f8a43ab042c727fdedd0e850540270359cbf9e8a044c"
+  },
+  {
+   "file": "29973.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 41585,
+   "sha256": "1631fbcb9ba5ed592e8e9e02624aa9332abc2295e1015d091b85c5d5238439a3"
+  },
+  {
+   "file": "30312.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 596861,
+   "sha256": "89fde9738f259c1fde72332fc7a3acd841de1fde22355d7210fed843a1575a8d"
+  },
+  {
+   "file": "30752.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 41450,
+   "sha256": "9cc437b94cb05c7ff138975aa816d39d0eaa63aa7eb3887a029d8de96e5d22cd"
+  },
+  {
+   "file": "30754.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 216983,
+   "sha256": "3f8e5ba699e8c7054de24c706b29d0c7957fb31c90069f5bdd8351c418b910e5"
+  },
+  {
+   "file": "30909.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 48659,
+   "sha256": "1b0899d6b4a9f32b712f570a5daaef85147f6372526bcd7171c5c688f58f19dd"
+  },
+  {
+   "file": "31065.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 65466,
+   "sha256": "dd3e3d1631f1eb98b9b6ab6ba9d08a9402cfd0d384eac6dd00d4b4f49b28c419"
+  },
+  {
+   "file": "3247.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 127607,
+   "sha256": "9e3823cdca6c3cbcb25a4bf9e96152e4581999938866a75dc01c03c276836dd5"
+  },
+  {
+   "file": "32761.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 118143,
+   "sha256": "a8fa624a6a86d7315280c857bdc9edd75bc754dda1b01567c713766aea3e5e4a"
+  },
+  {
+   "file": "3340.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 94565,
+   "sha256": "25c4c1d6262e3ae218818f204c123c34074f7109724ffbe6f4b852f51c7da113"
+  },
+  {
+   "file": "33426.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 112599,
+   "sha256": "c229a11ce96f30a7b27cf7f5db0dc46bb332b58a03ada447874d4a62741c61c6"
+  }
+ ],
+ "pilot": [
+  {
+   "file": "33756.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 78893,
+   "sha256": "66e9cc353d0eafd0d068190fd99da12005f1eb703769d4e45db70cd5e191b604"
+  },
+  {
+   "file": "34467.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 51313,
+   "sha256": "a79b71414cc76d5cb9e4debe8489851d35085ca29edc69584fc5a58e3c705110"
+  },
+  {
+   "file": "35205.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 86583,
+   "sha256": "e9e85dc93d3af694edbcc6c9b96a362c6a12fa65359ca02496e426931242fc81"
+  },
+  {
+   "file": "35246.txt",
+   "start": 2000,
+   "end": 34768,
+   "n_tokens": 56364,
+   "sha256": "848242d462318d6c39cac2fb796de5037982c5d650a5155358f7df4e5a11cb7f"
+  }
+ ],
+ "rule": "first books in file order with >= 36,000 tokens after skipping 2,000; slice [2,000, 34,768)"
+}
