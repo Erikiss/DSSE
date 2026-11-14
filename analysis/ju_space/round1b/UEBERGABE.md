@@ -48,6 +48,14 @@
   Soft-MTP-Kopf). Alle vier Teile damit fertig. Läuft jetzt: Integrationstest (alle Slots im Mock-Modus, Rundenauswertung,
   Notebooks) und Bau der Paketdateien (R: 192 neue Prompts; K: Labelbank, REF-K16; D: Reize; L: Langdokument-Liste).
 - 14.11. 04:00 MEZ: Integrationstest bestanden (alle 32 Sitzungen im Mock-Modus; 2 Klebefehler K->R und K->L mit 3 Korrekturen behoben; tests/integration_cpu.txt)
+- 14.11. 04:20 MEZ: Paketdateien fertig und geprüft (results/ju_space/plans/runde1b/packages/, MANIFEST.json mit sha256). Notebooks
+  gebaut (notebooks/runde1b_*.ipynb); J-Lens wird bei Bedarf gepinnt von Hugging Face (neuronpedia/jacobian-lens) geladen.
+  Nächster Schritt: Pilot r1b_P0 in Konto B (runde1b_P0.ipynb, beim ersten Lauf SELBSTTEST = True). Danach Einfrieren:
+  runde1b_freeze.json (freeze_commit, freeze_time, plan_files mit sha256, package_files, pilot-Raten, trims, projection_h,
+  funded {tier2: true, items}, datasets, models, jlens) schreiben und FROZEN_PLAN_SHA256 / FREEZE_RECORD_SHA256 in
+  r1b_run_session.py setzen, Plan-Arbeitskopie nach results/ju_space/plans/runde1b/ übernehmen, committen, pushen.
+  Dann Stufe 1: A1, A2 (Konto A), B1, B2 (Konto B); vorher in Konto A den Ordner dsse_runs/r1b_xfer für Konto B freigeben und in
+  Konto B als Verknüpfung r1b_xfer_A unter „Meine Ablage“ anlegen.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
