@@ -215,9 +215,9 @@ def glce4(env, rows):
     res = []
     for r in rows[:4]:
         c1, lg = env.eng.fwd(r["base"] + env.cont)
-        y, *_ = env.eng.decode(c1, lg[:, -1], [r["key"]], 0.7, env.c.d3_new, env.stop); del c1
+        y = env.eng.decode(c1, lg[:, -1], [r["key"]], 0.7, env.c.d3_new, env.stop)[0]; del c1, lg
         ids = r["base"] + env.cont + r["a1"] + r["chunk"][0]
-        _, lg2 = env.eng.fwd(ids)
+        lg2 = env.eng.fwd(ids)[1]                 # the full-prefill cache is dropped at once
         lo, _ = letters_logodds(lg2[0, -1], env.tk.A, env.tk.B)
         c2, _ = env.eng.fwd(r["base"] + env.cont + r["a1"]); v, _ = probe(env, c2, [r["chunk"]]); del c2
         res.append(dict(decode_identical=bool(y[0].tolist() == r["a1"]), probe_abs_diff=float(abs(float(lo) * r["chunk"][1] - v[0]))))

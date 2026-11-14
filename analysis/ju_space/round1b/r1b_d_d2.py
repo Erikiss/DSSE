@@ -99,19 +99,19 @@ def gen_stream(env, R, stream, long):
     for bt in batches(R, lambda r: len(env.tail1(r)), B):
         cache = LCE.copy(base, len(bt))
         cache, lg = env.eng.fwd(K._torch().tensor([env.tail1(r) for r in bt]), cache)
-        y, *_ = env.eng.decode(cache, lg[:, -1], [env.ctx.key("r1bD2", 1, r["p"]) for r in bt], 0.7, n, env.stop)
+        y = env.eng.decode(cache, lg[:, -1], [env.ctx.key("r1bD2", 1, r["p"]) for r in bt], 0.7, n, env.stop)[0]   # drop the cache
         for r, a in zip(bt, y.tolist()):
             out[r["rid"]]["ids"][0] = a
-        ntok += y.numel(); del cache
+        ntok += y.numel(); del cache, lg
     for bt in batches(R, lambda r: (r["cond"] == "MON", len(env.tail2(r, out[r["rid"]]["ids"][0]))), B):
         cache = LCE.copy(base, len(bt))
         cache, lg = env.eng.fwd(K._torch().tensor([env.tail2(r, out[r["rid"]]["ids"][0]) for r in bt]), cache)
-        y, last, cache, _, _ = env.eng.decode(cache, lg[:, -1], [env.ctx.key("r1bD2", 2, r["p"]) for r in bt], 0.7, n, env.stop)
+        y, _, cache, _, _ = env.eng.decode(cache, lg[:, -1], [env.ctx.key("r1bD2", 2, r["p"]) for r in bt], 0.7, n, env.stop)
         cache, lg = env.eng.fwd(K._torch().tensor([env.suffix] * len(bt)), cache)
-        y3, *_ = env.eng.decode(cache, lg[:, -1], [env.ctx.key("r1bD2", 3, r["p"]) for r in bt], 0.7, n, env.stop)
+        y3 = env.eng.decode(cache, lg[:, -1], [env.ctx.key("r1bD2", 3, r["p"]) for r in bt], 0.7, n, env.stop)[0]
         for r, a, b in zip(bt, y.tolist(), y3.tolist()):
             out[r["rid"]]["ids"][1], out[r["rid"]]["ids"][2] = a, b
-        ntok += y.numel() + y3.numel(); del cache
+        ntok += y.numel() + y3.numel(); del cache, lg
     end = len(pre) + max(len(env.tail2(r, out[r["rid"]]["ids"][0])) for r in R) + 2 * n + len(env.suffix)
     assert end <= env.c.max_pos, f"turn 3 ends at {end} > {env.c.max_pos}"
     return dict(rows=list(out.values()), stream=stream, prefix_len=len(pre), max_end=end, new_tokens=ntok, seconds=time.time() - t0)
@@ -165,9 +165,9 @@ def d2_glce3(ctx):
         if len(t1) != len(t2):
             t2 = t1
         cache, lg = env.eng.fwd(K._torch().tensor([t1, t1, t2]), cache)
-        yb, *_ = env.eng.decode(cache, lg[:, -1], [k, k, env.ctx.key("r1bD2", 1, p)], 0.7, n, env.stop); del cache
+        yb = env.eng.decode(cache, lg[:, -1], [k, k, env.ctx.key("r1bD2", 1, p)], 0.7, n, env.stop)[0]; del cache, lg
         c1, lg = env.eng.fwd(pre + t1)
-        yr, *_ = env.eng.decode(c1, lg[:, -1], [k], 0.7, n, env.stop); del c1
+        yr = env.eng.decode(c1, lg[:, -1], [k], 0.7, n, env.stop)[0]; del c1, lg
         res.append(dict(p=p, path_identical=bool((yb[0] == yr[0]).all()), repeat_identical=bool((yb[0] == yb[1]).all()),
                         first_diff=int((yb[0] != yr[0]).nonzero()[0]) if not (yb[0] == yr[0]).all() else None))
     ok = sum(x["path_identical"] for x in res) >= min(3, len(res)) and all(x["repeat_identical"] for x in res)
