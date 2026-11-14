@@ -44,15 +44,15 @@ def decode_rates(ctx):
 
         def prefill():
             P.sync(); t = time.time(); base, lg = eng.fwd(ids); P.sync(); rec["rates"][f"prefill_s_L{L}"] = time.time() - t
-            st["base"] = LCE.offload(base)
+            st["base"] = LCE.offload(base); st["lg"] = lg[0, -1].clone()
         rec.item(f"prefill_L{L}", prefill)
         if "base" not in st:
             continue
         if L in (Ls[0], Ls[-1]):
             def pre_ip():                                 # the in-place buffer's prefill (a view of the buffer) against the plain one
-                c1, l1 = eng.fwd(ids[:2048] if not c.mock else ids[:64]); del c1
-                c2, l2 = eng_ip.fwd(ids[:2048] if not c.mock else ids[:64]); del c2
-                rec["code_checks"][f"inplace_prefill_identical_L{L}"] = bool(K._torch().equal(l1, l2))
+                P.sync(); t = time.time(); c2, l2 = eng_ip.fwd(ids); P.sync(); rec["rates"][f"prefill_s_L{L}_inplace"] = time.time() - t
+                del c2
+                rec["code_checks"][f"inplace_prefill_identical_L{L}"] = bool(P.same(st["lg"], l2[0, -1]))
             rec.item(f"inplace_prefill_L{L}", pre_ip)
         for B in (1, 2, 3, 4):
             for ip in (False, True):
@@ -72,8 +72,8 @@ def decode_rates(ctx):
                         st["ref"] = (y, [x.clone() for x in lgs])
                     elif "ref" in st:
                         y0, l0 = st.pop("ref")
-                        rec["code_checks"][f"inplace_identical_L{L}_B{B}"] = bool(torch.equal(y0, y) and len(l0) == len(lgs)
-                                                                                 and all(torch.equal(u, v) for u, v in zip(l0, lgs)))
+                        rec["code_checks"][f"inplace_identical_L{L}_B{B}"] = bool(P.same(y0, y) and len(l0) == len(lgs)
+                                                                                 and all(P.same(u, v) for u, v in zip(l0, lgs)))
                     del cb, lgb, y, lgs[:]
                 rec.item(f"decode_L{L}_B{B}" + ("_inplace" if ip else ""), dec)
             st.pop("ref", None)

@@ -276,6 +276,28 @@ class Rec(dict):
             free()
 
 
+def bits(x):
+    """A float tensor as its integer bit pattern (bitwise comparison: NaN == NaN, -0.0 != 0.0); other tensors unchanged."""
+    t = K._torch()
+    if x.is_floating_point():
+        return x.contiguous().view({8: t.int64, 4: t.int32, 2: t.int16}[x.element_size()])
+    return x
+
+
+def same(a, b):
+    """Bitwise equality of nested results (tensors and arrays: dtype, shape and every bit, so equal NaNs count as equal)."""
+    t = K._torch()
+    if isinstance(a, t.Tensor):
+        return isinstance(b, t.Tensor) and a.dtype == b.dtype and a.shape == b.shape and bool(t.equal(bits(a), bits(b.to(a.device))))
+    if isinstance(a, np.ndarray):
+        return isinstance(b, np.ndarray) and a.dtype == b.dtype and a.shape == b.shape and a.tobytes() == b.tobytes()
+    if isinstance(a, (list, tuple)):
+        return isinstance(b, (list, tuple)) and len(a) == len(b) and all(same(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict):
+        return isinstance(b, dict) and a.keys() == b.keys() and all(same(a[k], b[k]) for k in a)
+    return a == b
+
+
 def timed(fn, reps=1, warm=1):
     """Median seconds of fn() over reps calls after warm untimed calls, synchronised around each call."""
     for _ in range(warm):

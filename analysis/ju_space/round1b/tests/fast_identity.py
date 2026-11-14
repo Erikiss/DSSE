@@ -2,11 +2,11 @@
 
   l_decode_nosync     r1b_l_engine.decode with nosync True against False: padded and unpadded batches, 32 steps, keyed Gumbel, early
                       stops (a wide stop set) with extra steps after the last stop, a probe with channels and spins plus spin_fn, an
-                      on_step window, mask_eos and greedy; torch.equal on every per-step logit row (lm_head outputs), every returned
+                      on_step window, mask_eos and greedy; bitwise equality of every per-step logit row (lm_head outputs), every returned
                       quantity (tokens, n, ended, e, peos, s, e0, s0, a, a2, z) and the per-row generator states after the call; the
                       4-D mask against the mask transformers builds itself (captured at layer 0)
   lce_inplace_kv      SO-LCE with the in-place KV buffer against DynamicCache: prefill, chunk over the cached prefix, crop, crop_layers,
-                      copy (B = 3), offload + copy, keyed decode of 32 tokens with block means, token_logprobs (chunked); torch.equal on
+                      copy (B = 3), offload + copy, keyed decode of 32 tokens with block means, token_logprobs (chunked); bitwise equality of
                       logits, tokens and means
   k_gumbel_kept_rows  K's keyed contrastive rollout (r1b_k_lens.Lens.rollout) with the noise drawn for the kept rows only against all
                       2N rows: tokens and every per-step record equal; the kept noise itself equal over 32 steps
@@ -31,16 +31,9 @@ def ok(cond, msg):
 
 
 def eq(a, b):
-    torch = K._torch()
-    if isinstance(a, torch.Tensor):
-        return isinstance(b, torch.Tensor) and a.shape == b.shape and a.dtype == b.dtype and torch.equal(a, b)
-    if isinstance(a, np.ndarray):
-        return isinstance(b, np.ndarray) and a.shape == b.shape and a.dtype == b.dtype and np.array_equal(a, b)
-    if isinstance(a, (list, tuple)):
-        return isinstance(b, (list, tuple)) and len(a) == len(b) and all(eq(x, y) for x, y in zip(a, b))
-    if isinstance(a, dict):
-        return isinstance(b, dict) and a.keys() == b.keys() and all(eq(a[k], b[k]) for k in a)
-    return a == b
+    """Bitwise equality of nested results (r1b_pilot.same: tensors and arrays bit for bit, NaN == NaN)."""
+    import r1b_pilot as P
+    return P.same(a, b)
 
 
 def capture(model):
@@ -98,7 +91,7 @@ def test_decode(tok, model):
         a, b = outs[False], outs[True]; n = len(a["log"]["lg"])
         ok(eq(a["r"], b["r"]), f"decode [{name}]: every returned quantity equal ({sum(x['n'] for x in a['r'])} tokens, "
                                f"{sum(x['ended'] for x in a['r'])} rows stopped)")
-        ok(len(b["log"]["lg"]) >= n and all(torch.equal(x, y) for x, y in zip(a["log"]["lg"], b["log"]["lg"][:n])),
+        ok(len(b["log"]["lg"]) >= n and all(eq(x, y) for x, y in zip(a["log"]["lg"], b["log"]["lg"][:n])),
            f"decode [{name}]: per-step logits equal on {n} forwards (nosync ran {len(b['log']['lg'])})")
         ok(eq(a["gs"], b["gs"]), f"decode [{name}]: per-row generator states equal after the call")
         ma, mb = a["log"]["mask"][:n], b["log"]["mask"][:n]
@@ -151,7 +144,9 @@ def test_kept_rows(tok, model):
     out = {kr: lens.rollout(1, h, h * 0.5, [lens.ph] * N, J=32, T=1.0, keys=keys, sets=False, fov=True, kept_rows=kr) for kr in (False, True)}
     ok(eq(out[False], out[True]), f"kept rows: rollout tokens and every per-step record equal over 32 steps ({sorted(out[True])})")
     G2, G1 = Gumbel(dev, 1.0, keys * 2), Gumbel(dev, 1.0, keys); V = model.get_output_embeddings().weight.shape[0]
-    ok(all(torch.equal(G2(torch.zeros(2 * N, V))[:N], G1(torch.zeros(N, V))) for _ in range(32)), "kept rows: the kept noise is equal over 32 draws")
+    ok(all(eq(G2(torch.zeros(2 * N, V))[:N], G1(torch.zeros(N, V))) for _ in range(32)), "kept rows: the kept noise is equal over 32 draws")
+    out = {kr: lens.rollout(1, h, h * 0.5, [lens.ph] * N, J=32, T=1.0, keys=keys, sets=False, fov=False, kept_rows=kr) for kr in (False, True)}
+    ok(eq(out[False], out[True]), "kept rows: rollout without capture (NaN fov records) equal bit for bit")
 
 
 def test_masks(model):

@@ -4,7 +4,9 @@ r1b_pilot.Rec.item (an out-of-memory or other error is a recorded value).
 
   decode_rates  L0 (i): E.decode at batch 32 on padded pilot prompts (row lengths ctx - 16 (i mod 8)) at contexts 512 and 1,100, plain
                 and hooked (L's full capture set on stand-in random sets of the planned sizes), after an untimed warm-up; the prefill
-                (decode's step 0, the same forward) is timed on its own and the decode step is (total - prefill) / steps
+                (decode's step 0, the same forward) is timed on its own and the decode step is (total - prefill) / steps; each with
+                engine.fast.l_decode_nosync off and on (rates of both) and the switch's GPU bit identity (every returned quantity, every
+                step's logits, the generator states after the call; with and without stops; padded and unpadded rows)
   long          L0 (iii): B = 1 prefill of the PG19 pilot slices at 16,384 and 32,768 tokens with and without the capture hooks
                 (probe.begin() called, so the hooks compute) and the chunked L2a pass (E.lce_logprobs, 2,048-token chunks); L0 (iv): one
                 duet message (batch 32, 40 new tokens) at a ~420-token history, re-prefill against a carried cache (prefill of the
@@ -65,16 +67,56 @@ def decode_rates(ctx):
                 pr = E.Probe(model, rw, chans=sets, spins=spins) if hooked else None
                 try:
                     pf = P.timed(lambda: _prefill(model, tok, rows, pr), reps=3, warm=1)
-                    P.sync(); t = time.time()
-                    E.decode(model, tok, rows, keys, T=1.0, max_new=steps, probe=pr, stop=False,
-                             spin_fn=(lambda st, z: z.cpu()) if hooked else None)
-                    P.sync(); tot = time.time() - t
+                    for ns in (False, True):                 # engine.fast.l_decode_nosync off / on: rates of both
+                        P.sync(); t = time.time()
+                        E.decode(model, tok, rows, keys, T=1.0, max_new=steps, probe=pr, stop=False,
+                                 spin_fn=(lambda st, z: z.cpu()) if hooked else None, nosync=ns)
+                        P.sync(); tot = time.time() - t; tg = tag + ("_nosync" if ns else "")
+                        rec["rates"][f"decode_ms_per_step_{tg}"] = 1000 * (tot - pf) / steps; rec["rates"][f"decode_call_s_{tg}"] = tot
                 finally:
                     if pr:
                         pr.remove()
-                rec["rates"][f"decode_ms_per_step_{tag}"] = 1000 * (tot - pf) / steps
-                rec["rates"][f"prefill_s_{tag}"] = pf; rec["rates"][f"decode_call_s_{tag}"] = tot
+                rec["rates"][f"prefill_s_{tag}"] = pf
             rec.item(f"decode_{tag}", run)
+
+            def ident(rows=rows, keys=keys, hooked=hooked, tag=tag):
+                """GPU bit identity of the switch: every returned quantity, every step's logits, the generator states after the call;
+                with stop tokens (stop=True, a stop set widened so that rows stop at different steps) and without."""
+                out = {}
+                for wide in (False, True):
+                    for ns in (False, True):
+                        pr = E.Probe(model, rw, chans=sets, spins=spins) if hooked else None
+                        lgs, gs = [], []; h = model.lm_head.register_forward_hook(lambda m, a, o: lgs.append(o))
+                        st0 = K.stop_tokens
+                        if wide:
+                            K.stop_tokens = lambda t_, m_: (st0(t_, m_)[0], set(st0(t_, m_)[1]) | set(range(0, 20000)))
+                        try:
+                            r = E.decode(model, tok, rows, keys, T=1.0, max_new=steps, probe=pr, stop=wide,
+                                         spin_fn=(lambda st, z: z.float().cpu().numpy()) if hooked else None, nosync=ns, gen_out=gs)
+                        finally:
+                            K.stop_tokens = st0; h.remove()
+                            if pr:
+                                pr.remove()
+                        out[(wide, ns)] = (r, lgs, gs)
+                    (ra, la, ga), (rb, lb, gb) = out[(wide, False)], out[(wide, True)]
+                    same = (P.same(ra, rb) and len(lb) >= len(la) and all(P.same(x, y) for x, y in zip(la, lb))
+                            and all(P.same(x, y) for x, y in zip(ga, gb)))
+                    rec["code_checks"][f"nosync_identical_{tag}{'_stops' if wide else ''}"] = bool(same)
+                    out.clear()
+            rec.item(f"nosync_identity_{tag}", ident)
+    def unpadded():
+        rows = [(p * (512 // max(len(p), 1) + 2))[:512 if not mock else 16] for p in prs[:B]]; keys = [ctx.key("r1bP0_L0", "u", i) for i in range(B)]
+        out = {}
+        for ns in (False, True):
+            lgs, gs = [], []; h = model.lm_head.register_forward_hook(lambda m, a, o: lgs.append(o))
+            try:
+                out[ns] = (E.decode(model, tok, rows, keys, T=1.0, max_new=steps, nosync=ns, gen_out=gs), lgs, gs)
+            finally:
+                h.remove()
+        (ra, la, ga), (rb, lb, gb) = out[False], out[True]
+        rec["code_checks"]["nosync_identical_unpadded_ctx512"] = bool(P.same(ra, rb) and len(lb) >= len(la) and all(P.same(x, y) for x, y in zip(la, lb))
+                                                                     and all(P.same(x, y) for x, y in zip(ga, gb)))
+    rec.item("nosync_identity_unpadded", unpadded)
     rec["env"].update(batch=B, steps=steps, padded=True, rows="pilot prompts repeated to ctx - 16 (i mod 8) tokens")
     ctx.write_json("p0b/l_decode.json", rec, config=dict(batch=B, steps=steps))
 

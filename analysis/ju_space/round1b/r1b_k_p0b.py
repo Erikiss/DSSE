@@ -6,7 +6,8 @@ is discarded; engineering numbers only). Each item runs under r1b_pilot.Rec.item
           (B = 48) and 4,096 (B = 24); item 4: the 28 down_proj hooks (KB.Tap) at batch 32 x 512 with a warm-up, synchronised around
           each call, median of 5; item 5: FISTA on a synthetic 4,000 x 172,032 fp32 matrix, the step-size estimate _lip timed on its
           own and the per-iteration time from 60 against 10 iterations after a warm-up; keyed (Gumbel) two-stream contrastive rollouts
-          at 80 / 160 / 320 seeds with and without capture; K's keyed decode (32 rows x 40 tokens, the backbone-rate reference)
+          at 80 / 160 / 320 seeds with and without capture, each with engine.fast.k_gumbel_kept_rows off and on (rates of both, GPU
+          bit identity of the tokens and every record); K's keyed decode (32 rows x 40 tokens, the backbone-rate reference)
   checks  item 6: the J-lens file (sha256, shapes, the unembed(h @ J[l].T) path); item 8 on the 8 pilot passages: patch identity,
           decode fronts = teacher-forced fronts, global position offset +4,096, frozen-QK reproduction; item 9: host RAM, local disk
           (Drive throughput: r1b_pilot.p0b_drive)
@@ -96,9 +97,13 @@ def rates(ctx):
             def roll(rows=rows, cap=cap):
                 g = torch.Generator(device=dev).manual_seed(rows)
                 h = torch.randn(rows, D, device=dev, generator=g); J = N(ctx, 40, 4)
-                keys = [ctx.key("r1bP0_K", "roll", rows, i) for i in range(rows)]
-                f = lambda: lens.rollout(blk, h, h * 0, [ph] * rows, J=J, T=1.0, keys=keys, sets=False, fov=cap)
-                rec["rates"][f"keyed_rollout_s_per_step_seeds{rows}_{'capture' if cap else 'nocapture'}"] = P.timed(f, reps=1, warm=1) / J
+                keys = [ctx.key("r1bP0_K", "roll", rows, i) for i in range(rows)]; res = {}
+                for kr in (False, True):                       # engine.fast.k_gumbel_kept_rows off / on: rates and identity
+                    f = lambda: res.__setitem__(kr, lens.rollout(blk, h, h * 0, [ph] * rows, J=J, T=1.0, keys=keys, sets=False, fov=cap,
+                                                                 kept_rows=kr))
+                    rec["rates"][f"keyed_rollout_s_per_step_seeds{rows}_{'capture' if cap else 'nocapture'}{'_kept' if kr else ''}"] = \
+                        P.timed(f, reps=1, warm=1) / J
+                rec["code_checks"][f"kept_rows_identical_seeds{rows}_{'capture' if cap else 'nocapture'}"] = P.same(res[False], res[True])
             rec.item(f"rollout_{rows}_{'cap' if cap else 'nocap'}", roll)
 
     def kdec():
