@@ -21,17 +21,38 @@
 - Nichts von goodfire.com / goodfire.ai automatisiert abrufen; keine Schlüssel in Dateien oder Commits.
 - Commits mit den bisherigen Trailern; nach jedem Arbeitsschritt committen und pushen.
 
-## Nächste Schritte (in dieser Reihenfolge)
-1. Fehlende Teile der Umsetzung fertigstellen (siehe „Stand“), Mock-Selbsttests je Teil, dann der Integrationstest aller Sitzungen.
-2. Notebooks bauen (`python notebooks/build_runde1b_gpu_notebooks.py`), prüfen, committen.
-3. Pilot r1b_P0 in Konto B laufen lassen (nur Technik), Raten in den Plan, Plan einfrieren (sha256 der fünf Dateien in
-   runde1b_freeze.json, Abschnitt 9 des Rahmens), dann die vier Slot-Notebooks der Stufe 1, danach Stufe 2 und Auswertung.
+## Nächste Schritte (Stand 14.11. 16:00 MEZ; lokal, in dieser Reihenfolge)
+1. L-CAL: Punkt (a) ist durchgefallen (Treffer localist 0/5, redundant 0/5, dense 0/5, dthr 5/5, xor3 0/5). Ursache in
+   r1b_l_cal.item_a und r1b_l_rules / r1b_l_stats suchen (Klassifikationsregel, Schwellen, Signalstärke der synthetischen Profile),
+   korrigieren, Mock-Selbsttest von Teil L; dann die volle L-CAL neu rechnen (Cache leer):
+   python results/ju_space/plans/runde1b/arbeitsstand/lcal/lcal_resumable.py results/ju_space/plans/runde1b/l_cal.json <cache-ordner>
+   (mehrere CPU-Stunden; Punkt a allein etwa 70 Min. mit 2 Kernen). Ziel: G_cal_L1..L5 true; sonst Befund dokumentieren, Nutzer fragen.
+2. K0-Prüfung offset4096 (Top-1 gleich, max |dlogp| 1,03e-3): Regel in Teil K (K0-Liste) nachsehen, Folge in den Datensatz.
+3. Hochrechnung mit den P0b-Raten (results/ju_space/plans/runde1b/arbeitsstand/p0b_summary.json; Skripte
+   arbeitsstand/freeze_prep_proj/cost_*_measured.py anpassen; engine.fast an): R nach RG18 (RL1 / RL2), D-Kürzungen T1.. nur solange
+   über 13,8 h, K-Abwurfreihenfolge nur bei > 30 % langsamer, L-Kürzungen falls eine Rate unter der Hälfte des Planwerts liegt
+   (L-Decode 60-81 ms je Schritt statt 25-35 ms prüfen).
+4. runde1b_freeze.json aus arbeitsstand/runde1b_freeze_DRAFT.json: freeze_commit, freeze_time, plan_files (fünf Dateien, echte Namen
+   runde1b_plan.md, runde1b_plan_teil_R/D/K/L.md), package_files (alle Paketdateien im Planordner inkl. pilot_material.json,
+   r1b_keys.json, l_cal.json, k1_label_bank/), pilot (gültige P0-Punkte + P0b), trims, projection_h, funded {tier2: true, items: []},
+   decisions {OD-M14: full_grid}, datasets, d_streams_sha256 (oberste Ebene), models, jlens, engine {D: {B_long: 3, B_mid: 7},
+   fast: {l_decode_nosync, lce_inplace_kv, k_gumbel_kept_rows: true}}, amendments (D-Deckel 13,8 h, Entscheidung des Nutzers
+   14.11.2026). Plantext 9.1 um engine-Schlüssel, Pins-Datei runde1b_pilot_pins.json und p0b_engineering.json ergänzen.
+5. Einfrieren (Reihenfolge laut arbeitsstand/freeze_prep.json): Plan-Arbeitskopie arbeitsstand/plan/*.md nach
+   results/ju_space/plans/runde1b/ kopieren, sha256 der Teildateien in 9.1 eintragen, Freeze-Commit (Plan + Paketdateien); im
+   nächsten Commit runde1b_freeze.json mit diesem freeze_commit und die Konstanten FROZEN_PLAN_SHA256 / FREEZE_RECORD_SHA256 in
+   r1b_run_session.py; Notebooks neu bauen (python notebooks/build_runde1b_gpu_notebooks.py); pushen.
+6. Optional vorher: restliche 23 Sitzungen des Mock-Integrationstests (tests/integration_cpu.txt; Treiber tests/integ_run2.py und
+   tests/integ_check.py, Pfade darin anpassen).
+7. Nutzer: Freigabe r1b_xfer A -> B (Verknüpfung r1b_xfer_A in Konto B), dann Slots A1, A2 (Konto A), B1, B2 (Konto B), danach
+   A_T2, B_T2 und ANA.
 
 ## Startprompt für die lokale Sitzung (kopieren)
-> Lies analysis/ju_space/round1b/UEBERGABE.md und analysis/ju_space/round1b/IMPLEMENTATION.md. Setze die Umsetzung von Runde 1b
-> dort fort, wo „Stand“ endet: fehlende Sitzungsschritte nach den Plandateien in results/ju_space/plans/runde1b/arbeitsstand/plan/
-> implementieren, Mock-Selbsttests ausführen, dann den Integrationstest aller Sitzungen im Mock-Modus und den Notebook-Bau.
-> Arbeite schlank und der Reihe nach; committe und pushe nach jedem Schritt auf ccr-6fe02b21-est040. Antworte auf Deutsch.
+> Lies analysis/ju_space/round1b/UEBERGABE.md (Abschnitt „Nächste Schritte“ und die letzten Einträge unter „Stand“) und
+> analysis/ju_space/round1b/IMPLEMENTATION.md. Arbeite die Schritte 1 bis 5 der Reihe nach ab: L-CAL korrigieren und vollständig
+> rechnen, offset4096 klären, Hochrechnung und Kürzungen nach den Planregeln, runde1b_freeze.json schreiben, einfrieren. Kein echtes
+> Modell lokal laufen lassen; Runde-1-Code byteidentisch; nach jedem Schritt committen und auf ccr-6fe02b21-est040 pushen.
+> Antworte auf Deutsch.
 
 ## Stand
 - 13.11. 23:50 MEZ: Kern in Arbeit (r1b_contracts.py vorhanden). Teile R, K, D, L und Integration noch offen.
