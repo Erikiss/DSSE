@@ -161,7 +161,9 @@ def k3h_ana(ctx, n):
         if r["simul"]["status"] == "abstained":
             m["category"] = "uninterpretable"
         out.append(dict(neuron=f"{r['l']}:{r['j']}", kind=r["kind"], pole="+" if r["pole"] > 0 else "-", threshold=r["thr"], firing_rate=r["rate"],
-                        damage_per_firing=KB.dist(r["damage"]), strength=KB.dist(r["strength"]), modes=m, simulatability=r["simul"]))
+                        damage_per_firing=KB.dist(r["damage"]), strength=KB.dist(r["strength"]), modes=m,
+                        simulatability=dict(status=r["simul"]["status"], R=val(r["simul"]["R"], "NaN:no_zero_ablation_effect"), attempts=r["simul"]["attempts"],
+                                            trace=[(o, val(x, "NaN:no_zero_ablation_effect")) for o, x in r["simul"]["trace"]])))
     sh = lambda kind: [o["modes"]["main_share"] for o in out if o.get("kind") == kind and isinstance(o.get("modes"), dict) and KB.fin(o["modes"]["main_share"])]
     dpf = lambda kind: [o["damage_per_firing"]["p50"] for o in out if o.get("kind") == kind and isinstance(o.get("damage_per_firing"), dict) and KB.fin(o["damage_per_firing"].get("p50"))]
     write(ctx, "k/k3h.json", dict(neurons=out, H_vs_random=dict(main_share_H=KB.dist(sh("H")), main_share_R=KB.dist(sh("R")),
