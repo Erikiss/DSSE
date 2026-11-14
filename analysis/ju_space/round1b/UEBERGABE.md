@@ -106,14 +106,14 @@
 - 14.11. 14:45 MEZ: Korrekturrunde fertig (Commits 8c09305 bis edaaa19), Integrationstest wegen Kontingent nach 10 von 33
   Sitzungen abgebrochen (alle exit 0, inkl. r1b_P0 und r1b_P0b). Erledigt: D-Cache-Fehler; Qwen3.5-2B gepinnt (Pins-Datei
   runde1b_pilot_pins.json vor dem Einfrieren); PG19 über GCS mit sha256; pilot_material.json (Builder r1b_pilot.py build);
-  Sitzung r1b_P0b (12 Schritte, etwa 60 A100-Min., Ergebnis p0b_engineering.json) mit notebooks/runde1b_P0b.ipynb (Konto B);
+  Sitzung r1b_P0b (12 Schritte, etwa 60 A100-Min., Ergebnis p0b_engineering.json) mit notebooks/runde1b_P0b.ipynb (Konto A, da Konto B keine A100 bekam);
   Schalter engine.fast.{l_decode_nosync, lce_inplace_kv, k_gumbel_kept_rows} (aus, bis P0b Bitgleichheit auf der A100 zeigt;
   tests/fast_identity.py 58/58 auf der CPU); r1b_keys.json; K-drop2/3. Offen: (1) restliche 23 Sitzungen des Mock-Integrationstests
   (scratchpad r1b/integ_run2.py-Muster); (2) K-drop4/5 (K6c(ii) gehört zu CF-K-link); (3) volle L-CAL: lief hier im Hintergrund,
   falls results/ju_space/plans/runde1b/l_cal.json fehlt, lokal neu: python analysis/ju_space/round1b/r1b_l_cal.py run
   results/ju_space/plans/runde1b/l_cal.json (mehrere CPU-Stunden; Punkt a allein über 1 h); (4) Qwen3.5-2B-Linearaufmerksamkeit
   läuft ohne Zusatzpakete langsam (P0b misst die Rate); (5) Plantext 9.1: engine-Schlüssel, Pins-Datei, p0b_engineering.json.
-  Nächster Schritt des Nutzers: runde1b_P0b.ipynb in Konto B laufen lassen; danach Einfrier-Datensatz aus p0b_engineering.json.
+  Nächster Schritt des Nutzers: runde1b_P0b.ipynb in Konto A laufen lassen; danach Einfrier-Datensatz aus p0b_engineering.json.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

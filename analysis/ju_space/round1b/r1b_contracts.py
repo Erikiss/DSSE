@@ -192,7 +192,7 @@ _R_TIER1 = ("r1b_R_S0", "r1b_R_S1", "r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S2_06",
 SESSIONS = {
     "r1b_P0": S("main", 0, "B", 0, (), 68.2, (M17, M35), "P0-R, P0-D, P0-K (K0 items 1-9 incl. the Qwen3.5-2B load), P0-L; shared "
                 "engineering items; SO-PILOT material only; engineering numbers only", jlens=True),
-    "r1b_P0b": S("main", 0, "B", 0, (done("r1b_P0", ()),), 60.0, (M17, M35), "re-pilot of r1b_P0's invalid or missing items "
+    "r1b_P0b": S("main", 0, "A", 0, (done("r1b_P0", ()),), 60.0, (M17, M35), "re-pilot of r1b_P0's invalid or missing items "
                  "(arbeitsstand/freeze_prep.json): P0-R (R-P's list), P0-D (warm-up, B = 1-4 after the cache release, crop / copy / chunked "
                  "against a full recompute), P0-K (K0 items 3-9 incl. the Qwen3.5-2B load), P0-L (L0 (i), (iii), (iv), (vii) on the real PG19 "
                  "pilot slices), Drive on the Drive path, a decode profile, the engine switches' GPU bit identity; SO-PILOT material only; "
@@ -268,7 +268,7 @@ TIER2_ITEMS = {"r1b_K_S2b": ("K3h",), "r1b_D_C": ("D5-x", "D3-name"),"r1b_L_A": 
 # Slots (main §4.4): one notebook each; sessions in order, each waiting for its start conditions (packing, not a rule).
 SLOTS = {
     "P0": dict(account="B", runtime="a100", sessions=("r1b_P0",)),
-    "P0b": dict(account="B", runtime="a100", sessions=("r1b_P0b",)),
+    "P0b": dict(account="A", runtime="a100", sessions=("r1b_P0b",)),
     "A1": dict(account="A", runtime="a100", sessions=("r1b_R_S2_14", "r1b_R_S2_18", "r1b_R_S3", "r1b_R_S6", "r1b_K_S5", "r1b_D_C")),
     "A2": dict(account="A", runtime="a100", sessions=("r1b_R_S0", "r1b_R_S1", "r1b_R_S2_06", "r1b_D_B", "r1b_R_S5", "r1b_R_S7",
                                                       "r1b_R_ana", "r1b_K_ana", "r1b_D_ana")),

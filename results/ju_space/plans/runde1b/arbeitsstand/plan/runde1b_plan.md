@@ -583,7 +583,7 @@ A100-minutes as planned (setup + I/O + 1.5 x work). 'Starts after' lists start c
 | Session | Part | Tier | Acct | Wave | Starts after | Content (IDs) | A100-min |
 |---|---|---|---|---|---|---|---|
 | r1b_P0 | all | pilot | B | 0 | harmonised part files and package drafts; before the freeze | P0-R (R-P's list), P0-D (D's pilot list), P0-K (K0 items 1-9 incl. the Qwen3.5-2B load), P0-L (L0 items i-vi); shared items measured once (Drive throughput, short-context decode with and without L's capture set, 16K / 32K prefill with and without down_proj hooks, crop / copy path and cached-vs-recomputed parity metrics); SO-PILOT only; engineering numbers only | 68.2 |
-| r1b_P0b | all | pilot | B | 0 | r1b_P0; before the freeze | re-run of r1b_P0's invalid or missing items (results/ju_space/plans/runde1b/arbeitsstand/freeze_prep.json): P0-R (R-P's list, absent from r1b_P0), P0-D with a warm-up and B = 1-4 after the cache-release fix plus crop / copy / chunked against a full recompute at 16,384 and 32,768, K0 items 3 and 6-9 incl. the Qwen3.5-2B load, synchronised hook timing and FISTA without the step-size estimate, L0 (i), (iii), (iv) and (vii) on the real PG19 pilot slices, Drive throughput on the Drive path; bit-identity of the engine switches (main §9.1); SO-PILOT only; engineering numbers only | about 60 |
+| r1b_P0b | all | pilot | A | 0 | r1b_P0; before the freeze | re-run of r1b_P0's invalid or missing items (results/ju_space/plans/runde1b/arbeitsstand/freeze_prep.json): P0-R (R-P's list, absent from r1b_P0), P0-D with a warm-up and B = 1-4 after the cache-release fix plus crop / copy / chunked against a full recompute at 16,384 and 32,768, K0 items 3 and 6-9 incl. the Qwen3.5-2B load, synchronised hook timing and FISTA without the step-size estimate, L0 (i), (iii), (iv) and (vii) on the real PG19 pilot slices, Drive throughput on the Drive path; bit-identity of the engine switches (main §9.1); SO-PILOT only; engineering numbers only | about 60 |
 | r1b_R_S0 | R | 1 | A | 1 | freeze | R0, R8.1, R9.5; SO-AX package (AX1, U*, leave-loop-out modes, SG10 check); exports to r1b_xfer (REF-R16 token ids, u*_b) | 22.2 |
 | r1b_R_S2_14 | R | 1 | A | 1 | freeze | R2.1 (axis texts), R2.2 at 14; AX-1b(14) | 58.5 |
 | r1b_R_S1 | R | 1 | A | 1 | r1b_R_S0 (concurrency, R.5); round-1 pilot files | R1 closed and open loop | 35.9 |
@@ -635,7 +635,7 @@ Copy-in details are executable in r1b_contracts.SESSIONS, which governs where th
 | K | 8.86 sessions, of which 8.63 K's own (incl. I/O 0.17), 0.18 for L, 0.05 REF-U32 reporting | 2.58 (RK-1 1.20, RK-2 0.88, K3h 0.50) | 8.78 (incl. K-S0 0.32); tier 2 2.58 (K.8) |
 | L | 4.82 sessions; 5.00 charged (incl. 0.18 run in K's sessions) | 0.92 (X1-X6) | 6.0 (core 5.08 incl. L-P 0.32; extensions 0.92) + 0.05 iota* (L.14) |
 | **Round** | **30.75** (account A 15.49, account B 15.26) | **8.36** (A 6.05, B 2.31) | 34.84 (+ reserves 4.1 outside), before the implementation amendments |
-| Pilot r1b_P0 (+ r1b_P0b) | 1.14 (+ about 1.0 for r1b_P0b; account B; before the freeze) | | 1.12 (four separate pilots) |
+| Pilot r1b_P0 (+ r1b_P0b) | 1.14 (+ about 1.0 for r1b_P0b, run in account A because account B got no A100; before the freeze) | | 1.12 (four separate pilots) |
 
 - **Tier 1 = 30.75 A100-h** at the parts' planned rates (30.60 before the implementation amendments of main §4.1: r1b_D_A +0.10 h,
   r1b_L_B +0.05 h), near the round-level target of about 30 h. No rule was changed to reach it: the
