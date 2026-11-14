@@ -44,6 +44,9 @@
 - 14.11. 01:30 MEZ: Teile D und L fertig umgesetzt, Mock-Selbsttests bestanden (D: Langkontext-Engine SO-LCE, Reize, alle Sitzungen,
   Auswertung; L: alle Schritte von r1b_L_A/r1b_L_B und l_ana). Offen bei D/L: Paketdateien vor dem Einfrieren erzeugen
   (r1b_d_stim.py build; r1b_l_base.build_longdoc_list), volle L-CAL (etwa 120 CPU-Min.) vor dem Einfrieren. R und K in Arbeit.
+- 14.11. 01:50 MEZ: Teile R und K fertig umgesetzt, Mock-Tests bestanden (R: 13 Sitzungen; K: 12 Sitzungen inkl. RK-1 mit CE- und
+  Soft-MTP-Kopf). Alle vier Teile damit fertig. Läuft jetzt: Integrationstest (alle Slots im Mock-Modus, Rundenauswertung,
+  Notebooks) und Bau der Paketdateien (R: 192 neue Prompts; K: Labelbank, REF-K16; D: Reize; L: Langdokument-Liste).
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
