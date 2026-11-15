@@ -40,9 +40,13 @@ def _m_delta(delta, med, Iref):
 
 # ---------------------------------------------------------------------------------------------------------------------------------- (a)
 def item_a(q, seeds):
-    """PIP tree on lean's synthetic background (N 4,096, n 1,200, 40 drivers): localist, redundant, dense, dense-threshold (32), XOR3."""
+    """PIP tree on lean's synthetic background (n 1,200, 40 drivers) at the real run's width: N = 172,032 units (Qwen3-1.7B's 28 x
+    6,144 MLP neurons) and L1's U grid m in {1, ..., 1,024} plus |P| (user decision 15.11.2026: the XH ratio must not be capped by a
+    scaled-down N; lean's N = 4,096 bounded it at 1,024 / m_0.5(U) ~ 1.8). Profiles: localist (20 units), redundant (the localist code
+    plus 2,000 noisy copies: the same planted signal on 2,000 further units, each with its own background noise), dense,
+    dense-threshold (32), XOR of 3 groups. Quick mode (code test only): N 512, n 240."""
     torch = _t()
-    N, n = (4096, 1200) if not q else (512, 240)
+    N, n = (172032, 1200) if not q else (512, 240)
     grid = [m for m in (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024) if m <= N // 2]
     exp = {"localist": "localised: the H-cluster is the store", "redundant": "H privileged but one of several representations (redundant)",
            "dense": "dense (no sparse store)", "dthr": "distributed without a privileged set", "xor3": "unclassified (profile reported)"}
@@ -52,24 +56,26 @@ def item_a(q, seeds):
         for sd in range(seeds):
             g = np.random.default_rng(1000 + sd)
             n2 = 2 * n                                   # rows 0..n-1 = S_fit (selection), n..2n-1 = S_L (every I-hat); plan L1: disjoint
-            Z = g.standard_normal((n2, 40)); Lm = g.standard_normal((40, N)) * np.linspace(1.5, 0.2, 40)[:, None]
-            X = Z @ Lm / math.sqrt(40) + g.standard_normal((n2, N))
-            y = (g.random(n2) < 0.5).astype(int); s = 2 * y - 1.0
+            Z = g.standard_normal((n2, 40), dtype=np.float32)
+            Lm = g.standard_normal((40, N), dtype=np.float32) * np.linspace(1.5, 0.2, 40, dtype=np.float32)[:, None]
+            X = Z @ Lm / np.float32(math.sqrt(40)); X += g.standard_normal((n2, N), dtype=np.float32)   # float32: 2,400 x 172,032
+            y = (g.random(n2) < 0.5).astype(int); s = (2 * y - 1.0).astype(np.float32)
             if prof == "localist":
                 Sx = g.choice(N, 20, replace=False); X[:, Sx] += 0.45 * s[:, None]
-            elif prof == "redundant":
-                Sx = g.choice(N, min(2000, N // 2), replace=False); X[:, Sx] += 0.12 * s[:, None]
+            elif prof == "redundant":                    # plan L-CAL (a) / L1 (vi): 'redundant (2,000 noisy copies)' of the localist code
+                Sx = g.choice(N, 20 + min(2000, N // 2), replace=False); X[:, Sx] += 0.45 * s[:, None]
             elif prof == "dense":
                 X += 0.03 * s[:, None]
             elif prof == "dthr":
-                Cm = g.standard_normal((N, 31)); A = g.standard_normal((n2, 31)) * 3.0; X += 0.08 * s[:, None] + A @ Cm.T
+                Cm = g.standard_normal((N, 31), dtype=np.float32); A = g.standard_normal((n2, 31), dtype=np.float32) * 3.0
+                X += 0.08 * s[:, None]; X += A @ Cm.T
             else:
                 Sx = g.choice(N, 60, replace=False); gg = g.standard_normal((n2, 3))
                 for k in range(3):
-                    X[:, Sx[20 * k:20 * (k + 1)]] += 0.8 * gg[:, [k]]
+                    X[:, Sx[20 * k:20 * (k + 1)]] += (0.8 * gg[:, [k]]).astype(np.float32)
                 y = (np.sign(gg).prod(1) > 0).astype(int)
-            Xf = torch.tensor(X[:n], dtype=torch.float32); yf = torch.tensor(y[:n])
-            Xt = torch.tensor(X[n:], dtype=torch.float32); yt = torch.tensor(y[n:]); folds = torch.tensor(S.folds_by_question(n, 5, sd))
+            Xf = torch.from_numpy(X[:n]); yf = torch.tensor(y[:n])
+            Xt = torch.from_numpy(X[n:]); yt = torch.tensor(y[n:]); folds = torch.tensor(S.folds_by_question(n, 5, sd))
             # every statistic below as plan L.3 L1 'Rule' / L1 (i)-(ii) define it (amended 15.11.2026, see commit message)
             nf = 50 if not q else 3                       # L1 (i): 50 fragments per m
             nperm = 100 if not q else 3                   # L1 (i): floor = q95 over 100 label permutations, fresh U fragment each
@@ -557,7 +563,8 @@ def run(out, quick=False, items="abcdefghijklmn"):
                                                        G_cal_L3=all(res.get(x, {}).get("pass", False) for x in "bcdehi"),
                                                        G_cal_L4=all(res.get(x, {}).get("pass", False) for x in "kl"),
                                                        G_cal_L5=all(res.get(x, {}).get("pass", False) for x in "mn")),
-                     provenance=dict(code_sha256=K.sha256_file(__file__), stats_sha256=K.sha256_file(S.__file__), written=K.iso()))), out)
+                     provenance=dict(code_sha256=K.sha256_file(__file__), stats_sha256=K.sha256_file(S.__file__), rules_sha256=K.sha256_file(RU.__file__),
+                                     written=K.iso()))), out)
     return res
 
 

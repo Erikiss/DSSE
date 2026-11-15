@@ -8,6 +8,7 @@ import r1b_core as K
 import r1b_contracts as C
 import r1b_l_rules as RU
 import r1b_l_stats as S
+HERE = os.path.dirname(os.path.abspath(__file__))
 from r1b_l_base import cfg, clean, gating, inj, lensout, loadpt, rng, wj
 
 NR = "not run (input missing)"
@@ -280,6 +281,17 @@ def l_cal_record(ctx):
         if ctx.mock:
             return {k: True for k in "abcdefghijklmn"}, ["MOCK: L-CAL record absent (code test)"]
         return {k: False for k in "abcdefghijklmn"}, ["L-CAL record missing (results/ju_space/plans/runde1b/l_cal.json)"]
+    # plan 9.1 (15.11.2026): l_cal.json is computed after the freeze by the frozen r1b_l_cal.py, r1b_l_stats.py and r1b_l_rules.py
+    # (SG3 makes the checkout equal to the freeze commit's files); a record from other code is invalid -> every item fails
+    # ('not testable (pipeline calibration failed)').
+    pv = d.get("provenance") or {}
+    want = dict(code_sha256=os.path.join(HERE, "r1b_l_cal.py"), stats_sha256=os.path.join(HERE, "r1b_l_stats.py"),
+                rules_sha256=os.path.join(HERE, "r1b_l_rules.py"))
+    bad = [k for k, f in want.items() if pv.get(k) != K.sha256_file(f)]
+    if bad or d.get("quick"):
+        if ctx.mock:
+            return {k: True for k in "abcdefghijklmn"}, [f"MOCK: L-CAL record not from the frozen code ({bad or 'quick'})"]
+        return {k: False for k in "abcdefghijklmn"}, [f"L-CAL record invalid (provenance {bad or 'quick mode'} does not match the frozen code)"]
     return {k: bool(v.get("pass")) for k, v in d.get("items", {}).items()}, []
 
 

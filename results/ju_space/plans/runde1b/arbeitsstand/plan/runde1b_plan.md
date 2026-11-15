@@ -930,22 +930,33 @@ r1b_P0's engineering record; each part's trim level and the round-level projecti
 freeze time (UTC). Keys the implemented code reads (r1b_core, r1b_run_session and the parts): freeze_commit, freeze_time, plan_files,
 package_files, pilot, trims (per part, e.g. trims['L'] within T2-T5), projection_h, funded {tier2, items}, decisions (e.g. 'OD-M14':
 'grid_2^14'), datasets (wikitext103 with its parquet pins, k_train_offset_lines, rk1_train_offset_lines and d_streams_sha256;
-triviaqa_rc_nocontext; pg19), models (incl. Qwen3.5-2B's pins), jlens (url; 'qwen3.5-2b' {name, sha256}).
+triviaqa_rc_nocontext; pg19), models (incl. Qwen3.5-2B's pins), jlens (url; 'qwen3.5-2b' {name, sha256}), engine (D {B_long,
+B_mid}; fast {l_decode_nosync, lce_inplace_kv, k_gumbel_kept_rows}: a switch is true only if r1b_P0b's GPU bit-identity verdicts
+are all true; read by r1b_core.engine_fast), amendments (engineering decisions before any data). The pilot entry holds r1b_P0's
+record and r1b_P0b's record p0b_engineering.json (Drive account A, dsse_runs/r1b_P0b/, sha256). Before the freeze the pilot
+sessions read results/ju_space/plans/runde1b/runde1b_pilot_pins.json (models, datasets, jlens, engine of the draft record).
 
 **Package files** (frozen with the plan, sha256 in the freeze record): R: prompts_1b.json, neutral_pool_1b.txt (sha256
 4b3bcaca06f45521a00f12ec2b056a13962bbfdd066ab93867980c9b0be9ebf5), the WORDSETS files, R5.5's candidate bank; D: d1_stimuli.json,
 d2_prompts.json, d3_items.json, d4_roles.json, d1v_pairs.json, the RSP pool's prompt list, instruction and keys (its texts are
 generated in session, D.16), the filler streams' token ids and their generator scripts; K: the K1 label bank (items, TriviaQA question-id hashes and screening order, arithmetic splits, frames and fillers, REF-K16
 token ids as ref_k16.json, scorer test files, the capitalised function-word list); L: F-neu, the SO-LONGDOC slice list
-(longdoc_slices.json), the natural-position passage list, the L-CAL generators, seeds and pre-freeze results (l_cal.json); main:
+(longdoc_slices.json), the natural-position passage list, the L-CAL generators and seeds (in r1b_l_cal.py, frozen as code); main:
 SO-PILOT, the SO-KEYS registry (r1b_keys.json, written with r1b_sessions_R imported).
 
 **Builders (run before the freeze, CPU, no Qwen output).** R: r1b_r_package.py (prompts_1b.json with the 192 new prompts, neutral
 pool, word sets, R5.5 bank); D: r1b_d_stim.py build <tokenizer dir> <dir> (the five D package files and the streams); K:
 r1b_k_labels.py build <root> <freeze.json> <dir> (K1 bank and ref_k16.json; needs the WikiText-103 and TriviaQA pins); L:
-r1b_l_base.build_longdoc_list (longdoc_slices.json) and r1b_l_cal.py run (l_cal.json, about 120 CPU-min); main: r1b_core.py keys.
-Without l_cal.json L-ANA reads every dependent branch 'not testable (pipeline calibration failed)'; without prompts_1b.json R's P256
-steps read 'not run (input missing)'.
+r1b_l_base.build_longdoc_list (longdoc_slices.json); main: r1b_core.py keys. Without prompts_1b.json R's P256 steps read 'not run
+(input missing)'.
+
+**L-CAL after the freeze (user decision of 15 November 2026).** results/ju_space/plans/runde1b/l_cal.json is not a package file. It
+is computed after the freeze and before r1b_L_ana (the L-ANA step of r1b_ana) by the frozen code: r1b_l_cal.py, r1b_l_stats.py and
+r1b_l_rules.py as at the freeze commit (CPU, synthetic data only, no Qwen output; python r1b_l_cal.py run <out> or the resumable
+wrapper), and committed. Its provenance holds the sha256 of these three files; L-ANA compares them with the files of its checkout
+(equal to the freeze commit's by SG3) and rejects a quick-mode record. Without a valid l_cal.json L-ANA reads every dependent branch
+'not testable (pipeline calibration failed)'. L-CAL (a) runs at the real run's width (N = 172,032, L1's U grid) so that the XH ratio
+is not capped by a scaled-down pool.
 
 ### 9.2 Before the freeze
 

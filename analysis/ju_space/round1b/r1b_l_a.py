@@ -433,8 +433,8 @@ def plant(X, kind, s, amp, g, P_size):
     st = torch.as_tensor(s, dtype=X.dtype, device=X.device)[:, None]
     if kind == "localist":
         Sx = g.choice(N, P_size, replace=False); Xp[:, Sx] += amp * 0.45 * st * sd[Sx]
-    elif kind == "redundant":
-        Sx = g.choice(N, min(2000, N // 2), replace=False); Xp[:, Sx] += amp * 0.12 * st * sd[Sx]
+    elif kind == "redundant":        # plan L1 (vi) / L-CAL (a): the localist code plus 2,000 noisy copies (same signal, own noise)
+        Sx = g.choice(N, P_size + min(2000, N // 2), replace=False); Xp[:, Sx] += amp * 0.45 * st * sd[Sx]
     elif kind == "dense":
         Xp += amp * 0.03 * st * sd
     elif kind.startswith("thr"):

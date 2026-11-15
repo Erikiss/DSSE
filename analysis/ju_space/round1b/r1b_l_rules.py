@@ -47,8 +47,8 @@ def rule_L1(st, cal_ok=True, m_cal=None, sg8=True):
         (Priv and r2 is not None and lo(r2) >= 0.5, "H privileged but one of several representations (redundant)"),
         (Priv, "H privileged, redundancy undecided"),
         ((not Priv) and syn is True and st.get("mono"), "holographic-like (threshold <= m_cal, synergistic, monogamous)"),
-        (pt(st.get("Ihat_P")) < 0.2 * pt(st.get("I_ref")) and pt(st.get("medU1024")) >= 0.5 * pt(st.get("I_ref")), "dense (no sparse store)"),
-        ((not Priv) and st.get("m0") is not None and st["m0"] <= 64, "distributed without a privileged set"),
+        ((not Priv) and st.get("m0") is not None and st["m0"] <= 64, "distributed without a privileged set"),   # before 'dense' (plan L1
+        (pt(st.get("Ihat_P")) < 0.2 * pt(st.get("I_ref")) and pt(st.get("medU1024")) >= 0.5 * pt(st.get("I_ref")), "dense (no sparse store)"),  # verdicts 5/6, 15.11.2026)
     ], "unclassified (profile reported)")
     lab = [f"no threshold above m_0 (m_0 = {st.get('m0')})" if st.get("m0") is not None else None,
            "not a strict threshold code (falsified)" if st.get("falsified") else None,

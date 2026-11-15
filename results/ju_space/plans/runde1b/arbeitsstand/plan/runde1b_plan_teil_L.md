@@ -290,11 +290,11 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
 - **Runs in.** r1b_P0 (10 A100-min of its work).
 - **Gates.** None; it defines SG7 (L's part).
 
-### L-CAL: known-answer calibration of every L statistic (core; CPU before the freeze; repeated as code tests)
+### L-CAL: known-answer calibration of every L statistic (core; CPU after the freeze by the frozen code, before L-ANA (main §9.1); quick mode as code test)
 
 - **What.** Measures each pipeline's false-positive rate and power on synthetic data with known answers at the planned sizes. This is the design rules' 'verifier error rate on known answers' applied to L's own statistics. A failed item turns the dependent verdicts into 'not testable (pipeline calibration failed)'.
 - **How.** Frozen generators and seeds:
-  - **(a) PIP tree** (lean): background N = 4,096, n = 1,200, 40 latent drivers. Profiles: localist (20 units), redundant (2,000 noisy copies), dense, dense-threshold (threshold at 32 units) and XOR of 3 groups.
+  - **(a) PIP tree** (lean): background N = 172,032 (the real run's width; lean's 4,096 capped the XH ratio at 1,024 / m_0.5(U), corrected before the freeze, 15 November 2026), n = 1,200 in S_L plus 1,200 S_fit rows for the selector, 40 latent drivers; the L1 statistics as in L1 (i), (ii) and 'Rule' on L1's U grid. Profiles: localist (20 units), redundant (the localist code plus 2,000 noisy copies: the same signal on 2,000 further units, each with its own noise), dense, dense-threshold (threshold at 32 units) and XOR of 3 groups.
   - **(b) Stickiness** (L.MARKOVSUR plus the item-FE hazard, surrogate-corrected Delta gamma): homogeneous and heterogeneous memoryless chains (frailty) and sticky semi-Markov chains (gamma 0.05-0.2); 600 x 1,024, occupancy 5-10 %.
   - **(c) HD rank test**: 100 heterogeneous memoryless populations; P(rank 1) must be 0.01 +- 0.01 over 400 reps.
   - **(d) Within-item bistability BI**: 96 items x 8 seeds; memoryless heterogeneous items against items with 15 % planted two-state switching.
@@ -417,8 +417,12 @@ Rank tests use the 99 CTRL99 sets: p = (1 + #{c >= statistic of P}) / 100, so th
     2. 'H privileged but one of several representations (redundant)': Priv and rho_lo >= 0.5.
     3. 'H privileged, redundancy undecided': Priv otherwise.
     4. 'holographic-like (threshold <= m_cal, synergistic, monogamous)': not Priv, Syn and Mono.
-    5. 'dense (no sparse store)': I-hat(P) < 0.2 I_ref and median I-hat_U(1,024) >= 0.5 I_ref.
-    6. 'distributed without a privileged set': not Priv and F_small.
+    5. 'distributed without a privileged set': not Priv and F_small.
+    6. 'dense (no sparse store)': I-hat(P) < 0.2 I_ref and median I-hat_U(1,024) >= 0.5 I_ref.
+    - Order of 5 and 6 corrected before the freeze (user decision of 15 November 2026): in the drafted order (dense first) a code
+      without a privileged set whose threshold lies between |P| and 64 units has I-hat(P) near 0 < 0.2 I_ref while the U curve
+      saturates by m = 1,024, so 'dense' always fired first and 'distributed without a privileged set' was unreachable for the
+      class it names (L-CAL (a), dense-threshold profile). A dense code with m_0 > 64 still reads 'dense'.
     7. 'unclassified (profile reported)'.
   - **Flags attached to every L1 verdict.**
     - 'no threshold above m_0', with m_0.
