@@ -169,6 +169,14 @@
   'not testable (pipeline calibration failed)'. Optionen: (A) so einfrieren (G_cal_L1 = false); (B) technischer Nachtrag vor
   allen Daten zum Generator von (a) (z. B. N, das die Rastergrenze wie im echten Lauf klein macht), dann neu rechnen.
   Push aus der lokalen Sitzung scheitert (kein Schreibrecht: git ohne Token, GitHub-API 403); Commits liegen lokal und als Bundle.
+- 15.11. EINGEFROREN (Entscheidungen des Nutzers 15.11.): L-CAL (a) mit N = 172.032 und L1-Raster, 'redundant' nach Plan
+  (Localist-Code + 2.000 verrauschte Kopien), L1-Zweige 5/6 getauscht (distributed vor dense; Plantext vermerkt), l_cal.json wird
+  NACH dem Einfrieren mit dem eingefrorenen Code gerechnet und vor r1b_L_ana committet (Plan 9.1; L-ANA prüft die sha256 von
+  r1b_l_cal/_stats/_rules). Kürzungen: keine (R RL0 12,0 h; D 13,4 h <= 13,8; K ohne Abwurf 10,6 h; L mit X1-X6). offset4096 =
+  G-K10-Label. Freeze-Commit 4de7a3b; runde1b_freeze.json und Konstanten im Folgecommit, Notebooks neu gebaut.
+  Nächste Schritte: (1) volle L-CAL: python results/ju_space/plans/runde1b/arbeitsstand/lcal/lcal_resumable.py
+  results/ju_space/plans/runde1b/l_cal.json <cache> (Gruppen mit --items, (a) braucht etwa 2,4 GB RAM je Prozess), committen;
+  (2) Freigabe r1b_xfer A -> B, dann Slots A1, A2, B1, B2.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

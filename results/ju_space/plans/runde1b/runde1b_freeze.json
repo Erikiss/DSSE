@@ -1,0 +1,683 @@
+{
+ "status": "frozen",
+ "freeze_commit": "4de7a3b41169704dd811e11965727e0e64d6b8f9",
+ "freeze_time": "2026-11-15T03:57:11Z",
+ "plan_files": {
+  "results/ju_space/plans/runde1b/runde1b_plan.md": "b725dd83dc2fe051150314c0b0cb3ab0684d3062c6dd6799537a1263b92d9b7b",
+  "results/ju_space/plans/runde1b/runde1b_plan_teil_R.md": "09a68f044147bd261e47c8f6acb92b65c9f18f9deea8b85b6ffa4954eeaa298c",
+  "results/ju_space/plans/runde1b/runde1b_plan_teil_D.md": "02e4c2d53733b428c7eb2e941f78a233b98fd44aac9ed52f4bc9db373d502ef3",
+  "results/ju_space/plans/runde1b/runde1b_plan_teil_K.md": "1b83946f292552a78fbd4e406f0ffa8a565021358daa5cfc9535a011b53a78a2",
+  "results/ju_space/plans/runde1b/runde1b_plan_teil_L.md": "ad4078cda6f39cdcd57c2fb38ac08f24b9f90b49b24db139cc0efc732800cdc6"
+ },
+ "package_files": {
+  "results/ju_space/plans/runde1b/d1_stimuli.json": "e57e77464c2b99ee44a166d5cf9bb7e8960cbe89ffdf9255d58565d53004ba0d",
+  "results/ju_space/plans/runde1b/d1v_pairs.json": "81a712a95c7ed1dadef5d6cdb56c6459691947183f5b97a80a024e76a99a58a7",
+  "results/ju_space/plans/runde1b/d2_prompts.json": "bf4d1e43a0fd6e9112640dc396d592207e50b3664628a998f6490d7de8398a26",
+  "results/ju_space/plans/runde1b/d3_items.json": "027edeec7bb44e155f436918a1e515af66b03cd11fe7865aff48e47d240e0b3d",
+  "results/ju_space/plans/runde1b/d4_roles.json": "b30bea5317890e99104026996783b9065ffc9c7878a397fd9ea6b08f6848d766",
+  "results/ju_space/plans/runde1b/k1_label_bank/bank.json": "55b80e28ecd2dc5743cd8cd57247cc84ba311e67896588d17dd9dc25cc928e90",
+  "results/ju_space/plans/runde1b/k1_label_bank/sha256.json": "461a17d2ab4d3fe5e6c8eb645ce7df4422bc5faaffd70078768906e3e2159a57",
+  "results/ju_space/plans/runde1b/k1_label_bank/unigram_logfreq.npy": "a1528f070f3db66fac76e5d1a6236e0c08180b37f420720c1e4e802711fc171f",
+  "results/ju_space/plans/runde1b/k1_label_bank/wt_train_ref.npy": "d46f2e59a508ea06af1e3395af499ff1ccb08a661e84ff8612a3818fd45d9227",
+  "results/ju_space/plans/runde1b/label_bank_1b.json": "f2c3eec12088be484f134f49956fb1ea6565a42793d807dc95168e8211d5c620",
+  "results/ju_space/plans/runde1b/longdoc_slices.json": "94878b4e67105bf75414d91b524d94324d10ce5df9924abe8f501c8bef5d46c4",
+  "results/ju_space/plans/runde1b/neutral_pool_1b.txt": "4b3bcaca06f45521a00f12ec2b056a13962bbfdd066ab93867980c9b0be9ebf5",
+  "results/ju_space/plans/runde1b/pilot_material.json": "618113719d604db328271daa700479f595dd7f47f6ba1385907cf4e4ee6ea5ba",
+  "results/ju_space/plans/runde1b/prompts_1b.json": "6360c50f754bb33920d3199bcf13630ecd518b7b8e6eb4f7a73fb3e439b442d7",
+  "results/ju_space/plans/runde1b/r1b_keys.json": "006619abcb5afa326dcd9541877ae4f2d7e4232c12623ee72934594d904104f0",
+  "results/ju_space/plans/runde1b/ref_k16.json": "861610d2f194c6c31512e621d181eca694d59de751b35b1f23736e72b00d5bab",
+  "results/ju_space/plans/runde1b/runde1b_pilot_pins.json": "81a45931cf0bcd501646a27d624144268e1cf6be1ec05286019a9000c1d911d5",
+  "results/ju_space/plans/runde1b/wordsets_1b.json": "58e9f8a9c1a3b3495cf3e2a4cea718e5e766f491ec929a45b84b7e728fa6d293"
+ },
+ "package_note": "l_cal.json is not a package file: computed after the freeze by the frozen r1b_l_cal.py / r1b_l_stats.py / r1b_l_rules.py before r1b_L_ana; L-ANA checks their sha256 in its provenance (main 9.1, user decision 15.11.2026)",
+ "pilot": {
+  "r1b_P0": {
+   "session": "r1b_P0",
+   "account": "B",
+   "record": {
+    "path": "dsse_runs/r1b_P0/p0_engineering.json",
+    "sha256": "08e8209e63d1342be1063b7e48c30ecb6b9a614ca4e2ba0bc8cb1a37ba9d80c6"
+   },
+   "outputs_sha256": {
+    "p0/p0_d.json": "a3bc9e96f92c8454410daf9c6de902828f20cc23004fda1f817f97404082d321",
+    "k0_pilot.json": "62e384c0d1f9359e89ff7ac0d28ae73d6182226c7ccc00697b56c730538cac22",
+    "pilot/l0_a.json": "a8844c3fefeb9c86296386113762f0148a3d821109b0bdc3f07ce2dca849679a",
+    "pilot/l0_b.json": "3e74f4403b011cc827446455b7fd3eb7a9d225e82e67c6e05b184bdeb7c4fb2f"
+   },
+   "code_commits": {
+    "k0_pilot, l0_a, l0_b": "ce02ad15e597bd7502dfbae2a03d12de70979a59",
+    "d0_pilot": "de5a6bc0acf060875822b12928f6e5b14f536bad"
+   },
+   "attempts": [
+    {
+     "started": "2026-11-14T09:06:45Z",
+     "result": "failed (d0_pilot)"
+    },
+    {
+     "started": "2026-11-14T09:09:59Z",
+     "result": "failed (d0_pilot)"
+    },
+    {
+     "started": "2026-11-14T10:26:28Z",
+     "result": "done"
+    }
+   ],
+   "a100_min_used": 8.0,
+   "env": {
+    "gpu": "NVIDIA A100-SXM4-40GB",
+    "torch": "2.14.1+cu130",
+    "transformers": "5.22.2",
+    "cuda": "13.0",
+    "python": "3.13.16",
+    "tf32_matmul": false,
+    "sdpa_kernel_D": "efficient"
+   },
+   "measured_valid": {
+    "D_prefill_B1_s": {
+     "15684": 3.584,
+     "27972": 7.759,
+     "31300": 9.111,
+     "3396 (incl. first-call warm-up)": 1.49
+    },
+    "D_prefill_fit": "0.115 s + 0.1546 ms x T + 4.243e-9 s x T^2",
+    "D_chunk700_s": {
+     "3396": 0.209,
+     "15684": 0.282,
+     "27972": 0.401,
+     "31300": 0.433
+    },
+    "D_copy_chunk700_s": {
+     "3396": 0.172,
+     "15684": 0.295,
+     "27972": 0.421,
+     "31300": 0.453
+    },
+    "D_decode_step_ms": {
+     "4096": {
+      "B1": 40.8,
+      "B2": 37.1,
+      "B3": 38.4
+     },
+     "16384": {
+      "B1": 77.0,
+      "B2": 87.3,
+      "B3": 93.2
+     },
+     "28672": {
+      "B1": 126.2,
+      "B2": 140.4
+     },
+     "32000": {
+      "B1": 139.5,
+      "B2": 154.6
+     }
+    },
+    "D_decode_fit": "step = max(38 ms, 13.4 ms + L x (3.45 us x ceil(16 B / 108) + 0.486 us x B)); fits every point >= 16K within 1 ms",
+    "D_parity": {
+     "crop_vs_copy_max_abs_logit": 0.0,
+     "static_vs_dynamic_tokens_identical": true,
+     "lengths": [
+      4096,
+      16384,
+      28672,
+      32000
+     ]
+    },
+    "K_rollout_s_per_step_J40": {
+     "160 rows (80 seeds)": 0.075,
+     "320 rows (160 seeds)": 0.133,
+     "note": "FOV capture on, frame prefill in step 1; implies 17.5 ms + 0.28 ms x rows per decode step"
+    },
+    "K_patch_identity_rel": 0.0,
+    "L_read_tok_per_s_hooked": 4544.9,
+    "L_refkl_60_units_s": 0.418,
+    "L_duet_32x40_call_s": 2.13,
+    "L_duet_note": "one batched E.decode of 32 fresh ~40-token prompts x 40 tokens: about 0.27 s prefill + 46.5 ms per decode step",
+    "L_duet_carried_cache": {
+     "max_rel": 2.09e-06,
+     "gumbel_flips": 0,
+     "pass": true
+    },
+    "peak_gb_l0_a": 33.1
+   },
+   "validity": {
+    "D_B3_B4_oom_28672_32000": "invalid as a batch limit: pilot kept the B=1 prefix on the GPU and the previous batch's cache alive through 'y, *_ = eng.decode(...)'; the failed allocations (328 / 368 / 490 MiB) are one layer's K tensor of the new B-row copy",
+    "D_peak_41GB": "reflects the retained caches, not session needs",
+    "D_local_write_MB_s": "local disk, not Drive",
+    "K_downproj_hook_overhead_1.89": "invalid: no cuda synchronize, no warm-up, back-to-back unsynced forwards of a [4, 128] batch",
+    "K_fista_35ms_per_iter": "biased: includes the 30-iteration power method _lip in a 5-iteration timing; about 5 ms per iteration after correction",
+    "K0_items_missing": "3 (shared-prefix decode 528 / 2,064 B 48, 4,096 B 24), 6 (J-lens path), 7 (Qwen3.5-2B load, 15 mtp tensors, rates), 8 (3 of 4 code checks), 9 (Drive, RAM, disk)",
+    "L0_i_decode_ms_per_step": "invalid as decode rates: (B=32 prefill of 512 / 1,100 tokens + 32 steps) / 33; unpadded rows; no warm-up",
+    "L0_iii_prefill_16k_32k": "invalid: longdoc_slices.json not found in results/ju_space/plans/runde1b/ (staged in packages/), fallback to 64-token mock texts (0.04 s, 6.5 GiB = weights); hooked run never called probe.begin()",
+    "L0_vi_drive": "invalid: local file in the work folder, read from page cache",
+    "L0_vii_L2a_parity": "invalid: 64-token documents (one chunk); OD-M14 undecided",
+    "P0_R": "not run: no r1b_P0 step registered in r1b_sessions_R.py; RG18 cannot be applied as written",
+    "SG7_in_session_done": "ok=true, enforced=false (vacuous)"
+   },
+   "derived_planning_rates": {
+    "R_GEN_SCALE": 2.0,
+    "R_GEN_SCALE_basis": "proxy from the L0_b duet (2.13 s per 32 x 40 against 1.0 s planned); P0-R not measured",
+    "R_READ_SCALE": 1.1,
+    "L_decode_ms_B32": "46.5 + 0.015 x context tokens (x 1.10 hooked)",
+    "K_decode": "17.5 ms + 0.28 ms x rows (0.24 without capture); lens frame prefill 19 tokens x 0.17 ms per row",
+    "teacher_forced_factor": 1.1,
+    "fista_s_per_iter": 0.005,
+    "qwen3.5_2b": "unmeasured (plan's x2 risk factor kept)",
+    "drive_io_min_per_GB": 10
+   }
+  },
+  "r1b_P0b": {
+   "session": "r1b_P0b",
+   "account": "A",
+   "record": {
+    "drive_file_id": "1OEL9N3XQPG9DlyyJOjgqZodSl9Er7eQh",
+    "path": "account A: dsse_runs/r1b_P0b/p0b_engineering.json (full record, 31.5 KB)",
+    "written": "2026-11-14T14:39:12Z",
+    "code_commit": "99302fc",
+    "gpu": "NVIDIA A100-SXM4-40GB",
+    "torch": "2.14.1+cu130",
+    "transformers": "5.22.2",
+    "note": "compact extract by the coordinator; the full record is authoritative"
+   },
+   "summary_file": "results/ju_space/plans/runde1b/arbeitsstand/p0b_summary.json",
+   "summary_sha256": "d27584bc58a6c468657bb61c0f7ffdc399f41496a544be013141b49977ac0325",
+   "summary": {
+    "source": {
+     "drive_file_id": "1OEL9N3XQPG9DlyyJOjgqZodSl9Er7eQh",
+     "path": "account A: dsse_runs/r1b_P0b/p0b_engineering.json (full record, 31.5 KB)",
+     "written": "2026-11-14T14:39:12Z",
+     "code_commit": "99302fc",
+     "gpu": "NVIDIA A100-SXM4-40GB",
+     "torch": "2.14.1+cu130",
+     "transformers": "5.22.2",
+     "note": "compact extract by the coordinator; the full record is authoritative"
+    },
+    "failed_or_not_run": [
+     "k_checks.offset4096_ok (top-1 identical, max |dlogp| 1.03e-3)"
+    ],
+    "engine_fast_identity_gpu": {
+     "lce_inplace_kv": "identical: prefill 4096/32000, decode L 4096/16384/28672/32000 x B 1-4, full/copy/crop at 16384/32768",
+     "l_decode_nosync": "identical: padded batch 32 ctx 512/1100 plain and hooked incl. stops; unpadded ctx 512",
+     "k_gumbel_kept_rows": "identical: 80/160/320 seeds, capture and no capture",
+     "proposed_record": {
+      "l_decode_nosync": true,
+      "lce_inplace_kv": true,
+      "k_gumbel_kept_rows": true
+     }
+    },
+    "d_decode_ms_per_step": {
+     "ref": {
+      "4096": [
+       36.9,
+       37.1,
+       37.4,
+       37.5
+      ],
+      "16384": [
+       77.2,
+       87.2,
+       93.0,
+       98.8
+      ],
+      "28672": [
+       126.1,
+       140.3,
+       150.3,
+       160.2
+      ],
+      "32000": [
+       139.4,
+       154.6,
+       165.8,
+       176.8
+      ]
+     },
+     "inplace": {
+      "4096": [
+       37.4,
+       37.7,
+       39.0,
+       38.4
+      ],
+      "16384": [
+       71.9,
+       76.3,
+       76.8,
+       76.8
+      ],
+      "28672": [
+       116.6,
+       121.1,
+       121.6,
+       121.7
+      ],
+      "32000": [
+       128.8,
+       133.2,
+       133.7,
+       133.7
+      ]
+     },
+     "columns": "B = 1, 2, 3, 4",
+     "prefill_s": {
+      "4096": 0.61,
+      "16384": 3.58,
+      "28672": 7.74,
+      "32000": 9.09
+     },
+     "peak_gb_inplace_32000": [
+      15.0,
+      23.0,
+      31.1,
+      39.2
+     ],
+     "B_long_3_fits": true,
+     "attention_share_gpu_32000_B1": 0.43
+    },
+    "d_parity": {
+     "crop_copy_vs_full_rel": {
+      "16384": 2.96e-05,
+      "32768": 1.51e-05
+     },
+     "G_LCE_1": true,
+     "l2a_chunked_vs_full_rel": {
+      "16384": 4.91e-05,
+      "32768": 7.86e-05
+     },
+     "OD_M14": "full_grid (rule: rel < 1e-4 at 32768)"
+    },
+    "k": {
+     "downproj_hook_overhead_ratio": 1.0013,
+     "fista_ms_per_iter": 4.25,
+     "fista_lip_s": 0.122,
+     "keyed_rollout_s_per_step_kept": {
+      "80": [
+       0.0798,
+       0.0707
+      ],
+      "160": [
+       0.1381,
+       0.1318
+      ],
+      "320": [
+       0.2635,
+       0.252
+      ],
+      "columns": "capture, no capture"
+     },
+     "keyed_rollout_s_per_step_all_rows": {
+      "80": [
+       0.0857,
+       0.075
+      ],
+      "160": [
+       0.1485,
+       0.1422
+      ],
+      "320": [
+       0.2928,
+       0.2812
+      ]
+     },
+     "kdecode_ms_per_step_32x40": {
+      "qwen3-1.7b": 61.4,
+      "qwen3.5-2b": 63.8,
+      "ratio": 1.039
+     },
+     "q35_mtp_head_s_per_step_80_seeds": 0.0156,
+     "G_K18": "ok (15 mtp tensors)",
+     "G_K17": "pass (agreement 0.487, 'eh/post')",
+     "shared_prefix_ms_per_step": {
+      "ctx528_B48": 52.2,
+      "ctx2064_B48": 118.4,
+      "ctx4096_B24": 110.4
+     },
+     "checks": {
+      "patch_identity_rel": 0.0,
+      "decode_vs_teacher_forced_rel": 2.8e-06,
+      "frozen_qk_rel": 2.4e-06,
+      "jlens_1.7b_sha256_ok": true,
+      "jlens_2b_sha256_ok": true
+     }
+    },
+    "l": {
+     "decode_ms_per_step_batch32_padded_without_prefill": {
+      "ctx512_plain": 59.9,
+      "ctx512_plain_nosync": 58.3,
+      "ctx512_hooked": 78.3,
+      "ctx512_hooked_nosync": 77.6,
+      "ctx1100_plain": 76.9,
+      "ctx1100_plain_nosync": 72.0,
+      "ctx1100_hooked": 80.7,
+      "ctx1100_hooked_nosync": 80.3
+     },
+     "prefill_s_batch32": {
+      "ctx512": 2.7,
+      "ctx1100": 6.03
+     },
+     "prefill_B1_s": {
+      "16384": 3.74,
+      "32768": 9.68,
+      "hook_overhead": "+0.4 %"
+     },
+     "l2a_chunked_s": {
+      "16384": 4.96,
+      "32768": 12.86
+     },
+     "duet_message_420_tokens_batch32_s": {
+      "reprefill": 4.36,
+      "carried_estimate": 2.14
+     }
+    },
+    "r_rates": {
+     "LOAD_min": 0.261,
+     "GEN": 1.68,
+     "GEN80": 1.975,
+     "GEN200": 2.619,
+     "GEN360": 3.429,
+     "RD14": 0.185,
+     "RDX": 0.233,
+     "RALL": 0.574,
+     "RFULL": 0.392,
+     "RSHORT": 0.07,
+     "FWD": 0.0386,
+     "FB": 0.0692,
+     "FB8": 0.0297,
+     "SOFT": 1.899,
+     "DMG": 1.327,
+     "units": "as r1b_r_p0b records them (R-P list)",
+     "peak_gb_max": 10.8
+    },
+    "drive": {
+     "copy_in_MB_s": 414,
+     "cold_read_MB_s": 91.3,
+     "cold_read_file": "r2_q1/axes/r2_axes.pt (314 MB)"
+    }
+   }
+  }
+ },
+ "trims": {
+  "R": [],
+  "D": [],
+  "K": [],
+  "L": []
+ },
+ "trims_note": {
+  "R": {
+   "rule": "RG18: smallest reduction level with tier 1 + conditional sessions (pilot excluded) <= 12.5 h",
+   "RL0_h": 12.02,
+   "RL1_h": 10.51,
+   "RL2_h": 9.85,
+   "note": "cost_R2_p0b.py total minus R-P, + REF-U32 0.07 h",
+   "level": "RL0",
+   "trims": [],
+   "tier1_h": 9.73,
+   "tier2_conditional_h": 2.29
+  },
+  "D": {
+   "rule": "trims T1.. only while tier 1 + funded D5-x > 13.8 h (main 4.3 amendment)",
+   "tier1_h": 12.94,
+   "tier1_plus_d5x_h": 13.44,
+   "trims": [],
+   "tier2_h": {
+    "D5-x": 0.5,
+    "D3-name": 0.13,
+    "reserves_R1_R3": 3.9
+   },
+   "reserves_note": "r1b_P0 estimate kept (not re-modelled; conservative with the in-place KV)",
+   "session_h": {
+    "r1b_D_A": 3.65,
+    "r1b_D_B": 4.38,
+    "r1b_D_C": 4.36,
+    "r1b_D_ana": 0.54
+   },
+   "note": "r1b_D_B and r1b_D_C near the 4.5-h time guard; continuations (SG5) carry any overrun"
+  },
+  "K": {
+   "rule": "drop order if decode or teacher-forced rates > 30 % slower",
+   "measured": "keyed rollouts (K0 item 2) -8..+15 % against the plan after the 19-token frame prefill; teacher-forced <= +23 %; K's 32-row keyed decode reference 61.4 ms/step = 2.3x the plan's 27 ms",
+   "decision": "no drop order: budget decision of the user (15.11.2026), K 10.6 h",
+   "tier1_h": 10.61,
+   "tier2_h": 2.63,
+   "trims": []
+  },
+  "L": {
+   "rule": "trim order (L.8) if any rate is below half its planning value",
+   "measured": "B = 32 decode 58.3 / 72.0 ms plain, 77.6 / 80.3 ms hooked at 512 / 1,100 (plan 30-35 ms, hooks x1.15): below half -> rule fires",
+   "decision": "user decision (15.11.2026): X1-X6 stay funded (funded.items = []), no tier-1 trims; the overrun is funded",
+   "tier1_sessions_h": 6.14,
+   "tier1_charged_h": 6.35,
+   "tier2_h": 1.05,
+   "trims": []
+  }
+ },
+ "reduction_level": {
+  "R": "RL0"
+ },
+ "projection_h": {
+  "planned": {
+   "tier1": 30.75,
+   "tier2": 8.36,
+   "pilot": 1.14,
+   "total": 40.25
+  },
+  "at_pilot_rates": {
+   "tier1": 39.42,
+   "tier2": 10.5,
+   "pilot_P0_P0b": 2.14,
+   "total": 52.06
+  },
+  "tier1": {
+   "R": 9.73,
+   "D": 12.94,
+   "K": 10.61,
+   "L": 6.14
+  },
+  "tier2": {
+   "R": 2.29,
+   "D": 4.53,
+   "K": 2.63,
+   "L": 1.05
+  },
+  "source": "results/ju_space/plans/runde1b/arbeitsstand/projection_p0b.json"
+ },
+ "funded": {
+  "tier2": true,
+  "items": [],
+  "note": "user decision: tier 1 and tier 2 funded; empty items = every tier-2 item and session funded; L's X1-X6 stay funded although L's pilot rule fired (user decision 15.11.2026)"
+ },
+ "decisions": {
+  "OD-M14": "full_grid",
+  "OD-M14_note": "r1b_P0b parity: chunked vs full rel 4.91e-5 / 7.86e-5 at 16,384 / 32,768 (< 1e-4)",
+  "K_drop_order": "not applied: budget decision of the user (15.11.2026), K 10.6 h",
+  "L_trims": "not applied: X1-X6 stay, funded.items [] (user decision 15.11.2026)",
+  "offset4096": "G-K10 label only (K0 rule): top-1 identical, max |dlogp| 1.03e-3"
+ },
+ "datasets": {
+  "wikitext103": {
+   "repo": "Salesforce/wikitext",
+   "revision": "b08601e04326c79dfdd32d625aee71d232d685c3",
+   "allow_patterns": [
+    "wikitext-103-raw-v1/train-00000-of-00002.parquet",
+    "wikitext-103-raw-v1/validation-00000-of-00001.parquet",
+    "wikitext-103-raw-v1/test-00000-of-00001.parquet"
+   ],
+   "sha256": {
+    "wikitext-103-raw-v1/train-00000-of-00002.parquet": "74da360f23826045b3e6ac6375411fdb15f003030aa74f2596ed08b857cb9212",
+    "wikitext-103-raw-v1/validation-00000-of-00001.parquet": "204929b7ff9d6184953f867dedb860e40aa69c078fc1e54b3baaa8fb28511c4c",
+    "wikitext-103-raw-v1/test-00000-of-00001.parquet": "5f1bea067869d04849c0f975a2b29c4ff47d867f484f5010ea5e861eab246d91"
+   },
+   "k_train_offset_lines": 19613,
+   "license": "CC BY-SA 3.0",
+   "rk1_train_offset_lines": 40000,
+   "rk1_train_offset_note": "proposed; must lie after SO-PILOT's 8 train passages (pilot_material.json, not built), which follow K's 1M-token reference (ends at raw train line 34137); r1b_k_rk.py reads it with int()",
+   "d_streams": {
+    "end_passage": 9304,
+    "d_streams_sha256": "fdf7a27ce17551be8145feb56321288c050cdf9e244ff0a601119e891fff348b",
+    "k_ref_1M_end_line": 34137,
+    "recomputed": "r1b_d_stim.py streams (2026-11-14, same sha256 and end_passage)"
+   }
+  },
+  "triviaqa_rc_nocontext": {
+   "repo": "mandarjoshi/trivia_qa",
+   "revision": "0f7faf33a3908546c6fd5b73a660e0f8ff173c2f",
+   "allow_patterns": [
+    "rc.nocontext/train-00000-of-00001.parquet",
+    "rc.nocontext/validation-00000-of-00001.parquet"
+   ],
+   "sha256": {
+    "rc.nocontext/train-00000-of-00001.parquet": "455223e4a3ba6977611914d96b1b812fe19a6cd4ea3aef4df381f093b297670c",
+    "rc.nocontext/validation-00000-of-00001.parquet": "48a5005c0eb4f8a4ae5b9868644297fd5bf1e694aeb3dc9c8ab958cac0d5b201"
+   }
+  },
+  "pg19": {
+   "source": "gcs",
+   "url_template": "https://storage.googleapis.com/deepmind-gutenberg/test/{file}",
+   "repo": null,
+   "revision": null,
+   "allow_patterns": [
+    "10146.txt",
+    "10321.txt",
+    "10356.txt",
+    "10762.txt",
+    "15562.txt",
+    "22424.txt",
+    "2544.txt",
+    "25773.txt",
+    "26183.txt",
+    "26239.txt",
+    "26493.txt",
+    "27454.txt",
+    "28444.txt",
+    "28988.txt",
+    "29973.txt",
+    "30312.txt",
+    "30752.txt",
+    "30754.txt",
+    "30909.txt",
+    "31065.txt",
+    "3247.txt",
+    "32761.txt",
+    "3340.txt",
+    "33426.txt",
+    "33756.txt",
+    "34467.txt",
+    "35205.txt",
+    "35246.txt"
+   ],
+   "sha256": {
+    "10146.txt": "f8dd4334fd8d422cd2f9153ffbff9b097611569592d7ca09fc6fe7881336d331",
+    "10321.txt": "fedcb2723c2ad091f76d45eb98efd810977e7b906f6fd8cbd815734d1e90c456",
+    "10356.txt": "af4b57d358448588adbc6da962cad655bf586ae746dba21f62e956d36d97c88e",
+    "10762.txt": "fcc71b161311d4854a078f8cdda6e4381542536167145f6dfdda84bcad256d5f",
+    "15562.txt": "90eae481a404688312d407918b07e649643ce6c934a16ad31040614221673ca1",
+    "22424.txt": "a3475140ed4763614c11c4f2e486e468ae5620bf539877bf769e16710d808a0d",
+    "2544.txt": "0c79ceaf5bcc208b8c924037613c2c7fb1606de21ec8d99d5c446a516c4af787",
+    "25773.txt": "02dedc58fe901826fe05a6864f377ec2d38993bd8c4e27429152e5e047dd52c4",
+    "26183.txt": "b73ddfcfe10430b96635b021312cbe21eaa6227bf1614b39846d4234d9e12a66",
+    "26239.txt": "550798583dc17a1b7f7300591a6531d1f0a3440b6d530c331186814225a36344",
+    "26493.txt": "f2088dc639475a627a830a819d2b4ade98e347a840a08980e0fdf35a7f836275",
+    "27454.txt": "0f5a3efba148e8435ae9acc4a34e570369d493d635413d56a3044b08d70f6d9a",
+    "28444.txt": "f7bd54971caf53bc3ca651cacbaaefae402812b56918f6c4b5dcaeb6a279864f",
+    "28988.txt": "5ba1eb22b96320155afd942871f76b1f040d4918d9871a1d4b854176c7015567",
+    "29973.txt": "349ac4532773414f8da1723d38f09ffad5911018fb380365022e6e76e48abf46",
+    "30312.txt": "4d9c0b401a9fd85b169a744d76c9e88e1d2a4b5d9a690c40fa2bf98164823032",
+    "30752.txt": "14f951b46330ff912bf29fe4888d668fc4693cd05b9d87f0c2fd0d985f3c29de",
+    "30754.txt": "f01af5df32ed5c8c4f5e99121f85d25667d45579da31856e9d572fd09810dd50",
+    "30909.txt": "1eebeea3739f55afd5d47e989fca2657022e72829abcab070af599cefa62dc92",
+    "31065.txt": "9d8228e48a41bef67408a097a3598588325bc70d5e2f6b00c96372783029d05f",
+    "3247.txt": "aa97806b530ffb25b5678e4c562e49055715eb5734c533c0b244537734b6a59c",
+    "32761.txt": "cd0c0c4cb9508cbabd73f90673c63363bf03e2d72aa87de2e86ed895689c3c13",
+    "3340.txt": "0d3bea08577a6bde3265827ddf5e688d8aa8ce1ab4ff4243075358c19709d788",
+    "33426.txt": "5f241da148e653140f9cafab7c93a0ff0f3e1d214077137b85fe8668a0bd522f",
+    "33756.txt": "636bea04db47134816380f2d03d735d46970fe214a0e11bd87d97f270d237cf4",
+    "34467.txt": "32d9cc33391e172ebaf885e574b365ee9738fa0041537a5c8a9859e7d84b6181",
+    "35205.txt": "05440b6f4c77d4204facc7c8ec5ebea3df8fef5782f03cb041f2accd184265f9",
+    "35246.txt": "4362445794452e6df50919837f9aa851539a11eaed673b8eb3ed613ac0b1a84b"
+   },
+   "note": "the 24 analysis + 4 pilot books of longdoc_slices.json; r1b_core.fetch_dataset only knows Hugging Face snapshots, so it needs a GCS branch (or the slices must ship as package files)"
+  }
+ },
+ "d_streams_sha256": "fdf7a27ce17551be8145feb56321288c050cdf9e244ff0a601119e891fff348b",
+ "models": {
+  "qwen3-1.7b": {
+   "repo": "Qwen/Qwen3-1.7B",
+   "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+   "sha256": {
+    "model-00001-of-00002.safetensors": "169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5",
+    "model-00002-of-00002.safetensors": "912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9",
+    "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+   }
+  },
+  "qwen3-0.6b": {
+   "repo": "Qwen/Qwen3-0.6B",
+   "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+   "sha256": {
+    "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+   }
+  },
+  "qwen3.5-2b": {
+   "repo": "Qwen/Qwen3.5-2B",
+   "revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+   "sha256": {
+    "model.safetensors-00001-of-00001.safetensors": "aa33250c4fc64891ddfaba3a314fd9542ea371843c387178b425fbcc5ed680b1",
+    "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+    "config.json": "ed1c1723241f23f7f4e23430759cbd7dcfb4103cbdfe052bfe7626b57c2615b4"
+   },
+   "layers": 24,
+   "hidden": 2048,
+   "license": "apache-2.0",
+   "mtp_tensors_in_index": 15,
+   "note": "pins read from the Hugging Face API on 2026-11-14 (Qwen3_5ForConditionalGeneration; text backbone 18 linear-attention + 6 full-attention layers, bf16 weights); load and G-K18 pending in P0b"
+  }
+ },
+ "jlens": {
+  "name": "Qwen3-1.7B_jacobian_lens.pt",
+  "url": "https://huggingface.co/neuronpedia/jacobian-lens/resolve/main/qwen3-1.7b/jlens/Salesforce-wikitext/Qwen3-1.7B_jacobian_lens.pt",
+  "sha256": "6fcc79011bd921ffd87612255e2e99950a124fa519470ee44ebaf161c39be9d6",
+  "size": 226501315,
+  "repo": "neuronpedia/jacobian-lens",
+  "repo_revision_seen": "d2527c3cdbaa60dd4b65cbca1604921f044e989a",
+  "qwen3.5-2b": {
+   "name": "Qwen3.5-2B_jacobian_lens.pt",
+   "sha256": "69e02a9794c340da7a69cfaa1638c0267192f25a64e7f4fa23f3021e72393c82",
+   "size": 192946315,
+   "url": "https://huggingface.co/neuronpedia/jacobian-lens/resolve/main/qwen3.5-2b/jlens/Salesforce-wikitext/Qwen3.5-2B_jacobian_lens.pt"
+  }
+ },
+ "engine": {
+  "D": {
+   "B_long": 3,
+   "B_mid": 7
+  },
+  "fast": {
+   "l_decode_nosync": true,
+   "lce_inplace_kv": true,
+   "k_gumbel_kept_rows": true
+  },
+  "note": "fast switches: r1b_P0b GPU bit identity all true (p0b_summary engine_fast_identity_gpu)"
+ },
+ "amendments": [
+  {
+   "part": "D",
+   "kind": "engineering (budget), before any data",
+   "cap_h": 13.8,
+   "decided": "2026-11-14",
+   "by": "user"
+  },
+  {
+   "part": "round",
+   "kind": "budget, before any data",
+   "decided": "2026-11-15",
+   "by": "user",
+   "text": "K without drop order (10.6 h), L with X1-X6, R RL0, D without trims; round about 52 A100-h at pilot rates"
+  },
+  {
+   "part": "L",
+   "kind": "L-CAL (a) generator at N = 172,032 and L1's grid; 'redundant' per plan; L1 verdicts 5/6 order; L-CAL after the freeze",
+   "decided": "2026-11-15",
+   "by": "user",
+   "in_plan_text": true
+  }
+ ]
+}

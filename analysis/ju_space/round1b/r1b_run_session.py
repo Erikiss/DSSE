@@ -31,8 +31,8 @@ import r1b_contracts as C
 import r1b_core as K
 from r1b_core import iso, load_json, dump_json, sha256_file
 
-FROZEN_PLAN_SHA256 = ""        # sha256 of results/ju_space/plans/runde1b/runde1b_plan.md, written here at the freeze (main §9.1, SG1)
-FREEZE_RECORD_SHA256 = ""      # sha256 of results/ju_space/plans/runde1b/runde1b_freeze.json, written here at the freeze (SG1)
+FROZEN_PLAN_SHA256 = "b725dd83dc2fe051150314c0b0cb3ab0684d3062c6dd6799537a1263b92d9b7b"        # sha256 of results/ju_space/plans/runde1b/runde1b_plan.md, written here at the freeze (main §9.1, SG1)
+FREEZE_RECORD_SHA256 = "0d6258922e591fb1261f2173140dc35a4ab729149cd13fcd26825d23216516a8"      # sha256 of results/ju_space/plans/runde1b/runde1b_freeze.json, written here at the freeze (SG1)
 R1_MODULES = {"analysis/ju_space/rk_loop.py": "1a20f61992637386c97197b7283a8b743214aa89028f504c4af6c2fbedbab2a1",
               "analysis/ju_space/rk_verdict.py": "62aced20fcd7435201e1f427e5c294869fdab3adcb54801f092aa8d31ab9049e",
               "analysis/ju_space/ufo_common.py": "6f3919e93b638a325f9a8dd5762430c6b5e7693d4e1f5a317d97366caa49f9ab",
