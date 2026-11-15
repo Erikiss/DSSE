@@ -1,0 +1,64 @@
+{
+ "written": "2026-11-15",
+ "rates": "r1b_P0b (p0b_summary.json; engine.fast switches on), r1b_P0 where P0b did not re-measure (L reads)",
+ "scripts": [
+  "freeze_prep_proj/cost_R2_p0b.py",
+  "freeze_prep_proj/cost_D_p0b.py",
+  "freeze_prep_proj/run_K_p0b.py",
+  "freeze_prep_proj/cost_L_p0b.py"
+ ],
+ "R": {
+  "rule": "RG18: smallest reduction level with tier 1 + conditional sessions (pilot excluded) <= 12.5 h",
+  "RL0_h": 12.02,
+  "RL1_h": 10.51,
+  "RL2_h": 9.85,
+  "note": "cost_R2_p0b.py total minus R-P, + REF-U32 0.07 h",
+  "level": "RL0",
+  "trims": [],
+  "tier1_h": 9.73,
+  "tier2_conditional_h": 2.29
+ },
+ "D": {
+  "rule": "trims T1.. only while tier 1 + funded D5-x > 13.8 h (main 4.3 amendment)",
+  "tier1_h": 12.94,
+  "tier1_plus_d5x_h": 13.44,
+  "trims": [],
+  "tier2_h": {
+   "D5-x": 0.5,
+   "D3-name": 0.13,
+   "reserves_R1_R3": 3.9
+  },
+  "reserves_note": "r1b_P0 estimate kept (not re-modelled; conservative with the in-place KV)",
+  "session_h": {
+   "r1b_D_A": 3.65,
+   "r1b_D_B": 4.38,
+   "r1b_D_C": 4.36,
+   "r1b_D_ana": 0.54
+  },
+  "note": "r1b_D_B and r1b_D_C near the 4.5-h time guard; continuations (SG5) carry any overrun"
+ },
+ "K": {
+  "rule": "drop order if decode or teacher-forced rates > 30 % slower",
+  "measured": "keyed rollouts (K0 item 2) -8..+15 % against the plan after the 19-token frame prefill; teacher-forced <= +23 %; K's 32-row keyed decode reference 61.4 ms/step = 2.3x the plan's 27 ms",
+  "decision": "no drop order: budget decision of the user (15.11.2026), K 10.6 h",
+  "tier1_h": 10.61,
+  "tier2_h": 2.63,
+  "trims": []
+ },
+ "L": {
+  "rule": "trim order (L.8) if any rate is below half its planning value",
+  "measured": "B = 32 decode 58.3 / 72.0 ms plain, 77.6 / 80.3 ms hooked at 512 / 1,100 (plan 30-35 ms, hooks x1.15): below half -> rule fires",
+  "decision": "user decision (15.11.2026): X1-X6 stay funded (funded.items = []), no tier-1 trims; the overrun is funded",
+  "tier1_sessions_h": 6.14,
+  "tier1_charged_h": 6.35,
+  "tier2_h": 1.05,
+  "trims": []
+ },
+ "offset4096": "K0 item 8 global position offset +4,096: top-1 identical, max |dlogp| 1.03e-3 > 1e-3 -> G-K10 label only (part K, K0 rule and G-K10: 'the offset check is a label only'); no stop, no trim, no code change",
+ "round_h": {
+  "tier1": 39.42,
+  "tier2": 10.5,
+  "pilot_P0_P0b": 2.14,
+  "total": 52.06
+ }
+}
