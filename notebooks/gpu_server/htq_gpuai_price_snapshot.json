@@ -1,0 +1,200 @@
+{
+  "retrieved_utc": "2026-11-16T22:32:02.528302+00:00",
+  "source": "https://api.gpu.ai/v1/pricing?include_unavailable=true&limit=200",
+  "pagination_complete": true,
+  "total_rows_read": 246,
+  "currency": "USD",
+  "price_per_hour_means": "entire configuration, not per GPU",
+  "offers": [
+    {
+      "gpu_type": "a100_80gb",
+      "gpu_count": 1,
+      "region": "us-central",
+      "price_per_hour": 1.38,
+      "available": 6,
+      "tier": "on_demand",
+      "community": false,
+      "deployment_type": "vm",
+      "cpu_cores": 16,
+      "ram_gb": 96,
+      "instance_disk_gb": 768,
+      "disk_price_per_gb_hour": 0,
+      "offering_id": "89addbbca240",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda124:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda124:2026-07@sha256:6422f5ac0d06b9921213a021b7e9ce2b7f806fe1bb1011a5f4dabb355c844862",
+        "driver_min": "550.54.14",
+        "cuda": "12.4"
+      }
+    },
+    {
+      "gpu_type": "b200",
+      "gpu_count": 1,
+      "region": "eu-east",
+      "price_per_hour": 8.99,
+      "available": 4,
+      "tier": "on_demand",
+      "community": false,
+      "deployment_type": "container",
+      "cpu_cores": 32,
+      "ram_gb": 323,
+      "instance_disk_gb": 100,
+      "disk_price_per_gb_hour": 0.00015749999999999998,
+      "offering_id": "f5e4c8afdb67",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda128:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda128:2026-07@sha256:ec4cea51710fcfc2a2b292c82d4d212a7181499e89db7463fda04de886731844",
+        "driver_min": "570.26",
+        "cuda": "12.8"
+      }
+    },
+    {
+      "gpu_type": "b200",
+      "gpu_count": 8,
+      "region": "india-south",
+      "price_per_hour": 89.9,
+      "available": 1,
+      "tier": "on_demand",
+      "community": true,
+      "deployment_type": "container",
+      "cpu_cores": 192,
+      "ram_gb": 1996,
+      "instance_disk_gb": 100,
+      "disk_price_per_gb_hour": 0.00031499999999999996,
+      "offering_id": "1d190bd2572f",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda128:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda128:2026-07@sha256:ec4cea51710fcfc2a2b292c82d4d212a7181499e89db7463fda04de886731844",
+        "driver_min": "570.26",
+        "cuda": "12.8"
+      }
+    },
+    {
+      "gpu_type": "b200",
+      "gpu_count": 4,
+      "region": "us-east",
+      "price_per_hour": 47.82,
+      "available": 2,
+      "tier": "on_demand",
+      "community": true,
+      "deployment_type": "container",
+      "cpu_cores": 96,
+      "ram_gb": 998,
+      "instance_disk_gb": 100,
+      "disk_price_per_gb_hour": 0.00031499999999999996,
+      "offering_id": "0db921c88f99",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda128:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda128:2026-07@sha256:ec4cea51710fcfc2a2b292c82d4d212a7181499e89db7463fda04de886731844",
+        "driver_min": "570.26",
+        "cuda": "12.8"
+      }
+    },
+    {
+      "gpu_type": "b300",
+      "gpu_count": 1,
+      "region": "eu-west",
+      "price_per_hour": 10.11,
+      "available": 4,
+      "tier": "on_demand",
+      "community": false,
+      "deployment_type": "container",
+      "cpu_cores": 32,
+      "ram_gb": 251,
+      "instance_disk_gb": 100,
+      "disk_price_per_gb_hour": 0.00015749999999999998,
+      "offering_id": "fd00ac2bfc93",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda128:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda128:2026-07@sha256:ec4cea51710fcfc2a2b292c82d4d212a7181499e89db7463fda04de886731844",
+        "driver_min": "570.26",
+        "cuda": "12.8"
+      }
+    },
+    {
+      "gpu_type": "h100_pcie",
+      "gpu_count": 1,
+      "region": "us-central",
+      "price_per_hour": 2.79,
+      "available": 14,
+      "tier": "on_demand",
+      "community": false,
+      "deployment_type": "vm",
+      "cpu_cores": 20,
+      "ram_gb": 128,
+      "instance_disk_gb": 1250,
+      "disk_price_per_gb_hour": 0,
+      "offering_id": "f9750ea15d5f",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda124:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda124:2026-07@sha256:6422f5ac0d06b9921213a021b7e9ce2b7f806fe1bb1011a5f4dabb355c844862",
+        "driver_min": "550.54.14",
+        "cuda": "12.4"
+      }
+    },
+    {
+      "gpu_type": "h100_pcie",
+      "gpu_count": 2,
+      "region": "us-central",
+      "price_per_hour": 5.58,
+      "available": 5,
+      "tier": "on_demand",
+      "community": false,
+      "deployment_type": "vm",
+      "cpu_cores": 40,
+      "ram_gb": 256,
+      "instance_disk_gb": 2500,
+      "disk_price_per_gb_hour": 0,
+      "offering_id": "4398f617e746",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda124:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda124:2026-07@sha256:6422f5ac0d06b9921213a021b7e9ce2b7f806fe1bb1011a5f4dabb355c844862",
+        "driver_min": "550.54.14",
+        "cuda": "12.4"
+      }
+    },
+    {
+      "gpu_type": "h100_sxm",
+      "gpu_count": 1,
+      "region": "ca-central",
+      "price_per_hour": 4.94,
+      "available": 4,
+      "tier": "on_demand",
+      "community": false,
+      "deployment_type": "container",
+      "cpu_cores": 24,
+      "ram_gb": 125,
+      "instance_disk_gb": 100,
+      "disk_price_per_gb_hour": 0.00015749999999999998,
+      "offering_id": "a87659100197",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda124:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda124:2026-07@sha256:6422f5ac0d06b9921213a021b7e9ce2b7f806fe1bb1011a5f4dabb355c844862",
+        "driver_min": "550.54.14",
+        "cuda": "12.4"
+      }
+    },
+    {
+      "gpu_type": "h200_sxm",
+      "gpu_count": 1,
+      "region": "us-east",
+      "price_per_hour": 5.95,
+      "available": 12,
+      "tier": "on_demand",
+      "community": false,
+      "deployment_type": "container",
+      "cpu_cores": 16,
+      "ram_gb": 188,
+      "instance_disk_gb": 100,
+      "disk_price_per_gb_hour": 0.00015749999999999998,
+      "offering_id": "0d0dbdf6e45b",
+      "environment": {
+        "image": "ghcr.io/gpuai-dev/base-cuda124:2026-07",
+        "image_digest": "ghcr.io/gpuai-dev/base-cuda124:2026-07@sha256:6422f5ac0d06b9921213a021b7e9ce2b7f806fe1bb1011a5f4dabb355c844862",
+        "driver_min": "550.54.14",
+        "cuda": "12.4"
+      }
+    }
+  ],
+  "selection": "Examples used for planning; not the complete catalog. The full response was read, including unavailable configurations."
+}

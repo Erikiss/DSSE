@@ -1,0 +1,746 @@
+{
+  "schema": "htq_runtime_plan_v1",
+  "written_utc": "2026-11-16T22:35:21.433153+00:00",
+  "source_head": "de28147",
+  "status_evidence": {
+    "source": "live status supplied by parent, not independently checked Drive in this read-only task",
+    "new_htq_K_S1": "complete",
+    "START_seconds": 7736,
+    "k3e_seconds": 6096,
+    "B2": "blocked before compute; assume all subsequent main sessions unstarted",
+    "old_reused_complete": [
+      "r1b_R_S0",
+      "r1b_R_S1",
+      "r1b_R_S2_14",
+      "r1b_R_S2_18",
+      "r1b_R_S2_06",
+      "r1b_R_S3",
+      "r1b_R_S6",
+      "r1b_D_A",
+      "r1b_D_B",
+      "r1b_K_S3"
+    ],
+    "partial_reuse": "r1b_D_C prior successful D3/D4/pool outputs and caches only; verify markers",
+    "must_not_reuse": [
+      "old H+ K_S4 including k8b",
+      "any H+-dependent K/L/ANA derived outputs"
+    ],
+    "followup_read_utc": "2026-11-16T22:38:25.961319+00:00",
+    "followup_read": "Connected Drive folder metadata confirms no new B2/K_S2a/K_S2b/L_A/L_B results. Variant D_C session_partial.json confirms successful prior D3/D4 and D5 pool/detector, d5_gen failed, d5x blocked. These are marker observations, not a new full tensor hash audit."
+  },
+  "timing_evidence": {
+    "arithmetic_sources": [
+      "results/ju_space/plans/runde1b/arbeitsstand/freeze_prep_proj/run_K_p0b.py",
+      "results/ju_space/plans/runde1b/arbeitsstand/freeze_prep_proj/cost_L_p0b.py",
+      "results/ju_space/plans/runde1b/arbeitsstand/freeze_prep_proj/cost_D_p0b.py",
+      "results/ju_space/plans/runde1b/arbeitsstand/freeze_prep_proj/cost_R2_p0b.py"
+    ],
+    "k3e_original_work_min": 7.9,
+    "k3e_with_1_5_margin_min": 11.85,
+    "k3e_live_min": 101.6,
+    "ratio_live_to_margin_baseline": 8.574,
+    "START_other_seconds": 1640,
+    "caution": "K3e has per-neuron serial verifier forwards. Its slowdown is not transferable to the whole run; no measured remaining-time upper bound exists."
+  },
+  "tasks": {
+    "r1b_K_S2a": {
+      "account": "B",
+      "baseline_a100_hours": 2.0533333333333332,
+      "hard_session_deps": [],
+      "basis": "P0b arithmetic 123.2 min; K1 and K_S3 already complete; invariant R_S0 export required"
+    },
+    "r1b_K_S2b": {
+      "account": "B",
+      "baseline_a100_hours": 1.6066666666666667,
+      "hard_session_deps": [
+        "r1b_K_S2a"
+      ],
+      "basis": "P0b K6e 66.4 min + assumed 0.5h reserve for funded K3h (registry nominal 19 min); G-K16 may double keys"
+    },
+    "r1b_K_S4": {
+      "account": "B",
+      "baseline_a100_hours": 2.475,
+      "hard_session_deps": [],
+      "basis": "P0b 148.5 min, full reset INCLUDING old H+ k8b; K1 and K_S3 already complete"
+    },
+    "r1b_L_A": {
+      "account": "B",
+      "baseline_a100_hours": 4.243333333333334,
+      "hard_session_deps": [],
+      "basis": "P0b 224.3 min core + 30.3 min funded X2/X6; independent of K_S4",
+      "invariant_inputs": [
+        "r1b_R_S0/xfer/dmg_ref_R16.json",
+        "r1b_R_S0/xfer/so_ax_ustar.pt"
+      ]
+    },
+    "r1b_L_B": {
+      "account": "B",
+      "baseline_a100_hours": 2.9525,
+      "hard_session_deps": [
+        "r1b_L_A"
+      ],
+      "basis": "P0b 144.3 min core + 32.85 min funded X1/X3/X4/X5",
+      "hard_file_deps": [
+        "r1b_D_A/lce/g_lce_1_2.json (already done)",
+        "r1b_K_S2a/lab/k4_gating.json (first step; producer need not be done)"
+      ],
+      "schedule_conservative_deps": [
+        "r1b_K_S2a"
+      ]
+    },
+    "r1b_D_C": {
+      "account": "A",
+      "baseline_a100_hours": 1.4333333333333333,
+      "hard_session_deps": [],
+      "basis": "Assumed only D5 remains: D5 work34 min x1.5 + setup5 + funded D5-x30 min; verify D3/D4 steps first; whole D_C would be 4.36h + D5-x0.5h"
+    },
+    "r1b_K_S5": {
+      "account": "A",
+      "baseline_a100_hours": 1.3383333333333334,
+      "hard_session_deps": [
+        "r1b_K_S2a",
+        "r1b_K_S4"
+      ],
+      "basis": "P0b80.3 min; completed K1/R_S0/R_S2_14/R_S2_18 also required"
+    },
+    "r1b_R_S5": {
+      "account": "A",
+      "baseline_a100_hours": 0.52,
+      "hard_session_deps": [],
+      "basis": "P0b31.2 min; uses only unchanged k4j from completed variant K1 plus reused R outputs"
+    },
+    "r1b_R_S7": {
+      "account": "A",
+      "baseline_a100_hours": 0.455,
+      "hard_session_deps": [],
+      "basis": "P0b27.3 min; independent of R_S5, reused R prerequisites complete"
+    },
+    "r1b_R_ana": {
+      "account": "A",
+      "baseline_a100_hours": 0.5316666666666666,
+      "hard_session_deps": [
+        "r1b_R_S5",
+        "r1b_R_S7"
+      ],
+      "basis": "P0b31.9 min; every other tier1 R session reused"
+    },
+    "r1b_K_ana": {
+      "account": "A",
+      "baseline_a100_hours": 0.55,
+      "hard_session_deps": [
+        "r1b_K_S2a",
+        "r1b_K_S2b",
+        "r1b_K_S4",
+        "r1b_K_S5"
+      ],
+      "basis": "P0b33 min; K1 and K_S3 complete"
+    },
+    "r1b_D_ana": {
+      "account": "A",
+      "baseline_a100_hours": 0.54,
+      "hard_session_deps": [
+        "r1b_D_C"
+      ],
+      "basis": "P0b0.54h (rounded model output); reused D_A/D_B/R sources required"
+    }
+  },
+  "main_GPU_work_baseline_h": 18.699167,
+  "CPU_main_report": {
+    "session": "r1b_ana",
+    "nominal_minutes": 7.5,
+    "parts": {
+      "l_ana": 5,
+      "ana_families": 0.5,
+      "ana_report": 2
+    },
+    "extra_to_GPU_budget": true,
+    "measured": false
+  },
+  "CPU_LCAL": {
+    "parallel": true,
+    "deadline": "verified+committed l_cal.json before r1b_ana",
+    "measured_final_frozen_generator_time": null,
+    "note": "Potential CPU wall-time bottleneck. Earlier71min/45min timings predate final generator; do not reuse as current estimate."
+  },
+  "existing_slot_schedules": {
+    "2": {
+      "makespan_h": 9.670833,
+      "gpu_work_h": 18.699167,
+      "allocated_h_if_all_workers_held_to_end": 19.341667,
+      "jobs": [
+        {
+          "worker": "gpu1",
+          "session": "r1b_K_S4",
+          "start_h": 0.0,
+          "end_h": 2.475
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_A",
+          "start_h": 2.475,
+          "end_h": 6.718333
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_B",
+          "start_h": 6.718333,
+          "end_h": 9.670833
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2a",
+          "start_h": 0.0,
+          "end_h": 2.053333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2b",
+          "start_h": 2.053333,
+          "end_h": 3.66
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_D_C",
+          "start_h": 3.66,
+          "end_h": 5.093333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S5",
+          "start_h": 5.093333,
+          "end_h": 6.431667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_S5",
+          "start_h": 6.431667,
+          "end_h": 6.951667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_S7",
+          "start_h": 6.951667,
+          "end_h": 7.406667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_ana",
+          "start_h": 7.406667,
+          "end_h": 7.938333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_ana",
+          "start_h": 7.938333,
+          "end_h": 8.488333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_D_ana",
+          "start_h": 8.488333,
+          "end_h": 9.028333
+        }
+      ]
+    },
+    "3": {
+      "makespan_h": 9.670833,
+      "gpu_work_h": 18.699167,
+      "allocated_h_if_all_workers_held_to_end": 29.0125,
+      "jobs": [
+        {
+          "worker": "gpu1",
+          "session": "r1b_K_S4",
+          "start_h": 0.0,
+          "end_h": 2.475
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_A",
+          "start_h": 2.475,
+          "end_h": 6.718333
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_B",
+          "start_h": 6.718333,
+          "end_h": 9.670833
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2a",
+          "start_h": 0.0,
+          "end_h": 2.053333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2b",
+          "start_h": 2.053333,
+          "end_h": 3.66
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_S5",
+          "start_h": 3.66,
+          "end_h": 4.18
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_S7",
+          "start_h": 4.18,
+          "end_h": 4.635
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_ana",
+          "start_h": 4.635,
+          "end_h": 5.166667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_ana",
+          "start_h": 5.166667,
+          "end_h": 5.716667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_D_ana",
+          "start_h": 5.716667,
+          "end_h": 6.256667
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_D_C",
+          "start_h": 0.0,
+          "end_h": 1.433333
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_K_S5",
+          "start_h": 2.475,
+          "end_h": 3.813333
+        }
+      ]
+    },
+    "4": {
+      "makespan_h": 9.670833,
+      "gpu_work_h": 18.699167,
+      "allocated_h_if_all_workers_held_to_end": 38.683333,
+      "jobs": [
+        {
+          "worker": "gpu1",
+          "session": "r1b_K_S4",
+          "start_h": 0.0,
+          "end_h": 2.475
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_A",
+          "start_h": 2.475,
+          "end_h": 6.718333
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_B",
+          "start_h": 6.718333,
+          "end_h": 9.670833
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2a",
+          "start_h": 0.0,
+          "end_h": 2.053333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2b",
+          "start_h": 2.053333,
+          "end_h": 3.66
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_D_C",
+          "start_h": 0.0,
+          "end_h": 1.433333
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_K_S5",
+          "start_h": 2.475,
+          "end_h": 3.813333
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_R_S5",
+          "start_h": 0.0,
+          "end_h": 0.52
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_R_S7",
+          "start_h": 0.52,
+          "end_h": 0.975
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_R_ana",
+          "start_h": 0.975,
+          "end_h": 1.506667
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_K_ana",
+          "start_h": 3.813333,
+          "end_h": 4.363333
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_D_ana",
+          "start_h": 4.363333,
+          "end_h": 4.903333
+        }
+      ]
+    }
+  },
+  "independent_session_schedules": {
+    "2": {
+      "makespan_h": 9.456667,
+      "gpu_work_h": 18.699167,
+      "allocated_h_if_all_workers_held_to_end": 18.913333,
+      "jobs": [
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_A",
+          "start_h": 0.0,
+          "end_h": 4.243333
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_B",
+          "start_h": 4.243333,
+          "end_h": 7.195833
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_R_S5",
+          "start_h": 7.195833,
+          "end_h": 7.715833
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_R_S7",
+          "start_h": 7.715833,
+          "end_h": 8.170833
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_R_ana",
+          "start_h": 8.170833,
+          "end_h": 8.7025
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_D_ana",
+          "start_h": 8.906667,
+          "end_h": 9.446667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2a",
+          "start_h": 0.0,
+          "end_h": 2.053333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S4",
+          "start_h": 2.053333,
+          "end_h": 4.528333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S5",
+          "start_h": 4.528333,
+          "end_h": 5.866667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2b",
+          "start_h": 5.866667,
+          "end_h": 7.473333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_D_C",
+          "start_h": 7.473333,
+          "end_h": 8.906667
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_ana",
+          "start_h": 8.906667,
+          "end_h": 9.456667
+        }
+      ]
+    },
+    "3": {
+      "makespan_h": 7.195833,
+      "gpu_work_h": 18.699167,
+      "allocated_h_if_all_workers_held_to_end": 21.5875,
+      "jobs": [
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_A",
+          "start_h": 0.0,
+          "end_h": 4.243333
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_B",
+          "start_h": 4.243333,
+          "end_h": 7.195833
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2a",
+          "start_h": 0.0,
+          "end_h": 2.053333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2b",
+          "start_h": 2.053333,
+          "end_h": 3.66
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_S5",
+          "start_h": 3.66,
+          "end_h": 4.18
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_S7",
+          "start_h": 4.18,
+          "end_h": 4.635
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_R_ana",
+          "start_h": 4.635,
+          "end_h": 5.166667
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_K_S4",
+          "start_h": 0.0,
+          "end_h": 2.475
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_K_S5",
+          "start_h": 2.475,
+          "end_h": 3.813333
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_D_C",
+          "start_h": 3.813333,
+          "end_h": 5.246667
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_D_ana",
+          "start_h": 5.246667,
+          "end_h": 5.786667
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_K_ana",
+          "start_h": 5.786667,
+          "end_h": 6.336667
+        }
+      ]
+    },
+    "4": {
+      "makespan_h": 7.195833,
+      "gpu_work_h": 18.699167,
+      "allocated_h_if_all_workers_held_to_end": 28.783333,
+      "jobs": [
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_A",
+          "start_h": 0.0,
+          "end_h": 4.243333
+        },
+        {
+          "worker": "gpu1",
+          "session": "r1b_L_B",
+          "start_h": 4.243333,
+          "end_h": 7.195833
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2a",
+          "start_h": 0.0,
+          "end_h": 2.053333
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_S2b",
+          "start_h": 2.053333,
+          "end_h": 3.66
+        },
+        {
+          "worker": "gpu2",
+          "session": "r1b_K_ana",
+          "start_h": 3.813333,
+          "end_h": 4.363333
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_K_S4",
+          "start_h": 0.0,
+          "end_h": 2.475
+        },
+        {
+          "worker": "gpu3",
+          "session": "r1b_K_S5",
+          "start_h": 2.475,
+          "end_h": 3.813333
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_D_C",
+          "start_h": 0.0,
+          "end_h": 1.433333
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_D_ana",
+          "start_h": 1.433333,
+          "end_h": 1.973333
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_R_S5",
+          "start_h": 1.973333,
+          "end_h": 2.493333
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_R_S7",
+          "start_h": 2.493333,
+          "end_h": 2.948333
+        },
+        {
+          "worker": "gpu4",
+          "session": "r1b_R_ana",
+          "start_h": 2.948333,
+          "end_h": 3.48
+        }
+      ]
+    }
+  },
+  "schedule_assumptions": [
+    "These are arithmetic baselines, not forecasts. No setup/network/cold-storage/retry overhead beyond old cost margins.",
+    "Existing B1 slot serializes K_S4 then L_A then L_B, yielding ~9.67h path for2/3/4 GPUs.",
+    "Scientific contracts DO NOT require K_S4 before L_A. Independent session workers reduce L critical path to ~7.2h;2 GPUs remain load-limited ~9.5h.",
+    "L_B scheduling conservatively waits for complete K_S2a; actual contract needs only first-step k4_gating.json and completed D_A GLCE. It is ready before L_A ends in all examples.",
+    "Distinct session per process/GPU; never run duplicate writers to one session folder.",
+    "Whole main-report completion also waits for CPU L-CAL and nominal7.5min CPU ANA, not included in makespan."
+  ],
+  "precision_and_hardware": {
+    "current_policy": "Native FP32, TF32 off, frozen attention/kernel behavior; FP4/BF16 marketing throughput is not an estimate of this workload.",
+    "current_SG2": "Runner accepts A100 with cc8.0 and>=39GB only. H100/H200/B200 require an explicit documented hardware amendment and compatible verified software; do not bypass with RUN_DEVICE=cpu.",
+    "unmeasured_external_speedup_scenarios": {
+      "H100": [
+        1.5,
+        2.5
+      ],
+      "B200": [
+        1.8,
+        3.0
+      ]
+    },
+    "external_speedups_are_assumptions_not_forecasts": true
+  },
+  "worker_flags": {
+    "CUDA_VISIBLE_DEVICES": "one distinct GPU per worker",
+    "RUN_DEVICE": "cuda",
+    "R1B_H_POLICY": "htq_v2",
+    "R1B_ACCOUNT": "A or B from tasks registry, even on one physical server",
+    "R1B_RUNS_B": "absolute staged B variant root (shared by workers)",
+    "R1B_XFER_A": "absolute staged original account-A r1b_xfer (hash-checked invariant R_S0 exports)",
+    "R1B_CAPTURE_HIDDEN": "only START/K3a; finished START is reused and not rerun for observation",
+    "runs_argument": "A_VARIANT_RUNS or B_VARIANT_RUNS according to account",
+    "work_argument": "separate local path per session; never old H+ work/cache paths"
+  },
+  "expense_characteristics": {
+    "K_S2a": "k4_states repeated calibration/ref forwards; k4_run_0..5 and k6c_* use lens rollouts. run_cells batches16cells×10seeds×2streams, but eachstep copies metrics and many set-readouts to CPU; V1 DLA all-layer per-set computations.",
+    "K_S2b": "k6e_* uses small16-unit cells with one seed,2streams,24steps, many H/RS/MC conditions; G-K16 can double2→4 keys. CPU/GPU synchronization and Python overhead are relevant.",
+    "K_S4": "k8b_* has48-conversation batches with8turns and per-token scalar records. k8c_* loops400items,2samples each,up to200tokens, batch2, all set readouts: likely latency/sync hotspot, not guaranteed GPU-saturated. k7a includes CPU fits/SVD.",
+    "K_S5": "many finite-difference/gradient and route tests with small repeated forwards, and channel lens K7b; mixed compute and dispatch overhead.",
+    "L": "engine.fast.l_decode_nosync alreadyenabled; teacher-forced reads/prefill and32-row generation. Long contexts can be memory/attention limited; CPU statistics and caches remain.",
+    "D_C": "D5 continuing context/cache decode; preserve completed D3/D4.",
+    "interpretation": "Source-code risk classification, not profiler evidence; no measured GPU utilization from this task."
+  },
+  "sensitivity_scenarios": [
+    {
+      "scenario": "old_pilot_optimistic",
+      "assumed_future_K_factor": 1,
+      "assumed_future_L_factor": 1,
+      "a100_work_h": 18.699,
+      "empirically_validated": false
+    },
+    {
+      "scenario": "illustrative_reserve",
+      "assumed_future_K_factor": 2,
+      "assumed_future_L_factor": 1.5,
+      "a100_work_h": 30.32,
+      "empirically_validated": false
+    },
+    {
+      "scenario": "illustrative_cautious",
+      "assumed_future_K_factor": 4,
+      "assumed_future_L_factor": 2,
+      "a100_work_h": 49.965,
+      "empirically_validated": false
+    },
+    {
+      "scenario": "stress_not_upper_bound",
+      "assumed_future_K_factor": 8.6,
+      "assumed_future_L_factor": 2,
+      "a100_work_h": 86.872,
+      "empirically_validated": false
+    }
+  ],
+  "separate_T2_after_main": {
+    "old_baseline_max_h": 8.82,
+    "components_h": {
+      "R_conditional": 2.29,
+      "D_reserves": 3.9,
+      "K_RK1_RK2": 2.63
+    },
+    "note": "Not part of18–20h main remainder. Includes only still-separate funded sessions; embedded X1–X6,D5-x,K3h are already in main budget. Trigger-false R sessions can be skipped.",
+    "hard_deps": {
+      "r1b_K_S6": [
+        "r1b_K_S2a (plus completed K_S1)"
+      ],
+      "r1b_K_S7": [
+        "completed K_S1+K_S3"
+      ],
+      "r1b_R_S5L": [
+        "R_S5 rg11 refit trigger"
+      ],
+      "r1b_R_S8": [
+        "R_ana J1_and_J2 trigger"
+      ],
+      "r1b_D_R": [
+        "D_ana+D_C (plus completed D_A)"
+      ],
+      "r1b_ana2": [
+        "main ANA and resolved separate tier2 sessions"
+      ]
+    }
+  },
+  "interpretation": "Old18–20A100-h is an optimistic arithmetic basis. Illustrative30–50h reserve cases require unmeasured2–4x futureK and1.5–2xL slowdowns, not empirical lower/upper confidence bounds;>50h remains possible. Validate representative B2/K4/L rates before a fixed cloud budget."
+}
