@@ -63,6 +63,15 @@ def intro(title, kind):
             "Danach rechnet es **nur K_S1 ab den von H abhängigen Schritten neu** und stoppt. "
             "Das bereits gerechnete Screening wird übernommen. Erst nach erfolgreichem "
             "Abschluss mit den weiteren GPU-Notebooks fortfahren.\n\n"
+            "**Hidden States mitschneiden:** standardmäßig eingeschaltet. Bei K3a, "
+            "nach `k2_sets`, werden für 256 festgelegte Requests (128 S3, 64 A-det, "
+            "64 NE) die Zustände am letzten Prompttoken aus allen 28 Blöcken "
+            "als Float32 gespeichert (etwa 56 MiB). Die Vorbereitung schneidet "
+            "keine Modellzustände mit. `HIDDEN_STATES_MITSCHNEIDEN = False` schaltet "
+            "den zusätzlichen Mitschnitt aus. Bereits erledigte Schritte werden "
+            "dafür nicht erneut gerechnet. Vor der tatsächlichen K3a-Generierung "
+            "prüft der Lauf Logit-Gleichheit und zusätzlichen Aufwand; die Messung "
+            "steht unter `observations/hidden_states_v1/benchmark.json`.\n\n"
         )
     else:
         source += (
@@ -115,7 +124,7 @@ assert os.path.isdir(SOURCE_B), "Verknüpfung dsse_runs_B fehlt."
 WORK, ROOT, REPO = "/content/work_htq_v2", "/content/root", "/content/DSSE"
 os.makedirs(WORK, exist_ok=True); os.makedirs(ROOT, exist_ok=True)
 # Nur für reale Unterprozesse; MOCK-Selbsttests erhalten keine Drive-/Variantenvariablen.
-_variant_keys = ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS")
+_variant_keys = ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS", "R1B_CAPTURE_HIDDEN")
 TEST_ENV = {{k: v for k, v in os.environ.items() if k not in _variant_keys}}
 VARIANT_ENV = dict(TEST_ENV, R1B_H_POLICY="{VARIANT}")
 '''
@@ -316,7 +325,7 @@ assert os.path.isdir(SOURCE_B), "Konto B: Verknüpfung dsse_runs_B fehlt; Freiga
 B_RUNS = os.path.join(SOURCE_B, "{SUBDIR}")
 BRANCH = "{BRANCH}"
 NUR_SELBSTTEST = False
-_variant_keys = ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS")
+_variant_keys = ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS", "R1B_CAPTURE_HIDDEN")
 TEST_ENV = {{k: v for k, v in os.environ.items() if k not in _variant_keys}}
 '''),
         cell("code", '''# Neue Arbeitskopie: vorhandene /content/DSSE-Repositories werden nicht verändert.
@@ -338,8 +347,81 @@ print("Vorbereitungscode:", COMMIT, flush=True)
     return doc
 
 
+def hidden_capture_status_code():
+    return '''# Ein Mitschnitt gilt nur mit passendem K3a-Schritt als bestätigt.
+def hidden_capture_status(runs):
+    import hashlib
+    root = os.path.join(runs, "r1b_K_S1")
+    manifest_path = os.path.join(root, "observations", "hidden_states_v1", "manifest.json")
+    result = dict(path=manifest_path, complete=False)
+    if not os.path.isfile(manifest_path):
+        return dict(result, reason="Manifest fehlt; die Aufzeichnung beginnt erst bei K3a.")
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            manifest = json.load(f)
+        with open(os.path.join(root, "steps", "k3a.json"), encoding="utf-8") as f:
+            step = json.load(f)
+    except (OSError, ValueError) as error:
+        return dict(result, reason="Manifest oder K3a-Abschluss ist nicht lesbar: " + str(error))
+    if not isinstance(manifest, dict) or not isinstance(step, dict):
+        return dict(result, reason="Manifest oder K3a-Abschluss hat ein unbekanntes Format.")
+    if manifest.get("schema") != "prefill_v1" or manifest.get("status") != "complete" or manifest.get("request_count") != 256:
+        return dict(result, reason="Schema, Abschlussstatus oder Requestzahl ist nicht bestätigt.")
+    if manifest.get("layer_ids") != list(range(28)):
+        return dict(result, reason="Die 28 erwarteten Modellblöcke sind nicht bestätigt.")
+    provenance = manifest.get("provenance") or {}
+    if not isinstance(provenance, dict) or step.get("status") != "ok" or step.get("name") != "k3a":
+        return dict(result, reason="Der zugehörige erfolgreiche K3a-Schritt ist nicht bestätigt.")
+    if provenance.get("session") != "r1b_K_S1" or provenance.get("step") != "k3a":
+        return dict(result, reason="Der Mitschnitt ist keiner passenden K3a-Sitzung zugeordnet.")
+    if any(not provenance.get(key) or provenance.get(key) != step.get(key) for key in ("attempt", "code_commit")):
+        return dict(result, reason="Mitschnitt und K3a-Schritt gehören nicht nachweislich zum selben Versuch und Code.")
+    families, outputs = manifest.get("families"), step.get("outputs")
+    expected_counts = {"s3": 128, "adet": 64, "ne": 64}
+    if not isinstance(families, dict) or set(families) != set(expected_counts) or not isinstance(outputs, dict):
+        return dict(result, reason="Die drei erwarteten Artefakte oder ihre Schrittprüfsummen fehlen.")
+    def digest(path):
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for block in iter(lambda: f.read(8 << 20), b""):
+                h.update(block)
+        return h.hexdigest()
+    directory = "observations/hidden_states_v1"
+    try:
+        for family, count in expected_counts.items():
+            rel = f"{directory}/{family}.pt"
+            saved = families[family]
+            record = outputs.get(rel)
+            if not isinstance(saved, dict) or saved.get("file") != rel or saved.get("count") != count or saved.get("shape") != [count, 28, 2048]:
+                return dict(result, reason=f"Unerwarteter Pfad, Umfang oder Tensorform für {family}.")
+            expected = saved.get("sha256")
+            if not isinstance(record, dict) or not expected or record.get("sha256") != expected:
+                return dict(result, reason=f"Manifest und K3a-Prüfsumme stimmen für {family} nicht überein.")
+            path = os.path.join(root, rel)
+            if not os.path.isfile(path) or digest(path) != expected:
+                return dict(result, reason=f"Artefakt {family} fehlt in Drive oder seine Prüfsumme stimmt nicht.")
+        benchmark_rel = f"{directory}/benchmark.json"
+        if manifest.get("benchmark") != benchmark_rel:
+            return dict(result, reason="Der erwartete GPU-Prüfbericht ist nicht zugeordnet.")
+        benchmark_path = os.path.join(root, benchmark_rel)
+        with open(benchmark_path, encoding="utf-8") as f:
+            benchmark = json.load(f)
+        if not isinstance(benchmark, dict) or benchmark.get("schema") != "prefill_v1" or benchmark.get("status") != "passed" or benchmark.get("logits_exact") is not True:
+            return dict(result, reason="Die GPU-Prüfung bestätigt keine exakte Logit-Gleichheit.")
+        benchmark_provenance = benchmark.get("provenance") or {}
+        if not isinstance(benchmark_provenance, dict) or any(benchmark_provenance.get(key) != provenance.get(key) for key in ("session", "step", "attempt", "code_commit")):
+            return dict(result, reason="GPU-Prüfbericht und Mitschnitt gehören nicht zum selben K3a-Versuch.")
+        benchmark_record = outputs.get(benchmark_rel)
+        if not isinstance(benchmark_record, dict) or digest(benchmark_path) != benchmark_record.get("sha256"):
+            return dict(result, reason="Die Schrittprüfsumme des GPU-Prüfberichts stimmt nicht.")
+    except (OSError, ValueError) as error:
+        return dict(result, reason="Artefaktprüfung in Drive fehlgeschlagen: " + str(error))
+    return dict(result, complete=True, reason="256 Requests, 28 Blöcke, passende K3a-/GPU-Prüfung und drei geprüfte Drive-Artefakte.")
+'''
+
+
 def start_main():
-    return '''# Nur das neue K_S1; anschließend wird die GPU für B2 frei.
+    return hidden_capture_status_code() + '''# Nur das neue K_S1; anschließend wird die GPU für B2 frei.
 MELDUNG = {0: "H_tq-K_S1 fertig. Als Nächstes HTQ_B2_in_A starten.",
            1: "K_S1 fehlgeschlagen; Variantenprotokolle prüfen und dieses Notebook erneut ausführen.",
            2: "Eine Freigabe ist nicht erfüllt; manifest.json prüfen.",
@@ -353,6 +435,9 @@ else:
     env = dict(VARIANT_ENV, R1B_ACCOUNT="B", R1B_SLOT="B1", R1B_ROOT=ROOT,
                RUN_DEVICE="cuda", NT="8", R1B_RUNTIME_T0=repr(T0),
                PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
+    env.pop("R1B_CAPTURE_HIDDEN", None)
+    if HIDDEN_STATES_MITSCHNEIDEN:
+        env["R1B_CAPTURE_HIDDEN"] = "1"
     cmd = [sys.executable, "-u", f"{R1B}/r1b_run_session.py", "r1b_K_S1", ROOT, f"{WORK}/r1b_K_S1", RUNS]
     while True:
         if time.time() - T0 >= LAUFZEIT_MAX_H * 3600:
@@ -369,6 +454,15 @@ else:
         assert hs.get("H_op_name") in ("H_tq", "H_ar"), "K_S1 hat unerwartet H+ als operative Menge verwendet."
         print("Neue operative Menge:", hs["H_op_name"], "mit", len(hs.get("H_op") or []), "Neuronen.")
     print(MELDUNG.get(RC, f"Unerwarteter Rückgabewert {RC}"))
+    if HIDDEN_STATES_MITSCHNEIDEN:
+        observation = hidden_capture_status(RUNS)
+        print("Hidden-State-Manifest:", observation["path"])
+        print("Mitschnitt bestätigt vollständig." if observation["complete"] else "Mitschnitt noch nicht bestätigt:", observation["reason"])
+        if not observation["complete"]:
+            print("Fertige Schritte werden für einen fehlenden Mitschnitt nicht erneut gerechnet.")
+        print("GPU-Prüfung und Zusatzaufwand: r1b_K_S1/observations/hidden_states_v1/benchmark.json")
+    else:
+        print("Zusätzlicher Hidden-State-Mitschnitt ist ausgeschaltet.")
 '''
 
 
@@ -380,6 +474,8 @@ def transform(name, spec, source_dir=HERE):
     config = text(doc["cells"][1]).replace('BRANCH = "ccr-6fe02b21-est040"', f'BRANCH = "{BRANCH}"')
     if original == "B1_in_A":
         config = config[:config.index("if GB < 70:")] if "if GB < 70:" in config else config
+    if kind == "start":
+        config = config.replace('SELBSTTEST = False', 'HIDDEN_STATES_MITSCHNEIDEN = True   # Optionaler Mitschnitt bei K3a; 256 Requests, ca. 56 MiB\nSELBSTTEST = False', 1)
     set_text(doc["cells"][1], config)
     set_text(doc["cells"][2], drive_code(kind))
     set_text(doc["cells"][5], text(doc["cells"][5]).replace("dict(os.environ, R1B_ACCOUNT=KONTO)", "dict(VARIANT_ENV, R1B_ACCOUNT=KONTO)"))
@@ -422,7 +518,7 @@ dem Koordinator zur Übernahme melden. Zwischenstände bleiben im Varianten-Cach
     source = source.replace('capture_output=True, text=True).stdout', 'capture_output=True, text=True, check=True).stdout')
     source += f'''
 RUNS = "/content/drive/MyDrive/dsse_runs/{SUBDIR}"
-clean_env = {{k: v for k, v in os.environ.items() if k not in ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS")}}
+clean_env = {{k: v for k, v in os.environ.items() if k not in ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS", "R1B_CAPTURE_HIDDEN")}}
 R1B, TEST_ENV = R, clean_env
 '''
     source += variant_helpers()

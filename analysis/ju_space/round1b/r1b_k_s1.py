@@ -2,7 +2,7 @@
 random sets and damage matching), K3a / K3b / K3c features (SG8 preview), K3d battery, K3e neuron-lens readouts (SO-GVRA), K3g(ii),
 K4j (G-K-J); K0 pilot items for r1b_P0. Files: hn/hn_set.json, hn/hn_detectors.pt, hn/rs_sets.json, hn/hn_meta.json, sg8_preview.json,
 lab/so_lab.json, k4j.json (contracts), and k/... (session data read by r1b_K_ana)."""
-import math, os, time
+import contextlib, math, os, time
 import numpy as np
 import r1b_core as RC
 import r1b_k_base as KB
@@ -428,10 +428,20 @@ def k3a(ctx):
     NE = b["ne"][:N(ctx, 300, 16)]
     allsets = {"H_tq": hs["H_tq"], "H_ar": hs["H_ar"], "H+": hs["H_plus"], "H_op": hs["H_op"], **{f"RS{k}": s for k, s in enumerate(rs["RS39"])}}
     uni = sorted({tuple(n) for s in allsets.values() for n in s}); sel = by_layer(uni)
+    from r1b_hidden_audit import start_audit
+    audit = start_audit(ctx, tok, model, {"s3": [r["qid"] for r in S3],
+                                        "adet": [it["id"] for it in Adet], "ne": [it["id"] for it in NE]})
 
-    def run(prompts, keys, label, max_new):
-        conts, lp = KB.decode(model, tok, prompts, keys=keys, T=1.0, topk=50, topp=0.9, max_new=max_new, batch=N(ctx, 64, 8), return_lp=True)
+    def run(family, prompts, keys, label, max_new):
+        capture = audit.prepare(family, prompts, keys, max_new) if audit else None
+        options = dict(setup=capture.setup, on_fwd=capture.on_fwd) if capture else {}
+        with capture if capture else contextlib.nullcontext():
+            conts, lp = KB.decode(model, tok, prompts, keys=keys, T=1.0, topk=50, topp=0.9, max_new=max_new,
+                                 batch=N(ctx, 64, 8), return_lp=True, **options)
         ys = [label(i, tok.decode(c)) for i, c in enumerate(conts)]
+        if audit:
+            audit.save_family(family, capture, prompts, keys, conts, ys, max_new)
+        del capture, options
         rows = [(p, c, span_len(tok, c) or 1) for p, c in zip(prompts, conts)]
         f = HN.cett_features(model, tok, rows, batch=N(ctx, 32, 8), sets=sel) if uni else {}
         with T_().no_grad():
@@ -442,12 +452,14 @@ def k3a(ctx):
         cov = [dict(ent=float(np.mean([e for _, e in x])) if x else 0.0, lp=float(np.mean([a for a, _ in x])) if x else 0.0, len=len(c),
                     freq=float(np.mean([uf[t] for t in c if t < len(uf)])) if c else 0.0, pre_ent=pe) for x, c, pe in zip(lp, conts, pre_ent)]
         return dict(y=ys, ans=f.get("ans"), pre=f.get("pre"), cov=cov, conts=conts)
-    s3 = run([tqa_prompt(tok, r["question"]) for r in S3], [ctx.key("r1bK_s3", r["qid"]) for r in S3],
+    s3 = run("s3", [tqa_prompt(tok, r["question"]) for r in S3], [ctx.key("r1bK_s3", r["qid"]) for r in S3],
              lambda i, t: label_tqa(ctx, S3[i], t), 24)
-    ad = run([RC.chat_ids(tok, it["prompt"]) for it in Adet], [ctx.key("r1bK_s3", it["id"]) for it in Adet],
+    ad = run("adet", [RC.chat_ids(tok, it["prompt"]) for it in Adet], [ctx.key("r1bK_s3", it["id"]) for it in Adet],
              lambda i, t: "correct" if label_ach(ctx, Adet[i], t) else "wrong", 8)
-    ne = run([RC.chat_ids(tok, it["prompt"]) for it in NE], [ctx.key("r1bK_s3", it["id"]) for it in NE],
+    ne = run("ne", [RC.chat_ids(tok, it["prompt"]) for it in NE], [ctx.key("r1bK_s3", it["id"]) for it in NE],
              lambda i, t: "refusal" if (KL.refusal(t) if not ctx.mock else H(t) % 2 == 0) else "answered", 24)
+    if audit:
+        audit.finish()
     # S_fit pre-generation vectors and answer rows restricted to the union (K3b refit; K3c)
     d = fit_data(ctx); cols = [l * npl + j for l, j in uni]
     fitX = d["X"][:, cols].float().numpy() if cols else None; fitpre = d["pre"][:, cols].float().numpy() if cols else None

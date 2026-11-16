@@ -271,6 +271,50 @@ Schreibzugriffe auf die Ergebnisse in Drive; kein vollständiger Test mit einem 
   erhalten; zusätzliche Datei-/Unterordner-Symlinks und abweichende Ziele bleiben gesperrt. Das vorhandene PREP_CHECK
   erneut vollständig ausführen: Seine Clone-Zelle lädt den aktualisierten Branch. Der Browserfehler selbst wird durch
   diese Codekorrektur nicht behoben; die gespeicherten Diagnose-Dateien zeigen den tatsächlichen Ablauf.
+- **Vorbereitung erfolgreich bestätigt (16.11.2026, 14:50:47 UTC):** Das aktuelle gespeicherte PREP_CHECK-Protokoll
+  `99508ee4f470` lief mit Commit `d8e479f` von 14:39:41 UTC bis 14:50:47.786 UTC. In beiden Konten endeten `seed` und
+  `check` mit Exit 0; für Konto B wurden 1.229 Dateien übernommen. Beide Ergebnisbäume sind damit als zusammengehöriges
+  Variantenpaar vorbereitet. Der oben dokumentierte Konto-B-Verknüpfungsfehler ist für diesen Lauf behoben. Als Nächstes
+  `runde1b_HTQ_START.ipynb` neu in Konto A auf **A100** öffnen und ausführen; es verwendet die abgeschlossene Vorbereitung
+  weiter und startet die ausstehenden K_S1-Messungen. Der erfolgreiche PREP_CHECK ist noch kein erfolgreicher GPU-Lauf.
+
+## Zusatzauftrag: begrenzter Hidden-State-Mitschnitt beim nächsten HTQ-Start (16.11.2026)
+
+Der Nutzer hat den empfohlenen kleinen Beobachtungsdatensatz freigegeben. Beim nächsten tatsächlichen `k3a`-Lauf von
+K_S1 sollen für **höchstens 256 vorhandene Anfragen** die Zustände aller 28 Decoderblöcke am letzten Prompt-Token
+mitgeschrieben werden: feste erste 128 S3-, 64 A-det- und 64 NE-Anfragen, FP32, Hidden-Breite 2.048. Die Auswahl erfolgt vor
+den Antwortbewertungen. Der reine Tensorinhalt beträgt höchstens **56 MiB**, zuzüglich Metadaten und Provenienz.
+Fragenzahl, wissenschaftliche Stichproben, Saaten, Generierung, Tore und Schwellen bleiben unverändert. Der Beobachter
+benötigt keine zusätzliche Generierung. Ein gesonderter Paritäts-/Overheadcheck führt vorab wenige zusätzliche Prefills
+auf festen Testeingaben aus; deren Ausgaben werden verworfen und gehören nicht zum wissenschaftlichen Datensatz.
+Es wird kein Klassifikator automatisch trainiert und keine neue bestätigende Testfamilie eröffnet.
+Anlass ist [From Bytes to Behavior: Request-Level Attribution from Live GPU Hidden States](https://arxiv.org/abs/2611.18272v1).
+Hier werden Framework-Hooks des eigenen Modells verwendet; die Debugger-Akquisition des Papers wird nicht nachgebaut.
+
+- **Startweg:** Das neue HTQ-START-Notebook aktiviert `R1B_CAPTURE_HIDDEN=1` nur für seinen realen K_S1-Unterprozess;
+  ältere bzw. normale Skripte haben den Mitschnitt standardmäßig aus. Alle sonstigen Hinweise zur vorbereiteten Variante
+  und zur Konto-B-Verknüpfung gelten weiter. Bei schon abgeschlossenem K3a/K_S1 entsteht durch nachträgliches Einschalten
+  kein Mitschnitt: fertige Schritte werden weiterhin übersprungen und nicht automatisch teuer wiederholt.
+- **Ablage:** In Konto B unter
+  `dsse_runs/variants/htq_v2/r1b_K_S1/observations/hidden_states_v1/`, von Konto A über `dsse_runs_B` erreichbar.
+  Je Aufgabenfamilie eine `.pt`-Datei mit SHA-256-Provenienzdatei, dazu `manifest.json` mit Status, Anzahl und Zuordnung.
+  Ein fehlendes oder unvollständiges Manifest ist kein erfolgreicher Abschluss des Mitschnitts.
+- **Zuordnung:** Anfrage-/Fragekennung, Aufgabenfamilie, Sample-ID, genaue Prompt-Token, Sampling-Schlüssel,
+  normale Antworttokens/-texte und Scorer-Labels gehören zu den Zuständen. Die Antworttokens enthalten nach bestehender
+  Decoder-Konvention kein Stopp-Token; es wird keine genaue EOS-Kennung behauptet. Modell-/Codefassung, H-Policy, Blocknummern,
+  Capture-Punkt, Datentyp und Tensorform werden mitprotokolliert. Es sind Zustände vor dem ersten Antworttoken;
+  weder der ganze Tokenverlauf noch rohe MLP-Neuronenaktivierungen werden gespeichert.
+- **Einordnung und Laufzeit:** rein explorative Beobachtung des eigenen Modells. Eine Vorhersage aus diesen Daten wäre
+  noch kein kausaler Nachweis für Verhalten und keine behauptete Reproduktion eines Papers oder GPU-Speicher-Debuggers.
+  Die tatsächlichen Mehrkosten auf der A100 sind noch nicht gemessen. Vor den teuren K3a-Generierungen vergleicht ein
+  GPU-Paritäts-/Overheadcheck zwei feste Eingaben mit und ohne Mitschnitt (Warm-up, drei Messpaare, exakt gleiche Logits);
+  ein Fehlschlag stoppt K3a. Seine JSON-Messung ist keine Prognose für den ganzen Lauf; bestandene modellfreie Tests
+  ersetzen die GPU-Messung nicht. Die frühere 15–18-h-Schätzung
+  bleibt auch mit dem begrenzten Mitschnitt eine Schätzung.
+
+Technische Schnittstelle und Regeln für Provenienz, Synchronisierung und Wiederaufnahme stehen in
+`analysis/ju_space/round1b/IMPLEMENTATION.md`, Abschnitt 12. Diese Dokumentation hält den freigegebenen Umfang fest;
+sie behauptet weder einen bereits erfolgreich ausgeführten GPU-Mitschnitt noch einen bestandenen A100-Benchmark.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

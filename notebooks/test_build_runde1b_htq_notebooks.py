@@ -1,6 +1,7 @@
 """Model-free checks for the notebook hand-off and process isolation contract."""
 import ast
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -19,6 +20,34 @@ spec.loader.exec_module(builder)
 
 
 class NotebookTests(unittest.TestCase):
+    def capture_fixture(self, directory):
+        root = Path(directory) / "r1b_K_S1"
+        location = "observations/hidden_states_v1"
+        artifact = root / location / "manifest.json"
+        artifact.parent.mkdir(parents=True)
+        step_path = root / "steps/k3a.json"
+        step_path.parent.mkdir(parents=True)
+        provenance = dict(session="r1b_K_S1", step="k3a", attempt="attempt1", code_commit="code1")
+        families, outputs = {}, {}
+        for family, count in (("s3", 128), ("adet", 64), ("ne", 64)):
+            rel = f"{location}/{family}.pt"
+            data = f"fixture states for {family}".encode()
+            (root / rel).write_bytes(data)
+            digest = hashlib.sha256(data).hexdigest()
+            families[family] = dict(file=rel, count=count, shape=[count, 28, 2048], sha256=digest)
+            outputs[rel] = dict(sha256=digest)
+        benchmark_rel = f"{location}/benchmark.json"
+        benchmark = dict(schema="prefill_v1", status="passed", logits_exact=True, provenance=provenance)
+        benchmark_path = root / benchmark_rel
+        benchmark_path.write_text(json.dumps(benchmark))
+        outputs[benchmark_rel] = dict(sha256=hashlib.sha256(benchmark_path.read_bytes()).hexdigest())
+        step = dict(name="k3a", status="ok", attempt="attempt1", code_commit="code1", outputs=outputs)
+        step_path.write_text(json.dumps(step))
+        manifest = dict(schema="prefill_v1", status="complete", request_count=256, layer_ids=list(range(28)),
+                        provenance=provenance, families=families, benchmark=benchmark_rel)
+        artifact.write_text(json.dumps(manifest))
+        return artifact, step_path, manifest, step, benchmark_path, benchmark
+
     def test_generated_notebooks_parse_and_leave_sources_unchanged(self):
         originals = {p: p.read_bytes() for p in HERE.glob("runde1b_*.ipynb") if not p.name.startswith("runde1b_HTQ_")}
         with tempfile.TemporaryDirectory() as d:
@@ -68,9 +97,10 @@ class NotebookTests(unittest.TestCase):
                 return SimpleNamespace(returncode=0)
 
             env = dict(NUR_SELBSTTEST=False, RUNS=d, ROOT="/models", WORK="/isolated-work", R1B="/code",
+                       HIDDEN_STATES_MITSCHNEIDEN=True,
                        T0=0, LAUFZEIT_MAX_H=23, VARIANT_ENV={"R1B_H_POLICY": "htq_v2"},
                        check_variant=lambda path, account: None, json=json,
-                       os=SimpleNamespace(path=SimpleNamespace(isfile=lambda path: Path(path).is_file())),
+                       os=os,
                        sys=SimpleNamespace(executable="python"), time=SimpleNamespace(time=lambda: 1),
                        subprocess=SimpleNamespace(run=run))
             exec(compile(builder.start_main(), "START", "exec"), env)
@@ -81,6 +111,94 @@ class NotebookTests(unittest.TestCase):
                 self.assertIn("/code/r1b_run_session.py", cmd)
                 self.assertNotIn("/code/r1b_run_slot.py", cmd)
                 self.assertEqual(proc_env["R1B_H_POLICY"], "htq_v2")
+                self.assertEqual(proc_env["R1B_CAPTURE_HIDDEN"], "1")
+
+    def test_capture_is_default_only_in_start_and_host_flag_is_scrubbed(self):
+        for name, spec in builder.SPECS.items():
+            doc = builder.transform(name, spec)
+            sources = [builder.text(c) for c in doc["cells"] if c["cell_type"] == "code"]
+            settings = [n for n in ast.walk(ast.parse("\n".join(sources)))
+                        if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "HIDDEN_STATES_MITSCHNEIDEN" for t in n.targets)]
+            self.assertEqual(len(settings), int(name == "HTQ_START"))
+            if settings:
+                self.assertIs(settings[0].value.value, True)
+            assignments = [n for n in ast.parse(builder.drive_code(spec[2])).body
+                           if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id in ("_variant_keys", "TEST_ENV", "VARIANT_ENV") for t in n.targets)]
+            env = dict(os=SimpleNamespace(environ={"R1B_CAPTURE_HIDDEN": "1", "SAFE": "yes"}))
+            exec(compile(ast.Module(body=assignments, type_ignores=[]), "isolated-env", "exec"), env)
+            self.assertNotIn("R1B_CAPTURE_HIDDEN", env["TEST_ENV"])
+            self.assertNotIn("R1B_CAPTURE_HIDDEN", env["VARIANT_ENV"])
+            self.assertEqual(env["os"].environ["R1B_CAPTURE_HIDDEN"], "1")
+
+    def test_capture_flag_off_removes_even_an_explicit_inherited_flag(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "r1b_K_S1"
+            (p / "hn").mkdir(parents=True)
+            (p / "session_done.json").write_text("{}")
+            (p / "hn/hn_set.json").write_text(json.dumps({"H_op_name": "H_tq", "H_op": [[1, 2]]}))
+            calls = []
+            def run(command, *, env):
+                calls.append(env)
+                return SimpleNamespace(returncode=0)
+            env = dict(NUR_SELBSTTEST=False, HIDDEN_STATES_MITSCHNEIDEN=False, RUNS=d, ROOT="/models", WORK="/work", R1B="/code",
+                       T0=0, LAUFZEIT_MAX_H=23, VARIANT_ENV={"R1B_H_POLICY": "htq_v2", "R1B_CAPTURE_HIDDEN": "1"},
+                       check_variant=lambda *a: None, json=json, os=os, sys=SimpleNamespace(executable="python"),
+                       time=SimpleNamespace(time=lambda: 1), subprocess=SimpleNamespace(run=run))
+            with contextlib.redirect_stdout(io.StringIO()):
+                exec(compile(builder.start_main(), "START", "exec"), env)
+            self.assertEqual(len(calls), 1)
+            self.assertNotIn("R1B_CAPTURE_HIDDEN", calls[0])
+
+    def test_capture_completion_requires_current_successful_k3a_provenance(self):
+        environment = dict(json=json, os=os)
+        exec(compile(builder.hidden_capture_status_code(), "capture-status", "exec"), environment)
+        verify = environment["hidden_capture_status"]
+        with tempfile.TemporaryDirectory() as d:
+            self.assertFalse(verify(d)["complete"])
+            artifact, _, manifest, _, _, _ = self.capture_fixture(d)
+            self.assertTrue(verify(d)["complete"])
+            for field, wrong in (("status", "partial"), ("schema", "other"), ("request_count", 128), ("layer_ids", list(range(27)))):
+                artifact.write_text(json.dumps(dict(manifest, **{field: wrong})))
+                self.assertFalse(verify(d)["complete"], field)
+            artifact.write_text(json.dumps(dict(manifest, provenance=dict(manifest["provenance"], attempt="old"))))
+            self.assertFalse(verify(d)["complete"])
+            artifact.unlink()
+            self.assertFalse(verify(d)["complete"], "successful K3a without an artifact must not imply a capture")
+
+    def test_capture_completion_rejects_missing_tampered_and_unrecorded_shards(self):
+        environment = dict(json=json, os=os)
+        exec(compile(builder.hidden_capture_status_code(), "capture-status", "exec"), environment)
+        verify = environment["hidden_capture_status"]
+        with tempfile.TemporaryDirectory() as d:
+            artifact, step_path, manifest, step, _, _ = self.capture_fixture(d)
+            root = Path(d) / "r1b_K_S1"
+            for family in ("s3", "adet", "ne"):
+                path = root / manifest["families"][family]["file"]
+                original = path.read_bytes()
+                path.unlink()
+                self.assertFalse(verify(d)["complete"], f"missing {family}")
+                path.write_bytes(original + b"tampered")
+                self.assertFalse(verify(d)["complete"], f"tampered {family}")
+                path.write_bytes(original)
+                self.assertTrue(verify(d)["complete"])
+            step["outputs"][manifest["families"]["s3"]["file"]]["sha256"] = "0" * 64
+            step_path.write_text(json.dumps(step))
+            self.assertFalse(verify(d)["complete"], "a manifest hash alone cannot override the step's recorded hash")
+
+    def test_capture_completion_requires_matching_passed_benchmark(self):
+        environment = dict(json=json, os=os)
+        exec(compile(builder.hidden_capture_status_code(), "capture-status", "exec"), environment)
+        verify = environment["hidden_capture_status"]
+        with tempfile.TemporaryDirectory() as d:
+            _, step_path, manifest, step, benchmark_path, benchmark = self.capture_fixture(d)
+            for wrong in (dict(benchmark, logits_exact=False), dict(benchmark, status="failed"),
+                          dict(benchmark, provenance=dict(benchmark["provenance"], attempt="old"))):
+                benchmark_path.write_text(json.dumps(wrong))
+                step["outputs"][manifest["benchmark"]]["sha256"] = hashlib.sha256(benchmark_path.read_bytes()).hexdigest()
+                step_path.write_text(json.dumps(step))
+                self.assertFalse(verify(d)["complete"])
+            benchmark_path.unlink()
+            self.assertFalse(verify(d)["complete"], "a missing GPU report is not a passed check")
 
     def test_readiness_is_checked_before_copy_and_main(self):
         for name, spec in builder.SPECS.items():
