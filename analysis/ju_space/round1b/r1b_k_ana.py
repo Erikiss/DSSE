@@ -9,8 +9,30 @@ import r1b_k_base as KB
 import r1b_k_rules as KR
 from r1b_core import coded, val, p_rank, p_pi, holm, bh
 from r1b_k_base import N, write, load_pt, logit_fit, boot_stat, ci, gt, lt, inside, fin, p_iut, holm_family, auroc
+from r1b_htq_variant import LABEL as HTQ_LABEL, VARIANT as HTQ_VARIANT, active as htq_active
 
 B_ = RC.N_BOOT
+
+
+def _htq_verdict(ctx, out):
+    """Preserve numerical/descriptive verdicts without claiming post-hoc confirmation."""
+    if not htq_active(ctx):
+        return out
+    out.update(h_policy=HTQ_VARIANT, inference="exploratory (post hoc)")
+    out.setdefault("labels", []).append(HTQ_LABEL)
+    comp = out["composite"]
+    comp.update(inference="exploratory (post hoc)", labels=[HTQ_LABEL])
+    comp["suffixes"] = [s for s in comp.get("suffixes", []) if not str(s).startswith("round level:")] + [
+        "round level: A+ and B+ exploratory (post hoc; excluded under main 0.5)", HTQ_LABEL]
+    rl = out["round_level"]
+    rl.update(confirmatory_eligible=False, labels=[HTQ_LABEL])
+    for key in ("CF_K_attr", "CF_K_link_rank", "CF_K_link_pi"):
+        for row in rl.get(key, {}).values():
+            row.update(confirmatory_eligible=False, inference="exploratory (post hoc)")
+    for key in ("Q9", "Q11", "A_plus"):
+        for row in out.get("families", {}).get(key, {}).values():
+            row.update(confirmatory_eligible=False, inference="exploratory (post hoc)")
+    return out
 
 
 def _in(ctx, s, rel):
@@ -1117,6 +1139,7 @@ def verdict(ctx):
                families_more=dict(Q13={k: dict(string=s13[k], **q13[k]) for k in q13}, Q10={k: dict(string=s10[k], **q10[k]) for k in q10}),
                labels=[l for l in (gk14 if "not" in gk14 else None, None if PH else "H-set not validated", "verifier unreliable" if gk6 != "verifier reliable" else None) if l],
                reported_next_to_composite=dict(K5a=gk5, RK2="see k_rk2 (r1b_K_S7)", RK1="see k_rk1 (r1b_K_S6)"))
+    _htq_verdict(ctx, out)
     write(ctx, "k_verdict.json", out, config=dict(boot=B_, level=RC.LEVEL), labels=out["labels"])
 
 

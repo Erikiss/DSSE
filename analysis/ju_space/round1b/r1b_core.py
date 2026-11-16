@@ -28,6 +28,7 @@ for _p in (HERE, R2DIR, AJS):
     if _p not in sys.path:
         sys.path.append(_p)
 import r1b_contracts as C
+from r1b_htq_variant import VARIANT as HTQ_VARIANT, LABEL as HTQ_LABEL, active as htq_active
 
 MOCK = os.environ.get("MOCK") == "1"
 QUICK = os.environ.get("QUICK") == "1"
@@ -1044,6 +1045,10 @@ class Ctx:
         producer declared 'not run' raises NotRun('input missing')."""
         p = os.path.join(self.inp, session, rel)
         if os.path.exists(p):
+            if htq_active(self) and not self.mock and session == "r1b_K_S1" and rel == "hn/hn_set.json":
+                d = load_json(p, {}) or {}
+                if d.get("h_policy") != HTQ_VARIANT or d.get("H_op_name") not in ("H_tq", "H_ar"):
+                    raise RuntimeError("H_tq variant received an incompatible SO-HN input; run HTQ_START first")
             return p
         if not required:
             return None
@@ -1113,7 +1118,7 @@ class Ctx:
     # ---- provenance and outputs (R9.1-R9.4, SG6)
     def provenance(self, config=None, seeds=None, labels=None):
         man, fz = self.manifest, self.freeze
-        return dict(session=self.session, attempt=self.attempt, step=self.step, part=self.part, account=self.account, tier=self.tier,
+        rec = dict(session=self.session, attempt=self.attempt, step=self.step, part=self.part, account=self.account, tier=self.tier,
                     reduction=(fz.get("trims") or {}).get(self.part), funded=fz.get("funded"), mock=self.mock, pilot=self.pilot,
                     plan=man.get("plan") or dict(note="no manifest (code test)"), code_commit=man.get("code_commit", "unknown"),
                     modules=module_hashes(), config=jsonable(config), config_sha256=sha256_text(canon(config)),
@@ -1123,6 +1128,13 @@ class Ctx:
                               used=sorted(self.keys_used),
                               seeds=seeds),
                     labels=list(labels or []), started=self.step_started, written=iso())
+        if htq_active(self):
+            rec["h_policy"] = HTQ_VARIANT
+            if (self.step_part or self.part) in ("K", "L"):
+                rec.update(post_hoc=True, amendment=2)
+                if HTQ_LABEL not in rec["labels"]:
+                    rec["labels"].append(HTQ_LABEL)
+        return rec
 
     def _pilot_check(self, obj, rel):
         bad = set(obj) - PILOT_KEYS

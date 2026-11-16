@@ -1,5 +1,9 @@
 # Runde 1b: Übergabe an eine lokale Claude-Code-Sitzung (Stand 13.11.2026, 23:50 MEZ; wird aktualisiert)
 
+**Aktueller Auftrag (16.11.2026):** Siehe „Aktueller Startweg: isolierte H_tq-Fortsetzung `htq_v2`“ weiter unten.
+Für diese Fortsetzung gilt Branch `codex/r1b-htq-continuation`. Frühere Branch-, Freeze- und Startanweisungen sind
+chronologische Übergabehistorie; der Plan ist inzwischen eingefroren. Umsetzung und Tests der Variante laufen noch.
+
 ## Lage
 - Branch: `ccr-6fe02b21-est040` (Repository Erikiss/DSSE). Immer zuerst `git pull`.
 - Plan (Entwurf, nicht eingefroren): Arbeitskopie `results/ju_space/plans/runde1b/arbeitsstand/plan/` (fünf Dateien:
@@ -188,7 +192,7 @@
   A100-80GB. Nachtrag zur Nutzerentscheidung vom 16.11.2026: Änderung 1 (runde1b_plan_amendments.md, H_tq statt H+) ist
   zurückgezogen. Sie hatte laut diesem Übergabestand nie gegriffen, weil K_S1 vorher nach dem eingefrorenen Text fertig wurde;
   es gilt weiter die eingefrorene H+-Regel. Die abgeschlossenen K_S1-Ergebnisse bleiben erhalten.
-- 16.11.2026 (Codex, aktueller Arbeitsstand nach Nutzerentscheidung): Rückzug von Änderung 1 in
+- 16.11.2026 (Codex, historischer Arbeitsstand nach der ersten Nutzerentscheidung; durch den folgenden htq_v2-Auftrag ergänzt): Rückzug von Änderung 1 in
   results/ju_space/plans/runde1b/runde1b_plan_amendments.md dokumentiert; ursprünglichen Vorschlag als ausdrücklich
   nicht mehr wirksame Historie erhalten. G-K22 verwendet bei instabilem H_tq weiterhin H+ und daran angepasste Zufallsmengen;
   die eingefrorene G-K1-Ausnahme für H_ar bleibt unverändert. Kein erzwungener Wiederholungslauf und kein Überschreiben des
@@ -200,6 +204,50 @@
   sowie Python-Syntax der Module und der vier zusätzlichen Notebooks. Keine echten Modelle und kein neuer GPU-Lauf.
   Veröffentlichung über einen eigenen Branch und Pull Request; die Colab-Notebooks laden weiterhin
   ccr-6fe02b21-est040 und erhalten die Korrekturen erst nach Übernahme des Pull Requests.
+- 16.11.2026, 10:17 UTC (Codex, neuer Auftrag nach späterer Nutzerentscheidung): Der Nutzer
+  wählt mit „Dann den kleineren Datensatz mit 15-18“ die kleinere **Neuronenmenge H_tq** (im bisherigen Lauf 286) statt
+  des instabilitätsbedingten H+-Ersatzes (12.445). Es werden keine Fragen, Beispiele, Stichproben oder Versuchszellen
+  reduziert. Änderung 1 und ihr Rückzug bleiben als Historie erhalten; die neue, ausdrücklich nachträgliche Änderung 2
+  steht in `results/ju_space/plans/runde1b/runde1b_plan_amendments.md`.
+  **Aktive Fortsetzung: opt-in `htq_v2`, Branch `codex/r1b-htq-continuation`.** In dieser Variante bleibt instabiles
+  H_tq die operative Menge H_op; Zufallsmengen werden dazu neu angepasst. Die G-K1-Ausnahme für H_ar bei zu geringer
+  TriviaQA-Ausbeute bleibt unverändert. H+ bleibt beschreibend erhalten. Tore, Schwellen, Daten, Saaten und Stichprobenzahlen
+  bleiben wie eingefroren; Instabilität wird weiter als solche ausgewiesen.
+  **Aktuell lesend aus Drive bestätigt:** K_S1 ist mit Code 121ab8a fertig; D_C ist nach fehlgeschlagenem d5_gen teilweise
+  fertig; K_S4 hat fertige k8b-Schritte, fehlgeschlagenes k8a und noch ausstehendes k8c. Die Vorbereitung der Variante hat
+  bisher keine Nutzerdaten in Drive verändert und keinen neuen GPU-Lauf ausgeführt.
+
+## Aktueller Startweg: isolierte H_tq-Fortsetzung `htq_v2` (16.11.2026)
+
+Dieser Abschnitt ist der neue Arbeitsauftrag; die älteren Startprompts und Standmeldungen weiter oben dokumentieren die
+Vorgeschichte. Implementiert und modellfrei geprüft: 33 Tests zu getrennter Übernahme, Fortsetzung, H_tq-Auswahl,
+Herkunftskennzeichnung, Konto-B-Pfadaliasen, Post-hoc-Auswertung und Notebook-Ablauf. Keine neuen GPU-Läufe oder
+Schreibzugriffe auf die Ergebnisse in Drive; kein vollständiger Test mit einem Mock-Modell oder einer A100.
+
+- Originale Slot-Läufe vor dem Kopieren stoppen. Die vorhandenen Ergebnisse in `dsse_runs` bleiben erhalten; die Variante
+  schreibt in **beiden Konten ausschließlich nach `dsse_runs/variants/htq_v2`**, mit getrennten lokalen Arbeitsordnern.
+  Alte H+-Ergebnisse, Marker, Eingabekopien oder Caches dürfen keine H_tq-Schritte als bereits erledigt ausweisen.
+- **Zuerst `HTQ_START` in Konto A auf einer A100.** Voraussetzung: `MyDrive/dsse_runs_B` ist die vorhandene Verknüpfung auf
+  den freigegebenen Ordner von Konto B und für Konto A beschreibbar. Der Start übernimmt die wiederverwendbaren R-/D-Sitzungen,
+  K_S3 und nur den H-unabhängigen Präfix von K_S1. Er berechnet K_S1 ab `k2_sets` mit der neuen Menge und neuen Zufallsmengen
+  erneut. Der Abschluss des ursprünglichen K_S1 überspringt diese Neuberechnung nicht. Der H-unabhängige H_ar-Schritt
+  stellt bei Bedarf seinen lokalen Fit-Cache wieder her, auch nach einem Neustart der Colab-Laufzeit.
+- K_S4 wird in der Variante **vollständig neu gerechnet, einschließlich k8b**. Seine bereits vorliegenden H+-Messungen
+  bleiben im ursprünglichen Ordner und werden nicht mit neuen H_tq-Messungen vermischt. Entsprechend bleiben die weiteren
+  K-/L-Ausgaben und RK-2 in der isolierten Variante.
+- **Eine GPU, Reihenfolge:** `HTQ_START` → `HTQ_B2_in_A` → `HTQ_B1_in_A` → `HTQ_A1_DC_zuerst` → `HTQ_A2` → `HTQ_ANA`.
+  Die neuen Notebooks laden bereits `codex/r1b-htq-continuation`; BRANCH muss nicht von Hand geändert werden. Die älteren
+  Standardnotebooks laden weiterhin den alten Branch und sind nicht der Startweg für `htq_v2`.
+- **L-CAL parallel:** `runde1b_HTQ_LCAL.ipynb` nach der Übernahme beider Ergebnisbäume auf einer CPU-Laufzeit mit viel RAM,
+  mit unverändertem eingefrorenem Kalibrierungscode. Ergebnis `dsse_runs/variants/htq_v2/r1b_lcal/l_cal.json` prüfen und vor ANA
+  ins Repository übernehmen. Danach die Stufe-2-Läufe der Variante;
+  eine neue Modell- oder Pilotmessung ersetzt weder L-CAL noch die festgelegten Tore.
+- K-/L-Urteile der Änderung 2 werden als **post hoc** ausgewiesen; betroffene H-abhängige Ergebnisse gehen nicht in die
+  bestätigenden Rundentestfamilien CF-K-attr, CF-K-link, CF-L oder CF-HERR ein. Die wiederverwendeten R-/D-Messungen behalten
+  ihre ursprüngliche Herkunft und Einordnung. Original- und Variantenbefunde werden getrennt berichtet.
+- **Zeitbedarf:** Die früher genannten 15–18 Stunden sind eine alte Basisschätzung, keine Zusage für die Fortsetzung.
+  Zusätzlich fallen die Neumessungen von K_S1/K_S4 sowie Einrichtung und Datenkopien an; H+ wird weiterhin beschreibend
+  erfasst. Die Restzeit nach den ersten neuen Schritten anhand gemessener Raten aktualisieren.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

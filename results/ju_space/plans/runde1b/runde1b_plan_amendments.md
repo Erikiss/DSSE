@@ -1,6 +1,76 @@
 # Round 1b: plan amendments (main §9.3)
 
-## Current status: amendment 1 withdrawn (user decision, 2026-11-16)
+## Current status: amendment 2, opt-in variant `htq_v2` (2026-11-16)
+
+The user's later instruction, "Dann den kleineren Datensatz mit 15-18", supersedes the decision to continue only with H+.
+The smaller object is the operational **neuron set**, H_tq (286 neurons in the observed Qwen3-1.7B run), not a smaller set of
+questions, examples or evaluation items. Amendment 1 remains withdrawn. The distinct amendment 2 below defines the new
+post-hoc continuation; the original H+ results and the withdrawal record are retained.
+
+The opt-in continuation and nine notebooks are implemented. Thirty-three model-free checks passed for seed isolation,
+checkpoint selection, policy/provenance guards, cross-account mount aliases, post-hoc reporting and notebook execution flow.
+No new GPU run or write to the user's Drive has taken place; full mock-model and A100 execution are not claimed.
+
+## Amendment 2 (2026-11-16T10:17:24Z) — post hoc, opt-in `htq_v2`
+
+**Decided by:** the user (16 November 2026), after the earlier recommendation to withdraw amendment 1 and an explanation of
+the H+ running-time cost. The later instruction selects the smaller H_tq continuation.
+
+**Reason.** The frozen G-K22 fallback uses H+ (12,445 neurons in the observed run) when H_tq is unstable. Matching and reading
+large random sets makes the remaining H-dependent measurements expensive. Retaining H_tq is a methodological change made
+after relevant H+ results were seen; it is not a reduction of the data or a correction to an unchanged measurement.
+
+**Changes to parts, sections and rules.**
+- Part K, K2 "Stability switch (G-K22)" and gate G-K22: within the explicitly selected `htq_v2` variant, retain H_tq as H_op
+  when the median Dg2 bootstrap Jaccard is below 0.5, and label it "unstable H-set (H_tq kept; amendment 2, post hoc)".
+  G-K22 still records instability; the amendment does not make an unstable set pass the gate. The frozen G-K1 exception,
+  H_ar primary when the TriviaQA yield fails, is unchanged. The corresponding K2 protocol in RK-2 (r1b_K_S7) uses the same
+  variant policy on that model's selected sets; its set size is determined by its own run, not fixed at 286.
+- Re-match RS39 / RS39mc / RS19 / RS20 / RS10 to the operational set used by the variant. H+ remains descriptive, including
+  hn_set.json's H_plus, K3a's detection comparison and the K-chain lens capture set.
+- Main §3.1 SG8 and downstream K/L readings use the variant's H_op and newly matched random sets. Keep the frozen
+  sample counts, item identities, seeds, thresholds, statistics and calibration requirements. No questions, data streams,
+  experimental cells or evaluation samples are removed to meet a time target.
+- Main §§0.5 and 9.3: K/L verdicts under this continuation are labelled post hoc. Affected H-dependent members of
+  CF-K-attr, CF-K-link, CF-L and CF-HERR are excluded from the round-level confirmatory families; amended descriptive
+  results are reported separately. The reused R/D measurements keep their original provenance and inferential status.
+
+**Separation and continuation.** Both accounts use a new root, `dsse_runs/variants/htq_v2`, with separate local working
+folders. The original `dsse_runs` session folders remain the frozen-text record. Do not overwrite the original K_S1 or
+combine H+-dependent outputs with H_tq-dependent outputs in one continued session.
+
+`HTQ_START` runs in account A on an A100 and requires the existing `dsse_runs_B` shortcut with write access. It seeds the
+variant with reusable R/D sessions, K_S3 and only the H-independent K_S1 prefix. K_S1's H-dependent steps, starting at
+k2_sets, run again in the variant; a completed original K_S1 is not treated as a completed variant K_S1. The independent
+H_ar step rebuilds its non-Drive fit cache when needed, including after a fresh-runtime resume. Downstream K/L
+sessions use the new products. K_S4 is rerun in full, including the already completed H+ k8b work; its old markers,
+outputs, copied inputs and caches are not imported into the variant. RK-2 also uses isolated variant outputs.
+
+For one GPU, use the new notebooks in this order:
+`HTQ_START` → `HTQ_B2_in_A` → `HTQ_B1_in_A` → `HTQ_A1_DC_zuerst` → `HTQ_A2` → `HTQ_ANA`.
+These notebooks already select branch `codex/r1b-htq-continuation`; no manual BRANCH edit is needed. Compute L-CAL in
+parallel with `HTQ_LCAL` on a high-RAM CPU runtime using the frozen calibration code. Its result is
+`dsse_runs/variants/htq_v2/r1b_lcal/l_cal.json`; commit it before the variant's ANA.
+Run tier 2 afterwards. This is an operational order for the isolated variant, not a change to the frozen data or gates.
+
+**Outputs seen before this amendment.** The H+ values and diagnostic outputs listed under historical amendment 1 below
+were already known, including |H_tq| = 286, |H+| = 12,445, failed G-K22, set-matching timings and the negative SG8 preview.
+The subsequent handoff recorded K_S1 as complete under the frozen H+ rule. In the present read-only Drive check, the
+coordinator confirmed completed K_S1 at code commit 121ab8a; D_C remains partial after d5_gen failed; K_S4 has completed
+k8b work, a failed k8a and pending k8c work. These previously seen results make amendment 2 post hoc. No new H_tq result
+is asserted here, and no original Drive data has been modified as part of preparing this amendment.
+
+**Reporting and running time.** Keep the original H+ outputs alongside the labelled amended outputs. Missing H+-variant
+results remain missing; the existence of an H_tq result does not complete its frozen-text counterpart. The earlier
+15–18-hour estimate is a baseline estimate, not a guarantee for this migration. The new run additionally includes K_S1
+and K_S4 remeasurement and setup/copy I/O; descriptive H+ capture is still present. Measure the first new steps before
+updating the remaining-time estimate. No achieved running time or new calibration result is claimed.
+
+## Historical withdrawal of amendment 1 (user decision, 2026-11-16)
+
+The following records the earlier completed withdrawal checkpoint. The implementation and validation statements in this
+historical section describe that checkpoint, before the user selected amendment 2; they are not claims about the current
+`htq_v2` implementation. Amendment 1 itself remains withdrawn.
 
 **Amendment 1 is withdrawn and has no operative effect.** On 16 November 2026 the user accepted the recommendation to keep
 the frozen rule: if G-K22 finds H_tq unstable (median Dg2 bootstrap Jaccard < 0.5), H+ replaces H in the prescribed set uses,
