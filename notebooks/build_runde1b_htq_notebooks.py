@@ -135,16 +135,56 @@ print("Unveränderte R_S0-Exporte:", LINK)
     return source
 
 
-def prepare_code(kind):
-    source = '''# Varianten-Bootstrap / Prüfung vor jedem realen Kopier- oder Hauptlauf.
+def variant_helpers():
+    return '''# Variantenwerkzeug: Ausgabe und Fehler mit Konto sichtbar streamen.
+import textwrap
 VARIANT_TOOL = f"{R1B}/r1b_htq_variant.py"
+def run_variant(action, path, account):
+    def show(message):
+        for line in str(message).splitlines() or [""]:
+            for wrapped in textwrap.wrap(line, width=72, replace_whitespace=False,
+                                         drop_whitespace=False, break_on_hyphens=False) or [""]:
+                print(wrapped, flush=True)
+    show(f"[Konto {account}] {action}: {path}")
+    command = [sys.executable, "-u", VARIANT_TOOL, action, path, account]
+    try:
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                   text=True, bufsize=1, env=TEST_ENV)
+    except OSError as error:
+        show(f"[Konto {account}] {action}: Start fehlgeschlagen: {error}")
+        raise RuntimeError(f"Konto {account}: {action} konnte nicht starten.") from error
+    try:
+        for line in process.stdout:
+            show(line.rstrip("\\r\\n"))
+        code = process.wait()
+    except BaseException:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+        show(f"[Konto {account}] {action}: unterbrochen; Kindprozess beendet.")
+        raise
+    finally:
+        process.stdout.close()
+    show(f"[Konto {account}] {action}: Exit {code}")
+    if code:
+        raise RuntimeError(f"Konto {account}: {action} fehlgeschlagen (Exit {code}). Details oben.")
+    return code
+
 def check_variant(path, account):
-    subprocess.run([sys.executable, VARIANT_TOOL, "check", path, account], check=True, env=TEST_ENV)
+    return run_variant("check", path, account)
 '''
+
+
+def prepare_code(kind, start_message="Beide Variantenordner bereit. Nun wird nur K_S1 neu gerechnet."):
+    source = '# Varianten-Bootstrap / Prüfung vor jedem realen Kopier- oder Hauptlauf.\n' + variant_helpers()
     if kind == "start":
         source += f'''if not NUR_SELBSTTEST:
     for original, account in ((SOURCE_A, "A"), (SOURCE_B, "B")):
-        subprocess.run([sys.executable, VARIANT_TOOL, "seed", original, account], check=True, env=TEST_ENV)
+        run_variant("seed", original, account)
         check_variant(os.path.join(original, "{SUBDIR}"), account)
     paired = dict(variant="{VARIANT}", accounts=["A", "B"], bootstrap_commit=COMMIT)
     for path in (os.path.join(SOURCE_A, "{SUBDIR}"), B_RUNS):
@@ -152,7 +192,7 @@ def check_variant(path, account):
         with open(marker + ".tmp", "w") as f:
             json.dump(paired, f, indent=1)
         os.replace(marker + ".tmp", marker)
-    print("Beide Variantenordner bereit. Nun wird nur K_S1 neu gerechnet.")
+    print({start_message!r}, flush=True)
 '''
     else:
         source += f'''if not NUR_SELBSTTEST:
@@ -168,6 +208,61 @@ def check_variant(path, account):
     assert os.path.isfile(done) and not os.path.exists(partial), "Zuerst HTQ_START bis zum fertigen neuen K_S1 ausführen."
 '''
     return source
+
+
+def prep_check():
+    name = "HTQ_PREP_CHECK"
+    doc = dict(cells=[
+        cell("markdown", '''# Runde 1b · Vorbereitung prüfen und fortsetzen · CPU, Konto A
+
+**In Konto A auf einer CPU-Laufzeit öffnen, dann „Alle ausführen“.** Vorher alte
+Runde-1b-Notebooks in beiden Konten stoppen. `dsse_runs_B` muss in Konto A als
+Verknüpfung mit Bearbeiterrecht erreichbar sein.
+
+Dieses Notebook lädt den aktuellen Vorbereitungscode in einen neuen temporären
+Ordner unter `/content`. Es prüft beziehungsweise vervollständigt dieselben
+Variantenordner wie HTQ_START. Eine vollständig vorbereitete Ablage von Konto A
+wird wiederverwendet. Originalergebnisse und vorhandene Sperren bleiben erhalten.
+
+Jeder Vorbereitungsschritt nennt Konto, Aktion und Pfad. Die vollständige Ausgabe
+einschließlich Fehler wird in kurzen Zeilen angezeigt; am Ende steht der Exit-Code.
+Dieses Notebook lädt keine Modelle und startet keine GPU-Messung.
+
+Nach erfolgreicher Vorbereitung beider Konten **HTQ_START auf der A100** ausführen.
+Bei einem Fehler ist die genaue Ursache unmittelbar über der kurzen Fehlermeldung
+zu sehen. Sperren oder Variantenordner nicht auf Verdacht löschen.
+'''),
+        cell("code", f'''import os, sys, json, subprocess, tempfile
+from google.colab import drive
+drive.mount("/content/drive")
+MYDRIVE = "/content/drive/MyDrive"
+SOURCE_A = f"{{MYDRIVE}}/dsse_runs"
+SOURCE_B = f"{{MYDRIVE}}/dsse_runs_B"
+assert os.path.isdir(SOURCE_A), "Konto A: dsse_runs fehlt."
+assert os.path.isdir(SOURCE_B), "Konto B: Verknüpfung dsse_runs_B fehlt; Freigabe und Bearbeiterrecht prüfen."
+B_RUNS = os.path.join(SOURCE_B, "{SUBDIR}")
+BRANCH = "{BRANCH}"
+NUR_SELBSTTEST = False
+_variant_keys = ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS")
+TEST_ENV = {{k: v for k, v in os.environ.items() if k not in _variant_keys}}
+'''),
+        cell("code", '''# Neue Arbeitskopie: vorhandene /content/DSSE-Repositories werden nicht verändert.
+REPO = tempfile.mkdtemp(prefix="dsse_htq_prep_", dir="/content")
+print("Aktuellen Vorbereitungscode laden:", REPO, flush=True)
+subprocess.run(["git", "clone", "-q", "--filter=blob:none", "--sparse", "-b", BRANCH,
+                "https://github.com/Erikiss/DSSE", REPO], check=True, env=TEST_ENV)
+subprocess.run(["git", "-C", REPO, "sparse-checkout", "set", "analysis/ju_space",
+                "results/ju_space/plans"], check=True, env=TEST_ENV)
+COMMIT = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output=True,
+                        text=True, check=True, env=TEST_ENV).stdout.strip()
+R1B = f"{REPO}/analysis/ju_space/round1b"
+print("Vorbereitungscode:", COMMIT, flush=True)
+'''),
+        cell("code", prepare_code("start", "Beide Konten vorbereitet und geprüft. Jetzt HTQ_START auf der A100 ausführen.")),
+    ], metadata={"colab": {"provenance": []}, "kernelspec": {"display_name": "Python 3", "name": "python3"}},
+        nbformat=4, nbformat_minor=5)
+    finish(doc, name)
+    return doc
 
 
 def start_main():
@@ -255,7 +350,11 @@ dem Koordinator zur Übernahme melden. Zwischenstände bleiben im Varianten-Cach
     source += f'''
 RUNS = "/content/drive/MyDrive/dsse_runs/{SUBDIR}"
 clean_env = {{k: v for k, v in os.environ.items() if k not in ("R1B_H_POLICY", "R1B_RUNS_B", "R1B_XFER_A", "R1B_SOURCE_RUNS")}}
-subprocess.run([sys.executable, f"{{R}}/r1b_htq_variant.py", "check", RUNS, "A"], check=True, env=clean_env)
+R1B, TEST_ENV = R, clean_env
+'''
+    source += variant_helpers()
+    source += f'''
+check_variant(RUNS, "A")
 pair = json.load(open(os.path.join(RUNS, "{PAIR_MARKER}")))
 assert pair.get("variant") == "{VARIANT}" and pair.get("accounts") == ["A", "B"], "Zuerst HTQ_START vorbereiten."
 OUT = f"{{RUNS}}/r1b_lcal"; CACHE = f"{{OUT}}/cache"; os.makedirs(CACHE, exist_ok=True)
@@ -285,6 +384,9 @@ def build(out=HERE, source_dir=HERE):
         built.append(path)
     path = out / "runde1b_HTQ_LCAL.ipynb"
     path.write_text(json.dumps(lcal(source_dir), indent=1, ensure_ascii=False) + "\n")
+    built.append(path)
+    path = out / "runde1b_HTQ_PREP_CHECK.ipynb"
+    path.write_text(json.dumps(prep_check(), indent=1, ensure_ascii=False) + "\n")
     built.append(path)
     return built
 

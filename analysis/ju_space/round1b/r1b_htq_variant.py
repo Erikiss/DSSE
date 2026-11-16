@@ -262,6 +262,7 @@ def seed(source, account):
     try:
         if dest.exists():
             check(dest, account)
+            print(f"[{account}] Vorbereitung bereits fertig; vorhandene Kopien werden weiterverwendet.", flush=True)
             return str(dest)
         if account == "A" and not (source / "r1b_R_S0").is_dir():
             raise ValueError("account A requires its original r1b_R_S0 folder")
@@ -271,16 +272,26 @@ def seed(source, account):
         source_top = {p.name for p in trees}
         stage = Path(tempfile.mkdtemp(prefix=f".{VARIANT}.seed-", dir=parent))
         records = {}
+        total = sum(len(files) for files in snapshots.values()) + len(prefix) + len(markers)
+        copied = 0
+        print(f"[{account}] Übernahme von {total} Dateien beginnt; Originale bleiben erhalten.", flush=True)
         for tree in trees:
+            print(f"[{account}] Ordner: {tree.name}", flush=True)
             (stage / tree.name).mkdir()
             for rel in sorted(snapshots[str(tree)]):
                 target_rel = f"{tree.name}/{rel}"
                 _copy(tree / rel, stage / target_rel, records, target_rel)
+                copied += 1
+                if copied % 100 == 0:
+                    print(f"[{account}] {copied}/{total} Dateien kopiert und geprüft.", flush=True)
         if account == "B":
             root = source / "r1b_K_S1"
             for rel, digest in {**prefix, **markers}.items():
                 target_rel = f"r1b_K_S1/{rel}"
                 _copy(root / rel, stage / target_rel, records, target_rel, expected=digest)
+                copied += 1
+                if copied % 100 == 0:
+                    print(f"[{account}] {copied}/{total} Dateien kopiert und geprüft.", flush=True)
         # Stop on concurrent producers, including newly appearing independent
         # folders. No completed destination is exposed until these checks pass.
         if source_top != {p.name for p in _trees(source)}:
@@ -309,6 +320,7 @@ def seed(source, account):
             raise ValueError(f"destination appeared during bootstrap: {dest}")
         os.rename(stage, dest)
         stage = None
+        print(f"[{account}] Vorbereitung fertig: {copied} Dateien kopiert und geprüft.", flush=True)
         return str(dest)
     finally:
         if stage is not None:

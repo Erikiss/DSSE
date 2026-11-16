@@ -248,6 +248,15 @@ Schreibzugriffe auf die Ergebnisse in Drive; kein vollständiger Test mit einem 
 - **Zeitbedarf:** Die früher genannten 15–18 Stunden sind eine alte Basisschätzung, keine Zusage für die Fortsetzung.
   Zusätzlich fallen die Neumessungen von K_S1/K_S4 sowie Einrichtung und Datenkopien an; H+ wird weiterhin beschreibend
   erfasst. Die Restzeit nach den ersten neuen Schritten anhand gemessener Raten aktualisieren.
+- **Vorbereitungsfehler am 16.11.2026:** Der vom Nutzer geteilte START-PDF zeigt einen `CalledProcessError` beim
+  `seed`-Unterprozess, noch vor dem K_S1-Hauptlauf. Der Ausdruck enthält die eigentliche Helper-Fehlermeldung nicht.
+  In Drive ist Kontos A Übernahme von 2.463 Dateien seit 11:31:59 UTC abgeschlossen; im bekannten Konto-B-Ordner fehlen
+  noch Varianten- und Paarmarkierung. Daraus allein folgt keine gesicherte Ursache und auch nicht sicher, welcher
+  `seed`-Aufruf fehlschlug. Für die Fortsetzung zuerst `runde1b_HTQ_PREP_CHECK.ipynb` in Konto A auf **CPU** ausführen:
+  Es zeigt Konto, Aktion, Rückgabecode und die vollständige Helper-Ausgabe und verwendet abgeschlossene Übernahmen
+  weiter. Keine Originalordner, Zwischenstände oder Sperren auf Verdacht löschen. Erst nach erfolgreicher Vorbereitung
+  wieder `HTQ_START` auf A100 ausführen, anschließend B2. Die Helper-Ausgaben nennen nun Ordner- und Dateifortschritt;
+  die neue Prüfung benötigt weder Modellgewichte noch eine GPU.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

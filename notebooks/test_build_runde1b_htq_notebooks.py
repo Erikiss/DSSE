@@ -1,7 +1,12 @@
 """Model-free checks for the notebook hand-off and process isolation contract."""
 import ast
+import contextlib
 import importlib.util
+import io
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,7 +25,7 @@ class NotebookTests(unittest.TestCase):
             first = {p.name: p.read_bytes() for p in builder.build(Path(d))}
             second = {p.name: p.read_bytes() for p in builder.build(Path(d))}
             self.assertEqual(first, second)
-            self.assertEqual(len(first), 9)
+            self.assertEqual(len(first), 10)
             for filename, raw in first.items():
                 doc = json.loads(raw)
                 self.assertEqual(doc["metadata"]["htq_variant"]["branch"], builder.BRANCH)
@@ -89,6 +94,72 @@ class NotebookTests(unittest.TestCase):
             if name != "HTQ_START":
                 self.assertIn("_htq_pair_ready.json", sources[guard])
                 self.assertIn("session_done.json", sources[guard])
+
+    def test_failed_b_seed_streams_wrapped_cause_and_reuses_a(self):
+        calls = []
+
+        def popen(command, **options):
+            calls.append((command, options))
+            action, account = command[-3], command[-1]
+            failure = account == "B" and action == "seed"
+            output = ("PermissionError: symlink outside source root: /drive/" + "long-path/" * 30 + "\n"
+                      if failure else "Konto A: vollständige Vorbereitung wird wiederverwendet.\n")
+            return SimpleNamespace(stdout=io.StringIO(output), wait=lambda: int(failure), poll=lambda: int(failure))
+
+        with tempfile.TemporaryDirectory() as d:
+            source_a, source_b = Path(d) / "A", Path(d) / "B"
+            source_a.mkdir(); source_b.mkdir()
+            output = io.StringIO()
+            environment = dict(R1B="/current/code", TEST_ENV={"SAFE": "yes"}, NUR_SELBSTTEST=False,
+                               SOURCE_A=str(source_a), SOURCE_B=str(source_b), B_RUNS=str(source_b / builder.SUBDIR),
+                               COMMIT="current", os=os, sys=sys, json=json,
+                               subprocess=SimpleNamespace(Popen=popen, PIPE=subprocess.PIPE, STDOUT=subprocess.STDOUT))
+            with contextlib.redirect_stdout(output):
+                with self.assertRaisesRegex(RuntimeError, "Konto B: seed fehlgeschlagen \\(Exit 1\\)"):
+                    exec(compile(builder.prepare_code("start"), "prepare", "exec"), environment)
+            visible = output.getvalue()
+            self.assertIn("[Konto A] seed: Exit 0", visible)
+            self.assertIn("Vorbereitung wird wiederverwendet", visible)
+            self.assertIn("[Konto B] seed:", visible)
+            self.assertIn("PermissionError: symlink outside source root", visible)
+            self.assertIn("[Konto B] seed: Exit 1", visible)
+            self.assertTrue(all(len(line) <= 72 for line in visible.splitlines()))
+            self.assertEqual([(c[-3], c[-1]) for c, _ in calls], [("seed", "A"), ("check", "A"), ("seed", "B")])
+            self.assertTrue(all(o["stderr"] == subprocess.STDOUT and o["stdout"] == subprocess.PIPE for _, o in calls))
+            self.assertTrue(all(o["text"] and o["bufsize"] == 1 and o["env"] == {"SAFE": "yes"} for _, o in calls))
+            self.assertFalse((source_a / builder.SUBDIR / builder.PAIR_MARKER).exists())
+
+    def test_interrupted_stream_terminates_child(self):
+        calls = []
+
+        class InterruptedOutput(io.StringIO):
+            def __next__(self):
+                raise KeyboardInterrupt()
+
+        process = SimpleNamespace(stdout=InterruptedOutput(""), poll=lambda: None,
+                                  terminate=lambda: calls.append("terminate"), wait=lambda **kw: calls.append("wait"))
+        environment = dict(R1B="/current/code", TEST_ENV={}, sys=sys,
+                           subprocess=SimpleNamespace(Popen=lambda *args, **kw: process,
+                                                      PIPE=subprocess.PIPE, STDOUT=subprocess.STDOUT,
+                                                      TimeoutExpired=subprocess.TimeoutExpired))
+        exec(compile(builder.variant_helpers(), "helpers", "exec"), environment)
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(KeyboardInterrupt):
+                environment["run_variant"]("seed", "/unchanged/source", "B")
+        self.assertEqual(calls, ["terminate", "wait"])
+        self.assertTrue(process.stdout.closed)
+
+    def test_prep_check_is_cpu_only_and_uses_same_bootstrap(self):
+        doc = builder.prep_check()
+        sources = [builder.text(c) for c in doc["cells"] if c["cell_type"] == "code"]
+        all_code = "\n".join(sources)
+        for forbidden in ("torch", "cuda", "fetch-models", "--selftest", "r1b_run_session.py", "r1b_run_slot.py", "rmtree", "os.remove", "unlink"):
+            self.assertNotIn(forbidden, all_code)
+        self.assertIn('tempfile.mkdtemp(prefix="dsse_htq_prep_", dir="/content")', all_code)
+        self.assertIn('"analysis/ju_space"', all_code)
+        self.assertIn('"results/ju_space/plans"', all_code)
+        self.assertEqual(sources[-1], builder.prepare_code("start", "Beide Konten vorbereitet und geprüft. Jetzt HTQ_START auf der A100 ausführen."))
+        self.assertNotIn("accelerator", doc["metadata"])
 
 
 if __name__ == "__main__":
