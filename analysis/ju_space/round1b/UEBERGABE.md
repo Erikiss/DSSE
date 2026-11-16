@@ -177,6 +177,16 @@
   Nächste Schritte: (1) volle L-CAL: python results/ju_space/plans/runde1b/arbeitsstand/lcal/lcal_resumable.py
   results/ju_space/plans/runde1b/l_cal.json <cache> (Gruppen mit --items, (a) braucht etwa 2,4 GB RAM je Prozess), committen;
   (2) Freigabe r1b_xfer A -> B, dann Slots A1, A2, B1, B2.
+- 16.11. 09:50 MEZ (Stufe 1 läuft; Drive Konto A: folders/12Z_7XHElXYRRGaEG0RtR_evzAT1-m0t-, Konto B:
+  folders/1e3Zy7mQ1OKALIPTk9z8ekD74DAab8AeP, per embeddedfolderview lesbar; Drive-Zeiten in US-Pazifikzeit = MEZ − 9 h).
+  Fertig: R_S0, R_S1, R_S2_14/18/06, R_S3, R_S6, D_B, D_A, K_S3, K_S1 (nach dem eingefrorenen Text mit H+ = 12.445 Neuronen,
+  G-K22 instabil; SG8-Vorschau 'H-neurons not replicated (detection at random-set level)'). Teilweise: D_C (Absturz in d5_gen,
+  behoben 7a49022), K_S4 (k8b fertig; k8a abgestürzt, behoben in diesem Bundle; k8c, k7a offen). Offen: R_S5, R_S7, R_ana,
+  K_S2a, K_S2b, K_S5, L_A, L_B, K_ana, D_ana, ANA; L-CAL (Notebook runde1b_LCAL.ipynb, CPU, Ergebnis nach
+  dsse_runs/r1b_lcal/l_cal.json, dann committen). Zusatz-Notebooks: runde1b_B1_in_A / B2_in_A (Konto-B-Sitzungen auf einer
+  A100 von Konto A; schreiben über die Verknüpfung dsse_runs_B), runde1b_A1_DC_zuerst. K_S1 brauchte für k2_screen_09 eine
+  A100-80GB. OFFENE ENTSCHEIDUNG DES NUTZERS: Änderung 1 (runde1b_plan_amendments.md, H_tq statt H+) hat nie gegriffen, weil
+  K_S1 vorher nach dem eingefrorenen Text fertig wurde; Empfehlung: zurückziehen (Rückzug dokumentieren, Code zurücknehmen).
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.
