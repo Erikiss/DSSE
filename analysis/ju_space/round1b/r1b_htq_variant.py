@@ -27,6 +27,7 @@ LABEL = "post hoc: H_tq retained (amendment 2)"
 SUBDIR = "variants/htq_v2"
 MARKER = "_htq_seed.json"
 _VARIANT_PREFIX_OUTPUTS = frozenset(("hn/htq_har_ready.json",))
+_COLAB_DRIVE = Path("/content/drive")
 
 
 def active(ctx=None):
@@ -43,18 +44,64 @@ def _account(account):
     return account
 
 
-def _path(value):
+def _path(value, account):
     p = Path(value).expanduser()
     if ".." in p.parts:
         raise ValueError("parent traversal is not allowed")
     p = Path(os.path.abspath(p))
-    _no_links(p)
+    _no_links(p, account=account)
     return p
 
 
-def _no_links(path):
+def _colab_shortcut_target(alias):
+    """Validate only Colab's shared B-root link, never links within run data."""
+    raw = os.readlink(alias)
+    target = Path(os.path.abspath(alias.parent / raw))
+    expected = _COLAB_DRIVE / ".shortcut-targets-by-id"
+    try:
+        parts = target.relative_to(expected).parts
+        if len(parts) != 2 or parts[1] != "dsse_runs":
+            raise ValueError("target does not match the supported shortcut layout")
+        # Common drive ancestors are checked by _no_links on the logical path.
+        # Check every remaining target component, without resolving recursive
+        # or indirect symlinks. Revalidate on each file/path check.
+        if any(p.is_symlink() for p in (target, target.parent, expected)):
+            raise ValueError("target path contains another symlink")
+        if not target.is_dir():
+            raise ValueError("target directory is missing")
+    except (OSError, ValueError) as e:
+        try:
+            resolved = str(target.resolve(strict=False))
+        except (OSError, RuntimeError):
+            resolved = "unresolvable (possibly a symlink cycle)"
+        raise ValueError(
+            f"unsupported Colab B shortcut {alias}: readlink={raw!r}, "
+            f"target={target}, resolved={resolved}; expected {expected}/<folder-id>/dsse_runs ({e})"
+        ) from None
+    return target
+
+
+def _shortcut_target(path):
+    alias = _COLAB_DRIVE / "MyDrive/dsse_runs_B"
+    if (path == alias or alias in path.parents) and alias.is_symlink():
+        return _colab_shortcut_target(alias)
+    return None
+
+
+def _assert_shortcut_unchanged(source, pinned):
+    if _shortcut_target(source) != pinned:
+        raise ValueError("Colab B shortcut changed while seeding; stop original notebooks and retry")
+
+
+def _no_links(path, account=None):
+    alias = _COLAB_DRIVE / "MyDrive/dsse_runs_B"
     for p in (path, *path.parents):
         if p.is_symlink():
+            if p == alias:
+                if account not in (None, "B"):
+                    raise ValueError(f"Colab dsse_runs_B shortcut is only allowed for account B: {p}")
+                _colab_shortcut_target(p)
+                continue
             raise ValueError(f"symlink is not allowed in seed paths: {p}")
 
 
@@ -223,7 +270,7 @@ def _same_seed_root(rec, dest, account):
 def check(variant_runs, account):
     """Validate completed bootstrap identity without overwriting new run progress."""
     account = _account(account)
-    dest = _path(variant_runs)
+    dest = _path(variant_runs, account)
     if dest.name != VARIANT or dest.parent.name != "variants":
         raise ValueError(f"expected a {SUBDIR} run root: {dest}")
     marker = dest / MARKER
@@ -243,23 +290,31 @@ def check(variant_runs, account):
 def seed(source, account):
     """Atomically seed a separate run root, or keep a completed seed unchanged."""
     account = _account(account)
-    source = _path(source)
+    source = _path(source, account)
     if not source.is_dir():
         raise ValueError(f"original run root is missing: {source}")
     if (source / MARKER).exists() or (source.name == VARIANT and source.parent.name == "variants"):
         raise ValueError("a variant run root cannot be used as the original source")
+    pinned_shortcut = _shortcut_target(source)
+    alias = _COLAB_DRIVE / "MyDrive/dsse_runs_B"
+    physical_source = (pinned_shortcut / source.relative_to(alias)) if pinned_shortcut is not None else source
     parent = source / "variants"
     _no_links(parent)
-    parent.mkdir(exist_ok=True)
+    physical_parent = physical_source / "variants"
+    # Own temporary paths use the validated physical root, so cleanup cannot
+    # follow a shared-root shortcut that was retargeted during a long copy.
+    physical_parent.mkdir(exist_ok=True)
     dest = parent / VARIANT
     _no_links(dest)
-    lock = parent / f".{VARIANT}.seed.lock"
+    physical_dest = physical_parent / VARIANT
+    lock = physical_parent / f".{VARIANT}.seed.lock"
     try:
         lock.mkdir()
     except FileExistsError:
         raise ValueError(f"bootstrap already running (or stale lock; inspect before removing): {lock}") from None
     stage = None
     try:
+        _assert_shortcut_unchanged(source, pinned_shortcut)
         if dest.exists():
             check(dest, account)
             print(f"[{account}] Vorbereitung bereits fertig; vorhandene Kopien werden weiterverwendet.", flush=True)
@@ -270,7 +325,7 @@ def seed(source, account):
         trees = _trees(source)
         snapshots = {str(p): _inventory(p) for p in trees}
         source_top = {p.name for p in trees}
-        stage = Path(tempfile.mkdtemp(prefix=f".{VARIANT}.seed-", dir=parent))
+        stage = Path(tempfile.mkdtemp(prefix=f".{VARIANT}.seed-", dir=physical_parent))
         records = {}
         total = sum(len(files) for files in snapshots.values()) + len(prefix) + len(markers)
         copied = 0
@@ -294,6 +349,7 @@ def seed(source, account):
                     print(f"[{account}] {copied}/{total} Dateien kopiert und geprüft.", flush=True)
         # Stop on concurrent producers, including newly appearing independent
         # folders. No completed destination is exposed until these checks pass.
+        _assert_shortcut_unchanged(source, pinned_shortcut)
         if source_top != {p.name for p in _trees(source)}:
             raise ValueError("source folders changed while seeding; stop original notebooks and retry")
         for tree in trees:
@@ -316,9 +372,10 @@ def seed(source, account):
             f.write("\n")
             f.flush()
             os.fsync(f.fileno())
-        if dest.exists():
+        _assert_shortcut_unchanged(source, pinned_shortcut)
+        if physical_dest.exists():
             raise ValueError(f"destination appeared during bootstrap: {dest}")
-        os.rename(stage, dest)
+        os.rename(stage, physical_dest)
         stage = None
         print(f"[{account}] Vorbereitung fertig: {copied} Dateien kopiert und geprüft.", flush=True)
         return str(dest)

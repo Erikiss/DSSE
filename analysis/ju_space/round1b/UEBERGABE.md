@@ -258,12 +258,19 @@ Schreibzugriffe auf die Ergebnisse in Drive; kein vollständiger Test mit einem 
   wieder `HTQ_START` auf A100 ausführen, anschließend B2. Die Helper-Ausgaben nennen nun Ordner- und Dateifortschritt;
   die neue Prüfung benötigt weder Modellgewichte noch eine GPU.
 - **Nicht lesbares Colab-Ausgabefeld:** Ein weiterer Screenshot zeigt eine fehlgeschlagene PREP_CHECK-Zelle und ein
-  abgestürztes Ausgabefeld im mobilen Browser. Die Python-Ursache ist weiterhin unbekannt. PREP_CHECK schreibt deshalb
+  abgestürztes Ausgabefeld im mobilen Browser. Daraus war die Python-Ursache nicht erkennbar. PREP_CHECK schreibt deshalb
   die vollständige Bootstrap-Ausgabe samt Traceback zusätzlich nach `dsse_runs/htq_prep_check.log` in Konto A und einen
   kleinen letzten Status nach `dsse_runs/htq_prep_check_status.json`. Frühere Logeinträge bleiben erhalten; im Notebook
   erscheinen nur kurze Statusmeldungen. Die Diagnose ist kein erfolgreicher Abschlussmarker. Bei fehlendem Drive-Zugriff
   kann auch die Protokolldatei nicht gespeichert werden. Das aktualisierte Notebook neu öffnen und auf CPU vollständig
   ausführen; danach zuerst Log/Status prüfen. Kein Start von K_S1 oder B2 allein aufgrund einer beendeten Fehlerzelle.
+- **Ursache belegt (16.11.2026, 14:05 UTC):** Das gespeicherte Protokoll bestätigt Konto A mit `seed` und `check`, jeweils
+  Exit 0. Konto B scheitert an `symlink is not allowed in seed paths: /content/drive/MyDrive/dsse_runs_B` (Exit 2).
+  Der Helper unterstützt nun gezielt diese Konto-B-Verknüpfung auf einen vorhandenen Standard-Colab-Zielordner
+  `/content/drive/.shortcut-targets-by-id/<Ordner-ID>/dsse_runs`. Die logischen Pfade in Übernahmemarkierungen bleiben
+  erhalten; zusätzliche Datei-/Unterordner-Symlinks und abweichende Ziele bleiben gesperrt. Das vorhandene PREP_CHECK
+  erneut vollständig ausführen: Seine Clone-Zelle lädt den aktualisierten Branch. Der Browserfehler selbst wird durch
+  diese Codekorrektur nicht behoben; die gespeicherten Diagnose-Dateien zeigen den tatsächlichen Ablauf.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

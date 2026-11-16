@@ -63,6 +63,16 @@ class SeedTests(unittest.TestCase):
                     "r1b_ana2/session_done.json", "r1b_declared_not_run.json"):
             write(self.source, rel, "must not reuse")
 
+    def colab_root(self):
+        drive = Path(self.temp.name) / "drive"
+        (drive / "MyDrive").mkdir(parents=True)
+        target = drive / ".shortcut-targets-by-id/folder-123/dsse_runs"
+        target.mkdir(parents=True)
+        alias = drive / "MyDrive/dsse_runs_B"
+        alias.symlink_to(target, target_is_directory=True)
+        self.source = target
+        return drive, alias, target
+
     def test_seed_b_preserves_original_and_excludes_h_dependents(self):
         self.prefix()
         self.independent()
@@ -262,6 +272,92 @@ class SeedTests(unittest.TestCase):
         rec["destination"] = str(alias_dest)
         write(dest, V.MARKER, json.dumps(rec))
         self.assertEqual(V.check(dest, "B")["source"], str(alias_root))
+
+    def test_real_colab_b_root_shortcut_seeds_and_keeps_logical_provenance(self):
+        drive, alias, target = self.colab_root()
+        self.prefix()
+        self.independent()
+        original = hashes(target)
+        with patch.object(V, "_COLAB_DRIVE", drive):
+            dest = Path(V.seed(alias, "B"))
+            rec = V.check(dest, "B")
+            self.assertEqual(dest, alias / V.SUBDIR)
+            self.assertEqual(rec["source"], str(alias))
+            self.assertEqual(rec["destination"], str(alias / V.SUBDIR))
+            self.assertTrue(all(info["source"].startswith(str(alias) + "/") for info in rec["files"].values()))
+            self.assertEqual(original, hashes(target))
+            self.assertTrue((target / V.SUBDIR / V.MARKER).is_file())
+            # Account B reads the same persisted marker via its native mount.
+            native = drive / "MyDrive/dsse_runs" / V.SUBDIR
+            write(native, V.MARKER, (dest / V.MARKER).read_text())
+            self.assertEqual(V.check(native, "B")["source"], str(alias))
+            self.assertEqual(V.seed(alias, "B"), str(dest))
+
+    def test_colab_shortcut_is_b_only_and_rejects_inner_data_links(self):
+        drive, alias, target = self.colab_root()
+        self.prefix()
+        self.independent()
+        with patch.object(V, "_COLAB_DRIVE", drive):
+            with self.assertRaisesRegex(ValueError, "only allowed for account B"):
+                V.seed(alias, "A")
+            (target / "r1b_inputs/jlens.pt").unlink()
+            (target / "r1b_inputs/jlens.pt").symlink_to(target / "k4j.json")
+            with self.assertRaisesRegex(ValueError, "symlink is not allowed in source data"):
+                V.seed(alias, "B")
+        self.assertFalse((target / V.SUBDIR / V.MARKER).exists())
+
+    def test_colab_shortcut_rejects_other_targets_with_diagnostics(self):
+        drive, alias, target = self.colab_root()
+        outside = Path(self.temp.name) / "outside/dsse_runs"
+        outside.mkdir(parents=True)
+        alias.unlink()
+        alias.symlink_to(outside, target_is_directory=True)
+        with patch.object(V, "_COLAB_DRIVE", drive):
+            with self.assertRaisesRegex(ValueError, "unsupported Colab B shortcut") as err:
+                V.seed(alias, "B")
+        self.assertIn(str(outside), str(err.exception))
+        self.assertIn("readlink=", str(err.exception))
+        self.assertIn("resolved=", str(err.exception))
+        self.assertIn("<folder-id>/dsse_runs", str(err.exception))
+        self.assertFalse((outside / "variants").exists())
+
+    def test_colab_shortcut_rejects_linked_target_and_cycles(self):
+        drive, alias, target = self.colab_root()
+        target.rmdir()
+        target.symlink_to(alias, target_is_directory=True)
+        with patch.object(V, "_COLAB_DRIVE", drive):
+            with self.assertRaisesRegex(ValueError, "target path contains another symlink") as err:
+                V.seed(alias, "B")
+        self.assertIn("unresolvable", str(err.exception))
+
+    def test_shortcut_retarget_cleans_only_its_original_owned_paths(self):
+        drive, alias, target = self.colab_root()
+        self.prefix()
+        self.independent()
+        second = drive / ".shortcut-targets-by-id/another-folder/dsse_runs"
+        V.shutil.copytree(target, second)
+        original_second = hashes(second)
+        sentinel = write(second, "variants/.htq_v2.seed.lock/keep.txt", "not our lock")
+        original_copy = V._copy
+        retargeted = False
+
+        def copy_then_retarget(*args, **kwargs):
+            nonlocal retargeted
+            result = original_copy(*args, **kwargs)
+            if not retargeted:
+                retargeted = True
+                alias.unlink()
+                alias.symlink_to(second, target_is_directory=True)
+            return result
+
+        with patch.object(V, "_COLAB_DRIVE", drive), patch.object(V, "_copy", side_effect=copy_then_retarget):
+            with self.assertRaisesRegex(ValueError, "shortcut changed while seeding"):
+                V.seed(alias, "B")
+        self.assertFalse((target / V.SUBDIR / V.MARKER).exists())
+        self.assertFalse((second / V.SUBDIR / V.MARKER).exists())
+        self.assertFalse(list((target / "variants").glob(".htq_v2.seed*")))
+        self.assertEqual(sentinel.read_text(), "not our lock")
+        self.assertEqual(original_second, hashes(second))
 
     def test_alias_exception_does_not_allow_other_roots_or_account_a(self):
         self.prefix()
