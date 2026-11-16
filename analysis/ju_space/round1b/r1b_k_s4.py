@@ -138,6 +138,8 @@ def _contexts(ctx, tok, b, bnd_rows, N_, inst, kind):
                 a = str(x["A"] + int(g.integers(1, 9)) * (1 if g.random() < 0.5 else -1))
             if a is not None:
                 msgs += [dict(role="user", content=x["prompt"]), dict(role="assistant", content=a.strip())]
+    if not msgs:                                  # no material for this context kind (e.g. no own correct answers): empty cell
+        return None
     ids = RC.enc(tok, tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=False, enable_thinking=False))
     head = RC.enc(tok, "<|im_start|>user\n")
     return ids if len(ids) <= N_ else head + ids[-(N_ - len(head)):]
@@ -156,12 +158,14 @@ def k8a_run(ctx, i, n):
     cells = [("NONE", 0)] + [("FILLER", L) for L in (N(ctx, 512, 64), N(ctx, 2048, 128), N(ctx, 4096, 192))] + \
             [(k, N(ctx, 2048, 128)) for k in ("COHERENT", "SHUFFLED", "OWN-CORRECT", "OWN-WRONG", "INJECTED-WRONG")]
     jobs = [(c, L, inst) for c, L in cells for inst in (range(8) if c != "NONE" else [0])]
-    rows = []
+    rows, empty = [], []
     for kind, L, inst in KB.parts(jobs, i, n):
         tg = [t for t in targets if kind == "NONE" or H(t[1].get("id", t[1].get("qid"))) % 8 == inst]
         if not tg:
             continue
         pre = _contexts(ctx, tok, b, brow, L, inst, kind) if kind != "NONE" else []
+        if pre is None:                            # empty cell: its contrasts read 'too few items' in k8a_stats
+            empty.append(dict(kind=kind, L=L, inst=inst, code="NA:no_context_material")); continue
         qs = [RC.chat_ids(tok, x["prompt"] if f == "ACH" else x["question"] + S1.Q_SUFFIX) for f, x in tg]
         ans = [RC.enc(tok, str(x["A"]) if f == "ACH" else x["aliases"][0]) for f, x in tg]
         pc = None
@@ -181,7 +185,7 @@ def k8a_run(ctx, i, n):
                 txt = tok.decode(t)
                 ok = S1.label_ach(ctx, x, txt) if f == "ACH" else S1.label_tqa(ctx, x, txt) == "correct"
                 rows.append(dict(kind=kind, L=L, inst=inst, fam=f, item=x.get("id", x.get("qid")), acc=float(ok), H_gen=s_mean(r), H_tf=s_mean(r2)))
-    out = dict(rows=rows)
+    out = dict(rows=rows, empty_cells=empty)
     if i == 0:                                                    # O1 global offset (+4,096) and O2 gap (2,048 position ids, no tokens)
         qs = [RC.chat_ids(tok, x["prompt"] if f == "ACH" else x["question"] + S1.Q_SUFFIX) for f, x in targets[:N(ctx, 16, 3)]]
         d1, top, nll = 0.0, True, []
