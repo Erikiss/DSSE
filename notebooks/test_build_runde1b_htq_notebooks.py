@@ -158,8 +158,86 @@ class NotebookTests(unittest.TestCase):
         self.assertIn('tempfile.mkdtemp(prefix="dsse_htq_prep_", dir="/content")', all_code)
         self.assertIn('"analysis/ju_space"', all_code)
         self.assertIn('"results/ju_space/plans"', all_code)
-        self.assertEqual(sources[-1], builder.prepare_code("start", "Beide Konten vorbereitet und geprüft. Jetzt HTQ_START auf der A100 ausführen."))
+        self.assertEqual(sources[-1], builder.logged_prep_code())
         self.assertNotIn("accelerator", doc["metadata"])
+
+    def test_prep_log_persists_success_and_running_state_without_flooding_output(self):
+        with tempfile.TemporaryDirectory() as d:
+            status = Path(d) / "htq_prep_check_status.json"
+            status.write_text(json.dumps({"status": "success", "run_id": "old"}))
+            program = '''import sys
+with open(HTQ_PREP_STATUS) as f:
+    assert json.load(f)["status"] == "running"
+for i in range(100):
+    print("full child output", i)
+print("stderr preserved", file=sys.stderr)
+'''
+            env = dict(SOURCE_A=d, COMMIT="abc123")
+            visible = io.StringIO()
+            with contextlib.redirect_stdout(visible):
+                exec(compile(builder.logged_prep_code(program), "logged-prep", "exec"), env)
+            saved = json.loads(status.read_text())
+            log = (Path(d) / "htq_prep_check.log").read_text()
+            self.assertEqual(saved["status"], "success")
+            self.assertEqual(saved["commit"], "abc123")
+            self.assertEqual(saved["stage"], "complete")
+            self.assertNotEqual(saved["run_id"], "old")
+            self.assertTrue(saved["started_utc"].endswith("+00:00"))
+            self.assertTrue(saved["finished_utc"].endswith("+00:00"))
+            self.assertIn("full child output 99", log)
+            self.assertIn("stderr preserved", log)
+            self.assertNotIn("full child output", visible.getvalue())
+            self.assertLess(len(visible.getvalue().splitlines()), 10)
+
+    def test_prep_log_persists_child_failure_and_appends_prior_log(self):
+        with tempfile.TemporaryDirectory() as d:
+            logfile = Path(d) / "htq_prep_check.log"
+            logfile.write_text("earlier diagnostic\n", encoding="utf-8")
+            process = SimpleNamespace(stdout=io.StringIO("PermissionError: Konto B cannot write\n"),
+                                      wait=lambda: 1, poll=lambda: 1)
+            env = dict(SOURCE_A=d, R1B="/current/code", TEST_ENV={}, sys=sys,
+                       subprocess=SimpleNamespace(Popen=lambda *a, **kw: process,
+                                                  PIPE=subprocess.PIPE, STDOUT=subprocess.STDOUT))
+            program = builder.variant_helpers() + '\nrun_variant("seed", "/source/B", "B")\n'
+            visible = io.StringIO()
+            with contextlib.redirect_stdout(visible):
+                with self.assertRaisesRegex(RuntimeError, "Ursache in htq_prep_check.log"):
+                    exec(compile(builder.logged_prep_code(program), "logged-prep", "exec"), env)
+            log = logfile.read_text()
+            saved = json.loads((Path(d) / "htq_prep_check_status.json").read_text())
+            self.assertTrue(log.startswith("earlier diagnostic\n"))
+            self.assertIn("PermissionError: Konto B cannot write", log)
+            self.assertIn("[Konto B] seed: Exit 1", log)
+            self.assertIn("Traceback", log)
+            self.assertEqual(saved["status"], "failed")
+            self.assertIn("Konto B", saved["error"])
+            self.assertNotIn("PermissionError", visible.getvalue())
+
+    def test_prep_log_catches_missing_global_before_child_starts(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = dict(SOURCE_A=d)
+            with contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(RuntimeError, "Ursache in htq_prep_check.log"):
+                    exec(compile(builder.logged_prep_code(), "logged-prep", "exec"), env)
+            saved = json.loads((Path(d) / "htq_prep_check_status.json").read_text())
+            log = (Path(d) / "htq_prep_check.log").read_text()
+            self.assertEqual(saved["status"], "failed")
+            self.assertEqual(saved["error_type"], "NameError")
+            self.assertIn("R1B", saved["error"])
+            self.assertIn("NameError", log)
+            self.assertIsNone(saved["commit"])
+
+    def test_prep_log_open_failure_never_claims_saved_or_creates_mount(self):
+        with tempfile.TemporaryDirectory() as d:
+            absent = Path(d) / "unmounted" / "dsse_runs"
+            visible = io.StringIO()
+            with contextlib.redirect_stdout(visible):
+                with self.assertRaisesRegex(RuntimeError, "Drive-Protokoll nicht gespeichert"):
+                    exec(compile(builder.logged_prep_code("raise AssertionError('must not run')"), "logged-prep", "exec"),
+                         dict(SOURCE_A=str(absent)))
+            self.assertFalse(absent.exists())
+            self.assertIn("NICHT", visible.getvalue())
+            self.assertNotIn("Vollständiges Protokoll:", visible.getvalue())
 
 
 if __name__ == "__main__":

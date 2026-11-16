@@ -225,7 +225,7 @@ Herkunftskennzeichnung, Konto-B-Pfadaliasen, Post-hoc-Auswertung und Notebook-Ab
 Schreibzugriffe auf die Ergebnisse in Drive; kein vollständiger Test mit einem Mock-Modell oder einer A100.
 
 - Originale Slot-Läufe vor dem Kopieren stoppen. Die vorhandenen Ergebnisse in `dsse_runs` bleiben erhalten; die Variante
-  schreibt in **beiden Konten ausschließlich nach `dsse_runs/variants/htq_v2`**, mit getrennten lokalen Arbeitsordnern.
+  schreibt Messergebnisse in **beiden Konten ausschließlich nach `dsse_runs/variants/htq_v2`**, mit getrennten lokalen Arbeitsordnern.
   Alte H+-Ergebnisse, Marker, Eingabekopien oder Caches dürfen keine H_tq-Schritte als bereits erledigt ausweisen.
 - **Zuerst `HTQ_START` in Konto A auf einer A100.** Voraussetzung: `MyDrive/dsse_runs_B` ist die vorhandene Verknüpfung auf
   den freigegebenen Ordner von Konto B und für Konto A beschreibbar. Der Start übernimmt die wiederverwendbaren R-/D-Sitzungen,
@@ -257,6 +257,13 @@ Schreibzugriffe auf die Ergebnisse in Drive; kein vollständiger Test mit einem 
   weiter. Keine Originalordner, Zwischenstände oder Sperren auf Verdacht löschen. Erst nach erfolgreicher Vorbereitung
   wieder `HTQ_START` auf A100 ausführen, anschließend B2. Die Helper-Ausgaben nennen nun Ordner- und Dateifortschritt;
   die neue Prüfung benötigt weder Modellgewichte noch eine GPU.
+- **Nicht lesbares Colab-Ausgabefeld:** Ein weiterer Screenshot zeigt eine fehlgeschlagene PREP_CHECK-Zelle und ein
+  abgestürztes Ausgabefeld im mobilen Browser. Die Python-Ursache ist weiterhin unbekannt. PREP_CHECK schreibt deshalb
+  die vollständige Bootstrap-Ausgabe samt Traceback zusätzlich nach `dsse_runs/htq_prep_check.log` in Konto A und einen
+  kleinen letzten Status nach `dsse_runs/htq_prep_check_status.json`. Frühere Logeinträge bleiben erhalten; im Notebook
+  erscheinen nur kurze Statusmeldungen. Die Diagnose ist kein erfolgreicher Abschlussmarker. Bei fehlendem Drive-Zugriff
+  kann auch die Protokolldatei nicht gespeichert werden. Das aktualisierte Notebook neu öffnen und auf CPU vollständig
+  ausführen; danach zuerst Log/Status prüfen. Kein Start von K_S1 oder B2 allein aufgrund einer beendeten Fehlerzelle.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

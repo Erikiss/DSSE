@@ -210,6 +210,75 @@ def prepare_code(kind, start_message="Beide Variantenordner bereit. Nun wird nur
     return source
 
 
+def logged_prep_code(program=None):
+    """Keep the last preparation cell useful even when Colab cannot render output."""
+    if program is None:
+        program = prepare_code("start", "Beide Konten vorbereitet und geprüft. Jetzt HTQ_START auf der A100 ausführen.")
+    return f'''# Dauerhaftes Diagnoseprotokoll: diese letzte Zelle enthält die Vorbereitung.
+import contextlib, json, os, traceback, uuid
+from datetime import datetime, timezone
+_prep_program = {program!r}
+_prep_source = globals().get("SOURCE_A") or "/content/drive/MyDrive/dsse_runs"
+_prep_now = lambda: datetime.now(timezone.utc).isoformat()
+_prep_status = dict(run_id=uuid.uuid4().hex[:12], started_utc=_prep_now(),
+                    finished_utc=None, status="running", stage="compile", error=None,
+                    commit=globals().get("COMMIT") if isinstance(globals().get("COMMIT"), str) else None)
+try:
+    if not os.path.isdir(_prep_source):
+        raise NotADirectoryError("Der bestehende dsse_runs-Ordner von Konto A fehlt; Drive zuerst verbinden.")
+    HTQ_PREP_LOG = os.path.join(_prep_source, "htq_prep_check.log")
+    HTQ_PREP_STATUS = os.path.join(_prep_source, "htq_prep_check_status.json")
+    _prep_log = open(HTQ_PREP_LOG, "a", encoding="utf-8", buffering=1)
+except Exception as error:
+    print("Protokoll konnte NICHT in Drive geöffnet werden:", str(error), flush=True)
+    raise RuntimeError("Drive-Protokoll nicht gespeichert. Konto-A-Ablage prüfen.") from None
+
+def _prep_save_status():
+    temporary = HTQ_PREP_STATUS + ".tmp-" + _prep_status["run_id"]
+    with open(temporary, "w", encoding="utf-8") as output:
+        json.dump(_prep_status, output, ensure_ascii=False, indent=1)
+    os.replace(temporary, HTQ_PREP_STATUS)
+
+print("Vorbereitung läuft. Vollständige Ausgabe wird in Drive gespeichert.", flush=True)
+print(HTQ_PREP_LOG, flush=True)
+_prep_status_saved = False
+with _prep_log:
+    with contextlib.redirect_stdout(_prep_log), contextlib.redirect_stderr(_prep_log):
+        print("\\n=== HTQ PREP", _prep_status["run_id"], _prep_status["started_utc"], "===", flush=True)
+        print("Code-Commit:", _prep_status["commit"] or "noch nicht bekannt", flush=True)
+        try:
+            _prep_save_status()  # Ein alter Erfolgsstatus darf nicht als aktueller gelten.
+            _prep_compiled = compile(_prep_program, "<HTQ-Vorbereitung>", "exec")
+            _prep_status["stage"] = "bootstrap"
+            _prep_save_status()
+            exec(_prep_compiled, globals())
+        except BaseException as error:
+            _prep_status.update(status="interrupted" if isinstance(error, KeyboardInterrupt) else "failed",
+                                error_type=type(error).__name__, error=(type(error).__name__ + ": " + str(error))[:500])
+            traceback.print_exc()
+        else:
+            _prep_status.update(status="success", stage="complete")
+        finally:
+            _prep_status["finished_utc"] = _prep_now()
+            try:
+                _prep_save_status()
+                _prep_status_saved = True
+            except Exception:
+                print("Statusdatei konnte NICHT aktualisiert werden:", flush=True)
+                traceback.print_exc()
+            print("Ergebnis:", _prep_status["status"], "Lauf:", _prep_status["run_id"], flush=True)
+print("Vorbereitung:", _prep_status["status"], flush=True)
+print("Vollständiges Protokoll:", HTQ_PREP_LOG, flush=True)
+if _prep_status_saved:
+    print("Statusdatei:", HTQ_PREP_STATUS, flush=True)
+else:
+    print("Statusdatei NICHT aktualisiert; bitte das Protokoll lesen.", flush=True)
+if _prep_status["status"] != "success":
+    raise RuntimeError("Vorbereitung fehlgeschlagen. Ursache in htq_prep_check.log.") from None
+print("Jetzt HTQ_START auf der A100 ausführen.", flush=True)
+'''
+
+
 def prep_check():
     name = "HTQ_PREP_CHECK"
     doc = dict(cells=[
@@ -224,13 +293,17 @@ Ordner unter `/content`. Es prüft beziehungsweise vervollständigt dieselben
 Variantenordner wie HTQ_START. Eine vollständig vorbereitete Ablage von Konto A
 wird wiederverwendet. Originalergebnisse und vorhandene Sperren bleiben erhalten.
 
-Jeder Vorbereitungsschritt nennt Konto, Aktion und Pfad. Die vollständige Ausgabe
-einschließlich Fehler wird in kurzen Zeilen angezeigt; am Ende steht der Exit-Code.
+Die letzte Zelle speichert die vollständige Vorbereitungsausgabe einschließlich
+Fehler in Konto A unter `dsse_runs/htq_prep_check.log`. Den aktuellen Laufstatus
+mit UTC-Zeit enthält `dsse_runs/htq_prep_check_status.json`. So bleibt die Ursache
+lesbar, wenn Colab die Zellenausgabe auf dem Telefon nicht anzeigt. Im Notebook
+erscheinen nur kurze Statusmeldungen. Die vorherigen Zellen zum Verbinden von
+Drive und Laden des Codes liegen außerhalb dieses Diagnoseprotokolls.
 Dieses Notebook lädt keine Modelle und startet keine GPU-Messung.
 
 Nach erfolgreicher Vorbereitung beider Konten **HTQ_START auf der A100** ausführen.
-Bei einem Fehler ist die genaue Ursache unmittelbar über der kurzen Fehlermeldung
-zu sehen. Sperren oder Variantenordner nicht auf Verdacht löschen.
+Bei einem Fehler das Protokoll in Drive öffnen. Sperren oder Variantenordner
+nicht auf Verdacht löschen.
 '''),
         cell("code", f'''import os, sys, json, subprocess, tempfile
 from google.colab import drive
@@ -258,7 +331,7 @@ COMMIT = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output
 R1B = f"{REPO}/analysis/ju_space/round1b"
 print("Vorbereitungscode:", COMMIT, flush=True)
 '''),
-        cell("code", prepare_code("start", "Beide Konten vorbereitet und geprüft. Jetzt HTQ_START auf der A100 ausführen.")),
+        cell("code", logged_prep_code()),
     ], metadata={"colab": {"provenance": []}, "kernelspec": {"display_name": "Python 3", "name": "python3"}},
         nbformat=4, nbformat_minor=5)
     finish(doc, name)
