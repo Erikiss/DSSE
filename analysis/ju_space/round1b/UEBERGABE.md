@@ -185,8 +185,21 @@
   K_S2a, K_S2b, K_S5, L_A, L_B, K_ana, D_ana, ANA; L-CAL (Notebook runde1b_LCAL.ipynb, CPU, Ergebnis nach
   dsse_runs/r1b_lcal/l_cal.json, dann committen). Zusatz-Notebooks: runde1b_B1_in_A / B2_in_A (Konto-B-Sitzungen auf einer
   A100 von Konto A; schreiben über die Verknüpfung dsse_runs_B), runde1b_A1_DC_zuerst. K_S1 brauchte für k2_screen_09 eine
-  A100-80GB. OFFENE ENTSCHEIDUNG DES NUTZERS: Änderung 1 (runde1b_plan_amendments.md, H_tq statt H+) hat nie gegriffen, weil
-  K_S1 vorher nach dem eingefrorenen Text fertig wurde; Empfehlung: zurückziehen (Rückzug dokumentieren, Code zurücknehmen).
+  A100-80GB. Nachtrag zur Nutzerentscheidung vom 16.11.2026: Änderung 1 (runde1b_plan_amendments.md, H_tq statt H+) ist
+  zurückgezogen. Sie hatte laut diesem Übergabestand nie gegriffen, weil K_S1 vorher nach dem eingefrorenen Text fertig wurde;
+  es gilt weiter die eingefrorene H+-Regel. Die abgeschlossenen K_S1-Ergebnisse bleiben erhalten.
+- 16.11.2026 (Codex, aktueller Arbeitsstand nach Nutzerentscheidung): Rückzug von Änderung 1 in
+  results/ju_space/plans/runde1b/runde1b_plan_amendments.md dokumentiert; ursprünglichen Vorschlag als ausdrücklich
+  nicht mehr wirksame Historie erhalten. G-K22 verwendet bei instabilem H_tq weiterhin H+ und daran angepasste Zufallsmengen;
+  die eingefrorene G-K1-Ausnahme für H_ar bleibt unverändert. Kein erzwungener Wiederholungslauf und kein Überschreiben des
+  laut Übergabe abgeschlossenen K_S1. Die obigen Fertig-/Teilweise-/Offen-Angaben stammen aus dem gemeldeten Stand
+  vom 16.11. 09:50 MEZ; in diesem Dokumentationsschritt wurde der aktuelle Drive-/Colab-Laufstand nicht unabhängig neu geprüft.
+  Code-Rücknahme abgeschlossen: r1b_k_s1.py und r1b_sessions_K.py sind bytegleich mit Freeze-Commit 4de7a3b, einschließlich
+  RK-2 (K_S7). Geprüft: Sitzungsverträge, SG1 (Plan-/Pakethashes und Freeze-Abstammung), Fortsetzung von k2_sets/k3a in
+  K_S1/K_S7 ohne Änderung-1-Dateien (fehlende Ausgaben und fehlgeschlagene Schritte werden weiterhin erkannt), 14 K1-Scorertests
+  sowie Python-Syntax der Module und der vier zusätzlichen Notebooks. Keine echten Modelle und kein neuer GPU-Lauf.
+  Veröffentlichung über einen eigenen Branch und Pull Request; die Colab-Notebooks laden weiterhin
+  ccr-6fe02b21-est040 und erhalten die Korrekturen erst nach Übernahme des Pull Requests.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

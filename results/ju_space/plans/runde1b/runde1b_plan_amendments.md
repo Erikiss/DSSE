@@ -1,6 +1,27 @@
 # Round 1b: plan amendments (main §9.3)
 
-## Amendment 1 (2026-11-16T00:30:00Z) — post hoc
+## Current status: amendment 1 withdrawn (user decision, 2026-11-16)
+
+**Amendment 1 is withdrawn and has no operative effect.** On 16 November 2026 the user accepted the recommendation to keep
+the frozen rule: if G-K22 finds H_tq unstable (median Dg2 bootstrap Jaccard < 0.5), H+ replaces H in the prescribed set uses,
+with random sets re-matched to H+. The frozen G-K1 exception (H_ar primary when TriviaQA yield fails) is unchanged.
+
+According to the 16 November 09:50 MEZ handoff, r1b_K_S1 completed under the frozen rule with H_op = H+ before amendment 1
+ever took effect. Its completed outputs are retained; withdrawal does not require re-running r1b_K_S1 or overwriting those
+outputs. This records the reported handoff status, not a new independent check of the live Drive or Colab run.
+
+The amendment-specific code and required output markers have been removed from both r1b_K_S1 and r1b_K_S7 (RK-2).
+The two affected modules, r1b_k_s1.py and r1b_sessions_K.py, are byte-identical to freeze commit 4de7a3b.
+Model-free checks passed: session contracts, SG1 (plan/package hashes and freeze ancestry), and runner continuation fixtures
+for k2_sets and k3a in both sessions. Completed steps are skipped with the original outputs; missing outputs and failed step
+records still require work. The 14 K1 scorer checks also passed. No real model or live Drive outputs were used in these checks.
+
+## Historical amendment 1 proposal — withdrawn, non-operative
+
+The original post-hoc proposal below is retained as history. Its change, overwrite instructions, labels and reporting rules
+are not current instructions; its statements about incomplete runs describe the earlier observation recorded with the proposal.
+
+### Amendment 1 (2026-11-16T00:30:00Z) — post hoc
 
 **Decided by:** the user (16 November 2026), on the coordinator's proposal (option B).
 

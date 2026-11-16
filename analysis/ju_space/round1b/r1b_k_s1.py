@@ -339,12 +339,12 @@ def k2_sets(ctx):
     if lab["G_K1_yield"] != "ok" or not htq["H"]:
         gk1 = "H_ar primary (TriviaQA yield)" if lab["G_K1_yield"] != "ok" else "C* gives no H-neurons"
     stable = KB.fin(htq["dg2_median"]) and htq["dg2_median"] >= 0.5
-    # Amendment 1 (15/16 Nov 2026, post hoc; runde1b_plan_amendments.md): an unstable H_tq stays H_op ('unstable set (H_tq kept)');
-    # H+ is reported descriptively only (hn_set.json H_plus, K3a's detection comparison, K's lens capture set), random sets match H_tq
-    gk22 = "stable set" if stable else "unstable set (H_tq kept; amendment 1, post hoc)"
+    gk22 = "stable set" if stable else "unstable set (H+ used)"
     if gk1.startswith("H_ar primary"):
         name, Hop = "H_ar", har.get("H", [])
-    else:                                                 # amendment 1: no switch to H+ when unstable
+    elif not stable:
+        name, Hop = "H+", htq["Hplus"]
+    else:
         name, Hop = "H_tq", htq["H"]
     sel_null = "selection not above label-permutation null" if len(htq["H"]) <= htq["perm_q95"] else None
     d = fit_data(ctx); cm = d["X"][:len(d["y_q"])].float().mean(0).numpy()            # mean answer-CETT per neuron (S_fit)
@@ -359,9 +359,6 @@ def k2_sets(ctx):
                 strings=dict(identified=f"H_tq identified: |H| = {len(htq['H'])} ({1000 * len(htq['H']) / (npl * R['wn'].shape[0]):.4f} ‰ of "
                              f"{npl * R['wn'].shape[0]})" if htq["H"] else "C* gives no H-neurons", stability=gk22,
                              permutation=sel_null, G_K1=gk1))
-    write(ctx, "hn/amendment1.json", dict(amendment=1, post_hoc=True, G_K22=gk22, H_op_name=name, n_H_op=len(Hop), n_H_plus=len(htq["Hplus"]),
-                                          frozen_text_H_op="H+" if not stable else name),
-          labels=["amendment 1 (post hoc): H_tq kept as H_op when unstable"] if not stable else [])
     write(ctx, "hn/hn_set.json", sets, config=dict(C_star=htq["C_star"]), labels=[x for x in (gk1 if gk1 != "ok" else None, sel_null) if x])
     write(ctx, "hn/rs_sets.json", dict(RS39=rs, RS39mc=rsmc, RS19=rs[:z["rs19"]], RS20=rs[:z["rs20"]], RS10=rs[:z["rs10"]],
                                        damages=dict(H=m.get("H_damage"), RS39=[x["damage"] for x in m["RS39"]],
@@ -438,7 +435,6 @@ def k3a(ctx):
                                       har=dict(X=harX, y=None if har is None else har["y"]), qids_s3=[r["qid"] for r in S3]))
     import r1b_k_rules as KR
     pv = KR.k3a_rule(load_pt(own(ctx, "k/k3/k3a_data.pt")), quick=True)
-    write(ctx, "k/k3/k3a_amendment1.json", dict(amendment=1, H_op_name=hs["H_op_name"], n_union=len(uni)))
     write(ctx, "sg8_preview.json", {"G-K2": pv["in_domain"]["string"], "G_K2": pv["in_domain"]["string"], "H_op_name": hs["H_op_name"], "detail": pv,
                                     "note": "in-session preview (SG8); the verdict label uses r1b_K_ana's value"}, labels=["SG8 preview"])
 
