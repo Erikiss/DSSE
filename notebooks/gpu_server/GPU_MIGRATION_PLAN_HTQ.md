@@ -1,5 +1,9 @@
 # HTQ: Restlaufzeit und Vorbereitung eines GPU-Wechsels
 
+**Verworfen durch Nutzerentscheidung am 16.11.2026:** Es bleibt bei Colab/A100.
+Diese Datei ist nur noch die historische Vergleichsrechnung; sie ist kein aktueller Miet- oder Migrationsauftrag.
+Es wurde keine externe GPU-Instanz gebucht. Der aktuelle Automatisierungsweg verwendet eine einzelne Colab-Laufzeit.
+
 Stand: 16. November 2026. Dies ist eine Betriebs- und Kostenplanung, keine Änderung des eingefrorenen Messplans.
 Keine Instanz wurde gemietet, kein Serverlauf gestartet und keine Änderung am A100-Hardwaretor SG2 vorgenommen.
 

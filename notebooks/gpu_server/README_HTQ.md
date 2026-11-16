@@ -1,5 +1,8 @@
 # H_tq-Fortsetzung auf einem GPU-Server vorbereiten
 
+**Historische Vorbereitung:** Der Nutzer hat den Miet-GPU-Wechsel am 16.11.2026 verworfen.
+Die Fortsetzung bleibt in Colab/A100; diese Server-Anleitung ist kein aktueller Startauftrag.
+
 `htq_launcher.py` arbeitet direkt mit den vorhandenen Runde-1b-Sitzungen. Er führt
 keine Colab-Zellen mit Drive-Mount aus und verwendet nicht die alten
 `setup.sh`/`run.sh` dieses Ordners: Diese gehören zu anderen Experimenten und ihr
