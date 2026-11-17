@@ -111,7 +111,7 @@ def probe_ctx(env, cache, am, qs):
     torch = K._torch(); n0 = cache.get_seq_length(); B = am.shape[0]; Y = np.zeros((B, len(qs))); M = np.zeros((B, len(qs)))
     for j, q in enumerate(qs):
         ids = env.tk.turn(q + " Answer Yes or No.")
-        a2 = torch.cat([am, torch.ones(B, len(ids), dtype=torch.long)], 1)
+        a2 = torch.cat([am, torch.ones(B, len(ids), dtype=torch.long, device=am.device)], 1)
         cache, lg = env.eng.fwd(torch.tensor([ids] * B), cache, am=a2)
         lp = torch.log_softmax(lg[:, -1].double(), -1)
         Y[:, j] = (lp[:, env.tk.YES] - lp[:, env.tk.NO]).cpu().numpy(); M[:, j] = (lp[:, env.tk.YES].exp() + lp[:, env.tk.NO].exp()).cpu().numpy()
@@ -138,7 +138,7 @@ def run_rows(env, R, n_turns, turn_len, ck_every, key_turn0=1, init=None):
         Y, M = probe_ctx(env, cache, am, qs); ck.append(dict(t=0, Y=Y, M=M, counts=[voice_counts(env, "") for _ in R]))
     for t in range(n_turns):
         if t:
-            am = torch.cat([am, torch.ones(len(R), len(env.cont), dtype=torch.long)], 1)
+            am = torch.cat([am, torch.ones(len(R), len(env.cont), dtype=torch.long, device=am.device)], 1)
             cache, lg = env.eng.fwd(torch.tensor([env.cont] * len(R)), cache, am=am)
         y, _, cache, am, _ = env.eng.decode(cache, lg[:, -1], [env.ctx.key("r1bD5", r["start"], key_turn0 + t) for r in R], 0.7, turn_len,
                                             env.stop, am=am)
@@ -204,7 +204,7 @@ def d5x(ctx):
         gen = [list(r["gen"]) for r in R]; dead = [None] * len(R); turn = c.d5_turns + 1
         while any(d is None for d in dead) and len(gen[0]) < c.d5x_max and time.time() - t0 < cap_s:
             if turn > c.d5_turns + 1:
-                am = torch.cat([am, torch.ones(len(R), len(env.cont), dtype=torch.long)], 1)
+                am = torch.cat([am, torch.ones(len(R), len(env.cont), dtype=torch.long, device=am.device)], 1)
                 cache, lg = env.eng.fwd(torch.tensor([env.cont] * len(R)), cache, am=am)
             y, _, cache, am, _ = env.eng.decode(cache, lg[:, -1], [ctx.key("r1bD5", r["start"], turn) for r in R], 0.7, c.d5x_turn,
                                                 env.stop, am=am)

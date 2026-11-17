@@ -4,6 +4,12 @@ metrics) is a tier-2 item in r1b_K_S2b. Long work is split into part steps (<= 5
 provenance (r1b_core.Ctx.write_json / save_pt). Code: r1b_k_base, r1b_k_labels (K1), r1b_k_hn (SO-HN), r1b_k_lens (SO-CL),
 r1b_k_gvra (SO-GVRA), r1b_k_te (SO-TE), r1b_k_s1 ... r1b_k_s5, r1b_k_rk, r1b_k_rules, r1b_k_ana."""
 from r1b_contracts import Step
+from r1b_htq_variant import active as htq_active
+
+HTQ = htq_active()
+HAR_FN = "k2_har_htq" if HTQ else "k2_har"
+HAR_EXTRA = " hn/htq_har_ready.json" if HTQ else ""
+SETS_EXTRA = " hn/htq_policy.json" if HTQ else ""
 
 
 def L(fn, **kw):
@@ -32,10 +38,11 @@ STEPS = {
         Step("k2_path", fn=L(S1 + "k2_path"), out="k/k2/path.pt", after="k2_alloc", minutes=4.5),
         Step("k2_supp", fn=L(S1 + "k2_supp"), out="k/k2/cstar.pt", after="k2_path", minutes=4.0),
         Step("k2_diag", fn=L(S1 + "k2_diag"), out="k/k2/h_tq.pt", after="k2_supp", minutes=3.0),
-        Step("k2_har", fn=L(S1 + "k2_har"), out="k/k2/h_ar.pt", after="k1_check", minutes=4.0),
-        Step("k2_sets", fn=L(S1 + "k2_sets"), out="hn/hn_set.json hn/rs_sets.json hn/hn_detectors.pt hn/hn_meta.json",
+        Step("k2_har", fn=L(S1 + HAR_FN), out="k/k2/h_ar.pt" + HAR_EXTRA, after="k1_check", minutes=4.0),
+        Step("k2_sets", fn=L(S1 + "k2_sets"), out="hn/hn_set.json hn/rs_sets.json hn/hn_detectors.pt hn/hn_meta.json" + SETS_EXTRA,
              after="k2_refs,k2_diag,k2_har", minutes=4.7),
-        Step("k3a", fn=L(S1 + "k3a"), out="k/k3/k3a_data.pt sg8_preview.json", after="k2_sets", minutes=1.9),
+        Step("k3a", fn=L(S1 + "k3a"), out="k/k3/k3a_data.pt sg8_preview.json", after="k2_sets", minutes=1.9,
+             opt="observations/hidden_states_v1/*.pt observations/hidden_states_v1/*.json"),
         Step("k3g2", fn=L(S1 + "k3g2"), out="k/k3/k3g2.pt", after="k3a", minutes=0.5),
         *parts("k3d", S1 + "k3d_part", 8, 3.4, "k3d", after="k2_sets"),
         Step("k3e", fn=L(S1 + "k3e"), out="k/k3/k3e.json", after="k2_sets,k4j", minutes=5.0),
@@ -106,7 +113,7 @@ STEPS = {
         Step("k2_supp", fn=L(S1 + "k2_supp"), out="k/k2/cstar.pt", after="k2_path", minutes=4.5),
         Step("k2_diag", fn=L(S1 + "k2_diag"), out="k/k2/h_tq.pt", after="k2_supp", minutes=3.0),
         Step("k2_har", fn=L(RK + "rk2_no_har"), out="k/k2/h_ar.pt", after="rk2_model", minutes=0.1),
-        Step("k2_sets", fn=L(S1 + "k2_sets"), out="hn/hn_set.json hn/rs_sets.json hn/hn_detectors.pt hn/hn_meta.json",
+        Step("k2_sets", fn=L(S1 + "k2_sets"), out="hn/hn_set.json hn/rs_sets.json hn/hn_detectors.pt hn/hn_meta.json" + SETS_EXTRA,
              after="k2_refs,k2_diag,k2_har", minutes=4.5),
         Step("k3a", fn=L(S1 + "k3a"), out="k/k3/k3a_data.pt sg8_preview.json", after="k2_sets", minutes=2.0),
         Step("rk2_run", fn=L("r1b_k_s3:rk2_run"), out="k/rk2/rows.pt k/rk2/rk2.json", after="k3a", minutes=4.5),

@@ -16,10 +16,12 @@ import os
 
 import r1b_contracts as C
 from r1b_core import PROV_REQUIRED, check_output, code_counts, coded, holm, load_json, sha256_file
+from r1b_htq_variant import LABEL as HTQ_LABEL, VARIANT as HTQ_VARIANT, active as htq_active
 
 ALPHA = 0.05
 FAMS = ("CF-R+", "CF-R-", "CF-D", "CF-K-attr", "CF-K-link", "CF-L", "CF-HERR")
 FOR = ("CF-R+", "CF-D", "CF-K-attr", "CF-K-link", "CF-L", "CF-HERR")
+HTQ_EXCLUDED = ("CF-K-attr", "CF-K-link", "CF-L", "CF-HERR")
 ATTR_L = "H-attractor (self-sustaining or bistable, H-specific, seen in natural dynamics)"
 G_K2_OK = "H-neurons replicated (in-domain detection)"
 K_POS9 = ("H-neuron attractor", "self-sustaining H", "within-item bistability")
@@ -64,6 +66,22 @@ def _strip(d):
 
 def _labels(d):
     return list(((d or {}).get("provenance") or {}).get("labels") or []) + [str(x) for x in ((d or {}).get("labels") or [])]
+
+
+def _posthoc(ctx, inputs=()):
+    """Also recognise labelled inputs if a caller omitted the variant's runtime flag."""
+    return htq_active(ctx) or any(isinstance(d, dict) and (
+        d.get("h_policy") == HTQ_VARIANT or (d.get("provenance") or {}).get("h_policy") == HTQ_VARIANT or
+        HTQ_LABEL in _labels(d)) for d in inputs)
+
+
+def _exclude_posthoc(fam):
+    """Keep descriptive statistics, but a post-hoc result cannot be confirmed (main 0.5)."""
+    for row in fam["members"]:
+        row.update(confirmatory_eligible=False, excluded=True,
+                   label="exploratory (post hoc; excluded from confirmatory family)", labels=[HTQ_LABEL])
+    fam.update(confirmed=0, confirmatory_eligible=False, excluded=len(fam["members"]), inference="post hoc",
+               note=fam.get("note", "") + "; " + HTQ_LABEL + "; excluded under main 0.5")
 
 
 def _fam(name, members, available=True, note=""):
@@ -138,11 +156,17 @@ def families(ctx):
                                       ("L5c 'H predicts the model's own step errors ...'", "L", str(l5c or "").startswith("H predicts the model's own step errors"),
                                        (LC.get("CF-HERR_member_L5c") or {}).get("p"), dict(string=l5c))],
                           V["K"] is not None or V["L"] is not None, "new at round level (C21); K8c p_IUT, L5c max(p(beta_H <= 0), rank p)")
+    posthoc = _posthoc(ctx, (V["K"], V["L"]))
+    if posthoc:
+        for name in HTQ_EXCLUDED:
+            _exclude_posthoc(fam[name])
+        # The part-level numerical Holm checks are descriptive in this variant.
+        cons = [s for s in cons if not any(s.startswith(name) for name in HTQ_EXCLUDED)]
     miss = [p for p in "RDKL" if V[p] is None]
     ctx.write_json("ana/families.json", dict(families=fam, part_vs_round_level=cons, verdict_files_missing=miss, l_ana=l_state),
                    config=dict(alpha=ALPHA, families=FAMS, k_link_form="PI", member_rule="main §2.4 (R.1's convention)"),
                    labels=(["MOCK (tiny random model; values are code-test values)"] if ctx.mock else []) +
-                   [f"verdict file missing: {p}" for p in miss])
+                   [f"verdict file missing: {p}" for p in miss] + ([HTQ_LABEL] if posthoc else []))
 
 
 # ====================================================================================================================================
@@ -241,6 +265,11 @@ def report(ctx):
     fams = load_json(ctx.path("ana/families.json"))
     F = fams["families"]
     V = _inputs(ctx); R, D, K, L = (V[p] or {} for p in "RDKL")
+    posthoc = _posthoc(ctx, (V["K"], V["L"])) or any(F[name].get("confirmatory_eligible") is False for name in HTQ_EXCLUDED)
+    if posthoc:
+        for name in HTQ_EXCLUDED:
+            if F[name].get("confirmatory_eligible") is not False:
+                _exclude_posthoc(F[name])
     LV, LC = L.get("verdicts") or {}, L.get("combined") or {}
     sess, sg6, declared = manifest(ctx)
     fz = ctx.freeze or {}
@@ -287,18 +316,28 @@ def report(ctx):
         catfish=dict(D2_a=_g(D, "parts", "(b2)", "verdict", "M", "D2_a"), D5_a=_g(D, "parts", "(b2)", "verdict", "D5_a", "verdict"),
                      L4_catfish=l4.get("catfish")),
         note="side by side, no pooling and no new verdict (main §2.4); neither part's verdict is reported without the other's")
-    nfor = [f for f in FOR if F[f]["confirmed"] > 0]
+    eligible_for = [f for f in FOR if not (posthoc and f in HTQ_EXCLUDED)]
+    nfor = [f for f in eligible_for if F[f]["confirmed"] > 0]
     against = dict(CF_R_minus=[r["member"] for r in F["CF-R-"]["members"] if r["label"] != "exploratory (Holm not met)"],
                    D17=D.get("D.17") in AGAINST["D"], K7=str((K.get("composite") or {}).get("string") or "").startswith(AGAINST["K"]),
                    L_ALL=LC.get("L-ALL") in AGAINST["L"],
                    note="outside CF-R- these are conjunctions of equivalence or bound rules (IUT), no further adjustment; each with its MDEs; "
                         "none refutes a hypothesis for larger models")
+    if posthoc:
+        for part in ("K", "L"):
+            ans[part]["labels"].append(HTQ_LABEL)
+            ans[part]["inference"] = "exploratory (post hoc)"
+        ans["D"]["qualifiers"]["L4_labels"] = [HTQ_LABEL]
+        against["descriptive_posthoc"] = {"K7": against["K7"], "L_ALL": against["L_ALL"]}
+        against.update(K7=False, L_ALL=False, excluded_parts=["K", "L"])
+        against["note"] += "; K/L equivalence and bound statements are descriptive post-hoc findings, not confirmatory against"
+        tables["labels"] = [HTQ_LABEL]
     t2 = dict(funded=fz.get("funded"), items_not_funded=[i for it in C.TIER2_ITEMS.values() for i in it if not _funded(fz, i)],
               sessions={s: (sess.get(s) or {}).get("state") for s, m in C.SESSIONS.items() if m["tier"] == 2},
               note="every tier-2 result is exploratory at the round level; r1b_ana2 reports them (runde1b_summary_t2.json)")
     probs = {s: p for s, p in sg6.items() if p}
     out = dict(answers=ans, families={f: F[f] for f in FAMS},
-               for_families=dict(with_confirmed_member=nfor, n=len(nfor), of=len(FOR),
+               for_families=dict(with_confirmed_member=nfor, n=len(nfor), of=len(eligible_for),
                                  null_bound="under a global null each 'for' family confirms falsely with p <= 0.05, so at least one with p <= 0.30"),
                R_counts=dict(F_plus=R.get("F_plus_counts"), F_minus=R.get("F_minus_counts")),
                confirmatory_against=against, cross_part_labels=dict(RG10=rg10 or ["J-lens valid at every block read (R5.1)" if jv else "jlens_validity.json missing"],
@@ -310,7 +349,13 @@ def report(ctx):
                sessions={s: e["state"] for s, e in sess.items()},
                report_check=dict(sessions_checked=len(sg6), problems=probs, ok=not probs, rule="SG6: provenance in every output (R9.1-R9.4)"),
                codes=code_counts(ans))
-    lab = (["MOCK (tiny random model; values are code-test values)"] if ctx.mock else []) + (["SG6 report check found problems"] if probs else [])
+    if posthoc:
+        out.update(h_policy=HTQ_VARIANT, inference="K/L: exploratory (post hoc)")
+        out["for_families"].update(excluded=list(HTQ_EXCLUDED), original_family_count=len(FOR),
+                                   null_bound="under a global null each eligible 'for' family confirms falsely with p <= 0.05; "
+                                              "union bound over the two unchanged R/D families <= 0.10")
+        out["exploratory"] += "; all H_tq amendment-2 K/L results are post hoc and excluded from round-level confirmatory inference"
+    lab = (["MOCK (tiny random model; values are code-test values)"] if ctx.mock else []) + (["SG6 report check found problems"] if probs else []) + ([HTQ_LABEL] if posthoc else [])
     ctx.write_json(C.FILES["summary"]["rel"], out, config=dict(alpha=ALPHA, families=FAMS, k_link_form="PI"), labels=lab)
     ctx.write_json(C.FILES["manifest"]["rel"], dict(sessions=sess, sg6=sg6, declared_not_run=declared), config=dict(), labels=lab)
 
@@ -320,12 +365,15 @@ def report(ctx):
 # ====================================================================================================================================
 def tier2(ctx):
     S = _ld(ctx, "r1b_ana", C.FILES["summary"]["rel"]) or {}
+    posthoc = _posthoc(ctx, (S,))
     src = dict(R=("r1b_R_ana2", "r_verdict2"), D=("r1b_D_R", "d_reserves"), RK1=("r1b_K_S6", "k_rk1"), RK2=("r1b_K_S7", "k_rk2"))
     roots, res = _roots(ctx), {}
     for k, (s, f) in src.items():
         d = _ld(ctx, s, C.FILES[f]["rel"])
         if d is not None:
             res[k] = dict(session=s, result=_strip(d), labels=["conditional run", "tier 2: exploratory at the round level"] + _labels(d))
+            if posthoc and k in ("RK1", "RK2"):
+                res[k]["labels"].append(HTQ_LABEL)
         else:
             st, _, p = _state(roots, s)
             rec = load_json(p, {}) if (p and st == "not run") else {}
@@ -338,5 +386,9 @@ def tier2(ctx):
                             L=dict(answer=(A.get("L") or {}).get("string"), tier2="X1-X6 in l_verdicts.json (r1b_ana)")),
                items_in_tier1_sessions="D5-x, D3-name (d_verdict.json), K3h (r1b_K_S2b), X1-X6 (l_verdicts.json): reported by their parts",
                note="tier 2 changes no tier-1 verdict and no round-level family (main §2.4)")
+    if posthoc:
+        out.update(h_policy=HTQ_VARIANT, labels=[HTQ_LABEL], inference="K/L: exploratory (post hoc)")
+        for part in ("K", "L"):
+            out["next_to"][part]["labels"] = [HTQ_LABEL]
     ctx.write_json(C.FILES["summary_t2"]["rel"], out, config=dict(sources={k: list(v) for k, v in src.items()}),
-                   labels=(["MOCK (tiny random model; values are code-test values)"] if ctx.mock else []) + ["conditional run"])
+                   labels=(["MOCK (tiny random model; values are code-test values)"] if ctx.mock else []) + ["conditional run"] + ([HTQ_LABEL] if posthoc else []))

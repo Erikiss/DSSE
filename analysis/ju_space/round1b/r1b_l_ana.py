@@ -10,8 +10,30 @@ import r1b_l_rules as RU
 import r1b_l_stats as S
 HERE = os.path.dirname(os.path.abspath(__file__))
 from r1b_l_base import cfg, clean, gating, inj, lensout, loadpt, rng, wj
+from r1b_htq_variant import LABEL as HTQ_LABEL, VARIANT as HTQ_VARIANT, active as htq_active
 
 NR = "not run (input missing)"
+
+
+def _htq_verdict(ctx, out, labels):
+    """Keep rule strings and p-values; affected confirmations become descriptive."""
+    if not htq_active(ctx):
+        return out
+    labels.append(HTQ_LABEL)
+    out.update(h_policy=HTQ_VARIANT, inference="exploratory (post hoc)", labels=[HTQ_LABEL])
+    comb = out["combined"]
+    comb.update(inference="exploratory (post hoc)", labels=[HTQ_LABEL])
+    for key in ("CF-L", "CF-HERR_member_L5c"):
+        result = comb.get(key)
+        if isinstance(result, dict):
+            result.update(confirmatory_eligible=False, labels=[HTQ_LABEL])
+            if isinstance(result.get("confirmed"), dict):
+                result["descriptive_holm_confirmed"] = dict(result["confirmed"])
+                result["confirmed"] = {k: False for k in result["confirmed"]}
+    for verdict in out.get("verdicts", {}).values():
+        if isinstance(verdict, dict):
+            verdict["labels"] = list(verdict.get("labels") or []) + [HTQ_LABEL]
+    return out
 
 
 def _tok(ctx):
@@ -403,4 +425,5 @@ def l_ana(ctx):
         comb["error"] = str(e)[:300]
     out = dict(verdicts=V, combined=comb, sg8=dict(ok=sg8, G_K2=gk2, preview=pop.get("sg8_preview")), l_cal=cal, l_cal_gates=calg, L5_stats=l5,
                codes=K.code_counts(clean(V)))
+    _htq_verdict(ctx, out, labels)
     wj(ctx, "l_verdicts.json", out, config=dict(rules="r1b_l_rules (part L file with its amendments)"), labels=labels)

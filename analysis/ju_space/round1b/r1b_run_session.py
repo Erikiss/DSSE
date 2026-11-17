@@ -30,6 +30,7 @@ if HERE not in sys.path:
 import r1b_contracts as C
 import r1b_core as K
 from r1b_core import iso, load_json, dump_json, sha256_file
+from r1b_htq_variant import VARIANT as HTQ_VARIANT, active as htq_active, check as check_htq_runs
 
 FROZEN_PLAN_SHA256 = "b725dd83dc2fe051150314c0b0cb3ab0684d3062c6dd6799537a1263b92d9b7b"        # sha256 of results/ju_space/plans/runde1b/runde1b_plan.md, written here at the freeze (main §9.1, SG1)
 FREEZE_RECORD_SHA256 = "0d6258922e591fb1261f2173140dc35a4ab729149cd13fcd26825d23216516a8"      # sha256 of results/ju_space/plans/runde1b/runde1b_freeze.json, written here at the freeze (SG1)
@@ -122,14 +123,26 @@ def registry():
 class Paths:
     def __init__(self, runs, account):
         self.runs, self.account = os.path.abspath(runs), account
+        if htq_active() and not MOCK:
+            check_htq_runs(self.runs, account)
         top = os.path.dirname(self.runs)
         self.runs_B = os.environ.get("R1B_RUNS_B") or os.path.join(top, C.RUNS_B_LINK)
         self.xfer_src = os.environ.get("R1B_XFER_A") or os.path.join(top, C.XFER_LINK)
         self.xfer_pub = os.path.join(self.runs, C.XFER_DIR)
+        if htq_active() and not MOCK and account == "A":
+            check_htq_runs(self.runs_B, "B")
 
 
 def is_done(d):
     return bool(d) and os.path.isfile(os.path.join(d, "session_done.json")) and not os.path.isfile(os.path.join(d, "session_partial.json"))
+
+
+def check_session_policy(d, session):
+    """Independent seeded sessions keep their provenance; new K/L/round outputs must belong to this variant."""
+    if htq_active() and not MOCK and session != "r1b_K_S3" and C.SESSIONS[session]["part"] in ("K", "L", "main"):
+        record = load_json(os.path.join(d, "session_done.json"), {}) or {}
+        if record.get("h_policy") != HTQ_VARIANT:
+            raise ValueError(f"{session}: completed outputs do not belong to htq_v2; run HTQ_START in the isolated roots")
 
 
 def sync(work, drive):
@@ -205,9 +218,11 @@ def resolve(P, s, copy=True):
     In account A a finished B session is copied from dsse_runs_B into dsse_runs first (copy=True)."""
     own = os.path.join(P.runs, s)
     if is_done(own):
+        check_session_policy(own, s)
         return "done", own
     other = os.path.join(P.runs_B, s) if (P.account == "A" and C.SESSIONS[s]["account"] == "B") else None
     if other and is_done(other):
+        check_session_policy(other, s)
         if copy:
             copy_folder(other, own)
             return "done", own
@@ -447,6 +462,11 @@ def step_done(ctx, st):
     m = load_json(marker(ctx.work, st)) or {}
     if m.get("status") == "not_run":
         return True
+    if htq_active(ctx) and not ctx.mock and ctx.session == "r1b_K_S1" and st.name == "k2_har":
+        ready = load_json(os.path.join(ctx.work, "hn", "htq_har_ready.json"), {}) or {}
+        cache = os.path.join(ctx.root, "k_local", ctx.session, "k2_har_rows.pt")
+        if ready.get("fit_rows_required", True) and not os.path.isfile(cache):
+            return False             # the Drive marker cannot stand in for a cache lost with the Colab runtime
     return m.get("status") == "ok" and all(outputs_of(ctx.work, st.mock_out if (ctx.mock and st.mock_out is not None) else st.out).values())
 
 
@@ -691,6 +711,8 @@ def finalize(ctx, P, steps, states, ran, guard, attempts, gates):
                   long_steps=[n for n, v in steps_rec.items() if v.get("long")], gates=gates, declared=list(ctx.declared), mock=ctx.mock,
                   code_commit=ctx.manifest.get("code_commit"), slot=os.environ.get("R1B_SLOT"),
                   packing="slot notebook (main §4.4); packing changes no measurement")
+    if htq_active(ctx):
+        common["h_policy"] = HTQ_VARIANT
     for d in (ctx.work, ctx.drive):
         for f in ("session_partial.json", "session_done.json"):
             try:
@@ -742,12 +764,15 @@ def run_session(session, root, work, runs, dry=False, check_only=False):
                 say(f"  step {st.name}: {st.fn or st.script} out={st.out} after={st.after} item={st.item} drop_if={st.drop_if}")
         return EXIT_DONE if chk["ok"] else (EXIT_NOT_RUN if chk["not_run"] else EXIT_WAIT)
     work, drive = os.path.abspath(work), os.path.join(P.runs, base)
+    if htq_active() and not MOCK and os.path.basename(os.path.dirname(work)) != "work_htq_v2":
+        raise ValueError("H_tq continuation requires isolated local WORK=/content/work_htq_v2")
     os.makedirs(os.path.join(work, "logs"), exist_ok=True)
     LOGF.append(open(os.path.join(work, "logs", "session.log"), "a"))
     t0 = float(os.environ.get("R1B_T0") or time.time())
     say(f"session {base} (part {meta['part']}, tier {meta['tier']}, account {acct}) {'MOCK ' if MOCK else ''}on {device}; "
         f"{pull(drive, work)} files resumed from Drive")
     if is_done(work):
+        check_session_policy(work, base)
         say(f"session {base} is already done (session_done.json)"); return EXIT_DONE
     try:
         steps = registry().get(base, [])
@@ -789,6 +814,8 @@ def run_session(session, root, work, runs, dry=False, check_only=False):
                               freeze_time=g1["freeze_time"], amendments_sha256=g1["amendments_sha256"], files=g1["files"]),
                     gates=gates, inputs=copied, declared=chk["declared"], versions=K.versions(), funded=fz.get("funded"),
                     trims=fz.get("trims"), models={m: K.model_pins(m, fz) for m in meta["models"]}, keys_sha256=K.sha256_text(K.canon(K.KEYS)))
+    if htq_active():
+        manifest["h_policy"] = HTQ_VARIANT
     dump_json(manifest, os.path.join(work, "manifest.json"))
     if fails:
         say(f"gates failed: {fails} (manifest.json)"); sync(work, drive); return EXIT_GATE

@@ -2,13 +2,14 @@
 random sets and damage matching), K3a / K3b / K3c features (SG8 preview), K3d battery, K3e neuron-lens readouts (SO-GVRA), K3g(ii),
 K4j (G-K-J); K0 pilot items for r1b_P0. Files: hn/hn_set.json, hn/hn_detectors.pt, hn/rs_sets.json, hn/hn_meta.json, sg8_preview.json,
 lab/so_lab.json, k4j.json (contracts), and k/... (session data read by r1b_K_ana)."""
-import math, os, time
+import contextlib, math, os, time
 import numpy as np
 import r1b_core as RC
 import r1b_k_base as KB
 import r1b_k_labels as KL
 from r1b_k_base import N, H, T_, write, save, load_pt, own, Interv, by_layer, set_values, coded, val
 import r1b_k_hn as HN
+from r1b_htq_variant import VARIANT as HTQ_VARIANT, LABEL as HTQ_LABEL, active as htq_active
 
 Q_SUFFIX = "\nAnswer with only the answer."
 MODEL = RC.C.M17                     # r1b_K_S7 (RK-2) sets qwen3.5-2b: K2's protocol on the second model
@@ -331,6 +332,23 @@ def k2_har(ctx):
     res.update(best or dict(H=[], note="no H at any C")); save(ctx, "k/k2/h_ar.pt", res)
 
 
+def k2_har_htq(ctx):
+    """Rebuild the non-Drive arithmetic fit cache in a fresh H_tq runtime (same frozen samples and keys)."""
+    k2_har(ctx)
+    cache = os.path.join(ctx.root, "k_local", ctx.session, "k2_har_rows.pt")
+    write(ctx, "hn/htq_har_ready.json", dict(h_policy=HTQ_VARIANT, fit_rows_required=os.path.isfile(cache),
+                                          purpose="fresh runtime: H_ar fit rows for K3a"))
+
+
+def h_choice(gk1, stable, htq, har, small=False):
+    """The frozen yield exception is shared by both policies; only the instability fallback changes."""
+    if gk1.startswith("H_ar primary"):
+        return "H_ar", har.get("H", [])
+    if not stable and not small:
+        return "H+", htq["Hplus"]
+    return "H_tq", htq["H"]
+
+
 def k2_sets(ctx):
     """G-K1, G-K22 -> H_op; random sets matched to H_op (RS39, RS39mc, RS19, RS20, RS10); detectors; SO-HN files."""
     tok, model = _m(ctx); z = sizes(ctx); R = refs(ctx); npl = R["wn"].shape[1]
@@ -339,13 +357,9 @@ def k2_sets(ctx):
     if lab["G_K1_yield"] != "ok" or not htq["H"]:
         gk1 = "H_ar primary (TriviaQA yield)" if lab["G_K1_yield"] != "ok" else "C* gives no H-neurons"
     stable = KB.fin(htq["dg2_median"]) and htq["dg2_median"] >= 0.5
-    gk22 = "stable set" if stable else "unstable set (H+ used)"
-    if gk1.startswith("H_ar primary"):
-        name, Hop = "H_ar", har.get("H", [])
-    elif not stable:
-        name, Hop = "H+", htq["Hplus"]
-    else:
-        name, Hop = "H_tq", htq["H"]
+    small = htq_active(ctx)
+    gk22 = "stable set" if stable else ("unstable set (H_tq retained; amendment 2, post hoc)" if small else "unstable set (H+ used)")
+    name, Hop = h_choice(gk1, stable, htq, har, small)
     sel_null = "selection not above label-permutation null" if len(htq["H"]) <= htq["perm_q95"] else None
     d = fit_data(ctx); cm = d["X"][:len(d["y_q"])].float().mean(0).numpy()            # mean answer-CETT per neuron (S_fit)
     cands = HN.rand_sets(Hop, cm, npl, n_valid=z["cands"], exclude=Hop)
@@ -359,6 +373,10 @@ def k2_sets(ctx):
                 strings=dict(identified=f"H_tq identified: |H| = {len(htq['H'])} ({1000 * len(htq['H']) / (npl * R['wn'].shape[0]):.4f} ‰ of "
                              f"{npl * R['wn'].shape[0]})" if htq["H"] else "C* gives no H-neurons", stability=gk22,
                              permutation=sel_null, G_K1=gk1))
+    if small:
+        sets.update(h_policy=HTQ_VARIANT, amendment=2, post_hoc=True)
+        write(ctx, "hn/htq_policy.json", dict(h_policy=HTQ_VARIANT, amendment=2, post_hoc=True, H_op_name=name,
+                                             n_H_op=len(Hop), n_H_plus=len(htq["Hplus"]), G_K22=gk22), labels=[HTQ_LABEL])
     write(ctx, "hn/hn_set.json", sets, config=dict(C_star=htq["C_star"]), labels=[x for x in (gk1 if gk1 != "ok" else None, sel_null) if x])
     write(ctx, "hn/rs_sets.json", dict(RS39=rs, RS39mc=rsmc, RS19=rs[:z["rs19"]], RS20=rs[:z["rs20"]], RS10=rs[:z["rs10"]],
                                        damages=dict(H=m.get("H_damage"), RS39=[x["damage"] for x in m["RS39"]],
@@ -385,7 +403,11 @@ def k2_sets(ctx):
 
 
 def hnset(ctx):
-    return RC.load_json(KB.up(ctx, "r1b_K_S1", "hn/hn_set.json"))
+    d = RC.load_json(KB.up(ctx, "r1b_K_S1", "hn/hn_set.json"))
+    if htq_active(ctx) and not ctx.mock:
+        if not isinstance(d, dict) or d.get("h_policy") != HTQ_VARIANT or d.get("H_op_name") not in ("H_tq", "H_ar"):
+            raise RuntimeError("H_tq variant requires newly computed SO-HN outputs; run HTQ_START first")
+    return d
 
 
 def rssets(ctx):
@@ -406,10 +428,20 @@ def k3a(ctx):
     NE = b["ne"][:N(ctx, 300, 16)]
     allsets = {"H_tq": hs["H_tq"], "H_ar": hs["H_ar"], "H+": hs["H_plus"], "H_op": hs["H_op"], **{f"RS{k}": s for k, s in enumerate(rs["RS39"])}}
     uni = sorted({tuple(n) for s in allsets.values() for n in s}); sel = by_layer(uni)
+    from r1b_hidden_audit import start_audit
+    audit = start_audit(ctx, tok, model, {"s3": [r["qid"] for r in S3],
+                                        "adet": [it["id"] for it in Adet], "ne": [it["id"] for it in NE]})
 
-    def run(prompts, keys, label, max_new):
-        conts, lp = KB.decode(model, tok, prompts, keys=keys, T=1.0, topk=50, topp=0.9, max_new=max_new, batch=N(ctx, 64, 8), return_lp=True)
+    def run(family, prompts, keys, label, max_new):
+        capture = audit.prepare(family, prompts, keys, max_new) if audit else None
+        options = dict(setup=capture.setup, on_fwd=capture.on_fwd) if capture else {}
+        with capture if capture else contextlib.nullcontext():
+            conts, lp = KB.decode(model, tok, prompts, keys=keys, T=1.0, topk=50, topp=0.9, max_new=max_new,
+                                 batch=N(ctx, 64, 8), return_lp=True, **options)
         ys = [label(i, tok.decode(c)) for i, c in enumerate(conts)]
+        if audit:
+            audit.save_family(family, capture, prompts, keys, conts, ys, max_new)
+        del capture, options
         rows = [(p, c, span_len(tok, c) or 1) for p, c in zip(prompts, conts)]
         f = HN.cett_features(model, tok, rows, batch=N(ctx, 32, 8), sets=sel) if uni else {}
         with T_().no_grad():
@@ -420,12 +452,14 @@ def k3a(ctx):
         cov = [dict(ent=float(np.mean([e for _, e in x])) if x else 0.0, lp=float(np.mean([a for a, _ in x])) if x else 0.0, len=len(c),
                     freq=float(np.mean([uf[t] for t in c if t < len(uf)])) if c else 0.0, pre_ent=pe) for x, c, pe in zip(lp, conts, pre_ent)]
         return dict(y=ys, ans=f.get("ans"), pre=f.get("pre"), cov=cov, conts=conts)
-    s3 = run([tqa_prompt(tok, r["question"]) for r in S3], [ctx.key("r1bK_s3", r["qid"]) for r in S3],
+    s3 = run("s3", [tqa_prompt(tok, r["question"]) for r in S3], [ctx.key("r1bK_s3", r["qid"]) for r in S3],
              lambda i, t: label_tqa(ctx, S3[i], t), 24)
-    ad = run([RC.chat_ids(tok, it["prompt"]) for it in Adet], [ctx.key("r1bK_s3", it["id"]) for it in Adet],
+    ad = run("adet", [RC.chat_ids(tok, it["prompt"]) for it in Adet], [ctx.key("r1bK_s3", it["id"]) for it in Adet],
              lambda i, t: "correct" if label_ach(ctx, Adet[i], t) else "wrong", 8)
-    ne = run([RC.chat_ids(tok, it["prompt"]) for it in NE], [ctx.key("r1bK_s3", it["id"]) for it in NE],
+    ne = run("ne", [RC.chat_ids(tok, it["prompt"]) for it in NE], [ctx.key("r1bK_s3", it["id"]) for it in NE],
              lambda i, t: "refusal" if (KL.refusal(t) if not ctx.mock else H(t) % 2 == 0) else "answered", 24)
+    if audit:
+        audit.finish()
     # S_fit pre-generation vectors and answer rows restricted to the union (K3b refit; K3c)
     d = fit_data(ctx); cols = [l * npl + j for l, j in uni]
     fitX = d["X"][:, cols].float().numpy() if cols else None; fitpre = d["pre"][:, cols].float().numpy() if cols else None

@@ -1,5 +1,9 @@
 # Runde 1b: Übergabe an eine lokale Claude-Code-Sitzung (Stand 13.11.2026, 23:50 MEZ; wird aktualisiert)
 
+**Aktueller Auftrag (16.11.2026):** Siehe „Aktueller Startweg: isolierte H_tq-Fortsetzung `htq_v2`“ weiter unten.
+Für diese Fortsetzung gilt Branch `codex/r1b-htq-continuation`. Frühere Branch-, Freeze- und Startanweisungen sind
+chronologische Übergabehistorie; der Plan ist inzwischen eingefroren. Umsetzung und Tests der Variante laufen noch.
+
 ## Lage
 - Branch: `ccr-6fe02b21-est040` (Repository Erikiss/DSSE). Immer zuerst `git pull`.
 - Plan (Entwurf, nicht eingefroren): Arbeitskopie `results/ju_space/plans/runde1b/arbeitsstand/plan/` (fünf Dateien:
@@ -177,6 +181,140 @@
   Nächste Schritte: (1) volle L-CAL: python results/ju_space/plans/runde1b/arbeitsstand/lcal/lcal_resumable.py
   results/ju_space/plans/runde1b/l_cal.json <cache> (Gruppen mit --items, (a) braucht etwa 2,4 GB RAM je Prozess), committen;
   (2) Freigabe r1b_xfer A -> B, dann Slots A1, A2, B1, B2.
+- 16.11. 09:50 MEZ (Stufe 1 läuft; Drive Konto A: folders/12Z_7XHElXYRRGaEG0RtR_evzAT1-m0t-, Konto B:
+  folders/1e3Zy7mQ1OKALIPTk9z8ekD74DAab8AeP, per embeddedfolderview lesbar; Drive-Zeiten in US-Pazifikzeit = MEZ − 9 h).
+  Fertig: R_S0, R_S1, R_S2_14/18/06, R_S3, R_S6, D_B, D_A, K_S3, K_S1 (nach dem eingefrorenen Text mit H+ = 12.445 Neuronen,
+  G-K22 instabil; SG8-Vorschau 'H-neurons not replicated (detection at random-set level)'). Teilweise: D_C (Absturz in d5_gen,
+  behoben 7a49022), K_S4 (k8b fertig; k8a abgestürzt, behoben in diesem Bundle; k8c, k7a offen). Offen: R_S5, R_S7, R_ana,
+  K_S2a, K_S2b, K_S5, L_A, L_B, K_ana, D_ana, ANA; L-CAL (Notebook runde1b_LCAL.ipynb, CPU, Ergebnis nach
+  dsse_runs/r1b_lcal/l_cal.json, dann committen). Zusatz-Notebooks: runde1b_B1_in_A / B2_in_A (Konto-B-Sitzungen auf einer
+  A100 von Konto A; schreiben über die Verknüpfung dsse_runs_B), runde1b_A1_DC_zuerst. K_S1 brauchte für k2_screen_09 eine
+  A100-80GB. Nachtrag zur Nutzerentscheidung vom 16.11.2026: Änderung 1 (runde1b_plan_amendments.md, H_tq statt H+) ist
+  zurückgezogen. Sie hatte laut diesem Übergabestand nie gegriffen, weil K_S1 vorher nach dem eingefrorenen Text fertig wurde;
+  es gilt weiter die eingefrorene H+-Regel. Die abgeschlossenen K_S1-Ergebnisse bleiben erhalten.
+- 16.11.2026 (Codex, historischer Arbeitsstand nach der ersten Nutzerentscheidung; durch den folgenden htq_v2-Auftrag ergänzt): Rückzug von Änderung 1 in
+  results/ju_space/plans/runde1b/runde1b_plan_amendments.md dokumentiert; ursprünglichen Vorschlag als ausdrücklich
+  nicht mehr wirksame Historie erhalten. G-K22 verwendet bei instabilem H_tq weiterhin H+ und daran angepasste Zufallsmengen;
+  die eingefrorene G-K1-Ausnahme für H_ar bleibt unverändert. Kein erzwungener Wiederholungslauf und kein Überschreiben des
+  laut Übergabe abgeschlossenen K_S1. Die obigen Fertig-/Teilweise-/Offen-Angaben stammen aus dem gemeldeten Stand
+  vom 16.11. 09:50 MEZ; in diesem Dokumentationsschritt wurde der aktuelle Drive-/Colab-Laufstand nicht unabhängig neu geprüft.
+  Code-Rücknahme abgeschlossen: r1b_k_s1.py und r1b_sessions_K.py sind bytegleich mit Freeze-Commit 4de7a3b, einschließlich
+  RK-2 (K_S7). Geprüft: Sitzungsverträge, SG1 (Plan-/Pakethashes und Freeze-Abstammung), Fortsetzung von k2_sets/k3a in
+  K_S1/K_S7 ohne Änderung-1-Dateien (fehlende Ausgaben und fehlgeschlagene Schritte werden weiterhin erkannt), 14 K1-Scorertests
+  sowie Python-Syntax der Module und der vier zusätzlichen Notebooks. Keine echten Modelle und kein neuer GPU-Lauf.
+  Veröffentlichung über einen eigenen Branch und Pull Request; die Colab-Notebooks laden weiterhin
+  ccr-6fe02b21-est040 und erhalten die Korrekturen erst nach Übernahme des Pull Requests.
+- 16.11.2026, 10:17 UTC (Codex, neuer Auftrag nach späterer Nutzerentscheidung): Der Nutzer
+  wählt mit „Dann den kleineren Datensatz mit 15-18“ die kleinere **Neuronenmenge H_tq** (im bisherigen Lauf 286) statt
+  des instabilitätsbedingten H+-Ersatzes (12.445). Es werden keine Fragen, Beispiele, Stichproben oder Versuchszellen
+  reduziert. Änderung 1 und ihr Rückzug bleiben als Historie erhalten; die neue, ausdrücklich nachträgliche Änderung 2
+  steht in `results/ju_space/plans/runde1b/runde1b_plan_amendments.md`.
+  **Aktive Fortsetzung: opt-in `htq_v2`, Branch `codex/r1b-htq-continuation`.** In dieser Variante bleibt instabiles
+  H_tq die operative Menge H_op; Zufallsmengen werden dazu neu angepasst. Die G-K1-Ausnahme für H_ar bei zu geringer
+  TriviaQA-Ausbeute bleibt unverändert. H+ bleibt beschreibend erhalten. Tore, Schwellen, Daten, Saaten und Stichprobenzahlen
+  bleiben wie eingefroren; Instabilität wird weiter als solche ausgewiesen.
+  **Aktuell lesend aus Drive bestätigt:** K_S1 ist mit Code 121ab8a fertig; D_C ist nach fehlgeschlagenem d5_gen teilweise
+  fertig; K_S4 hat fertige k8b-Schritte, fehlgeschlagenes k8a und noch ausstehendes k8c. Die Vorbereitung der Variante hat
+  bisher keine Nutzerdaten in Drive verändert und keinen neuen GPU-Lauf ausgeführt.
+
+## Aktueller Startweg: isolierte H_tq-Fortsetzung `htq_v2` (16.11.2026)
+
+Dieser Abschnitt ist der neue Arbeitsauftrag; die älteren Startprompts und Standmeldungen weiter oben dokumentieren die
+Vorgeschichte. Implementiert und modellfrei geprüft: 33 Tests zu getrennter Übernahme, Fortsetzung, H_tq-Auswahl,
+Herkunftskennzeichnung, Konto-B-Pfadaliasen, Post-hoc-Auswertung und Notebook-Ablauf. Keine neuen GPU-Läufe oder
+Schreibzugriffe auf die Ergebnisse in Drive; kein vollständiger Test mit einem Mock-Modell oder einer A100.
+
+- Originale Slot-Läufe vor dem Kopieren stoppen. Die vorhandenen Ergebnisse in `dsse_runs` bleiben erhalten; die Variante
+  schreibt Messergebnisse in **beiden Konten ausschließlich nach `dsse_runs/variants/htq_v2`**, mit getrennten lokalen Arbeitsordnern.
+  Alte H+-Ergebnisse, Marker, Eingabekopien oder Caches dürfen keine H_tq-Schritte als bereits erledigt ausweisen.
+- **Zuerst `HTQ_START` in Konto A auf einer A100.** Voraussetzung: `MyDrive/dsse_runs_B` ist die vorhandene Verknüpfung auf
+  den freigegebenen Ordner von Konto B und für Konto A beschreibbar. Der Start übernimmt die wiederverwendbaren R-/D-Sitzungen,
+  K_S3 und nur den H-unabhängigen Präfix von K_S1. Er berechnet K_S1 ab `k2_sets` mit der neuen Menge und neuen Zufallsmengen
+  erneut. Der Abschluss des ursprünglichen K_S1 überspringt diese Neuberechnung nicht. Der H-unabhängige H_ar-Schritt
+  stellt bei Bedarf seinen lokalen Fit-Cache wieder her, auch nach einem Neustart der Colab-Laufzeit.
+- K_S4 wird in der Variante **vollständig neu gerechnet, einschließlich k8b**. Seine bereits vorliegenden H+-Messungen
+  bleiben im ursprünglichen Ordner und werden nicht mit neuen H_tq-Messungen vermischt. Entsprechend bleiben die weiteren
+  K-/L-Ausgaben und RK-2 in der isolierten Variante.
+- **Eine GPU, Reihenfolge:** `HTQ_START` → `HTQ_B2_in_A` → `HTQ_B1_in_A` → `HTQ_A1_DC_zuerst` → `HTQ_A2` → `HTQ_ANA`.
+  Die neuen Notebooks laden bereits `codex/r1b-htq-continuation`; BRANCH muss nicht von Hand geändert werden. Die älteren
+  Standardnotebooks laden weiterhin den alten Branch und sind nicht der Startweg für `htq_v2`.
+- **L-CAL parallel:** `runde1b_HTQ_LCAL.ipynb` nach der Übernahme beider Ergebnisbäume auf einer CPU-Laufzeit mit viel RAM,
+  mit unverändertem eingefrorenem Kalibrierungscode. Ergebnis `dsse_runs/variants/htq_v2/r1b_lcal/l_cal.json` prüfen und vor ANA
+  ins Repository übernehmen. Danach die Stufe-2-Läufe der Variante;
+  eine neue Modell- oder Pilotmessung ersetzt weder L-CAL noch die festgelegten Tore.
+- K-/L-Urteile der Änderung 2 werden als **post hoc** ausgewiesen; betroffene H-abhängige Ergebnisse gehen nicht in die
+  bestätigenden Rundentestfamilien CF-K-attr, CF-K-link, CF-L oder CF-HERR ein. Die wiederverwendeten R-/D-Messungen behalten
+  ihre ursprüngliche Herkunft und Einordnung. Original- und Variantenbefunde werden getrennt berichtet.
+- **Zeitbedarf:** Die früher genannten 15–18 Stunden sind eine alte Basisschätzung, keine Zusage für die Fortsetzung.
+  Zusätzlich fallen die Neumessungen von K_S1/K_S4 sowie Einrichtung und Datenkopien an; H+ wird weiterhin beschreibend
+  erfasst. Die Restzeit nach den ersten neuen Schritten anhand gemessener Raten aktualisieren.
+- **Vorbereitungsfehler am 16.11.2026:** Der vom Nutzer geteilte START-PDF zeigt einen `CalledProcessError` beim
+  `seed`-Unterprozess, noch vor dem K_S1-Hauptlauf. Der Ausdruck enthält die eigentliche Helper-Fehlermeldung nicht.
+  In Drive ist Kontos A Übernahme von 2.463 Dateien seit 11:31:59 UTC abgeschlossen; im bekannten Konto-B-Ordner fehlen
+  noch Varianten- und Paarmarkierung. Daraus allein folgt keine gesicherte Ursache und auch nicht sicher, welcher
+  `seed`-Aufruf fehlschlug. Für die Fortsetzung zuerst `runde1b_HTQ_PREP_CHECK.ipynb` in Konto A auf **CPU** ausführen:
+  Es zeigt Konto, Aktion, Rückgabecode und die vollständige Helper-Ausgabe und verwendet abgeschlossene Übernahmen
+  weiter. Keine Originalordner, Zwischenstände oder Sperren auf Verdacht löschen. Erst nach erfolgreicher Vorbereitung
+  wieder `HTQ_START` auf A100 ausführen, anschließend B2. Die Helper-Ausgaben nennen nun Ordner- und Dateifortschritt;
+  die neue Prüfung benötigt weder Modellgewichte noch eine GPU.
+- **Nicht lesbares Colab-Ausgabefeld:** Ein weiterer Screenshot zeigt eine fehlgeschlagene PREP_CHECK-Zelle und ein
+  abgestürztes Ausgabefeld im mobilen Browser. Daraus war die Python-Ursache nicht erkennbar. PREP_CHECK schreibt deshalb
+  die vollständige Bootstrap-Ausgabe samt Traceback zusätzlich nach `dsse_runs/htq_prep_check.log` in Konto A und einen
+  kleinen letzten Status nach `dsse_runs/htq_prep_check_status.json`. Frühere Logeinträge bleiben erhalten; im Notebook
+  erscheinen nur kurze Statusmeldungen. Die Diagnose ist kein erfolgreicher Abschlussmarker. Bei fehlendem Drive-Zugriff
+  kann auch die Protokolldatei nicht gespeichert werden. Das aktualisierte Notebook neu öffnen und auf CPU vollständig
+  ausführen; danach zuerst Log/Status prüfen. Kein Start von K_S1 oder B2 allein aufgrund einer beendeten Fehlerzelle.
+- **Ursache belegt (16.11.2026, 14:05 UTC):** Das gespeicherte Protokoll bestätigt Konto A mit `seed` und `check`, jeweils
+  Exit 0. Konto B scheitert an `symlink is not allowed in seed paths: /content/drive/MyDrive/dsse_runs_B` (Exit 2).
+  Der Helper unterstützt nun gezielt diese Konto-B-Verknüpfung auf einen vorhandenen Standard-Colab-Zielordner
+  `/content/drive/.shortcut-targets-by-id/<Ordner-ID>/dsse_runs`. Die logischen Pfade in Übernahmemarkierungen bleiben
+  erhalten; zusätzliche Datei-/Unterordner-Symlinks und abweichende Ziele bleiben gesperrt. Das vorhandene PREP_CHECK
+  erneut vollständig ausführen: Seine Clone-Zelle lädt den aktualisierten Branch. Der Browserfehler selbst wird durch
+  diese Codekorrektur nicht behoben; die gespeicherten Diagnose-Dateien zeigen den tatsächlichen Ablauf.
+- **Vorbereitung erfolgreich bestätigt (16.11.2026, 14:50:47 UTC):** Das aktuelle gespeicherte PREP_CHECK-Protokoll
+  `99508ee4f470` lief mit Commit `d8e479f` von 14:39:41 UTC bis 14:50:47.786 UTC. In beiden Konten endeten `seed` und
+  `check` mit Exit 0; für Konto B wurden 1.229 Dateien übernommen. Beide Ergebnisbäume sind damit als zusammengehöriges
+  Variantenpaar vorbereitet. Der oben dokumentierte Konto-B-Verknüpfungsfehler ist für diesen Lauf behoben. Als Nächstes
+  `runde1b_HTQ_START.ipynb` neu in Konto A auf **A100** öffnen und ausführen; es verwendet die abgeschlossene Vorbereitung
+  weiter und startet die ausstehenden K_S1-Messungen. Der erfolgreiche PREP_CHECK ist noch kein erfolgreicher GPU-Lauf.
+
+## Zusatzauftrag: begrenzter Hidden-State-Mitschnitt beim nächsten HTQ-Start (16.11.2026)
+
+Der Nutzer hat den empfohlenen kleinen Beobachtungsdatensatz freigegeben. Beim nächsten tatsächlichen `k3a`-Lauf von
+K_S1 sollen für **höchstens 256 vorhandene Anfragen** die Zustände aller 28 Decoderblöcke am letzten Prompt-Token
+mitgeschrieben werden: feste erste 128 S3-, 64 A-det- und 64 NE-Anfragen, FP32, Hidden-Breite 2.048. Die Auswahl erfolgt vor
+den Antwortbewertungen. Der reine Tensorinhalt beträgt höchstens **56 MiB**, zuzüglich Metadaten und Provenienz.
+Fragenzahl, wissenschaftliche Stichproben, Saaten, Generierung, Tore und Schwellen bleiben unverändert. Der Beobachter
+benötigt keine zusätzliche Generierung. Ein gesonderter Paritäts-/Overheadcheck führt vorab wenige zusätzliche Prefills
+auf festen Testeingaben aus; deren Ausgaben werden verworfen und gehören nicht zum wissenschaftlichen Datensatz.
+Es wird kein Klassifikator automatisch trainiert und keine neue bestätigende Testfamilie eröffnet.
+Anlass ist [From Bytes to Behavior: Request-Level Attribution from Live GPU Hidden States](https://arxiv.org/abs/2611.18272v1).
+Hier werden Framework-Hooks des eigenen Modells verwendet; die Debugger-Akquisition des Papers wird nicht nachgebaut.
+
+- **Startweg:** Das neue HTQ-START-Notebook aktiviert `R1B_CAPTURE_HIDDEN=1` nur für seinen realen K_S1-Unterprozess;
+  ältere bzw. normale Skripte haben den Mitschnitt standardmäßig aus. Alle sonstigen Hinweise zur vorbereiteten Variante
+  und zur Konto-B-Verknüpfung gelten weiter. Bei schon abgeschlossenem K3a/K_S1 entsteht durch nachträgliches Einschalten
+  kein Mitschnitt: fertige Schritte werden weiterhin übersprungen und nicht automatisch teuer wiederholt.
+- **Ablage:** In Konto B unter
+  `dsse_runs/variants/htq_v2/r1b_K_S1/observations/hidden_states_v1/`, von Konto A über `dsse_runs_B` erreichbar.
+  Je Aufgabenfamilie eine `.pt`-Datei mit SHA-256-Provenienzdatei, dazu `manifest.json` mit Status, Anzahl und Zuordnung.
+  Ein fehlendes oder unvollständiges Manifest ist kein erfolgreicher Abschluss des Mitschnitts.
+- **Zuordnung:** Anfrage-/Fragekennung, Aufgabenfamilie, Sample-ID, genaue Prompt-Token, Sampling-Schlüssel,
+  normale Antworttokens/-texte und Scorer-Labels gehören zu den Zuständen. Die Antworttokens enthalten nach bestehender
+  Decoder-Konvention kein Stopp-Token; es wird keine genaue EOS-Kennung behauptet. Modell-/Codefassung, H-Policy, Blocknummern,
+  Capture-Punkt, Datentyp und Tensorform werden mitprotokolliert. Es sind Zustände vor dem ersten Antworttoken;
+  weder der ganze Tokenverlauf noch rohe MLP-Neuronenaktivierungen werden gespeichert.
+- **Einordnung und Laufzeit:** rein explorative Beobachtung des eigenen Modells. Eine Vorhersage aus diesen Daten wäre
+  noch kein kausaler Nachweis für Verhalten und keine behauptete Reproduktion eines Papers oder GPU-Speicher-Debuggers.
+  Die tatsächlichen Mehrkosten auf der A100 sind noch nicht gemessen. Vor den teuren K3a-Generierungen vergleicht ein
+  GPU-Paritäts-/Overheadcheck zwei feste Eingaben mit und ohne Mitschnitt (Warm-up, drei Messpaare, exakt gleiche Logits);
+  ein Fehlschlag stoppt K3a. Seine JSON-Messung ist keine Prognose für den ganzen Lauf; bestandene modellfreie Tests
+  ersetzen die GPU-Messung nicht. Die frühere 15–18-h-Schätzung
+  bleibt auch mit dem begrenzten Mitschnitt eine Schätzung.
+
+Technische Schnittstelle und Regeln für Provenienz, Synchronisierung und Wiederaufnahme stehen in
+`analysis/ju_space/round1b/IMPLEMENTATION.md`, Abschnitt 12. Diese Dokumentation hält den freigegebenen Umfang fest;
+sie behauptet weder einen bereits erfolgreich ausgeführten GPU-Mitschnitt noch einen bestandenen A100-Benchmark.
 
 ## Erweiterungswunsch des Nutzers (14.11.2026): Gemma 4 als weiteres Modell (nach 1b, wie Teil P)
 - Sinnvoll vor allem für K und L, teilweise D; R ist an die Runde-1-Daten von Qwen gebunden.

@@ -169,3 +169,55 @@ freeze `FROZEN_PLAN_SHA256` and `FREEZE_RECORD_SHA256` in r1b_run_session.py are
   (K8b bistability block with 16 templates), `K-drop6` (K10a delta2); `K-drop4` (K6c(ii)) and `K-drop5` (K6e descriptive arms) are not
   implemented.
 - `python r1b_core.py keys <out>` imports r1b_sessions_R (R's loop names) before writing r1b_keys.json.
+
+## 12. Optional observational hidden-state capture in the H_tq continuation
+
+The user approved a bounded capture for the next `htq_v2` K_S1 run (16 November 2026). It observes the model's own ordinary
+K3a generation. The observer itself adds no model request or forward pass, changes no frozen sample count, seed, decoding
+setting, gate, threshold or scorer, and performs no probe fitting or training. A separate pre-run parity/overhead check
+adds a few fixed-input prefill forwards; its outputs are discarded and never join the scientific sample or capture dataset.
+The resulting dataset is an exploratory observation;
+predictive associations from it are not causal attribution and do not establish a reproduction of a GPU-memory debugger
+or of the user-mentioned paper.
+
+**Selection and measurement.** Capture a fixed prefix of at most 128 S3 requests, 64 A-det requests and 64 NE requests,
+selected before their output labels are known. These are observation rows within K3a's existing samples, not a smaller
+scientific sample. For each selected request retain the decoder-block output at the last non-padding prompt position on
+the actual prefill forward, in FP32, for all 28 Qwen3-1.7B blocks (hidden width 2,048). This vector precedes selection of the
+first generated token. It is neither an all-token trace nor an MLP-neuron activation vector; its shape and layer numbering
+must be declared in the file metadata. Prompt identity, family and sample identity keep capture rows aligned with their
+ordinary continuations and independent scorer labels.
+
+The tensor payload cap is `256 * 28 * 2048 * 4 = 58,720,256` bytes (**56 MiB**), plus request metadata, file/container
+overhead and provenance. Counts can be lower if a family has fewer available requests. This storage bound is not a timing
+estimate. Real A100 copy/synchronisation and I/O overhead remains unmeasured. Before expensive K3a generation, a GPU
+parity/overhead check uses two fixed inputs, warm-up and three timed pairs with and without capture, requiring exactly
+identical logits. Its benchmark JSON records the local measurement; a failure stops K3a. Distinguish that measurement
+from model-free geometry/metadata tests and from a whole-run timing forecast. A tiny-model benchmark does not establish
+the overhead on the full model.
+
+**Opt in and location.** `R1B_CAPTURE_HIDDEN=1` enables this observer for K3a. The new HTQ START notebook enables it for its
+real K_S1 subprocess; older/default scripts leave it off. It belongs to the isolated variant session, under
+`observations/hidden_states_v1/`: one `<family>.pt` shard per request family and a final `manifest.json`. In account B this
+is below `dsse_runs/variants/htq_v2/r1b_K_S1`; the account-A START notebook reaches the same folder through `dsse_runs_B`.
+The observation files carry their own version/configuration and an explicit exploratory label, independently of the
+post-hoc H_tq amendment labels.
+
+**Metadata and provenance.** Each selected request needs its stable request/question and sample ID, task family, exact
+rendered prompt token IDs and non-padding length, sampling key, ordinary generated token IDs/text, and ordinary scorer label.
+Continuation tokens follow the existing decoder convention and exclude its stop token; do not claim an exact recorded EOS ID.
+Record block indices, capture point, dtype, tensor dimensions and row order, model revision, code/configuration identity,
+session/attempt and H policy. Use `ctx.save_pt` for shards and `ctx.write_json` for the manifest, so SG6 sees the normal
+`.prov.json` SHA-256 sidecars and provenance. A complete manifest must distinguish requested versus captured counts and
+identify all completed shards; an absent or partial manifest must not be described as a complete capture.
+
+**Continuation and sync.** These files are optional K3a outputs: present files must be declared in the step's `opt` patterns
+to enter its output-hash record and SG6 checks, while ordinary runs without capture still succeed. The existing runner syncs
+`observations/` after steps, excludes `.tmp`/`.r1btmp`, and resumes it from Drive. Write shards atomically; keep partial/retry
+status explicit, use deterministic family/request identities, and never append duplicate requests to the 256-row cap on
+retry. Enablement is not a request to replay an already completed step: the runner skips completed K3a/K_S1 before the
+observer runs. In that case report that no new capture was produced rather than silently repeating expensive measurements.
+
+For later analysis split by question/request identity, not by tokens from the same request. The fixed-prefix observation
+sample is not a representative random sample of model usage, and scorer labels describe the task-specific observed
+behaviour. Preserve those limits when reporting any classifier or visualisation derived from these files.
