@@ -1,5 +1,27 @@
 # K3a/K3b/K3c aus vorhandenen H_tq-Daten auswerten
 
+Bei dem bereits beobachteten Anmeldefehler **credential propagation**:
+[LOKAL-Notebook ohne Drive-Anmeldung öffnen](https://colab.research.google.com/github/Erikiss/DSSE/blob/codex/r1b-htq-continuation/notebooks/runde1b_HTQ_K3_LOKAL.ipynb).
+CPU wählen, links im Colab-Dateibrowser die vorhandene `k3a_data.pt` und das
+bereitgestellte kleine `htq_k3_context.zip` nach `/content` hochladen; alternativ
+nach `/content/htq_k3_upload`. Den großen Upload vollständig abwarten, dann
+**Alle ausführen**. Es gibt keinen JavaScript-Großupload, keine Anmeldeversuche
+und keine Warteschleife. Fehlende Dateien führen sofort zu einer konkreten
+Dateibrowser-Anleitung. `EINGABE_MODE="LOKAL"` ist in diesem neuen Notebook vorgegeben.
+Android-Mehrfachdownloads wie `k3a_data (1).pt` werden erkannt. Falls das Gerät
+einen anderen Namen vergibt, den vollständigen lokalen Dateipfad in `INPUT_FILE`
+eintragen. Bei mehreren Rohdateien wird nur eine zur Kontext-SHA256 passende
+Kopie verwendet; die Prüfung vor dem Laden bleibt erhalten.
+
+Das Kontext-ZIP enthält `session_done.json`, `hn/htq_policy.json`,
+`hn/hn_set.json`, `sg8_preview.json` und den hashgebundenen
+`k/k3/k3a_data.pt.prov.json`-Sidecar; `steps/k3a.json` kann ebenfalls enthalten sein.
+Ein gemeinsamer Prefix `r1b_K_S1/` ist zulässig. Der kleine Kontext wird direkt
+aus dem ZIP gelesen, ohne beliebige ZIP-Pfade zu entpacken. Rohdatei, H_tq-Policy
+und Producer-Hashes werden auch in diesem lokalen Eingang vollständig geprüft.
+Die lokal hochgeladenen Originaldateien werden ausschließlich gelesen.
+
+Für eine funktionierende Drive-Anmeldung bleibt der bisherige AUTO-Start verfügbar:
 [CPU-Notebook in Colab öffnen](https://colab.research.google.com/github/Erikiss/DSSE/blob/codex/r1b-htq-continuation/notebooks/runde1b_HTQ_K3_CPU.ipynb),
 CPU als Laufzeittyp wählen, dann **Alle ausführen**. Eine sichtbare GPU führt
 vor Anmeldung und großem Download zum Abbruch. Es werden keine Modelle geladen,
@@ -12,8 +34,9 @@ Drive-API mit Leseberechtigung; die Suche prüft den kanonischen Pfad
 Mehrere gültige Kopien mit derselben SHA256 sind zulässig. Bei verschiedenen
 Prüfsummen muss die gewünschte private Datei-ID in `DATEI_ID` eingetragen werden.
 Diese ID umgeht weder Anmeldung noch Dateifreigaben. Bei fehlendem Drive-Scope
-oder `credential propagation` enthält das Diagnose-ZIP den Fehler; die Anmeldung
-muss dann in einer frischen CPU-Laufzeit funktionieren. Es werden keine Freigaben geändert.
+oder `credential propagation` enthält das Diagnose-ZIP den Fehler. Auch eine
+frische Laufzeit garantiert keine erfolgreiche Anmeldung; der lokale Start oben
+kommt vollständig ohne diese Anmeldung aus. Es werden keine Freigaben geändert.
 
 Die große Rohdatei wird in 16-MiB-Schritten unter `/content/htq_k3_cache` abgelegt.
 Hashgebundene Kontextdateien und die vollständige Roh-SHA256 werden vor dem

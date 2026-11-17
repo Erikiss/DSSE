@@ -79,6 +79,86 @@ def mounted_candidates(base):
     return found
 
 
+def local_context_zip(path):
+    """Read only the small source context; never extract or load tensor members."""
+    import json
+    from pathlib import PurePosixPath
+    import stat
+    import zipfile
+    blobs = {}
+    with zipfile.ZipFile(path) as archive:
+        members = archive.infolist()
+        if len(members) > 100 or sum(item.file_size for item in members) > 32 << 20:
+            raise ValueError("Kontext-ZIP ist unerwartet groß; nur den kleinen Quellkontext verwenden.")
+        for member in members:
+            parts = PurePosixPath(member.filename).parts
+            if not parts or member.filename.startswith(("/", "\\")) or ".." in parts or "\\" in member.filename:
+                raise ValueError("Ungültiger Pfad im Kontext-ZIP.")
+            if stat.S_ISLNK(member.external_attr >> 16):
+                raise ValueError("Verknüpfung im Kontext-ZIP ist nicht zulässig.")
+            if member.is_dir():
+                continue
+            if parts[0] == "r1b_K_S1":
+                parts = parts[1:]
+            rel = "/".join(parts)
+            if rel not in CONTEXT + OPTIONAL:
+                continue
+            if rel in blobs:
+                raise ValueError("Doppelte Kontextdatei im ZIP: " + rel)
+            blobs[rel] = archive.read(member)
+    if any(rel not in blobs for rel in CONTEXT):
+        raise ValueError("ZIP enthält keinen vollständigen K3-Quellkontext.")
+    return dict(checked_context(blobs), context_zip=str(path))
+
+
+def local_source(upload_dir, fallback_dir="/content", context_zip="", input_file=""):
+    """Resolve explicit local uploads without Drive imports, authentication or retry."""
+    from pathlib import Path
+    import re
+    roots = list(dict.fromkeys((Path(upload_dir), Path(fallback_dir))))
+    if input_file:
+        raw_files = [Path(input_file)]
+        if not raw_files[0].is_file():
+            raise FileNotFoundError("INPUT_FILE fehlt: " + str(raw_files[0]))
+        if raw_files[0].parent not in roots:
+            roots.append(raw_files[0].parent)
+    else:
+        pattern = re.compile(r"k3a_data(?: \(\d+\))?\.pt(?: \(\d+\))?$")
+        raw_files = sorted({path for root in roots if root.is_dir() for path in root.iterdir()
+                            if path.is_file() and pattern.fullmatch(path.name)})
+    if not raw_files:
+        raise FileNotFoundError("Lokale Rohdatei fehlt. Links im Colab-Dateibrowser k3a_data.pt nach "
+                                + str(upload_dir) + " oder " + str(fallback_dir)
+                                + " hochladen, Upload vollständig abwarten und diese Zelle erneut starten. Keine Drive-Anmeldung wird versucht.")
+    if context_zip:
+        paths = [Path(context_zip)]
+        if not paths[0].is_file():
+            raise FileNotFoundError("KONTEXT_ZIP fehlt: " + str(paths[0]))
+    else:
+        paths = sorted({p for root in roots if root.is_dir() for p in root.glob("*.zip")})
+    contexts, rejected = [], []
+    for path in paths:
+        try:
+            contexts.append(local_context_zip(path))
+        except Exception as error:
+            rejected.append(path.name + ": " + str(error))
+            if context_zip:
+                raise
+    if not contexts:
+        detail = " · ".join(rejected[:3])
+        raise FileNotFoundError("Kleiner K3-Quellkontext fehlt oder ist ungültig. Das bereitgestellte htq_k3_context.zip neben k3a_data.pt hochladen; nicht die Diagnose-ZIP verwenden. " + detail)
+    source = choose_source(contexts)
+    # With two uploads, select only an exact producer-hash match; one upload is
+    # verified by stage_source before the analysis process can load it.
+    if len(raw_files) > 1:
+        raw_files = [path for path in raw_files if sha256(path) == source["sha256"]]
+        if not raw_files:
+            raise ValueError("Keine lokale Rohdatei stimmt mit der Kontext-SHA256 überein.")
+    raw = raw_files[0]
+    print("Lokale Eingabe gefunden; Drive-Anmeldung wird vollständig übersprungen.", flush=True)
+    return dict(source, kind="local", source=str(raw), size=raw.stat().st_size)
+
+
 def api_list(service, query):
     files, token = [], None
     for page in range(100):
@@ -188,7 +268,7 @@ def stage_source(source, cache, service=None, downloader_factory=None):
         print("Lokaler K3a-Cache ist vollständig und SHA-geprüft.", flush=True)
     else:
         temporary = target.with_suffix(".download")
-        if source["kind"] == "mounted":
+        if source["kind"] in ("mounted", "local"):
             count, total = 0, source["size"]
             with open(source["source"], "rb") as src, open(temporary, "wb") as dst:
                 for block in iter(lambda: src.read(16 << 20), b""):
@@ -224,7 +304,7 @@ def stage_source(source, cache, service=None, downloader_factory=None):
     return session
 
 
-HELPERS = (sha256, checked_context, mounted_candidates, api_list, api_meta, api_session,
+HELPERS = (sha256, checked_context, mounted_candidates, local_context_zip, local_source, api_list, api_meta, api_session,
            api_child, api_context, api_candidates, choose_source, stage_source)
 
 
@@ -263,11 +343,16 @@ try:
     stage = "source_context"
     source = None
     service = None
-    if not DATEI_ID:
+    mode = EINGABE_MODE.strip().upper()
+    if mode not in ("AUTO", "LOKAL"):
+        raise ValueError("EINGABE_MODE muss AUTO oder LOKAL sein.")
+    if mode == "LOKAL":
+        source = local_source(LOKAL_ORDNER, "/content", KONTEXT_ZIP, INPUT_FILE)
+    elif not DATEI_ID:
         candidates = mounted_candidates("/content/drive/MyDrive")
         if candidates:
             source = choose_source(candidates)
-    if source is None:
+    if source is None and mode == "AUTO":
         print("Anmeldung für direkten Drive-API-Lesezugriff; Drive-Mount wird nicht benötigt.", flush=True)
         from google.colab import auth
         auth.authenticate_user()
@@ -327,8 +412,8 @@ except BaseException as error:
         traceback.print_exc(file=log)
     notebook_status("failed", error_type=type(error).__name__, error=str(error))
     print("Angehalten:", type(error).__name__, str(error), flush=True)
-    if stage == "source_context":
-        print("Falls credential propagation scheitert: frische CPU-Laufzeit und passende Google-Anmeldung prüfen. DATEI_ID wählt eine Quelle, ersetzt die Anmeldung nicht.", flush=True)
+    if stage == "source_context" and globals().get("mode") == "AUTO":
+        print("Bei credential propagation den lokalen Start runde1b_HTQ_K3_LOKAL.ipynb verwenden: Rohdatei und Kontext-ZIP im Dateibrowser bereitstellen. DATEI_ID ersetzt die Anmeldung nicht.", flush=True)
         if "scope" in str(error).lower() or "insufficient" in str(error).lower():
             print("Der Google-Zugang benötigt die Berechtigung drive.readonly. Anmeldung und Dateifreigabe prüfen; es werden keine Freigaben automatisch geändert.", flush=True)
 finally:
@@ -351,7 +436,9 @@ if failure is not None:
 '''
 
 
-def build(out=HERE):
+def build(out=HERE, mode="AUTO"):
+    if mode not in ("AUTO", "LOKAL"):
+        raise ValueError("Unknown notebook input mode")
     intro = '''# H_tq · Offene K3-Auswertung aus vorhandenen Daten · CPU
 
 **CPU-Laufzeit wählen, dann „Alle ausführen“. Keine GPU nötig.** Dieses Notebook
@@ -365,6 +452,7 @@ Die automatische Suche akzeptiert nur abgeschlossene, hashgeprüfte H_tq-Quellen
 im Pfad `variants/htq_v2/r1b_K_S1/k/k3`. Bei verschiedenen gültigen Kopien hält sie
 an; dann optional die gewünschte private Datei-ID in der Konfiguration eintragen.
 Eine Datei-ID ersetzt keine Zugriffsberechtigung oder erfolgreiche Anmeldung.
+Bei `credential propagation` den [lokalen Start ohne Anmeldung](https://colab.research.google.com/github/Erikiss/DSSE/blob/codex/r1b-htq-continuation/notebooks/runde1b_HTQ_K3_LOKAL.ipynb) verwenden.
 
 Die Rohdatei wird lokal zwischengespeichert, vollständig gegen ihre Producer-SHA256
 geprüft und erst danach geladen. Fortschritt, Status und Fehler liegen in einem
@@ -374,7 +462,37 @@ wird nicht mit eingepackt. Falls der Download am Handy nicht erscheint: links im
 Colab-Dateibrowser die ausgegebene ZIP-Datei herunterladen. Ergebnisse vor Ende
 der CPU-Laufzeit sichern; das Notebook fordert keine neue Laufzeit an.
 '''
+    if mode == "LOKAL":
+        intro = '''# H_tq · K3-Auswertung mit lokalen Dateien · CPU, ohne Drive-Anmeldung
+
+**CPU-Laufzeit wählen. Dieses Notebook verwendet keine Google-Drive-Anmeldung.**
+
+1. Die vorhandene `k3a_data.pt` und das bereitgestellte kleine
+   `htq_k3_context.zip` auf dem eigenen Gerät bereithalten.
+2. Links in Colab das Dateisymbol öffnen und beide Dateien nach `/content`
+   hochladen. Alternativ ist `/content/htq_k3_upload` möglich. Den großen Upload
+   vollständig abwarten. Das Notebook öffnet dafür keinen JavaScript-Uploaddialog.
+   Android-Namen wie `k3a_data (1).pt` werden ebenfalls erkannt; alternativ den
+   genauen Dateipfad in `INPUT_FILE` eintragen.
+3. Danach „Alle ausführen“. Fehlende Dateien führen sofort zu einer Anleitung;
+   es gibt keine Anmeldeversuche und keine Warteschleife.
+
+Die Rohdatei und ihr Quellkontext werden unverändert über Producer-SHA256,
+H_tq-Policy und Provenienz geprüft, bevor die Auswertung sie lädt. Eine sichtbare
+GPU führt zum frühen Abbruch. Es werden keine Modelle geladen oder Antworten
+erzeugt; L-CAL und Gesamt-ANA sind keine Voraussetzung. Die Originaldateien
+werden ausschließlich gelesen. Der lokale Cache bleibt bei normaler Wiederholung nutzbar.
+
+Ergebnisse und Protokolle liegen unter `/content/htq_k3_output`. Das Ergebnis-ZIP
+wird am Ende automatisch heruntergeladen; bei Fehlern gibt es ein Diagnose-ZIP.
+Falls der Browser den Download verhindert, dieselbe ZIP links im Dateibrowser
+herunterladen. Vor Ende der CPU-Laufzeit sichern; lokale Colab-Dateien sind temporär.
+'''
     config = f'''BRANCH = "{BRANCH}"
+EINGABE_MODE = "{mode}"
+LOKAL_ORDNER = "/content/htq_k3_upload"
+INPUT_FILE = ""  # Optional: genauer lokaler Rohdateipfad, etwa /content/k3a_data (1).pt.
+KONTEXT_ZIP = ""  # Lokal gewöhnlich leer lassen; das kleine Kontext-ZIP wird automatisch gefunden.
 DATEI_ID = ""  # Optional: private Drive-ID der gewünschten k3a_data.pt; gewöhnlich leer lassen.
 CACHE_ROOT = "/content/htq_k3_cache"
 AUSGABE_ROOT = "/content/htq_k3_output"
@@ -384,14 +502,15 @@ AUSGABE_ROOT = "/content/htq_k3_output"
               + "\n\n".join(inspect.getsource(f) for f in HELPERS))
     cells=[]
     for i,(kind,source) in enumerate((("markdown",intro),("code",config),("code",helper),("code",main_source()))):
-        cell=dict(cell_type=kind,id=hashlib.sha256(f"K3CPU:{i}".encode()).hexdigest()[:12],metadata={},source=source.splitlines(keepends=True))
+        cell=dict(cell_type=kind,id=hashlib.sha256(f"K3CPU:{mode}:{i}".encode()).hexdigest()[:12],metadata={},source=source.splitlines(keepends=True))
         if kind=='code':ast.parse(source);cell.update(execution_count=None,outputs=[])
         cells.append(cell)
     doc=dict(cells=cells,metadata=dict(colab=dict(provenance=[]),kernelspec=dict(display_name="Python 3",name="python3")),nbformat=4,nbformat_minor=5)
-    target=Path(out)/"runde1b_HTQ_K3_CPU.ipynb"
+    target=Path(out)/("runde1b_HTQ_K3_LOKAL.ipynb" if mode == "LOKAL" else "runde1b_HTQ_K3_CPU.ipynb")
     target.write_text(json.dumps(doc,indent=1,ensure_ascii=False)+"\n")
     return target
 
 
 if __name__ == "__main__":
     print(build())
+    print(build(mode="LOKAL"))

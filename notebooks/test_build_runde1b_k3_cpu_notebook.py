@@ -143,6 +143,7 @@ class NotebookTests(unittest.TestCase):
                 packages={name:SimpleNamespace(__version__='test')for name in ['numpy','scipy','torch']}
                 packages['torch'].cuda=SimpleNamespace(is_available=lambda:False)
                 scope=dict(BRANCH=B.BRANCH,DATEI_ID='',AUSGABE_ROOT=tmp,CACHE_ROOT=tmp+'/cache',REL=B.REL,
+                           EINGABE_MODE='AUTO',LOKAL_ORDNER=tmp+'/upload',KONTEXT_ZIP='',INPUT_FILE='',
                            mounted_candidates=lambda p:[],sha256=B.sha256)
                 result=SimpleNamespace(returncode=0 if failure=='gpu' else 1,stdout='A100'if failure=='gpu'else'')
                 with patch.dict(sys.modules,{'google':google,'google.colab':colab,**packages}),patch.dict(os.environ,{'COLAB_GPU':'0'}),patch('subprocess.run',return_value=result),contextlib.redirect_stdout(io.StringIO()):
@@ -156,6 +157,112 @@ class NotebookTests(unittest.TestCase):
                     self.assertIn('notebook.log',z.namelist())
                 colab.files.download.assert_called_once()
                 self.assertEqual(colab.auth.authenticate_user.call_count,0 if failure=='gpu' else 1)
+
+
+class LocalInputTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.base=Path(self.temp.name);self.upload=self.base/'upload';self.upload.mkdir()
+        self.api,self.payload,self.blobs=fixture()
+
+    def context_zip(self, prefix=''):
+        p=self.upload/'htq_k3_context.zip'
+        with zipfile.ZipFile(p,'w') as z:
+            for rel,raw in self.blobs.items():z.writestr(prefix+rel,raw)
+        return p
+
+    def test_local_context_flat_or_session_prefix_stages_without_api(self):
+        for prefix in ['', 'r1b_K_S1/']:
+            with self.subTest(prefix=prefix):
+                self.context_zip(prefix)
+                raw=self.upload/'k3a_data.pt';raw.write_bytes(self.payload)
+                source=B.local_source(self.upload,self.base/'fallback')
+                self.assertEqual(source['kind'],'local')
+                self.assertEqual(source['sha256'],hashlib.sha256(self.payload).hexdigest())
+                session=B.stage_source(source,self.base/'cache')
+                self.assertEqual((session/B.REL).read_bytes(),self.payload)
+                self.assertEqual(raw.read_bytes(),self.payload)
+
+    def test_missing_raw_stops_before_context_and_auth(self):
+        with patch.object(B,'local_context_zip',side_effect=AssertionError('context inspected before raw')):
+            with self.assertRaisesRegex(FileNotFoundError,'Colab-Dateibrowser'):
+                B.local_source(self.upload,self.base/'fallback')
+
+    def test_android_renaming_selects_hash_matching_copy(self):
+        self.context_zip()
+        (self.upload/'k3a_data.pt').write_bytes(b'old incomplete upload')
+        renamed=self.upload/'k3a_data (1).pt';renamed.write_bytes(self.payload)
+        source=B.local_source(self.upload,self.base/'fallback')
+        self.assertEqual(Path(source['source']),renamed)
+        session=B.stage_source(source,self.base/'cache')
+        self.assertEqual((session/B.REL).read_bytes(),self.payload)
+
+    def test_explicit_input_file_accepts_arbitrary_local_name_but_still_checks_hash(self):
+        self.context_zip()
+        raw=self.upload/'renamed-by-browser.bin';raw.write_bytes(self.payload)
+        source=B.local_source(self.upload,self.base/'fallback',input_file=str(raw))
+        self.assertEqual(source['source'],str(raw))
+        self.assertEqual((B.stage_source(source,self.base/'cache')/B.REL).read_bytes(),self.payload)
+        with self.assertRaisesRegex(FileNotFoundError,'INPUT_FILE'):
+            B.local_source(self.upload,input_file=str(self.base/'missing.pt'))
+
+    def test_missing_or_tampered_context_does_not_fall_back_to_drive(self):
+        (self.upload/'k3a_data.pt').write_bytes(self.payload)
+        with self.assertRaisesRegex(FileNotFoundError,'Quellkontext'):
+            B.local_source(self.upload,self.base/'fallback')
+        self.blobs['hn/hn_set.json']=b'{}';p=self.context_zip()
+        with self.assertRaisesRegex(ValueError,'Kontext-Prüfsumme'):
+            B.local_source(self.upload,self.base/'fallback',str(p))
+
+    def test_context_zip_rejects_traversal_and_duplicate_files(self):
+        for extra in ['../outside.json','session_done.json']:
+            with self.subTest(extra=extra):
+                p=self.context_zip()
+                with zipfile.ZipFile(p,'a')as z:
+                    with contextlib.redirect_stderr(io.StringIO()):z.writestr(extra,b'{}')
+                with self.assertRaisesRegex(ValueError,'Pfad|Doppelte'):
+                    B.local_context_zip(p)
+        self.assertFalse((self.base/'outside.json').exists())
+
+    def test_new_notebook_defaults_local_while_existing_defaults_auto(self):
+        with tempfile.TemporaryDirectory()as tmp:
+            for mode in ['AUTO','LOKAL']:
+                n=json.loads(B.build(tmp,mode).read_text())
+                code='\n'.join(''.join(c['source'])for c in n['cells']if c['cell_type']=='code')
+                self.assertIn(f'EINGABE_MODE = "{mode}"',code)
+                self.assertNotIn('files.upload(',code)
+                for c in n['cells']:
+                    if c['cell_type']=='code':ast.parse(''.join(c['source']))
+
+    def test_local_runtime_never_authenticates_on_missing_upload_or_cache_error(self):
+        for failure in ['missing','cache_oserror']:
+            with self.subTest(failure=failure):
+                google=ModuleType('google');colab=ModuleType('google.colab')
+                auth=Mock(side_effect=AssertionError('LOKAL attempted Google auth'))
+                colab.files=SimpleNamespace(download=Mock());colab.auth=SimpleNamespace(authenticate_user=auth);google.colab=colab
+                packages={name:SimpleNamespace(__version__='test')for name in ['numpy','scipy','torch']}
+                packages['torch'].cuda=SimpleNamespace(is_available=lambda:False)
+                if failure=='cache_oserror':
+                    self.context_zip();(self.upload/'k3a_data.pt').write_bytes(self.payload)
+                else:
+                    (self.upload/'k3a_data.pt').unlink(missing_ok=True)
+                stage=Mock(side_effect=OSError('local cache write failed'))
+                scope=dict(BRANCH=B.BRANCH,DATEI_ID='',EINGABE_MODE='LOKAL',LOKAL_ORDNER=str(self.upload),KONTEXT_ZIP='',INPUT_FILE='',
+                           AUSGABE_ROOT=str(self.base/failure),CACHE_ROOT=str(self.base/'cache'),REL=B.REL,
+                           local_source=lambda a,b,c,d:B.local_source(a,self.base/'fallback',c,d),
+                           stage_source=stage,sha256=B.sha256)
+                result=SimpleNamespace(returncode=1,stdout='')
+                with patch.dict(sys.modules,{'google':google,'google.colab':colab,**packages}),patch.dict(os.environ,{'COLAB_GPU':'0'}),patch('subprocess.run',return_value=result),contextlib.redirect_stdout(io.StringIO())as output:
+                    with self.assertRaisesRegex(RuntimeError,'K3-CPU wurde angehalten'):
+                        exec(compile(B.main_source(),'K3 LOKAL','exec'),scope)
+                auth.assert_not_called()
+                self.assertNotIn('Anmeldung für direkten',output.getvalue())
+                self.assertEqual(stage.call_count,1 if failure=='cache_oserror'else 0)
+                archive=next((self.base/failure).rglob('htq_k3_diagnostic.zip'))
+                with zipfile.ZipFile(archive)as z:
+                    status=json.loads(z.read('notebook_status.json'))
+                    self.assertEqual(status['state'],'failed')
+                    self.assertEqual(status['stage'],'download_and_hash'if failure=='cache_oserror'else'source_context')
 
 
 if __name__=='__main__':unittest.main()
